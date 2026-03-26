@@ -11,6 +11,7 @@ import {
   InsertOwnerDraw,
   InsertPartner,
   InsertPODDocument,
+  InsertRouteStop,
   InsertTransaction,
   InsertTransactionImport,
   InsertUser,
@@ -20,6 +21,7 @@ import {
   ownerDraws,
   partnership,
   podDocuments,
+  routeStops,
   transactions,
   transactionImports,
   users,
@@ -862,4 +864,89 @@ export async function getQuotationsByStatus(userId: number, status: string) {
       )
     )
     .orderBy(desc(loadQuotations.createdAt));
+}
+
+
+// ─── Route Stops ──────────────────────────────────────────────────────────────
+
+export async function createRouteStop(data: InsertRouteStop) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(routeStops).values(data);
+  return result;
+}
+
+export async function createMultipleRouteStops(stops: InsertRouteStop[]) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  if (stops.length === 0) return [];
+
+  const result = await db.insert(routeStops).values(stops);
+  return result;
+}
+
+export async function getRouteStopsByQuotationId(quotationId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(routeStops)
+    .where(eq(routeStops.quotationId, quotationId))
+    .orderBy(routeStops.stopOrder);
+}
+
+export async function updateRouteStop(stopId: number, data: Partial<InsertRouteStop>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(routeStops)
+    .set(data)
+    .where(eq(routeStops.id, stopId));
+}
+
+export async function deleteRouteStop(stopId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(routeStops)
+    .where(eq(routeStops.id, stopId));
+}
+
+export async function deleteRouteStopsByQuotationId(quotationId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(routeStops)
+    .where(eq(routeStops.quotationId, quotationId));
+}
+
+export async function getRouteStopById(stopId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(routeStops)
+    .where(eq(routeStops.id, stopId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateRouteStopsOrder(quotationId: number, stops: Array<{ id: number; stopOrder: number }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  for (const stop of stops) {
+    await db
+      .update(routeStops)
+      .set({ stopOrder: stop.stopOrder })
+      .where(eq(routeStops.id, stop.id));
+  }
 }

@@ -7,6 +7,7 @@ import { plaidRouter } from "./_core/plaidRouter";
 import { quotationRouter } from "./_core/quotationRouter";
 import { geocodingRouter } from "./_core/geocodingRouter";
 import { routesRouter } from "./_core/routesRouter";
+import { multiStopRouter } from "./_core/multiStopRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -804,6 +805,7 @@ export const appRouter = router({
   quotation: quotationRouter,
   geocoding: geocodingRouter,
   routes: routesRouter,
+  multiStop: multiStopRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -276,3 +276,26 @@ export const loadQuotations = mysqlTable("load_quotations", {
 
 export type LoadQuotation = typeof loadQuotations.$inferSelect;
 export type InsertLoadQuotation = typeof loadQuotations.$inferInsert;
+
+/**
+ * Route Stops - Multiple pickup/delivery stops for optimized routes
+ */
+export const routeStops = mysqlTable("route_stops", {
+  id: int("id").autoincrement().primaryKey(),
+  quotationId: int("quotationId").notNull().references(() => loadQuotations.id, { onDelete: "cascade" }),
+  stopOrder: int("stopOrder").notNull(), // Order in optimized route (1, 2, 3, etc.)
+  stopType: mysqlEnum("stopType", ["pickup", "delivery"]).notNull(),
+  address: text("address").notNull(),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  weight: decimal("weight", { precision: 10, scale: 2 }).default("0"),
+  weightUnit: varchar("weightUnit", { length: 10 }).default("lbs"),
+  description: text("description"),
+  distanceFromPrevious: decimal("distanceFromPrevious", { precision: 10, scale: 2 }), // Miles from previous stop
+  durationFromPrevious: decimal("durationFromPrevious", { precision: 10, scale: 2 }), // Hours from previous stop
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type RouteStop = typeof routeStops.$inferSelect;
+export type InsertRouteStop = typeof routeStops.$inferInsert;

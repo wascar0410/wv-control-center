@@ -172,3 +172,15 @@
 - [x] Frontend: agregar indicador de tiempo estimado en QuotationForm
 - [x] Tests para Google Routes API (12 tests nuevos, 107/107 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 21: Optimización de Rutas con Múltiples Paradas
+- [x] Backend: actualizar esquema para tabla route_stops (14 campos)
+- [x] Backend: crear algoritmo de optimización de rutas (Nearest Neighbor + 2-opt local search)
+- [x] Backend: agregar 8 queries para gestionar múltiples paradas
+- [x] Backend: crear tRPC router multiStopRouter con 3 procedimientos
+- [x] Frontend: componente StopsList para agregar/editar paradas
+- [x] Frontend: componente RouteOptimizer para visualizar orden optimizado
+- [x] Frontend: integrar en QuotationForm para soportar múltiples paradas
+- [x] Tests para optimización de rutas (10 tests nuevos, 117/117 total pasando)
+- [x] Checkpoint y entrega

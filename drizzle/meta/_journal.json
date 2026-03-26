@@ -43,6 +43,13 @@
       "when": 1774557166929,
       "tag": "0005_magical_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1774559494737,
+      "tag": "0006_complex_magneto",
+      "breakpoints": true
     }
   ]
 }
