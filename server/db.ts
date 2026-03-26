@@ -184,24 +184,22 @@ export async function getMonthlyCashFlow(year: number) {
   const startDate = new Date(year, 0, 1);
   const endDate = new Date(year + 1, 0, 0, 23, 59, 59);
 
-  const monthExpr = sql<number>`MONTH(${transactions.transactionDate})`;
-
-  const rows = await db
-    .select({
-      month: monthExpr.as('month'),
-      type: transactions.type,
-      total: sql<string>`SUM(${transactions.amount})`.as('total'),
-    })
-    .from(transactions)
-    .where(and(gte(transactions.transactionDate, startDate), lte(transactions.transactionDate, endDate)))
-    .groupBy(monthExpr, transactions.type);
+  const rows: any[] = await db.execute(sql`
+    SELECT 
+      MONTH(transactionDate) as month,
+      type,
+      SUM(amount) as total
+    FROM transactions
+    WHERE transactionDate >= ${startDate} AND transactionDate <= ${endDate}
+    GROUP BY MONTH(transactionDate), type
+  `);
 
   const monthMap: Record<number, { income: number; expenses: number }> = {};
   for (let i = 1; i <= 12; i++) monthMap[i] = { income: 0, expenses: 0 };
 
-  rows.forEach((r) => {
+  (rows as any[]).forEach((r) => {
     const m = Number(r.month);
-    const total = parseFloat(r.total ?? "0");
+    const total = parseFloat(String(r.total ?? "0"));
     if (r.type === "income") monthMap[m].income += total;
     else monthMap[m].expenses += total;
   });

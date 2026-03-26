@@ -73,3 +73,5 @@
 
 ## Bugs Reportados
 - [x] Google Maps cargándose múltiples veces en /driver (error: "You have included the Google Maps JavaScript API multiple times") — RESUELTO: agregada verificación global y de DOM
+
+- [x] Consulta SQL de flujo de caja fallando en /driver (GROUP BY MONTH issue) — RESUELTO: migrado a raw SQL con db.execute()
