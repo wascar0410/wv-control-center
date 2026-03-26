@@ -69,3 +69,7 @@
 - [x] Mejorar UX móvil: captura de cámara, preview de imagen, progreso de carga
 - [x] Tests para fuel logs y BOL upload (12 tests nuevos, 33/33 total pasando)
 - [x] Notificaciones al propietario cuando se sube BOL o registra gasto importante
+
+
+## Bugs Reportados
+- [x] Google Maps cargándose múltiples veces en /driver (error: "You have included the Google Maps JavaScript API multiple times") — RESUELTO: agregada verificación global y de DOM
