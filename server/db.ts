@@ -182,17 +182,19 @@ export async function getMonthlyCashFlow(year: number) {
   const db = await getDb();
   if (!db) return [];
   const startDate = new Date(year, 0, 1);
-  const endDate = new Date(year, 11, 31, 23, 59, 59);
+  const endDate = new Date(year + 1, 0, 0, 23, 59, 59);
+
+  const monthExpr = sql<number>`MONTH(${transactions.transactionDate})`;
 
   const rows = await db
     .select({
-      month: sql<number>`MONTH(${transactions.transactionDate})`,
+      month: monthExpr.as('month'),
       type: transactions.type,
-      total: sql<string>`SUM(${transactions.amount})`,
+      total: sql<string>`SUM(${transactions.amount})`.as('total'),
     })
     .from(transactions)
     .where(and(gte(transactions.transactionDate, startDate), lte(transactions.transactionDate, endDate)))
-    .groupBy(sql`MONTH(${transactions.transactionDate})`, transactions.type);
+    .groupBy(monthExpr, transactions.type);
 
   const monthMap: Record<number, { income: number; expenses: number }> = {};
   for (let i = 1; i <= 12; i++) monthMap[i] = { income: 0, expenses: 0 };
