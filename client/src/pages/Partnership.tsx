@@ -115,7 +115,7 @@ export default function Partnership() {
     setShowPartnerForm(true);
   };
 
-  const totalPercent = (partners ?? []).reduce((sum, p) => sum + parseFloat(String(p.participationPercent)), 0);
+  const totalPercent = (partners ?? []).reduce((sum, p) => sum + parseFloat(String(p?.participationPercent ?? 0)), 0);
 
   return (
     <div className="space-y-6">
@@ -208,7 +208,7 @@ export default function Partnership() {
                   {(distribution?.partners ?? []).length > 0 ? (
                     <div className="mt-5 space-y-3">
                       <h4 className="text-sm font-semibold text-foreground">Distribución por Socio</h4>
-                      {distribution?.partners.map((partner) => (
+                      {distribution?.partners?.map((partner) => (
                         <div key={partner.id} className="rounded-xl bg-background border border-border p-4">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
@@ -456,7 +456,7 @@ export default function Partnership() {
                 <p className="text-xs text-muted-foreground">
                   Distribución calculada para {MONTHS[selectedMonth - 1]}:{" "}
                   <span className="text-primary font-semibold">
-                    {formatCurrency(distribution.partners.find((p) => p.id === parseInt(drawForm.partnerId))?.distribution ?? 0)}
+                    {formatCurrency(distribution?.partners?.find((p) => p?.id === parseInt(drawForm.partnerId))?.distribution ?? 0)}
                   </span>
                 </p>
               )}

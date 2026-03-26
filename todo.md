@@ -87,3 +87,5 @@
 - [ ] Checkpoint y entrega
 
 - [x] Error en /loads: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO: agregada validación defensiva con optional chaining en Finance.tsx
+
+- [x] Error en /partnership: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO: agregada validación defensiva con optional chaining en Partnership.tsx
