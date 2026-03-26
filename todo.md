@@ -85,3 +85,5 @@
 - [x] Notificaciones al chofer cuando recibe asignación
 - [x] Tests para asignación de cargas (8 tests nuevos)
 - [ ] Checkpoint y entrega
+
+- [x] Error en /loads: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO: agregada validación defensiva con optional chaining en Finance.tsx

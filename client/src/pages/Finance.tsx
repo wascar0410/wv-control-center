@@ -91,18 +91,18 @@ export default function Finance() {
   };
 
   const cashFlowChartData = (cashFlow ?? []).map((d) => ({
-    month: MONTHS[d.month - 1],
-    Ingresos: d.income,
-    Gastos: d.expenses,
-    Utilidad: d.profit,
+    month: MONTHS[d?.month ? d.month - 1 : 0] ?? "Mes",
+    Ingresos: d?.income ?? 0,
+    Gastos: d?.expenses ?? 0,
+    Utilidad: d?.profit ?? 0,
   }));
 
   // Expense breakdown for pie chart
   const expenseByCategory = (summary?.byCategory ?? [])
-    .filter((c) => c.type === "expense")
+    .filter((c) => c?.type === "expense")
     .map((c, i) => ({
-      name: CATEGORY_CONFIG[c.category]?.label ?? c.category,
-      value: c.total,
+      name: CATEGORY_CONFIG[c?.category]?.label ?? c?.category ?? "Otro",
+      value: c?.total ?? 0,
       color: PIE_COLORS[i % PIE_COLORS.length],
     }));
 
