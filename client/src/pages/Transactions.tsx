@@ -83,10 +83,10 @@ export default function Transactions() {
           ) : bankAccounts && bankAccounts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {bankAccounts.map((account) => (
-                <button
+                <div
                   key={account.id}
                   onClick={() => setSelectedBankAccount(account.id)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                  className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
                     selectedBankAccount === account.id
                       ? "border-primary bg-primary/10"
                       : "border-border bg-background/50 hover:border-primary/50"
@@ -103,19 +103,18 @@ export default function Transactions() {
                         {" •••• " + account.accountLast4}
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleUnlinkAccount(account.id);
                       }}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      className="p-1 rounded hover:bg-destructive/10 text-destructive transition-colors"
+                      title="Desconectar cuenta"
                     >
                       <Unlink2 className="w-4 h-4" />
-                    </Button>
+                    </button>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           ) : (
