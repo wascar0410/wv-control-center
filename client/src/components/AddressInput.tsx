@@ -51,18 +51,30 @@ export default function AddressInput({
     try {
       const result = await geocodeAddressMutation.refetch();
       
+      if (result.error) {
+        const errorMsg = result.error?.message || "No se pudieron obtener las coordenadas. Intenta ingresar manualmente.";
+        setError(errorMsg);
+        toast.warning(errorMsg);
+        setIsLoading(false);
+        return;
+      }
+
       if (result.data) {
         onCoordinatesChange(result.data.latitude, result.data.longitude);
         if (onFormattedAddressChange) {
           onFormattedAddressChange(result.data.formattedAddress);
         }
-        toast.success("Coordenadas encontradas exitosamente");
+        toast.success("✓ Coordenadas encontradas");
         setShowCoordinates(true);
+      } else {
+        setError("No se encontraron coordenadas. Intenta con una dirección más específica.");
+        toast.warning("Dirección no encontrada. Intenta con más detalles.");
       }
     } catch (err: any) {
-      const errorMessage = err?.message || "No se pudieron obtener las coordenadas";
+      console.error("[Geocoding Error]", err);
+      const errorMessage = "Geocodificación no disponible. Ingresa las coordenadas manualmente.";
       setError(errorMessage);
-      toast.error(errorMessage);
+      toast.info(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -136,6 +148,37 @@ export default function AddressInput({
           </div>
         </div>
       )}
+
+      {/* Manual coordinate input */}
+      <details className="text-xs text-muted-foreground cursor-pointer">
+        <summary className="font-medium hover:text-foreground">📍 Ingresar coordenadas manualmente</summary>
+        <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t">
+          <div>
+            <Label htmlFor={`lat-${label}`} className="text-xs">Latitud</Label>
+            <Input
+              id={`lat-${label}`}
+              type="number"
+              placeholder="40.7128"
+              step="0.0001"
+              value={latitude === 0 ? "" : latitude}
+              onChange={(e) => onCoordinatesChange(parseFloat(e.target.value) || 0, longitude)}
+              className="text-xs"
+            />
+          </div>
+          <div>
+            <Label htmlFor={`lng-${label}`} className="text-xs">Longitud</Label>
+            <Input
+              id={`lng-${label}`}
+              type="number"
+              placeholder="-74.0060"
+              step="0.0001"
+              value={longitude === 0 ? "" : longitude}
+              onChange={(e) => onCoordinatesChange(latitude, parseFloat(e.target.value) || 0)}
+              className="text-xs"
+            />
+          </div>
+        </div>
+      </details>
 
       <p className="text-xs text-muted-foreground">
         💡 Escribe la dirección y presiona Enter o haz clic en el botón de ubicación
