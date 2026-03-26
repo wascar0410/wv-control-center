@@ -162,3 +162,13 @@
 - [x] Frontend: actualizar QuotationForm para usar AddressInput (elimina entrada manual de coordenadas)
 - [x] Tests para geocoding (10 tests nuevos, 95/95 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 20: Integración Google Routes API (Distancia y Tiempo Real)
+- [x] Backend: crear helper para Google Routes API (calculateRoute, calculateMultipleRoutes)
+- [x] Backend: agregar tRPC router para calculateRoute y calculateMultipleRoutes
+- [x] Backend: actualizar quotationRouter para usar Routes en lugar de Haversine
+- [x] Frontend: actualizar QuotationResults para mostrar tiempo de conducción
+- [x] Frontend: agregar indicador de tiempo estimado en QuotationForm
+- [x] Tests para Google Routes API (12 tests nuevos, 107/107 total pasando)
+- [x] Checkpoint y entrega

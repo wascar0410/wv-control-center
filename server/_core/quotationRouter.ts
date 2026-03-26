@@ -8,6 +8,7 @@ import {
   deleteLoadQuotation,
   getQuotationsByStatus
 } from "../db";
+import { calculateMultipleRoutes } from "./routes";
 
 // Haversine formula to calculate distance between two points
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -69,14 +70,26 @@ export const quotationRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Calculate distances using Haversine formula
-      const emptyMiles = calculateDistance(input.vanLat, input.vanLng, input.pickupLat, input.pickupLng);
-      const loadedMiles = calculateDistance(input.pickupLat, input.pickupLng, input.deliveryLat, input.deliveryLng);
-      const returnEmptyMiles = input.includeReturnEmpty
-        ? calculateDistance(input.deliveryLat, input.deliveryLng, input.vanLat, input.vanLng)
-        : 0;
-      
-      const totalMiles = emptyMiles + loadedMiles + returnEmptyMiles;
+      // Calculate distances and durations using Google Routes API
+      const routesData = await calculateMultipleRoutes(
+        input.vanLat,
+        input.vanLng,
+        input.pickupLat,
+        input.pickupLng,
+        input.deliveryLat,
+        input.deliveryLng,
+        input.includeReturnEmpty
+      );
+
+      if (!routesData) {
+        throw new Error("No se pudo calcular la ruta. Verifica las coordenadas e intenta de nuevo.");
+      }
+
+      const emptyMiles = routesData.emptyRoute?.distanceMiles || 0;
+      const loadedMiles = routesData.loadedRoute?.distanceMiles || 0;
+      const returnEmptyMiles = routesData.returnRoute?.distanceMiles || 0;
+      const totalMiles = routesData.totalDistanceMiles;
+      const totalDurationHours = routesData.totalDurationHours;
 
       // Calculate base price
       let totalPrice = totalMiles * input.ratePerMile;
@@ -129,6 +142,7 @@ export const quotationRouter = router({
         returnEmptyMiles: Math.round(returnEmptyMiles * 100) / 100,
         totalMiles: Math.round(totalMiles * 100) / 100,
         totalPrice: Math.round(totalPrice * 100) / 100,
+        totalDurationHours: Math.round(totalDurationHours * 100) / 100,
         ...profitability,
       };
     }),

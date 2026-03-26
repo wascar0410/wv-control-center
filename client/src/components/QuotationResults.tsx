@@ -12,6 +12,7 @@ interface QuotationResultsProps {
   estimatedOperatingCost: number;
   estimatedProfit: number;
   profitMarginPercent: number;
+  totalDurationHours?: number;
 }
 
 export default function QuotationResults({
@@ -24,6 +25,7 @@ export default function QuotationResults({
   estimatedOperatingCost,
   estimatedProfit,
   profitMarginPercent,
+  totalDurationHours = 0,
 }: QuotationResultsProps) {
   const isRentable = profitMarginPercent >= 15; // Minimum 15% margin
 
@@ -53,6 +55,14 @@ export default function QuotationResults({
               <p className="text-sm text-muted-foreground">Total Millas</p>
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{totalMiles.toFixed(1)}</p>
             </div>
+            {totalDurationHours > 0 && (
+              <div className="p-4 rounded-lg bg-indigo-50 dark:bg-indigo-950">
+                <p className="text-sm text-muted-foreground">Tiempo Estimado</p>
+                <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                  {totalDurationHours.toFixed(1)}h
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
