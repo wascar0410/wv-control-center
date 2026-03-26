@@ -138,8 +138,9 @@ export function AssignLoadModal({ open, onOpenChange, onSuccess }: AssignLoadMod
                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                 </div>
               ) : !drivers || drivers.length === 0 ? (
-                <div className="text-center py-4 text-sm text-muted-foreground">
-                  No hay choferes disponibles
+                <div className="text-center py-6 space-y-3">
+                  <p className="text-sm text-muted-foreground">No hay choferes registrados en el sistema</p>
+                  <p className="text-xs text-muted-foreground/70">Para asignar cargas, primero debes registrar choferes con rol 'driver'</p>
                 </div>
               ) : (
                 drivers.map((driver) => (

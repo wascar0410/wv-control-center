@@ -91,3 +91,8 @@
 - [x] Control de acceso por rol: Rutas protegidas (solo Admin ve Cargas, Finanzas, Socios)
 - [x] Tests: 40/40 pasando
 - [x] Checkpoint final guardado
+
+
+## Bugs Actuales
+- [x] Error 502 en servidor — RESUELTO: No había choferes registrados. Creado usuario de prueba "Juan Pérez" con rol driver
+- [x] Modal de asignar carga no muestra choferes — RESUELTO: Mejorado mensaje cuando no hay choferes disponibles
