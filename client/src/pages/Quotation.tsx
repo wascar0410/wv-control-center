@@ -2,6 +2,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import QuotationForm, { type QuotationFormData } from "@/components/QuotationForm";
 import QuotationResults from "@/components/QuotationResults";
+import CreateLoadModal from "@/components/CreateLoadModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, RotateCcw } from "lucide-react";
@@ -18,11 +19,16 @@ interface QuotationResult {
   estimatedOperatingCost: number;
   estimatedProfit: number;
   profitMarginPercent: number;
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  weight?: number;
 }
 
 export default function Quotation() {
   const [result, setResult] = useState<QuotationResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showCreateLoadModal, setShowCreateLoadModal] = useState(false);
+  const [formDataForLoad, setFormDataForLoad] = useState<QuotationFormData | null>(null);
 
   const calculateQuotation = trpc.quotation.calculateQuotation.useMutation({
     onSuccess: (data) => {
@@ -38,6 +44,7 @@ export default function Quotation() {
     setIsLoading(true);
     try {
       await calculateQuotation.mutateAsync(formData);
+      setFormDataForLoad(formData);
     } finally {
       setIsLoading(false);
     }
@@ -134,13 +141,27 @@ export default function Quotation() {
 
             {/* Action Buttons */}
             <div className="flex gap-4 justify-center">
-              <Button size="lg" className="min-w-[200px]">
-                Crear Carga
+              <Button size="lg" className="min-w-[200px]" onClick={() => setShowCreateLoadModal(true)}>
+                ✓ Crear Carga
               </Button>
               <Button size="lg" variant="outline" className="min-w-[200px]" onClick={handleReset}>
                 Calcular Otra
               </Button>
             </div>
+
+            {/* Create Load Modal */}
+            {result && formDataForLoad && (
+              <CreateLoadModal
+                isOpen={showCreateLoadModal}
+                onClose={() => setShowCreateLoadModal(false)}
+                quotationData={{
+                  pickupAddress: formDataForLoad.pickupAddress,
+                  deliveryAddress: formDataForLoad.deliveryAddress,
+                  weight: formDataForLoad.weight,
+                  totalPrice: result.totalPrice,
+                }}
+              />
+            )}
           </div>
         )}
       </div>

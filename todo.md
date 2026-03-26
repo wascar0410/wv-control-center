@@ -184,3 +184,12 @@
 - [x] Frontend: integrar en QuotationForm para soportar múltiples paradas
 - [x] Tests para optimización de rutas (10 tests nuevos, 117/117 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 22: Correcciones y Mejoras
+- [x] Investigar y resolver error de permisos de Google Maps (mejorado manejo de errores en geocoding.ts)
+- [x] Unificar ventanas de cotización y creación de carga (CreateLoadModal integrado en Quotation page)
+- [x] Crear carga automáticamente después de confirmar cotización (modal con datos pre-llenados)
+- [x] Usar tRPC router existente loads.create para crear carga desde cotización
+- [x] Tests para nuevo flujo integrado (117/117 tests pasando)
+- [x] Checkpoint y entrega

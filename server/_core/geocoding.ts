@@ -16,28 +16,49 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
     return null;
   }
 
+  // Validate API key
+  if (!ENV.GOOGLE_MAPS_API_KEY) {
+    console.error("[Geocoding] Google Maps API key not configured");
+    return null;
+  }
+
   try {
     const params = new URLSearchParams({
       address: address.trim(),
       key: ENV.GOOGLE_MAPS_API_KEY,
+      components: "country:US", // Restrict to US for better results
     });
 
-    const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?${params}`, {
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
+    
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     });
 
     if (!response.ok) {
-      console.error("[Geocoding] API error:", response.status, response.statusText);
+      console.error("[Geocoding] API error:", response.status, response.statusText, await response.text());
       return null;
     }
 
     const data = await response.json();
 
-    if (data.status !== "OK" || !data.results || data.results.length === 0) {
+    // Check for API errors
+    if (data.status === "REQUEST_DENIED") {
+      console.error("[Geocoding] Request denied:", data.error_message);
+      return null;
+    }
+
+    if (data.status === "ZERO_RESULTS") {
       console.warn("[Geocoding] No results found for address:", address);
+      return null;
+    }
+
+    if (data.status !== "OK" || !data.results || data.results.length === 0) {
+      console.warn("[Geocoding] Unexpected status:", data.status);
       return null;
     }
 
@@ -50,8 +71,12 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
       longitude: location.lng,
       formattedAddress: result.formatted_address,
     };
-  } catch (error) {
-    console.error("[Geocoding] Error:", error);
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      console.error("[Geocoding] Request timeout");
+    } else {
+      console.error("[Geocoding] Error:", error?.message || error);
+    }
     return null;
   }
 }
