@@ -1,0 +1,15 @@
+{
+  "query": "SELECT id, status, price FROM loads ORDER BY id DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute SELECT id, status, price FROM loads ORDER BY id DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "status": "delivered",
+      "price": "800.00"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tstatus\tprice\n1\tdelivered\t800.00\n",
+  "stderr": "",
+  "execution_time_ms": 510
+}
