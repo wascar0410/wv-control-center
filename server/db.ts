@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte, or, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   fuelLogs,
@@ -454,4 +454,172 @@ export async function deletePOD(podId: number) {
   if (!db) throw new Error("Database not available");
   
   await db.delete(podDocuments).where(eq(podDocuments.id, podId));
+}
+
+
+// ─── Driver Performance Stats ─────────────────────────────────────────────────
+
+export async function getDriverStats(driverId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    // Total delivered loads
+    const deliveredLoads = await db
+      .select()
+      .from(loads)
+      .where(
+        and(
+          eq(loads.assignedDriverId, driverId),
+          inArray(loads.status, ["delivered", "invoiced", "paid"])
+        )
+      );
+
+    // Total income from paid loads
+    const paidLoads = await db
+      .select()
+      .from(loads)
+      .where(
+        and(
+          eq(loads.assignedDriverId, driverId),
+          eq(loads.status, "paid")
+        )
+      );
+
+    const totalIncome = paidLoads.reduce((sum, load) => sum + (Number(load.price) || 0), 0);
+
+    // Total fuel expenses
+    const fuelExpenses = await db
+      .select()
+      .from(fuelLogs)
+      .where(eq(fuelLogs.driverId, driverId));
+
+    const totalFuelExpense = fuelExpenses.reduce((sum, log) => sum + (Number(log.amount) || 0), 0);
+
+    // Total net margin
+    const totalNetMargin = paidLoads.reduce((sum, load) => {
+      const fuel = Number(load.estimatedFuel) || 0;
+      const tolls = Number(load.estimatedTolls) || 0;
+      return sum + ((Number(load.price) || 0) - fuel - tolls);
+    }, 0);
+
+    // Active loads
+    const activeLoads = await db
+      .select()
+      .from(loads)
+      .where(
+        and(
+          eq(loads.assignedDriverId, driverId),
+          inArray(loads.status, ["available", "in_transit"])
+        )
+      );
+
+    // Average margin per delivery
+    const avgMarginPerDelivery = deliveredLoads.length > 0 
+      ? totalNetMargin / deliveredLoads.length 
+      : 0;
+
+    return {
+      totalDeliveries: deliveredLoads.length,
+      totalIncome,
+      totalFuelExpense,
+      totalNetMargin,
+      activeLoads: activeLoads.length,
+      avgMarginPerDelivery: Math.round(avgMarginPerDelivery * 100) / 100,
+      efficiency: deliveredLoads.length > 0 
+        ? Math.round((totalNetMargin / totalIncome) * 100) 
+        : 0,
+    };
+  } catch (error) {
+    console.error("[Database] Error getting driver stats:", error);
+    return null;
+  }
+}
+
+export async function getDriverMonthlyTrends(driverId: number, months: number = 6) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    const paidLoads = await db
+      .select()
+      .from(loads)
+      .where(
+        and(
+          eq(loads.assignedDriverId, driverId),
+          eq(loads.status, "paid")
+        )
+      );
+
+    // Group by month
+    const trends: Record<string, { income: number; expenses: number; deliveries: number }> = {};
+
+    // Initialize last N months
+    for (let i = months - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthKey = date.toISOString().slice(0, 7); // YYYY-MM
+      trends[monthKey] = { income: 0, expenses: 0, deliveries: 0 };
+    }
+
+    // Add load data
+    paidLoads.forEach((load) => {
+      if (load.deliveryDate) {
+        const monthKey = new Date(load.deliveryDate).toISOString().slice(0, 7);
+        if (trends[monthKey]) {
+          trends[monthKey].income += Number(load.price) || 0;
+          trends[monthKey].expenses += (Number(load.estimatedFuel) || 0) + (Number(load.estimatedTolls) || 0);
+          trends[monthKey].deliveries += 1;
+        }
+      }
+    });
+
+    // Add fuel expenses
+    const fuelLogsData = await db
+      .select()
+      .from(fuelLogs)
+      .where(eq(fuelLogs.driverId, driverId));
+
+    fuelLogsData.forEach((log) => {
+      if (log.logDate) {
+        const monthKey = new Date(log.logDate).toISOString().slice(0, 7);
+        if (trends[monthKey]) {
+          trends[monthKey].expenses += Number(log.amount) || 0;
+        }
+      }
+    });
+
+    return Object.entries(trends).map(([month, data]) => ({
+      month,
+      income: Math.round(data.income * 100) / 100,
+      expenses: Math.round(data.expenses * 100) / 100,
+      netMargin: Math.round((data.income - data.expenses) * 100) / 100,
+      deliveries: data.deliveries,
+    }));
+  } catch (error) {
+    console.error("[Database] Error getting driver monthly trends:", error);
+    return [];
+  }
+}
+
+export async function getDriverRecentDeliveries(driverId: number, limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return db
+      .select()
+      .from(loads)
+      .where(
+        and(
+          eq(loads.assignedDriverId, driverId),
+          inArray(loads.status, ["delivered", "invoiced", "paid"])
+        )
+      )
+      .orderBy(desc(loads.deliveryDate))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Database] Error getting recent deliveries:", error);
+    return [];
+  }
 }

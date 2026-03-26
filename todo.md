@@ -115,3 +115,15 @@
 - [x] Notificaciones al gestor cuando se sube POD
 - [x] Tests para POD upload (10 tests nuevos, 54/54 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 16: Driver Performance Dashboard
+- [x] Backend: queries para estadísticas del chofer (entregas, ingresos, gastos, eficiencia)
+- [x] Backend: routers tRPC para getDriverStats, getDriverMonthlyTrends, getRecentDeliveries
+- [x] Frontend: componentes para KPIs (entregas totales, ingresos, gastos, margen neto)
+- [x] Frontend: gráficos de tendencias mensuales (Recharts)
+- [x] Frontend: tabla de entregas recientes del chofer
+- [x] Frontend: página DriverPerformance con layout responsivo
+- [x] Navegación: agregar enlace en DashboardLayout (Desempeño)
+- [x] Tests para driver stats (10 tests nuevos, 64/64 total pasando)
+- [x] Checkpoint y entrega

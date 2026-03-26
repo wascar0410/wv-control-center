@@ -31,6 +31,7 @@ import {
   Users,
   Truck,
   Shield,
+  TrendingUp,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -44,6 +45,7 @@ const menuItems = [
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },
   { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
+  { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

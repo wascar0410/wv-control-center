@@ -13,7 +13,39 @@ import {
   updateLoad, updateLoadStatus, updatePartner, getDrawsByPeriod, getAllDrivers,
   createLoadAssignment, getLoadAssignments, getAssignmentById, updateAssignmentStatus, getAvailableLoads, getPendingAssignmentsForDriver,
   uploadPOD, getPODsByLoadId, getPODsByDriverId, getPODById, deletePOD,
+  getDriverStats, getDriverMonthlyTrends, getDriverRecentDeliveries,
 } from "./db";
+
+// ─── Driver Stats Router ─────────────────────────────────────────────────────────
+
+const driverStatsRouter = router({
+  getStats: protectedProcedure
+    .input(z.object({ driverId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver estas estadísticas");
+      }
+      return getDriverStats(input.driverId);
+    }),
+
+  getMonthlyTrends: protectedProcedure
+    .input(z.object({ driverId: z.number(), months: z.number().min(1).max(24).default(6) }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver estas estadísticas");
+      }
+      return getDriverMonthlyTrends(input.driverId, input.months);
+    }),
+
+  getRecentDeliveries: protectedProcedure
+    .input(z.object({ driverId: z.number(), limit: z.number().min(1).max(50).default(10) }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver estas entregas");
+      }
+      return getDriverRecentDeliveries(input.driverId, input.limit);
+    }),
+});
 
 // ─── Loads Router ─────────────────────────────────────────────────────────────
 
@@ -643,6 +675,7 @@ export const appRouter = router({
   finance: financeRouter,
   partnership: partnershipRouter,
   driver: driverRouter,
+  driverStats: driverStatsRouter,
   dashboard: dashboardRouter,
   assignment: assignmentRouter,
   pod: podRouter,
