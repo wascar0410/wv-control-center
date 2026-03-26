@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `pod_documents` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`loadId` int NOT NULL,\n\t`driverId` int NOT NULL,\n\t`assignmentId` int,\n\t`documentUrl` text NOT NULL,\n\t`documentKey` varchar(512) NOT NULL,\n\t`fileName` varchar(255) NOT NULL,\n\t`fileSize` int,\n\t`mimeType` varchar(50),\n\t`uploadedAt` timestamp NOT NULL DEFAULT (now()),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `pod_documents_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute CREATE TABLE `pod_documents` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`loadId` int NOT NULL,\n\t`driverId` int NOT NULL,\n\t`assignmentId` int,\n\t`documentUrl` text NOT NULL,\n\t`documentKey` varchar(512) NOT NULL,\n\t`fileName` varchar(255) NOT NULL,\n\t`fileSize` int,\n\t`mimeType` varchar(50),\n\t`uploadedAt` timestamp NOT NULL DEFAULT (now()),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `pod_documents_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 485
+}

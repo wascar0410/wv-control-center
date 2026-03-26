@@ -9,9 +9,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { MapView } from "@/components/Map";
+import { PODUploadModal } from "@/components/PODUploadModal";
 import {
   Truck, MapPin, Package, Fuel, Camera, CheckCircle2, Navigation,
-  Upload, Loader2, ArrowRight, Clock, Weight
+  Upload, Loader2, ArrowRight, Clock, Weight, FileCheck
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -30,6 +31,7 @@ export default function DriverView() {
   const [selectedLoad, setSelectedLoad] = useState<any>(null);
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [showBOLUpload, setShowBOLUpload] = useState(false);
+  const [showPODUpload, setShowPODUpload] = useState(false);
   const [fuelForm, setFuelForm] = useState({ amount: "", gallons: "", pricePerGallon: "", location: "" });
   const [bolFile, setBolFile] = useState<File | null>(null);
   const [bolPreview, setBolPreview] = useState<string | null>(null);
@@ -242,6 +244,7 @@ export default function DriverView() {
                     onStartTransit={() => statusMutation.mutate({ id: load.id, status: "in_transit" })}
                     onMarkDelivered={() => statusMutation.mutate({ id: load.id, status: "delivered" })}
                     onUploadBOL={() => { setSelectedLoad(load); setShowBOLUpload(true); }}
+                    onUploadPOD={() => { setSelectedLoad(load); setShowPODUpload(true); }}
                     onLogFuel={() => { setSelectedLoad(load); setShowFuelForm(true); }}
                   />
                 ))
@@ -502,12 +505,25 @@ export default function DriverView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* POD Upload Modal */}
+      <PODUploadModal
+        open={showPODUpload}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowPODUpload(false);
+            setSelectedLoad(null);
+          }
+        }}
+        loadId={selectedLoad?.id ?? 0}
+        clientName={selectedLoad?.clientName}
+      />
     </div>
   );
 }
 
 function LoadCard({
-  load, isSelected, onSelect, onStartTransit, onMarkDelivered, onUploadBOL, onLogFuel, onAccept, onReject, readonly
+  load, isSelected, onSelect, onStartTransit, onMarkDelivered, onUploadBOL, onUploadPOD, onLogFuel, onAccept, onReject, readonly
 }: {
   load: any;
   isSelected: boolean;
@@ -515,6 +531,7 @@ function LoadCard({
   onStartTransit?: () => void;
   onMarkDelivered?: () => void;
   onUploadBOL?: () => void;
+  onUploadPOD?: () => void;
   onLogFuel?: () => void;
   onAccept?: () => void;
   onReject?: () => void;
@@ -575,8 +592,13 @@ function LoadCard({
               </Button>
             )}
             {onUploadBOL && (
-              <Button size="sm" variant="outline" className="h-8 text-xs px-2" onClick={onUploadBOL}>
+              <Button size="sm" variant="outline" className="h-8 text-xs px-2" onClick={onUploadBOL} title="Subir BOL">
                 <Camera className="w-3 h-3" />
+              </Button>
+            )}
+            {onUploadPOD && (
+              <Button size="sm" variant="outline" className="h-8 text-xs px-2 border-green-500/30 text-green-400 hover:bg-green-500/10" onClick={onUploadPOD} title="Subir POD">
+                <FileCheck className="w-3 h-3" />
               </Button>
             )}
             {onLogFuel && (

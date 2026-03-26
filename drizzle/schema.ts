@@ -169,3 +169,23 @@ export const loadAssignments = mysqlTable("load_assignments", {
 
 export type LoadAssignment = typeof loadAssignments.$inferSelect;
 export type InsertLoadAssignment = typeof loadAssignments.$inferInsert;
+
+/**
+ * POD Documents - Proof of Delivery documents
+ */
+export const podDocuments = mysqlTable("pod_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  loadId: int("loadId").notNull(),
+  driverId: int("driverId").notNull(),
+  assignmentId: int("assignmentId"),
+  documentUrl: text("documentUrl").notNull(),
+  documentKey: varchar("documentKey", { length: 512 }).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileSize: int("fileSize"),
+  mimeType: varchar("mimeType", { length: 50 }),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PODDocument = typeof podDocuments.$inferSelect;
+export type InsertPODDocument = typeof podDocuments.$inferInsert;

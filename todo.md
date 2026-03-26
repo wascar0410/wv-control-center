@@ -104,4 +104,14 @@
 - [x] Vista del Chofer: botones de aceptar/rechazar en tab de Disponibles
 - [x] Notificaciones al gestor cuando chofer acepta/rechaza
 - [x] Tests para aceptación/rechazo de cargas (4 tests nuevos, 44/44 total pasando)
-- [ ] Checkpoint y entrega
+- [x] Checkpoint y entrega
+
+
+## Fase 15: Comprobante de Entrega (POD) desde Vista de Carga
+- [x] Actualizar esquema DB: tabla pod_documents
+- [x] Backend: routers tRPC para uploadPOD y getPOD con S3 storage
+- [x] Componente PODUploadModal con validación y preview
+- [x] Integrar POD upload en vista de carga del chofer (botón en LoadCard)
+- [x] Notificaciones al gestor cuando se sube POD
+- [x] Tests para POD upload (10 tests nuevos, 54/54 total pasando)
+- [x] Checkpoint y entrega

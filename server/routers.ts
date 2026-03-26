@@ -12,6 +12,7 @@ import {
   getLoads, getMonthlyCashFlow, getOwnerDraws, getPartners, getTransactions,
   updateLoad, updateLoadStatus, updatePartner, getDrawsByPeriod, getAllDrivers,
   createLoadAssignment, getLoadAssignments, getAssignmentById, updateAssignmentStatus, getAvailableLoads, getPendingAssignmentsForDriver,
+  uploadPOD, getPODsByLoadId, getPODsByDriverId, getPODById, deletePOD,
 } from "./db";
 
 // ─── Loads Router ─────────────────────────────────────────────────────────────
@@ -546,6 +547,86 @@ const assignmentRouter = router({
     }),
 });
 
+// ─── POD Router ───────────────────────────────────────────────────────────────
+
+const podRouter = router({
+  upload: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      assignmentId: z.number().optional(),
+      documentUrl: z.string().url().optional(),
+      documentKey: z.string(),
+      fileName: z.string(),
+      fileSize: z.number().positive(),
+      mimeType: z.string(),
+      fileBase64: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Validar que el chofer es el asignado a esta carga
+      const load = await getLoadById(input.loadId);
+      if (!load) throw new Error("Carga no encontrada");
+      if (load.assignedDriverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para subir POD de esta carga");
+      }
+
+      let documentUrl = input.documentUrl || "";
+      if (input.fileBase64) {
+        const buffer = Buffer.from(input.fileBase64, "base64");
+        const result = await storagePut(input.documentKey, buffer, input.mimeType);
+        documentUrl = result.url;
+      }
+
+      if (!documentUrl) {
+        throw new Error("No se pudo generar URL del documento");
+      }
+
+      await uploadPOD({
+        loadId: input.loadId,
+        driverId: ctx.user.id,
+        assignmentId: input.assignmentId,
+        documentUrl,
+        documentKey: input.documentKey,
+        fileName: input.fileName,
+        fileSize: input.fileSize,
+        mimeType: input.mimeType,
+      });
+
+      // Notificar al gestor
+      await notifyOwner({
+        title: "Comprobante de Entrega Subido",
+        content: `${ctx.user.name} subio POD para carga #${input.loadId} (${load.clientName})`,
+      });
+
+      return { success: true };
+    }),
+
+  getByLoad: protectedProcedure
+    .input(z.object({ loadId: z.number() }))
+    .query(({ input }) => getPODsByLoadId(input.loadId)),
+
+  getByDriver: protectedProcedure
+    .input(z.object({ driverId: z.number() }))
+    .query(({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver estos PODs");
+      }
+      return getPODsByDriverId(input.driverId);
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ podId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const pod = await getPODById(input.podId);
+      if (!pod) throw new Error("POD no encontrado");
+      if (pod.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para eliminar este POD");
+      }
+
+      await deletePOD(input.podId);
+      return { success: true };
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -564,6 +645,7 @@ export const appRouter = router({
   driver: driverRouter,
   dashboard: dashboardRouter,
   assignment: assignmentRouter,
+  pod: podRouter,
 });
 
 export type AppRouter = typeof appRouter;

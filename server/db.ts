@@ -7,12 +7,14 @@ import {
   InsertLoadAssignment,
   InsertOwnerDraw,
   InsertPartner,
+  InsertPODDocument,
   InsertTransaction,
   InsertUser,
   loadAssignments,
   loads,
   ownerDraws,
   partnership,
+  podDocuments,
   transactions,
   users,
 } from "../drizzle/schema";
@@ -399,4 +401,57 @@ export async function getAvailableLoads() {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(loads).where(eq(loads.status, "available")).orderBy(desc(loads.createdAt));
+}
+
+
+// ─── POD Documents ───────────────────────────────────────────────────────────
+
+export async function uploadPOD(data: InsertPODDocument) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(podDocuments).values(data);
+  return result;
+}
+
+export async function getPODsByLoadId(loadId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db
+    .select()
+    .from(podDocuments)
+    .where(eq(podDocuments.loadId, loadId))
+    .orderBy(desc(podDocuments.uploadedAt));
+}
+
+export async function getPODsByDriverId(driverId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return db
+    .select()
+    .from(podDocuments)
+    .where(eq(podDocuments.driverId, driverId))
+    .orderBy(desc(podDocuments.uploadedAt));
+}
+
+export async function getPODById(podId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db
+    .select()
+    .from(podDocuments)
+    .where(eq(podDocuments.id, podId))
+    .limit(1);
+  
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function deletePOD(podId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(podDocuments).where(eq(podDocuments.id, podId));
 }
