@@ -238,33 +238,33 @@ export default function Loads() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filteredLoads.map((load) => {
-                  const statusCfg = STATUS_CONFIG[load.status] ?? STATUS_CONFIG.available;
-                  const margin = parseFloat(String(load.netMargin ?? 0));
+                  const statusCfg = STATUS_CONFIG[load?.status ?? 'available'] ?? STATUS_CONFIG.available;
+                  const margin = parseFloat(String(load?.netMargin ?? 0));
                   const isPositive = margin >= 0;
                   return (
-                    <tr key={load.id} className="hover:bg-accent/20 transition-colors">
+                    <tr key={load?.id ?? Math.random()} className="hover:bg-accent/20 transition-colors">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                             <Package className="w-3.5 h-3.5 text-primary" />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-foreground truncate max-w-[140px]">{load.clientName}</p>
-                            <p className="text-xs text-muted-foreground">{load.weight} {load.weightUnit}</p>
+                            <p className="text-sm font-medium text-foreground truncate max-w-[140px]">{load?.clientName ?? 'N/A'}</p>
+                            <p className="text-xs text-muted-foreground">{load?.weight ?? 'N/A'} {load?.weightUnit ?? 'lbs'}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         <div className="text-xs text-muted-foreground space-y-0.5 max-w-[180px]">
-                          <p className="truncate"><span className="text-green-400">A</span> {load.pickupAddress}</p>
-                          <p className="truncate"><span className="text-red-400">B</span> {load.deliveryAddress}</p>
+                          <p className="truncate"><span className="text-green-400">A</span> {load?.pickupAddress ?? 'N/A'}</p>
+                          <p className="truncate"><span className="text-red-400">B</span> {load?.deliveryAddress ?? 'N/A'}</p>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-sm text-muted-foreground">{load.merchandiseType}</span>
+                        <span className="text-sm text-muted-foreground">{load?.merchandiseType ?? 'N/A'}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-sm font-semibold text-foreground">{formatCurrency(load.price)}</span>
+                        <span className="text-sm font-semibold text-foreground">{formatCurrency(load?.price ?? 0)}</span>
                       </td>
                       <td className="px-4 py-3 text-right hidden sm:table-cell">
                         <span className={`text-sm font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
@@ -283,20 +283,20 @@ export default function Loads() {
                               size="sm"
                               variant="outline"
                               className="h-7 text-xs px-2 hidden sm:flex"
-                              onClick={() => statusMutation.mutate({ id: load.id, status: statusCfg.next as any })}
+                              onClick={() => statusMutation.mutate({ id: load?.id ?? 0, status: statusCfg.next as any })}
                               disabled={statusMutation.isPending}
                             >
-                              {STATUS_NEXT_LABEL[load.status]}
+                              {STATUS_NEXT_LABEL[load?.status ?? 'available']}
                             </Button>
                           )}
-                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(load)}>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleEdit(load ?? {} as any)}>
                             <Pencil className="w-3.5 h-3.5" />
                           </Button>
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-7 w-7 text-destructive hover:text-destructive"
-                            onClick={() => { if (confirm("¿Eliminar esta carga?")) deleteMutation.mutate({ id: load.id }); }}
+                            onClick={() => { if (confirm("¿Eliminar esta carga?")) deleteMutation.mutate({ id: load?.id ?? 0 }); }}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
