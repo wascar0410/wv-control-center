@@ -176,8 +176,8 @@ export default function DriverView() {
     });
   };
 
-  const activeLoads = (loads ?? []).filter((l) => l.status === "in_transit" || l.status === "available");
-  const completedLoads = (loads ?? []).filter((l) => l.status === "delivered" || l.status === "paid" || l.status === "invoiced");
+  const activeLoads = (loads ?? []).filter((l) => l?.status === "in_transit" || l?.status === "available");
+  const completedLoads = (loads ?? []).filter((l) => l?.status === "delivered" || l?.status === "paid" || l?.status === "invoiced");
 
   return (
     <div className="space-y-5">
@@ -466,7 +466,7 @@ function LoadCard({
   onLogFuel?: () => void;
   readonly?: boolean;
 }) {
-  const statusCfg = STATUS_CONFIG[load.status] ?? STATUS_CONFIG.available;
+  const statusCfg = STATUS_CONFIG[load?.status ?? 'available'] ?? STATUS_CONFIG.available;
 
   return (
     <Card
@@ -476,8 +476,8 @@ function LoadCard({
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{load.clientName}</p>
-            <p className="text-xs text-muted-foreground">{load.merchandiseType} · {load.weight} {load.weightUnit}</p>
+            <p className="text-sm font-semibold text-foreground truncate">{load?.clientName ?? 'N/A'}</p>
+            <p className="text-xs text-muted-foreground">{load?.merchandiseType ?? 'N/A'} · {load?.weight ?? 'N/A'} {load?.weightUnit ?? 'lbs'}</p>
           </div>
           <Badge variant="outline" className={`text-xs border shrink-0 ${statusCfg.className}`}>
             {statusCfg.label}
@@ -487,25 +487,25 @@ function LoadCard({
         <div className="space-y-1.5 text-xs">
           <div className="flex items-start gap-2">
             <span className="w-4 h-4 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center font-bold shrink-0 mt-0.5">A</span>
-            <span className="text-muted-foreground truncate">{load.pickupAddress}</span>
+            <span className="text-muted-foreground truncate">{load?.pickupAddress ?? 'N/A'}</span>
           </div>
           <div className="flex items-center gap-2 pl-1">
             <ArrowRight className="w-3 h-3 text-muted-foreground/40 shrink-0" />
           </div>
           <div className="flex items-start gap-2">
             <span className="w-4 h-4 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center font-bold shrink-0 mt-0.5">B</span>
-            <span className="text-muted-foreground truncate">{load.deliveryAddress}</span>
+            <span className="text-muted-foreground truncate">{load?.deliveryAddress ?? 'N/A'}</span>
           </div>
         </div>
 
         {!readonly && (
           <div className="flex gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
-            {load.status === "available" && onStartTransit && (
+            {load?.status === "available" && onStartTransit && (
               <Button size="sm" className="flex-1 h-8 text-xs" onClick={onStartTransit}>
                 <Truck className="w-3 h-3 mr-1" /> Iniciar
               </Button>
             )}
-            {load.status === "in_transit" && onMarkDelivered && (
+            {load?.status === "in_transit" && onMarkDelivered && (
               <Button size="sm" className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700" onClick={onMarkDelivered}>
                 <CheckCircle2 className="w-3 h-3 mr-1" /> Entregada
               </Button>

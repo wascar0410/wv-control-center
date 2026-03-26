@@ -90,3 +90,5 @@
 
 - [x] Error en /partnership: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO: agregada validación defensiva con optional chaining en Partnership.tsx
 - [x] Error en /loads: "Cannot read properties of undefined (reading 'expenses')" (segunda ocurrencia) — RESUELTO: agregada validación defensiva en Loads.tsx para todas las referencias a load
+
+- [x] Vista del Chofer no muestra cargas activas/asignadas — RESUELTO: Agregada validación defensiva en DriverView.tsx. NOTA: Las cargas deben ser asignadas al chofer desde el Dashboard usando el botón 'Asignar Carga'
