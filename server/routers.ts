@@ -11,6 +11,7 @@ import {
   deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
   getLoads, getMonthlyCashFlow, getOwnerDraws, getPartners, getTransactions,
   updateLoad, updateLoadStatus, updatePartner, getDrawsByPeriod, getAllDrivers,
+  createLoadAssignment, getLoadAssignments, getAssignmentById, updateAssignmentStatus, getAvailableLoads,
 } from "./db";
 
 // ─── Loads Router ─────────────────────────────────────────────────────────────
@@ -459,6 +460,51 @@ const dashboardRouter = router({
   recentLoads: protectedProcedure.query(() => getLoads()),
 });
 
+// ─── Assignment Router ────────────────────────────────────────────────────────
+
+const assignmentRouter = router({
+  availableLoads: protectedProcedure.query(() => getAvailableLoads()),
+  
+  drivers: protectedProcedure.query(() => getAllDrivers()),
+  
+  assign: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      driverId: z.number(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const id = await createLoadAssignment({
+        loadId: input.loadId,
+        driverId: input.driverId,
+        assignedBy: ctx.user.id,
+        notes: input.notes,
+      });
+      
+      const load = await getLoadById(input.loadId);
+      await notifyOwner({
+        title: "📦 Carga Asignada",
+        content: `Carga #${input.loadId} (${load?.clientName}) asignada al chofer`,
+      });
+      
+      return { id };
+    }),
+  
+  list: protectedProcedure
+    .input(z.object({ driverId: z.number().optional(), status: z.string().optional() }).optional())
+    .query(({ input }) => getLoadAssignments(input?.driverId, input?.status)),
+  
+  updateStatus: protectedProcedure
+    .input(z.object({
+      assignmentId: z.number(),
+      status: z.enum(["pending", "accepted", "rejected", "completed"]),
+    }))
+    .mutation(async ({ input }) => {
+      await updateAssignmentStatus(input.assignmentId, input.status);
+      return { success: true };
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -476,6 +522,7 @@ export const appRouter = router({
   partnership: partnershipRouter,
   driver: driverRouter,
   dashboard: dashboardRouter,
+  assignment: assignmentRouter,
 });
 
 export type AppRouter = typeof appRouter;

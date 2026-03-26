@@ -75,3 +75,13 @@
 - [x] Google Maps cargándose múltiples veces en /driver (error: "You have included the Google Maps JavaScript API multiple times") — RESUELTO: agregada verificación global y de DOM
 
 - [x] Consulta SQL de flujo de caja fallando en /driver (GROUP BY MONTH issue) — RESUELTO: migrado a raw SQL con db.execute()
+
+
+## Fase 11: Asignación de Cargas del Gestor al Chofer
+- [x] Actualizar esquema DB: tabla loadAssignments con relaciones
+- [x] Crear routers tRPC: assignLoad, getAssignments, updateAssignmentStatus
+- [x] Crear modal de asignación con búsqueda y filtros
+- [x] Agregar vista de asignaciones en Dashboard del Gestor
+- [x] Notificaciones al chofer cuando recibe asignación
+- [x] Tests para asignación de cargas (8 tests nuevos)
+- [ ] Checkpoint y entrega

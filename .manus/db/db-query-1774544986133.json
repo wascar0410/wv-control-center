@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `load_assignments` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`loadId` int NOT NULL,\n\t`driverId` int NOT NULL,\n\t`assignedBy` int NOT NULL,\n\t`status` enum('pending','accepted','rejected','completed') NOT NULL DEFAULT 'pending',\n\t`assignedAt` timestamp NOT NULL DEFAULT (now()),\n\t`acceptedAt` timestamp,\n\t`completedAt` timestamp,\n\t`notes` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `load_assignments_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute CREATE TABLE `load_assignments` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`loadId` int NOT NULL,\n\t`driverId` int NOT NULL,\n\t`assignedBy` int NOT NULL,\n\t`status` enum('pending','accepted','rejected','completed') NOT NULL DEFAULT 'pending',\n\t`assignedAt` timestamp NOT NULL DEFAULT (now()),\n\t`acceptedAt` timestamp,\n\t`completedAt` timestamp,\n\t`notes` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,\n\tCONSTRAINT `load_assignments_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 427
+}

@@ -4,10 +4,12 @@ import {
   fuelLogs,
   InsertFuelLog,
   InsertLoad,
+  InsertLoadAssignment,
   InsertOwnerDraw,
   InsertPartner,
   InsertTransaction,
   InsertUser,
+  loadAssignments,
   loads,
   ownerDraws,
   partnership,
@@ -299,4 +301,50 @@ export async function getDashboardKPIs() {
     monthExpenses: finSummary.expenses,
     monthProfit: finSummary.netProfit,
   };
+}
+
+
+// ─── Load Assignments ─────────────────────────────────────────────────────────
+
+export async function createLoadAssignment(data: InsertLoadAssignment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(loadAssignments).values(data).execute() as any;
+  return result.insertId as number;
+}
+
+export async function getLoadAssignments(driverId?: number, status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (driverId) conditions.push(eq(loadAssignments.driverId, driverId));
+  if (status) conditions.push(eq(loadAssignments.status, status as any));
+  return db
+    .select()
+    .from(loadAssignments)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(loadAssignments.assignedAt));
+}
+
+export async function getAssignmentById(assignmentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [result] = await db.select().from(loadAssignments).where(eq(loadAssignments.id, assignmentId));
+  return result || null;
+}
+
+export async function updateAssignmentStatus(assignmentId: number, status: string, completedAt?: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const updateData: any = { status };
+  if (status === "accepted") updateData.acceptedAt = new Date();
+  if (status === "completed" || completedAt) updateData.completedAt = completedAt || new Date();
+  
+  await db.update(loadAssignments).set(updateData).where(eq(loadAssignments.id, assignmentId));
+}
+
+export async function getAvailableLoads() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(loads).where(eq(loads.status, "available")).orderBy(desc(loads.createdAt));
 }

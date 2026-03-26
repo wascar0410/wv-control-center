@@ -149,3 +149,23 @@ export const fuelLogs = mysqlTable("fuel_logs", {
 
 export type FuelLog = typeof fuelLogs.$inferSelect;
 export type InsertFuelLog = typeof fuelLogs.$inferInsert;
+
+/**
+ * Load Assignments - Track which driver is assigned to which load
+ */
+export const loadAssignments = mysqlTable("load_assignments", {
+  id: int("id").autoincrement().primaryKey(),
+  loadId: int("loadId").notNull(),
+  driverId: int("driverId").notNull(),
+  assignedBy: int("assignedBy").notNull(), // Manager/Admin who assigned
+  status: mysqlEnum("status", ["pending", "accepted", "rejected", "completed"]).default("pending").notNull(),
+  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+  acceptedAt: timestamp("acceptedAt"),
+  completedAt: timestamp("completedAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LoadAssignment = typeof loadAssignments.$inferSelect;
+export type InsertLoadAssignment = typeof loadAssignments.$inferInsert;

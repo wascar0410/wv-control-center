@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Package, DollarSign, TrendingUp, TrendingDown, Truck, ArrowRight,
-  Clock, CheckCircle2, AlertCircle, FileText
+  Clock, CheckCircle2, AlertCircle, FileText, Plus
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { AssignLoadModal } from "@/components/AssignLoadModal";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   available: { label: "Disponible", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
@@ -24,10 +26,17 @@ function formatCurrency(value: number) {
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
   const { data: kpis, isLoading: kpisLoading } = trpc.dashboard.kpis.useQuery();
   const { data: loads, isLoading: loadsLoading } = trpc.dashboard.recentLoads.useQuery();
+  const utils = trpc.useUtils();
 
   const recentLoads = loads?.slice(0, 5) ?? [];
+
+  const handleAssignSuccess = () => {
+    utils.dashboard.recentLoads.invalidate();
+    utils.assignment.availableLoads.invalidate();
+  };
 
   return (
     <div className="space-y-6">
@@ -41,10 +50,16 @@ export default function Dashboard() {
             Panel de control — WV Transport, LLC
           </p>
         </div>
-        <Button onClick={() => setLocation("/loads")} className="gap-2 self-start sm:self-auto">
-          <Package className="w-4 h-4" />
-          Nueva Carga
-        </Button>
+        <div className="flex gap-2 self-start sm:self-auto">
+          <Button onClick={() => setLocation("/loads")} className="gap-2">
+            <Package className="w-4 h-4" />
+            Nueva Carga
+          </Button>
+          <Button onClick={() => setAssignModalOpen(true)} variant="outline" className="gap-2">
+            <Plus className="w-4 h-4" />
+            Asignar Carga
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -146,9 +161,9 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="grid gap-2">
               <QuickAction icon={Package} label="Nueva Carga" desc="Registrar envío" onClick={() => setLocation("/loads")} />
+              <QuickAction icon={Plus} label="Asignar Carga" desc="Asignar al chofer" onClick={() => setAssignModalOpen(true)} />
               <QuickAction icon={DollarSign} label="Registrar Gasto" desc="Combustible, mantenimiento..." onClick={() => setLocation("/finance")} />
               <QuickAction icon={FileText} label="Ver Finanzas" desc="Flujo de caja mensual" onClick={() => setLocation("/finance")} />
-              <QuickAction icon={Truck} label="Vista Chofer" desc="Rutas y entregas" onClick={() => setLocation("/driver")} />
             </CardContent>
           </Card>
 
@@ -185,6 +200,9 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Assign Load Modal */}
+      <AssignLoadModal open={assignModalOpen} onOpenChange={setAssignModalOpen} onSuccess={handleAssignSuccess} />
     </div>
   );
 }

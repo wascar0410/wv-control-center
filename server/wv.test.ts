@@ -83,6 +83,11 @@ vi.mock("./db", () => ({
     monthProfit: 3500,
   }),
   getAllDrivers: vi.fn().mockResolvedValue([]),
+  createLoadAssignment: vi.fn().mockResolvedValue(1),
+  getLoadAssignments: vi.fn().mockResolvedValue([]),
+  getAssignmentById: vi.fn().mockResolvedValue(null),
+  updateAssignmentStatus: vi.fn().mockResolvedValue(undefined),
+  getAvailableLoads: vi.fn().mockResolvedValue([]),
   upsertUser: vi.fn().mockResolvedValue(undefined),
   getUserByOpenId: vi.fn().mockResolvedValue(undefined),
 }));
@@ -558,5 +563,77 @@ describe("driver.uploadBOL", () => {
         bolImageUrl: "https://cdn.example.com/test.jpg",
       })
     );
+  });
+});
+
+
+// ─── Assignment Tests ─────────────────────────────────────────────────────────
+
+describe("assignment", () => {
+  it("lists available loads for assignment", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    const loads = await caller.assignment.availableLoads();
+    expect(Array.isArray(loads)).toBe(true);
+  });
+
+  it("lists available drivers for assignment", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    const drivers = await caller.assignment.drivers();
+    expect(Array.isArray(drivers)).toBe(true);
+  });
+
+  it("assigns a load to a driver", async () => {
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.assignment.assign({
+      loadId: 1,
+      driverId: 2,
+      notes: "Entrega urgente",
+    });
+    expect(result.id).toBe(1);
+  });
+
+  it("notifies owner when load is assigned", async () => {
+    const { notifyOwner } = await import("./_core/notification");
+    const ctx = createAdminContext();
+    const caller = appRouter.createCaller(ctx);
+    await caller.assignment.assign({
+      loadId: 1,
+      driverId: 2,
+    });
+    expect(notifyOwner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringContaining("Carga Asignada"),
+      })
+    );
+  });
+
+  it("lists assignments for a driver", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const assignments = await caller.assignment.list({ driverId: 2 });
+    expect(Array.isArray(assignments)).toBe(true);
+  });
+
+  it("updates assignment status to accepted", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.assignment.updateStatus({
+      assignmentId: 1,
+      status: "accepted",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("updates assignment status to completed", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.assignment.updateStatus({
+      assignmentId: 1,
+      status: "completed",
+    });
+    expect(result.success).toBe(true);
   });
 });
