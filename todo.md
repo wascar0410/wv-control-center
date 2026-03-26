@@ -205,3 +205,15 @@
 - [x] Mostrar información de carga (cliente, peso, mercancía, precio)
 - [x] Tests para gestión de estado (117/117 tests pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 24: Seguimiento de Ubicación en Tiempo Real
+- [x] Actualizar esquema DB: tabla driver_locations (11 campos para GPS, velocidad, precisión)
+- [x] Backend: queries para recibir y almacenar ubicación GPS del chofer (7 queries)
+- [x] Backend: tRPC locationRouter con 5 procedimientos (recordLocation, getDriverLocation, getDriverLocationHistory, getAllActiveDrivers, getLoadLocationTrail)
+- [x] Frontend: componente DriverLocationMap con Google Maps y marcadores de choferes
+- [x] Frontend: auto-refresh cada 5 segundos para actualizaciones en tiempo real
+- [x] Frontend: integrar DriverLocationMap en Dashboard (solo para admins)
+- [x] Frontend: mostrar múltiples choferes con información de velocidad y carga
+- [x] Tests para seguimiento de ubicación (117/117 tests pasando)
+- [x] Checkpoint y entrega

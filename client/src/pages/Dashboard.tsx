@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +7,12 @@ import {
   Package, DollarSign, TrendingUp, TrendingDown, Truck, ArrowRight,
   Clock, CheckCircle2, AlertCircle, FileText, Plus
 } from "lucide-react";
+import { useState } from "react";
+
+"use client";
 import { useLocation } from "wouter";
 import { AssignLoadModal } from "@/components/AssignLoadModal";
+import { DriverLocationMap } from "@/components/DriverLocationMap";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   available: { label: "Disponible", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
@@ -98,6 +101,11 @@ export default function Dashboard() {
           highlight
         />
       </div>
+
+      {/* Driver Location Tracking */}
+      {user?.role === "admin" && (
+        <DriverLocationMap />
+      )}
 
       {/* Recent Loads + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

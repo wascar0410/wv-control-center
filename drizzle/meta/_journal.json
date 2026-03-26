@@ -50,6 +50,13 @@
       "when": 1774559494737,
       "tag": "0006_complex_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1774561977398,
+      "tag": "0007_productive_silk_fever",
+      "breakpoints": true
     }
   ]
 }

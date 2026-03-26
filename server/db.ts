@@ -2,8 +2,10 @@ import { and, desc, eq, gte, isNull, lte, or, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   bankAccounts,
+  driverLocations,
   fuelLogs,
   InsertBankAccount,
+  InsertDriverLocation,
   InsertFuelLog,
   InsertLoad,
   InsertLoadAssignment,
@@ -949,4 +951,82 @@ export async function updateRouteStopsOrder(quotationId: number, stops: Array<{ 
       .set({ stopOrder: stop.stopOrder })
       .where(eq(routeStops.id, stop.id));
   }
+}
+
+
+// ─── Driver Locations ────────────────────────────────────────────────────────
+
+export async function recordDriverLocation(location: InsertDriverLocation): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(driverLocations).values(location);
+  return Number((result as any).insertId || 0);
+}
+
+export async function getLatestDriverLocation(driverId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select()
+    .from(driverLocations)
+    .where(eq(driverLocations.driverId, driverId))
+    .orderBy(desc(driverLocations.timestamp))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getDriverLocationHistory(driverId: number, minutesBack: number = 60) {
+  const db = await getDb();
+  if (!db) return [];
+  const cutoffTime = new Date(Date.now() - minutesBack * 60 * 1000);
+  return await db
+    .select()
+    .from(driverLocations)
+    .where(
+      and(
+        eq(driverLocations.driverId, driverId),
+        gte(driverLocations.timestamp, cutoffTime)
+      )
+    )
+    .orderBy(desc(driverLocations.timestamp));
+}
+
+export async function getAllActiveDriverLocations() {
+  const db = await getDb();
+  if (!db) return [];
+  // Get latest location for each driver in last 5 minutes
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  const result = await db
+    .select()
+    .from(driverLocations)
+    .where(gte(driverLocations.timestamp, fiveMinutesAgo))
+    .orderBy(desc(driverLocations.timestamp));
+  
+  // Group by driverId and keep only latest
+  const latestByDriver = new Map();
+  for (const loc of result) {
+    if (!latestByDriver.has(loc.driverId)) {
+      latestByDriver.set(loc.driverId, loc);
+    }
+  }
+  return Array.from(latestByDriver.values());
+}
+
+export async function getDriverLocationsByLoadId(loadId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(driverLocations)
+    .where(eq(driverLocations.loadId, loadId))
+    .orderBy(desc(driverLocations.timestamp));
+}
+
+export async function deleteOldDriverLocations(daysOld: number = 30) {
+  const db = await getDb();
+  if (!db) return;
+  const cutoffDate = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+  await db
+    .delete(driverLocations)
+    .where(lte(driverLocations.createdAt, cutoffDate));
 }

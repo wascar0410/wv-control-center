@@ -299,3 +299,24 @@ export const routeStops = mysqlTable("route_stops", {
 
 export type RouteStop = typeof routeStops.$inferSelect;
 export type InsertRouteStop = typeof routeStops.$inferInsert;
+
+
+/**
+ * Driver Locations - Real-time GPS tracking for drivers
+ */
+export const driverLocations = mysqlTable("driver_locations", {
+  id: int("id").autoincrement().primaryKey(),
+  driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  loadId: int("loadId").references(() => loads.id, { onDelete: "set null" }),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }).notNull(),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }).notNull(),
+  accuracy: decimal("accuracy", { precision: 8, scale: 2 }), // Meters
+  speed: decimal("speed", { precision: 8, scale: 2 }), // km/h
+  heading: decimal("heading", { precision: 6, scale: 2 }), // Degrees 0-360
+  altitude: decimal("altitude", { precision: 10, scale: 2 }), // Meters
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DriverLocation = typeof driverLocations.$inferSelect;
+export type InsertDriverLocation = typeof driverLocations.$inferInsert;
