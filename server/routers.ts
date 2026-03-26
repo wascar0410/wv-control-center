@@ -11,7 +11,7 @@ import {
   deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
   getLoads, getMonthlyCashFlow, getOwnerDraws, getPartners, getTransactions,
   updateLoad, updateLoadStatus, updatePartner, getDrawsByPeriod, getAllDrivers,
-  createLoadAssignment, getLoadAssignments, getAssignmentById, updateAssignmentStatus, getAvailableLoads,
+  createLoadAssignment, getLoadAssignments, getAssignmentById, updateAssignmentStatus, getAvailableLoads, getPendingAssignmentsForDriver,
 } from "./db";
 
 // ─── Loads Router ─────────────────────────────────────────────────────────────
@@ -501,6 +501,47 @@ const assignmentRouter = router({
     }))
     .mutation(async ({ input }) => {
       await updateAssignmentStatus(input.assignmentId, input.status);
+      return { success: true };
+    }),
+  
+  pendingForDriver: protectedProcedure.query(({ ctx }) => {
+    if (ctx.user.role !== "driver") return [];
+    return getPendingAssignmentsForDriver(ctx.user.id);
+  }),
+  
+  accept: protectedProcedure
+    .input(z.object({ assignmentId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const assignment = await getAssignmentById(input.assignmentId);
+      if (!assignment) throw new Error("Asignacion no encontrada");
+      if (assignment.driverId !== ctx.user.id) throw new Error("No tienes permiso para aceptar esta carga");
+      
+      await updateAssignmentStatus(input.assignmentId, "accepted");
+      
+      const load = await getLoadById(assignment.loadId);
+      await notifyOwner({
+        title: "Carga Aceptada",
+        content: `${ctx.user.name} acepto la carga #${assignment.loadId} (${load?.clientName})`,
+      });
+      
+      return { success: true };
+    }),
+  
+  reject: protectedProcedure
+    .input(z.object({ assignmentId: z.number(), reason: z.string().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const assignment = await getAssignmentById(input.assignmentId);
+      if (!assignment) throw new Error("Asignacion no encontrada");
+      if (assignment.driverId !== ctx.user.id) throw new Error("No tienes permiso para rechazar esta carga");
+      
+      await updateAssignmentStatus(input.assignmentId, "rejected");
+      
+      const load = await getLoadById(assignment.loadId);
+      await notifyOwner({
+        title: "Carga Rechazada",
+        content: `${ctx.user.name} rechazo la carga #${assignment.loadId} (${load?.clientName}). Razon: ${input.reason || "No especificada"}`,
+      });
+      
       return { success: true };
     }),
 });

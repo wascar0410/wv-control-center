@@ -373,6 +373,28 @@ export async function updateAssignmentStatus(assignmentId: number, status: strin
   await db.update(loadAssignments).set(updateData).where(eq(loadAssignments.id, assignmentId));
 }
 
+export async function getPendingAssignmentsForDriver(driverId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: loadAssignments.id,
+      loadId: loadAssignments.loadId,
+      status: loadAssignments.status,
+      assignedAt: loadAssignments.assignedAt,
+      load: loads,
+    })
+    .from(loadAssignments)
+    .innerJoin(loads, eq(loadAssignments.loadId, loads.id))
+    .where(
+      and(
+        eq(loadAssignments.driverId, driverId),
+        eq(loadAssignments.status, "pending")
+      )
+    )
+    .orderBy(desc(loadAssignments.assignedAt));
+}
+
 export async function getAvailableLoads() {
   const db = await getDb();
   if (!db) return [];

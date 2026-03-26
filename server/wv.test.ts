@@ -85,7 +85,19 @@ vi.mock("./db", () => ({
   getAllDrivers: vi.fn().mockResolvedValue([]),
   createLoadAssignment: vi.fn().mockResolvedValue(1),
   getLoadAssignments: vi.fn().mockResolvedValue([]),
-  getAssignmentById: vi.fn().mockResolvedValue(null),
+  getAssignmentById: vi.fn().mockResolvedValue({
+    id: 1,
+    loadId: 1,
+    driverId: 2,
+    assignedBy: 1,
+    status: "pending",
+    assignedAt: new Date(),
+    acceptedAt: null,
+    completedAt: null,
+    notes: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }),
   updateAssignmentStatus: vi.fn().mockResolvedValue(undefined),
   getAvailableLoads: vi.fn().mockResolvedValue([]),
   upsertUser: vi.fn().mockResolvedValue(undefined),
@@ -634,6 +646,36 @@ describe("assignment", () => {
       assignmentId: 1,
       status: "completed",
     });
+    expect(result.success).toBe(true);
+  });
+  it("accepts an assignment as driver", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.assignment.accept({ assignmentId: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an assignment as driver with reason", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.assignment.reject({
+      assignmentId: 1,
+      reason: "Carga muy pesada",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("sends notification when driver accepts assignment", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.assignment.accept({ assignmentId: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it("sends notification when driver rejects assignment", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.assignment.reject({ assignmentId: 1, reason: "No disponible" });
     expect(result.success).toBe(true);
   });
 });

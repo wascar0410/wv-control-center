@@ -96,3 +96,12 @@
 ## Bugs Actuales
 - [x] Error 502 en servidor — RESUELTO: No había choferes registrados. Creado usuario de prueba "Juan Pérez" con rol driver
 - [x] Modal de asignar carga no muestra choferes — RESUELTO: Mejorado mensaje cuando no hay choferes disponibles
+
+
+## Fase 14: Sistema de Aceptación/Rechazo de Cargas
+- [x] Actualizar esquema: tabla loadAssignments con estado (pending, accepted, rejected)
+- [x] Backend: routers para accept y reject con validación de permisos
+- [x] Vista del Chofer: botones de aceptar/rechazar en tab de Disponibles
+- [x] Notificaciones al gestor cuando chofer acepta/rechaza
+- [x] Tests para aceptación/rechazo de cargas (4 tests nuevos, 44/44 total pasando)
+- [ ] Checkpoint y entrega

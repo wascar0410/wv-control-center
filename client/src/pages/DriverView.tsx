@@ -71,6 +71,22 @@ export default function DriverView() {
     onError: (e) => toast.error(e.message),
   });
 
+  const acceptMutation = trpc.assignment.accept.useMutation({
+    onSuccess: () => {
+      utils.driver.myLoads.invalidate();
+      toast.success("Carga aceptada exitosamente");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const rejectMutation = trpc.assignment.reject.useMutation({
+    onSuccess: () => {
+      utils.driver.myLoads.invalidate();
+      toast.success("Carga rechazada");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
   const handleMapReady = useCallback((map: google.maps.Map) => {
     mapRef.current = map;
     setMapReady(true);
@@ -243,17 +259,22 @@ export default function DriverView() {
                   </CardContent>
                 </Card>
               ) : (
-                unassignedAvailableLoads.map((load: any) => (
+                unassignedAvailableLoads.map((load: any) => {
+                  const assignment = load.assignmentId ? { id: load.assignmentId } : null;
+                  return (
                   <LoadCard
                     key={load?.id ?? Math.random()}
                     load={load}
                     isSelected={selectedLoad?.id === load?.id}
                     onSelect={() => handleSelectLoad(load)}
+                    onAccept={assignment ? () => acceptMutation.mutate({ assignmentId: assignment.id }) : undefined}
+                    onReject={assignment ? () => rejectMutation.mutate({ assignmentId: assignment.id }) : undefined}
                     onStartTransit={() => statusMutation.mutate({ id: load?.id, status: "in_transit" })}
                     onUploadBOL={() => { setSelectedLoad(load); setShowBOLUpload(true); }}
                     onLogFuel={() => { setSelectedLoad(load); setShowFuelForm(true); }}
                   />
-                ))
+                );
+                })
               )}
             </TabsContent>
 
@@ -486,7 +507,7 @@ export default function DriverView() {
 }
 
 function LoadCard({
-  load, isSelected, onSelect, onStartTransit, onMarkDelivered, onUploadBOL, onLogFuel, readonly
+  load, isSelected, onSelect, onStartTransit, onMarkDelivered, onUploadBOL, onLogFuel, onAccept, onReject, readonly
 }: {
   load: any;
   isSelected: boolean;
@@ -495,6 +516,8 @@ function LoadCard({
   onMarkDelivered?: () => void;
   onUploadBOL?: () => void;
   onLogFuel?: () => void;
+  onAccept?: () => void;
+  onReject?: () => void;
   readonly?: boolean;
 }) {
   const statusCfg = STATUS_CONFIG[load?.status ?? 'available'] ?? STATUS_CONFIG.available;
@@ -531,7 +554,17 @@ function LoadCard({
 
         {!readonly && (
           <div className="flex gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
-            {load?.status === "available" && onStartTransit && (
+            {onAccept && onReject && (
+              <>
+                <Button size="sm" className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700" onClick={onAccept}>
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> Aceptar
+                </Button>
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={onReject}>
+                  Rechazar
+                </Button>
+              </>
+            )}
+            {load?.status === "available" && onStartTransit && !onAccept && (
               <Button size="sm" className="flex-1 h-8 text-xs" onClick={onStartTransit}>
                 <Truck className="w-3 h-3 mr-1" /> Iniciar
               </Button>
