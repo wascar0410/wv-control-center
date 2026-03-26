@@ -152,3 +152,13 @@
 - [x] Frontend: página Quotation con formulario y resultados
 - [x] Tests para sistema de cotización (10 tests nuevos, 84/84 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 19: Integración Google Maps Geocoding API
+- [x] Backend: crear helper para geocoding de direcciones (geocodeAddress, reverseGeocodeCoordinates)
+- [x] Backend: agregar tRPC router para geocodeAddress y validateCoordinates
+- [x] Frontend: componente AddressInput con búsqueda y autocompletado
+- [x] Frontend: integrar AddressInput en QuotationForm para van, recogida y entrega
+- [x] Frontend: actualizar QuotationForm para usar AddressInput (elimina entrada manual de coordenadas)
+- [x] Tests para geocoding (10 tests nuevos, 95/95 total pasando)
+- [x] Checkpoint y entrega

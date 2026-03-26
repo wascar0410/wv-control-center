@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { MapPin, Truck, Package, DollarSign } from "lucide-react";
 import { toast } from "sonner";
+import AddressInput from "./AddressInput";
 
 interface QuotationFormProps {
   onSubmit: (data: QuotationFormData) => void;
@@ -92,42 +93,18 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
           <CardDescription>Dónde está actualmente la van de carga</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="vanAddress">Dirección de la Van</Label>
-            <Input
-              id="vanAddress"
-              placeholder="Ej: 123 Main St, Miami, FL 33101"
-              value={formData.vanAddress}
-              onChange={(e) => handleInputChange("vanAddress", e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="vanLat">Latitud</Label>
-              <Input
-                id="vanLat"
-                type="number"
-                step="0.0001"
-                placeholder="25.7617"
-                value={formData.vanLat || ""}
-                onChange={(e) => handleInputChange("vanLat", parseFloat(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="vanLng">Longitud</Label>
-              <Input
-                id="vanLng"
-                type="number"
-                step="0.0001"
-                placeholder="-80.1918"
-                value={formData.vanLng || ""}
-                onChange={(e) => handleInputChange("vanLng", parseFloat(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-          </div>
+          <AddressInput
+            label="Dirección de la Van"
+            placeholder="Ej: 123 Main St, Miami, FL 33101"
+            value={formData.vanAddress}
+            latitude={formData.vanLat}
+            longitude={formData.vanLng}
+            onAddressChange={(addr) => handleInputChange("vanAddress", addr)}
+            onCoordinatesChange={(lat, lng) => {
+              handleInputChange("vanLat", lat);
+              handleInputChange("vanLng", lng);
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -141,42 +118,18 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
           <CardDescription>Dónde se recoge la carga</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="pickupAddress">Dirección de Recogida</Label>
-            <Input
-              id="pickupAddress"
-              placeholder="Ej: 456 Oak Ave, Tampa, FL 33602"
-              value={formData.pickupAddress}
-              onChange={(e) => handleInputChange("pickupAddress", e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="pickupLat">Latitud</Label>
-              <Input
-                id="pickupLat"
-                type="number"
-                step="0.0001"
-                placeholder="27.9506"
-                value={formData.pickupLat || ""}
-                onChange={(e) => handleInputChange("pickupLat", parseFloat(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="pickupLng">Longitud</Label>
-              <Input
-                id="pickupLng"
-                type="number"
-                step="0.0001"
-                placeholder="-82.4572"
-                value={formData.pickupLng || ""}
-                onChange={(e) => handleInputChange("pickupLng", parseFloat(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-          </div>
+          <AddressInput
+            label="Dirección de Recogida"
+            placeholder="Ej: 456 Oak Ave, Tampa, FL 33602"
+            value={formData.pickupAddress}
+            latitude={formData.pickupLat}
+            longitude={formData.pickupLng}
+            onAddressChange={(addr) => handleInputChange("pickupAddress", addr)}
+            onCoordinatesChange={(lat, lng) => {
+              handleInputChange("pickupLat", lat);
+              handleInputChange("pickupLng", lng);
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -190,42 +143,18 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
           <CardDescription>Dónde se entrega la carga</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="deliveryAddress">Dirección de Entrega</Label>
-            <Input
-              id="deliveryAddress"
-              placeholder="Ej: 789 Pine Rd, Jacksonville, FL 32099"
-              value={formData.deliveryAddress}
-              onChange={(e) => handleInputChange("deliveryAddress", e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="deliveryLat">Latitud</Label>
-              <Input
-                id="deliveryLat"
-                type="number"
-                step="0.0001"
-                placeholder="30.3322"
-                value={formData.deliveryLat || ""}
-                onChange={(e) => handleInputChange("deliveryLat", parseFloat(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="deliveryLng">Longitud</Label>
-              <Input
-                id="deliveryLng"
-                type="number"
-                step="0.0001"
-                placeholder="-81.6557"
-                value={formData.deliveryLng || ""}
-                onChange={(e) => handleInputChange("deliveryLng", parseFloat(e.target.value))}
-                className="mt-1"
-              />
-            </div>
-          </div>
+          <AddressInput
+            label="Dirección de Entrega"
+            placeholder="Ej: 789 Pine Rd, Jacksonville, FL 32099"
+            value={formData.deliveryAddress}
+            latitude={formData.deliveryLat}
+            longitude={formData.deliveryLng}
+            onAddressChange={(addr) => handleInputChange("deliveryAddress", addr)}
+            onCoordinatesChange={(lat, lng) => {
+              handleInputChange("deliveryLat", lat);
+              handleInputChange("deliveryLng", lng);
+            }}
+          />
         </CardContent>
       </Card>
 

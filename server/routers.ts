@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { plaidRouter } from "./_core/plaidRouter";
 import { quotationRouter } from "./_core/quotationRouter";
+import { geocodingRouter } from "./_core/geocodingRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -800,6 +801,7 @@ export const appRouter = router({
   bankTransaction: bankTransactionRouter,
   plaid: plaidRouter,
   quotation: quotationRouter,
+  geocoding: geocodingRouter,
 });
 
 export type AppRouter = typeof appRouter;
