@@ -92,3 +92,5 @@
 - [x] Error en /loads: "Cannot read properties of undefined (reading 'expenses')" (segunda ocurrencia) — RESUELTO: agregada validación defensiva en Loads.tsx para todas las referencias a load
 
 - [x] Vista del Chofer no muestra cargas activas/asignadas — RESUELTO: Agregada validación defensiva en DriverView.tsx. NOTA: Las cargas deben ser asignadas al chofer desde el Dashboard usando el botón 'Asignar Carga'
+
+- [x] Error 500 en finance.cashFlow: "Failed to load resource: the server responded with a status of 500" — RESUELTO: Corregido desempaquetamiento de resultado de db.execute() y agregada validación defensiva
