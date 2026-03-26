@@ -36,6 +36,13 @@
       "when": 1774554776443,
       "tag": "0004_perpetual_secret_warriors",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1774557166929,
+      "tag": "0005_magical_echo",
+      "breakpoints": true
     }
   ]
 }

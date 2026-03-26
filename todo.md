@@ -140,3 +140,15 @@
 - [x] Integración bancaria: Plaid API instalado y configurado con credenciales
 - [x] Tests para transacciones manuales y automáticas (10 tests nuevos, 74/74 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 18: Sistema de Cotización de Cargas (Distancia, Millas, Peso, Rentabilidad)
+- [x] Actualizar esquema DB: tabla loadQuotations con 30 campos de tarificación
+- [x] Backend: queries para cálculos de distancia, tarificación por milla/peso (8 queries)
+- [x] Backend: routers tRPC para calculateQuotation, getQuotation, getMyQuotations, updateQuotation, deleteQuotation, getQuotationsByStatus
+- [x] Frontend: componente QuotationForm con ubicación van, recogida, entrega
+- [x] Frontend: cálculos con Haversine formula (millas vacías, cargadas, retorno)
+- [x] Frontend: componente QuotationResults con análisis de rentabilidad
+- [x] Frontend: página Quotation con formulario y resultados
+- [x] Tests para sistema de cotización (10 tests nuevos, 84/84 total pasando)
+- [x] Checkpoint y entrega

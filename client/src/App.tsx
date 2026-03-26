@@ -12,6 +12,7 @@ import Partnership from "./pages/Partnership";
 import DriverView from "./pages/DriverView";
 import DriverPerformance from "./pages/DriverPerformance";
 import Transactions from "./pages/Transactions";
+import Quotation from "./pages/Quotation";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
 import { Loader2, Truck } from "lucide-react";
@@ -104,6 +105,7 @@ function AppRoutes() {
           <Route path="/driver" component={DriverView} />
           <Route path="/driver-performance" component={DriverPerformance} />
           <Route path="/transactions" component={Transactions} />
+          <Route path="/quotation" component={Quotation} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

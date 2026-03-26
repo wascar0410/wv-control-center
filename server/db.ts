@@ -7,6 +7,7 @@ import {
   InsertFuelLog,
   InsertLoad,
   InsertLoadAssignment,
+  InsertLoadQuotation,
   InsertOwnerDraw,
   InsertPartner,
   InsertPODDocument,
@@ -14,6 +15,7 @@ import {
   InsertTransactionImport,
   InsertUser,
   loadAssignments,
+  loadQuotations,
   loads,
   ownerDraws,
   partnership,
@@ -772,4 +774,92 @@ export async function getTransactionImportsByDateRange(
       )
     )
     .orderBy(desc(transactionImports.transactionDate));
+}
+
+
+// ─── Load Quotations ──────────────────────────────────────────────────────────
+
+export async function createLoadQuotation(data: InsertLoadQuotation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(loadQuotations).values(data);
+  return result;
+}
+
+export async function getLoadQuotationById(quotationId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(loadQuotations)
+    .where(eq(loadQuotations.id, quotationId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getLoadQuotationsByUserId(userId: number, limit: number = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(loadQuotations)
+    .where(eq(loadQuotations.userId, userId))
+    .orderBy(desc(loadQuotations.createdAt))
+    .limit(limit);
+}
+
+export async function updateLoadQuotation(quotationId: number, data: Partial<InsertLoadQuotation>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(loadQuotations)
+    .set(data)
+    .where(eq(loadQuotations.id, quotationId));
+}
+
+export async function deleteLoadQuotation(quotationId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(loadQuotations)
+    .where(eq(loadQuotations.id, quotationId));
+}
+
+export async function getQuotationsByDateRange(userId: number, startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(loadQuotations)
+    .where(
+      and(
+        eq(loadQuotations.userId, userId),
+        gte(loadQuotations.createdAt, startDate),
+        lte(loadQuotations.createdAt, endDate)
+      )
+    )
+    .orderBy(desc(loadQuotations.createdAt));
+}
+
+export async function getQuotationsByStatus(userId: number, status: string) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(loadQuotations)
+    .where(
+      and(
+        eq(loadQuotations.userId, userId),
+        eq(loadQuotations.status, status as any)
+      )
+    )
+    .orderBy(desc(loadQuotations.createdAt));
 }

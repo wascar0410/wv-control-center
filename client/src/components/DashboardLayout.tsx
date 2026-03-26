@@ -33,6 +33,7 @@ import {
   Shield,
   TrendingUp,
   CreditCard,
+  Calculator,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -43,6 +44,7 @@ import { Badge } from "./ui/badge";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
   { icon: Package, label: "Cargas", path: "/loads", description: "Gestión de envíos" },
+  { icon: Calculator, label: "Cotización", path: "/quotation", description: "Calcular precio y rentabilidad" },
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
   { icon: CreditCard, label: "Transacciones", path: "/transactions", description: "Seguimiento de gastos e ingresos" },
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },

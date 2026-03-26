@@ -229,3 +229,50 @@ export const transactionImports = mysqlTable("transaction_imports", {
 
 export type TransactionImport = typeof transactionImports.$inferSelect;
 export type InsertTransactionImport = typeof transactionImports.$inferInsert;
+
+/**
+ * Load Quotations - Pricing calculations for potential loads
+ */
+export const loadQuotations = mysqlTable("load_quotations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  // Van location (starting point)
+  vanLat: decimal("vanLat", { precision: 10, scale: 7 }).notNull(),
+  vanLng: decimal("vanLng", { precision: 10, scale: 7 }).notNull(),
+  vanAddress: text("vanAddress").notNull(),
+  // Pickup location
+  pickupLat: decimal("pickupLat", { precision: 10, scale: 7 }).notNull(),
+  pickupLng: decimal("pickupLng", { precision: 10, scale: 7 }).notNull(),
+  pickupAddress: text("pickupAddress").notNull(),
+  // Delivery location
+  deliveryLat: decimal("deliveryLat", { precision: 10, scale: 7 }).notNull(),
+  deliveryLng: decimal("deliveryLng", { precision: 10, scale: 7 }).notNull(),
+  deliveryAddress: text("deliveryAddress").notNull(),
+  // Cargo details
+  weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
+  weightUnit: varchar("weightUnit", { length: 10 }).default("lbs").notNull(),
+  cargoDescription: text("cargoDescription"),
+  // Distance calculations
+  emptyMiles: decimal("emptyMiles", { precision: 10, scale: 2 }).notNull(), // Van to pickup
+  loadedMiles: decimal("loadedMiles", { precision: 10, scale: 2 }).notNull(), // Pickup to delivery
+  returnEmptyMiles: decimal("returnEmptyMiles", { precision: 10, scale: 2 }).default("0"), // Delivery back to origin
+  totalMiles: decimal("totalMiles", { precision: 10, scale: 2 }).notNull(),
+  // Pricing
+  ratePerMile: decimal("ratePerMile", { precision: 10, scale: 2 }).notNull(), // Base rate $/mile
+  ratePerPound: decimal("ratePerPound", { precision: 10, scale: 4 }).default("0"), // Optional: $/lb
+  fuelSurcharge: decimal("fuelSurcharge", { precision: 10, scale: 2 }).default("0"),
+  totalPrice: decimal("totalPrice", { precision: 10, scale: 2 }).notNull(),
+  // Profitability analysis
+  estimatedFuelCost: decimal("estimatedFuelCost", { precision: 10, scale: 2 }).default("0"),
+  estimatedOperatingCost: decimal("estimatedOperatingCost", { precision: 10, scale: 2 }).default("0"),
+  estimatedProfit: decimal("estimatedProfit", { precision: 10, scale: 2 }).default("0"),
+  profitMarginPercent: decimal("profitMarginPercent", { precision: 5, scale: 2 }).default("0"),
+  // Status
+  status: mysqlEnum("status", ["draft", "quoted", "accepted", "rejected", "expired"]).default("draft").notNull(),
+  expiresAt: timestamp("expiresAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LoadQuotation = typeof loadQuotations.$inferSelect;
+export type InsertLoadQuotation = typeof loadQuotations.$inferInsert;
