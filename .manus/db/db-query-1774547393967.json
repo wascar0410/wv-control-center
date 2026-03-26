@@ -1,0 +1,17 @@
+{
+  "query": "SELECT id, clientName, status, assignedDriverId, createdAt FROM loads ORDER BY createdAt DESC LIMIT 10;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute SELECT id, clientName, status, assignedDriverId, createdAt FROM loads ORDER BY createdAt DESC LIMIT 10;",
+  "rows": [
+    {
+      "id": "1",
+      "clientName": "Brocker",
+      "status": "in_transit",
+      "assignedDriverId": "NULL",
+      "createdAt": "2026-03-26 17:01:44"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tclientName\tstatus\tassignedDriverId\tcreatedAt\n1\tBrocker\tin_transit\tNULL\t2026-03-26 17:01:44\n",
+  "stderr": "",
+  "execution_time_ms": 350
+}

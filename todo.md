@@ -61,7 +61,6 @@
 - [x] Checkpoint guardado
 - [x] Entrega al usuario
 
-
 ## Fase 10: Mejora de Fuel Logs y BOL Upload
 - [x] Mejorar validación de archivos en backend (tamaño, tipo MIME)
 - [x] Implementar almacenamiento S3 para BOL con URLs presignadas
@@ -70,13 +69,6 @@
 - [x] Tests para fuel logs y BOL upload (12 tests nuevos, 33/33 total pasando)
 - [x] Notificaciones al propietario cuando se sube BOL o registra gasto importante
 
-
-## Bugs Reportados
-- [x] Google Maps cargándose múltiples veces en /driver (error: "You have included the Google Maps JavaScript API multiple times") — RESUELTO: agregada verificación global y de DOM
-
-- [x] Consulta SQL de flujo de caja fallando en /driver (GROUP BY MONTH issue) — RESUELTO: migrado a raw SQL con db.execute()
-
-
 ## Fase 11: Asignación de Cargas del Gestor al Chofer
 - [x] Actualizar esquema DB: tabla loadAssignments con relaciones
 - [x] Crear routers tRPC: assignLoad, getAssignments, updateAssignmentStatus
@@ -84,13 +76,18 @@
 - [x] Agregar vista de asignaciones en Dashboard del Gestor
 - [x] Notificaciones al chofer cuando recibe asignación
 - [x] Tests para asignación de cargas (8 tests nuevos)
-- [ ] Checkpoint y entrega
 
-- [x] Error en /loads: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO: agregada validación defensiva con optional chaining en Finance.tsx
+## Fase 12: Diagnostico y Correcciones Finales
+- [x] Error en /loads: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO
+- [x] Error en /partnership: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO
+- [x] Error 500 en finance.cashFlow — RESUELTO: Corregido desempaquetamiento de db.execute()
+- [x] Google Maps cargándose múltiples veces — RESUELTO: agregada verificación global
 
-- [x] Error en /partnership: "Cannot read properties of undefined (reading 'expenses')" — RESUELTO: agregada validación defensiva con optional chaining en Partnership.tsx
-- [x] Error en /loads: "Cannot read properties of undefined (reading 'expenses')" (segunda ocurrencia) — RESUELTO: agregada validación defensiva en Loads.tsx para todas las referencias a load
-
-- [x] Vista del Chofer no muestra cargas activas/asignadas — RESUELTO: Agregada validación defensiva en DriverView.tsx. NOTA: Las cargas deben ser asignadas al chofer desde el Dashboard usando el botón 'Asignar Carga'
-
-- [x] Error 500 en finance.cashFlow: "Failed to load resource: the server responded with a status of 500" — RESUELTO: Corregido desempaquetamiento de resultado de db.execute() y agregada validación defensiva
+## Fase 13: Vista del Chofer Mejorada
+- [x] Diagnosticado: cargas no se mostraban porque assignedDriverId era NULL
+- [x] Backend: getLoads() mejorado con parametro includeUnassigned
+- [x] Frontend: DriverView.tsx con 3 tabs (Activas, Disponibles, Completadas)
+- [x] UX: Mensajes claros indicando como aceptar cargas disponibles
+- [x] Control de acceso por rol: Rutas protegidas (solo Admin ve Cargas, Finanzas, Socios)
+- [x] Tests: 40/40 pasando
+- [x] Checkpoint final guardado

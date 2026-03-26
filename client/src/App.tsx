@@ -77,15 +77,28 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ProtectedRoute({ component: Component, requiredRole }: { component: React.ComponentType; requiredRole?: 'admin' | 'user' | 'driver' }) {
+  const { user } = useAuth();
+  
+  if (requiredRole === 'admin' && user?.role !== 'admin') {
+    return <NotFound />;
+  }
+  if (requiredRole === 'driver' && user?.role !== 'admin') {
+    return <NotFound />;
+  }
+  
+  return <Component />;
+}
+
 function AppRoutes() {
   return (
     <AuthGate>
       <DashboardLayout>
         <Switch>
           <Route path="/" component={Dashboard} />
-          <Route path="/loads" component={Loads} />
-          <Route path="/finance" component={Finance} />
-          <Route path="/partnership" component={Partnership} />
+          <Route path="/loads" component={() => <ProtectedRoute component={Loads} requiredRole="admin" />} />
+          <Route path="/finance" component={() => <ProtectedRoute component={Finance} requiredRole="admin" />} />
+          <Route path="/partnership" component={() => <ProtectedRoute component={Partnership} requiredRole="admin" />} />
           <Route path="/driver" component={DriverView} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />

@@ -312,7 +312,7 @@ const partnershipRouter = router({
 
 const driverRouter = router({
   myLoads: protectedProcedure.query(({ ctx }) =>
-    getLoads({ driverId: ctx.user.id })
+    getLoads({ driverId: ctx.user.id, includeUnassigned: true })
   ),
 
   allDrivers: protectedProcedure.query(() => getAllDrivers()),

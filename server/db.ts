@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   fuelLogs,
@@ -87,12 +87,25 @@ export async function createLoad(data: InsertLoad) {
   return result.insertId as number;
 }
 
-export async function getLoads(filters?: { status?: string; driverId?: number }) {
+export async function getLoads(filters?: { status?: string; driverId?: number; includeUnassigned?: boolean }) {
   const db = await getDb();
   if (!db) return [];
   const conditions = [];
   if (filters?.status) conditions.push(eq(loads.status, filters.status as any));
-  if (filters?.driverId) conditions.push(eq(loads.assignedDriverId, filters.driverId));
+  
+  if (filters?.driverId) {
+    if (filters.includeUnassigned) {
+      conditions.push(
+        or(
+          eq(loads.assignedDriverId, filters.driverId),
+          and(eq(loads.status, "available" as any), isNull(loads.assignedDriverId))
+        )
+      );
+    } else {
+      conditions.push(eq(loads.assignedDriverId, filters.driverId));
+    }
+  }
+  
   return db.select().from(loads).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(loads.createdAt));
 }
 

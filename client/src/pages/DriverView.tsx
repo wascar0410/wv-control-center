@@ -176,7 +176,9 @@ export default function DriverView() {
     });
   };
 
-  const activeLoads = (loads ?? []).filter((l) => l?.status === "in_transit" || l?.status === "available");
+  const assignedLoads = (loads ?? []).filter((l) => l?.assignedDriverId !== null && l?.assignedDriverId !== undefined);
+  const unassignedAvailableLoads = (loads ?? []).filter((l) => (l?.assignedDriverId === null || l?.assignedDriverId === undefined) && l?.status === "available");
+  const activeAssignedLoads = assignedLoads.filter((l) => l?.status === "in_transit" || l?.status === "available");
   const completedLoads = (loads ?? []).filter((l) => l?.status === "delivered" || l?.status === "paid" || l?.status === "invoiced");
 
   return (
@@ -193,7 +195,10 @@ export default function DriverView() {
           <Tabs defaultValue="active">
             <TabsList className="bg-card border border-border w-full">
               <TabsTrigger value="active" className="flex-1 gap-1.5">
-                <Truck className="w-3.5 h-3.5" /> Activas ({activeLoads.length})
+                <Truck className="w-3.5 h-3.5" /> Activas ({activeAssignedLoads.length})
+              </TabsTrigger>
+              <TabsTrigger value="available" className="flex-1 gap-1.5">
+                <Package className="w-3.5 h-3.5" /> Disponibles ({unassignedAvailableLoads.length})
               </TabsTrigger>
               <TabsTrigger value="completed" className="flex-1 gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Completadas ({completedLoads.length})
@@ -203,15 +208,16 @@ export default function DriverView() {
             <TabsContent value="active" className="mt-3 space-y-3">
               {isLoading ? (
                 <div className="p-8 text-center text-muted-foreground text-sm">Cargando...</div>
-              ) : activeLoads.length === 0 ? (
+              ) : activeAssignedLoads.length === 0 ? (
                 <Card className="bg-card border-border">
                   <CardContent className="p-8 text-center">
                     <Truck className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">No tienes cargas activas</p>
+                    <p className="text-sm text-muted-foreground">No tienes cargas activas asignadas</p>
+                    <p className="text-xs text-muted-foreground mt-2">Revisa la pestaña "Disponibles" para aceptar cargas</p>
                   </CardContent>
                 </Card>
               ) : (
-                activeLoads.map((load) => (
+                activeAssignedLoads.map((load: any) => (
                   <LoadCard
                     key={load.id}
                     load={load}
@@ -219,6 +225,31 @@ export default function DriverView() {
                     onSelect={() => handleSelectLoad(load)}
                     onStartTransit={() => statusMutation.mutate({ id: load.id, status: "in_transit" })}
                     onMarkDelivered={() => statusMutation.mutate({ id: load.id, status: "delivered" })}
+                    onUploadBOL={() => { setSelectedLoad(load); setShowBOLUpload(true); }}
+                    onLogFuel={() => { setSelectedLoad(load); setShowFuelForm(true); }}
+                  />
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="available" className="mt-3 space-y-3">
+              {isLoading ? (
+                <div className="p-8 text-center text-muted-foreground text-sm">Cargando...</div>
+              ) : unassignedAvailableLoads.length === 0 ? (
+                <Card className="bg-card border-border">
+                  <CardContent className="p-8 text-center">
+                    <Package className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No hay cargas disponibles</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                unassignedAvailableLoads.map((load: any) => (
+                  <LoadCard
+                    key={load?.id ?? Math.random()}
+                    load={load}
+                    isSelected={selectedLoad?.id === load?.id}
+                    onSelect={() => handleSelectLoad(load)}
+                    onStartTransit={() => statusMutation.mutate({ id: load?.id, status: "in_transit" })}
                     onUploadBOL={() => { setSelectedLoad(load); setShowBOLUpload(true); }}
                     onLogFuel={() => { setSelectedLoad(load); setShowFuelForm(true); }}
                   />
