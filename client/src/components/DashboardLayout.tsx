@@ -32,6 +32,7 @@ import {
   Truck,
   Shield,
   TrendingUp,
+  CreditCard,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -43,6 +44,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
   { icon: Package, label: "Cargas", path: "/loads", description: "Gestión de envíos" },
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
+  { icon: CreditCard, label: "Transacciones", path: "/transactions", description: "Seguimiento de gastos e ingresos" },
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },
   { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },

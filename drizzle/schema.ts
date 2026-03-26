@@ -189,3 +189,43 @@ export const podDocuments = mysqlTable("pod_documents", {
 
 export type PODDocument = typeof podDocuments.$inferSelect;
 export type InsertPODDocument = typeof podDocuments.$inferInsert;
+
+/**
+ * Bank Accounts - Connected bank accounts for automatic sync
+ */
+export const bankAccounts = mysqlTable("bank_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  bankName: varchar("bankName", { length: 255 }).notNull(),
+  accountType: mysqlEnum("accountType", ["checking", "savings", "credit_card", "other"]).notNull(),
+  accountLast4: varchar("accountLast4", { length: 4 }).notNull(),
+  plaidAccountId: varchar("plaidAccountId", { length: 255 }),
+  plaidAccessToken: text("plaidAccessToken"),
+  isActive: boolean("isActive").default(true).notNull(),
+  lastSyncedAt: timestamp("lastSyncedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BankAccount = typeof bankAccounts.$inferSelect;
+export type InsertBankAccount = typeof bankAccounts.$inferInsert;
+
+/**
+ * Transaction Imports - Transactions imported from bank accounts
+ */
+export const transactionImports = mysqlTable("transaction_imports", {
+  id: int("id").autoincrement().primaryKey(),
+  bankAccountId: int("bankAccountId").notNull(),
+  transactionId: int("transactionId"),
+  externalTransactionId: varchar("externalTransactionId", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+  transactionType: mysqlEnum("transactionType", ["debit", "credit"]).notNull(),
+  transactionDate: timestamp("transactionDate").notNull(),
+  category: varchar("category", { length: 255 }),
+  isMatched: boolean("isMatched").default(false).notNull(),
+  importedAt: timestamp("importedAt").defaultNow().notNull(),
+});
+
+export type TransactionImport = typeof transactionImports.$inferSelect;
+export type InsertTransactionImport = typeof transactionImports.$inferInsert;

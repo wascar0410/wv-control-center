@@ -127,3 +127,16 @@
 - [x] Navegación: agregar enlace en DashboardLayout (Desempeño)
 - [x] Tests para driver stats (10 tests nuevos, 64/64 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 17: Seguimiento de Gastos e Ingresos (Manual + Automático)
+- [x] Actualizar esquema DB: tabla bankAccounts, tabla transactionImports
+- [x] Backend: queries para gestionar cuentas bancarias y transacciones importadas (16 queries)
+- [x] Backend: routers tRPC para addManualTransaction, linkBankAccount, unlinkBankAccount, getImportedTransactions, etc.
+- [x] Frontend: formulario AddTransactionModal para agregar gastos/ingresos manuales
+- [x] Frontend: modal LinkBankAccountModal para conectar cuenta bancaria
+- [x] Frontend: página de Transacciones con filtros (tipo, búsqueda, origen)
+- [x] Frontend: tabla de transacciones con búsqueda y paginación
+- [x] Integración bancaria: Plaid API instalado y configurado con credenciales
+- [x] Tests para transacciones manuales y automáticas (10 tests nuevos, 74/74 total pasando)
+- [x] Checkpoint y entrega

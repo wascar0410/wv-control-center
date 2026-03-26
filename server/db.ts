@@ -1,7 +1,9 @@
 import { and, desc, eq, gte, isNull, lte, or, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
+  bankAccounts,
   fuelLogs,
+  InsertBankAccount,
   InsertFuelLog,
   InsertLoad,
   InsertLoadAssignment,
@@ -9,6 +11,7 @@ import {
   InsertPartner,
   InsertPODDocument,
   InsertTransaction,
+  InsertTransactionImport,
   InsertUser,
   loadAssignments,
   loads,
@@ -16,6 +19,7 @@ import {
   partnership,
   podDocuments,
   transactions,
+  transactionImports,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -622,4 +626,150 @@ export async function getDriverRecentDeliveries(driverId: number, limit: number 
     console.error("[Database] Error getting recent deliveries:", error);
     return [];
   }
+}
+
+
+// ─── Bank Accounts ────────────────────────────────────────────────────────────
+
+export async function createBankAccount(data: InsertBankAccount) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(bankAccounts).values(data);
+  return result;
+}
+
+export async function getBankAccountsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(bankAccounts)
+    .where(and(eq(bankAccounts.userId, userId), eq(bankAccounts.isActive, true)))
+    .orderBy(desc(bankAccounts.createdAt));
+}
+
+export async function getBankAccountById(accountId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(bankAccounts)
+    .where(eq(bankAccounts.id, accountId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function updateBankAccount(accountId: number, data: Partial<InsertBankAccount>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(bankAccounts)
+    .set(data)
+    .where(eq(bankAccounts.id, accountId));
+}
+
+export async function deactivateBankAccount(accountId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(bankAccounts)
+    .set({ isActive: false })
+    .where(eq(bankAccounts.id, accountId));
+}
+
+// ─── Transaction Imports ──────────────────────────────────────────────────────
+
+export async function createTransactionImport(data: InsertTransactionImport) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(transactionImports).values(data);
+  return result;
+}
+
+export async function getTransactionImportsByBankAccount(bankAccountId: number, limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(transactionImports)
+    .where(eq(transactionImports.bankAccountId, bankAccountId))
+    .orderBy(desc(transactionImports.transactionDate))
+    .limit(limit);
+}
+
+export async function getUnmatchedTransactionImports(bankAccountId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(transactionImports)
+    .where(
+      and(
+        eq(transactionImports.bankAccountId, bankAccountId),
+        eq(transactionImports.isMatched, false)
+      )
+    )
+    .orderBy(desc(transactionImports.transactionDate));
+}
+
+export async function matchTransactionImport(importId: number, transactionId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(transactionImports)
+    .set({ transactionId, isMatched: true })
+    .where(eq(transactionImports.id, importId));
+}
+
+export async function getTransactionImportById(importId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select()
+    .from(transactionImports)
+    .where(eq(transactionImports.id, importId))
+    .limit(1);
+
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function deleteTransactionImport(importId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(transactionImports)
+    .where(eq(transactionImports.id, importId));
+}
+
+export async function getTransactionImportsByDateRange(
+  bankAccountId: number,
+  startDate: Date,
+  endDate: Date
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(transactionImports)
+    .where(
+      and(
+        eq(transactionImports.bankAccountId, bankAccountId),
+        gte(transactionImports.transactionDate, startDate),
+        lte(transactionImports.transactionDate, endDate)
+      )
+    )
+    .orderBy(desc(transactionImports.transactionDate));
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { plaidRouter } from "./_core/plaidRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -14,7 +15,123 @@ import {
   createLoadAssignment, getLoadAssignments, getAssignmentById, updateAssignmentStatus, getAvailableLoads, getPendingAssignmentsForDriver,
   uploadPOD, getPODsByLoadId, getPODsByDriverId, getPODById, deletePOD,
   getDriverStats, getDriverMonthlyTrends, getDriverRecentDeliveries,
+  createBankAccount, getBankAccountsByUserId, getBankAccountById, updateBankAccount, deactivateBankAccount,
+  createTransactionImport, getTransactionImportsByBankAccount, getUnmatchedTransactionImports, matchTransactionImport, deleteTransactionImport, getTransactionImportById,
 } from "./db";
+
+// ─── Bank & Transaction Router ─────────────────────────────────────────────────
+
+const bankTransactionRouter = router({
+  // Bank Accounts
+  linkBankAccount: protectedProcedure
+    .input(z.object({
+      bankName: z.string(),
+      accountType: z.enum(["checking", "savings", "credit_card", "other"]),
+      accountLast4: z.string().length(4),
+      plaidAccountId: z.string().optional(),
+      plaidAccessToken: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const account = await createBankAccount({
+        userId: ctx.user.id,
+        bankName: input.bankName,
+        accountType: input.accountType,
+        accountLast4: input.accountLast4,
+        plaidAccountId: input.plaidAccountId,
+        plaidAccessToken: input.plaidAccessToken,
+      });
+      return { success: true, accountId: typeof account === 'object' && 'insertId' in account ? (account as any).insertId : 0 };
+    }),
+
+  getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
+    return getBankAccountsByUserId(ctx.user.id);
+  }),
+
+  unlinkBankAccount: protectedProcedure
+    .input(z.object({ accountId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const account = await getBankAccountById(input.accountId);
+      if (!account || account.userId !== ctx.user.id) {
+        throw new Error("Cuenta no encontrada");
+      }
+      await deactivateBankAccount(input.accountId);
+      return { success: true };
+    }),
+
+  // Manual Transactions
+  addManualTransaction: protectedProcedure
+    .input(z.object({
+      type: z.enum(["income", "expense"]),
+      category: z.string(),
+      amount: z.number().positive(),
+      description: z.string(),
+      transactionDate: z.date(),
+      referenceLoadId: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const transaction = await createTransaction({
+        type: input.type,
+        category: input.category as any,
+        amount: String(input.amount),
+        description: input.description,
+        transactionDate: input.transactionDate,
+        referenceLoadId: input.referenceLoadId,
+        createdBy: ctx.user.id,
+      });
+      return { success: true, transactionId: typeof transaction === 'object' && 'insertId' in transaction ? (transaction as any).insertId : 0 };
+    }),
+
+  // Imported Transactions
+  getImportedTransactions: protectedProcedure
+    .input(z.object({ bankAccountId: z.number(), limit: z.number().default(50) }))
+    .query(async ({ input, ctx }) => {
+      const account = await getBankAccountById(input.bankAccountId);
+      if (!account || account.userId !== ctx.user.id) {
+        throw new Error("Cuenta no encontrada");
+      }
+      return getTransactionImportsByBankAccount(input.bankAccountId, input.limit);
+    }),
+
+  getUnmatchedImports: protectedProcedure
+    .input(z.object({ bankAccountId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const account = await getBankAccountById(input.bankAccountId);
+      if (!account || account.userId !== ctx.user.id) {
+        throw new Error("Cuenta no encontrada");
+      }
+      return getUnmatchedTransactionImports(input.bankAccountId);
+    }),
+
+  matchImportToTransaction: protectedProcedure
+    .input(z.object({ importId: z.number(), transactionId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const importRecord = await getTransactionImportById(input.importId);
+      if (!importRecord) throw new Error("Importación no encontrada");
+      
+      const account = await getBankAccountById(importRecord.bankAccountId);
+      if (!account || account.userId !== ctx.user.id) {
+        throw new Error("No tienes permiso");
+      }
+      
+      await matchTransactionImport(input.importId, input.transactionId);
+      return { success: true };
+    }),
+
+  deleteImportedTransaction: protectedProcedure
+    .input(z.object({ importId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      const importRecord = await getTransactionImportById(input.importId);
+      if (!importRecord) throw new Error("Importación no encontrada");
+      
+      const account = await getBankAccountById(importRecord.bankAccountId);
+      if (!account || account.userId !== ctx.user.id) {
+        throw new Error("No tienes permiso");
+      }
+      
+      await deleteTransactionImport(input.importId);
+      return { success: true };
+    }),
+});
 
 // ─── Driver Stats Router ─────────────────────────────────────────────────────────
 
@@ -679,6 +796,8 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   assignment: assignmentRouter,
   pod: podRouter,
+  bankTransaction: bankTransactionRouter,
+  plaid: plaidRouter,
 });
 
 export type AppRouter = typeof appRouter;

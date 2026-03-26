@@ -11,6 +11,7 @@ import Finance from "./pages/Finance";
 import Partnership from "./pages/Partnership";
 import DriverView from "./pages/DriverView";
 import DriverPerformance from "./pages/DriverPerformance";
+import Transactions from "./pages/Transactions";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
 import { Loader2, Truck } from "lucide-react";
@@ -102,6 +103,7 @@ function AppRoutes() {
           <Route path="/partnership" component={() => <ProtectedRoute component={Partnership} requiredRole="admin" />} />
           <Route path="/driver" component={DriverView} />
           <Route path="/driver-performance" component={DriverPerformance} />
+          <Route path="/transactions" component={Transactions} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>
