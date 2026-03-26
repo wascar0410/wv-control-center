@@ -1,28 +1,431 @@
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router } from "./_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { notifyOwner } from "./_core/notification";
+import { storagePut } from "./storage";
+import {
+  createLoad, createOwnerDraw, createPartner, createTransaction, createFuelLog,
+  deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
+  getLoads, getMonthlyCashFlow, getOwnerDraws, getPartners, getTransactions,
+  updateLoad, updateLoadStatus, updatePartner, getDrawsByPeriod, getAllDrivers,
+} from "./db";
+
+// ─── Loads Router ─────────────────────────────────────────────────────────────
+
+const loadsRouter = router({
+  list: protectedProcedure
+    .input(z.object({ status: z.string().optional(), driverId: z.number().optional() }).optional())
+    .query(({ input }) => getLoads(input)),
+
+  byId: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(({ input }) => getLoadById(input.id)),
+
+  create: protectedProcedure
+    .input(z.object({
+      clientName: z.string().min(1),
+      pickupAddress: z.string().min(1),
+      deliveryAddress: z.string().min(1),
+      pickupLat: z.number().optional(),
+      pickupLng: z.number().optional(),
+      deliveryLat: z.number().optional(),
+      deliveryLng: z.number().optional(),
+      weight: z.number().positive(),
+      weightUnit: z.string().default("lbs"),
+      merchandiseType: z.string().min(1),
+      price: z.number().positive(),
+      estimatedFuel: z.number().min(0).default(0),
+      estimatedTolls: z.number().min(0).default(0),
+      assignedDriverId: z.number().optional(),
+      notes: z.string().optional(),
+      pickupDate: z.string().optional(),
+      deliveryDate: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const id = await createLoad({
+        ...input,
+        price: String(input.price) as any,
+        weight: String(input.weight) as any,
+        estimatedFuel: String(input.estimatedFuel) as any,
+        estimatedTolls: String(input.estimatedTolls) as any,
+        pickupLat: input.pickupLat ? String(input.pickupLat) as any : undefined,
+        pickupLng: input.pickupLng ? String(input.pickupLng) as any : undefined,
+        deliveryLat: input.deliveryLat ? String(input.deliveryLat) as any : undefined,
+        deliveryLng: input.deliveryLng ? String(input.deliveryLng) as any : undefined,
+        pickupDate: input.pickupDate ? new Date(input.pickupDate) : undefined,
+        deliveryDate: input.deliveryDate ? new Date(input.deliveryDate) : undefined,
+        createdBy: ctx.user.id,
+      });
+      return { id };
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      clientName: z.string().optional(),
+      pickupAddress: z.string().optional(),
+      deliveryAddress: z.string().optional(),
+      pickupLat: z.number().optional(),
+      pickupLng: z.number().optional(),
+      deliveryLat: z.number().optional(),
+      deliveryLng: z.number().optional(),
+      weight: z.number().optional(),
+      merchandiseType: z.string().optional(),
+      price: z.number().optional(),
+      estimatedFuel: z.number().optional(),
+      estimatedTolls: z.number().optional(),
+      assignedDriverId: z.number().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      const updateData: any = { ...data };
+      if (data.price !== undefined) updateData.price = String(data.price);
+      if (data.weight !== undefined) updateData.weight = String(data.weight);
+      if (data.estimatedFuel !== undefined) updateData.estimatedFuel = String(data.estimatedFuel);
+      if (data.estimatedTolls !== undefined) updateData.estimatedTolls = String(data.estimatedTolls);
+      await updateLoad(id, updateData);
+      return { success: true };
+    }),
+
+  updateStatus: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(["available", "in_transit", "delivered", "invoiced", "paid"]),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      await updateLoadStatus(input.id, input.status);
+
+      // Auto-create income transaction when load is paid
+      if (input.status === "paid") {
+        const load = await getLoadById(input.id);
+        if (load) {
+          await createTransaction({
+            type: "income",
+            category: "load_payment",
+            amount: load.price,
+            description: `Pago de carga #${load.id} - ${load.clientName}`,
+            referenceLoadId: load.id,
+            transactionDate: new Date(),
+            createdBy: ctx.user.id,
+          });
+          await notifyOwner({
+            title: "💰 Carga Pagada",
+            content: `La carga #${load.id} de ${load.clientName} por $${load.price} ha sido marcada como pagada. Ingreso registrado automáticamente.`,
+          });
+        }
+      }
+
+      if (input.status === "delivered") {
+        const load = await getLoadById(input.id);
+        if (load) {
+          await notifyOwner({
+            title: "✅ Carga Entregada",
+            content: `La carga #${load.id} de ${load.clientName} (${load.pickupAddress} → ${load.deliveryAddress}) ha sido entregada exitosamente.`,
+          });
+        }
+      }
+
+      return { success: true };
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await deleteLoad(input.id);
+      return { success: true };
+    }),
+
+  uploadBOL: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      fileBase64: z.string(),
+      fileName: z.string(),
+      mimeType: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const key = `bol/${input.loadId}-${Date.now()}-${input.fileName}`;
+      const { url } = await storagePut(key, buffer, input.mimeType);
+      await updateLoad(input.loadId, { bolImageUrl: url });
+      return { url };
+    }),
+});
+
+// ─── Finance Router ───────────────────────────────────────────────────────────
+
+const financeRouter = router({
+  transactions: protectedProcedure
+    .input(z.object({
+      type: z.enum(["income", "expense"]).optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+    }).optional())
+    .query(({ input }) =>
+      getTransactions({
+        type: input?.type,
+        startDate: input?.startDate ? new Date(input.startDate) : undefined,
+        endDate: input?.endDate ? new Date(input.endDate) : undefined,
+      })
+    ),
+
+  addExpense: protectedProcedure
+    .input(z.object({
+      category: z.enum(["fuel", "maintenance", "insurance", "subscriptions", "phone", "payroll", "tolls", "other"]),
+      amount: z.number().positive(),
+      description: z.string().optional(),
+      receiptBase64: z.string().optional(),
+      receiptFileName: z.string().optional(),
+      transactionDate: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      let receiptUrl: string | undefined;
+      if (input.receiptBase64 && input.receiptFileName) {
+        const buffer = Buffer.from(input.receiptBase64, "base64");
+        const key = `receipts/${Date.now()}-${input.receiptFileName}`;
+        const { url } = await storagePut(key, buffer, "image/jpeg");
+        receiptUrl = url;
+      }
+
+      const id = await createTransaction({
+        type: "expense",
+        category: input.category,
+        amount: String(input.amount) as any,
+        description: input.description,
+        receiptUrl,
+        transactionDate: input.transactionDate ? new Date(input.transactionDate) : new Date(),
+        createdBy: ctx.user.id,
+      });
+
+      if (input.amount >= 500) {
+        await notifyOwner({
+          title: "⚠️ Gasto Importante Registrado",
+          content: `Se registró un gasto de $${input.amount} en la categoría "${input.category}". ${input.description ?? ""}`,
+        });
+      }
+
+      return { id };
+    }),
+
+  summary: protectedProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .query(({ input }) => getFinancialSummary(input.year, input.month)),
+
+  cashFlow: protectedProcedure
+    .input(z.object({ year: z.number() }))
+    .query(({ input }) => getMonthlyCashFlow(input.year)),
+});
+
+// ─── Partnership Router ───────────────────────────────────────────────────────
+
+const partnershipRouter = router({
+  list: protectedProcedure.query(() => getPartners()),
+
+  create: protectedProcedure
+    .input(z.object({
+      partnerName: z.string().min(1),
+      partnerRole: z.string().min(1),
+      participationPercent: z.number().min(0).max(100),
+      userId: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const id = await createPartner({
+        ...input,
+        participationPercent: String(input.participationPercent) as any,
+      });
+      return { id };
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      partnerName: z.string().optional(),
+      partnerRole: z.string().optional(),
+      participationPercent: z.number().min(0).max(100).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      const updateData: any = { ...data };
+      if (data.participationPercent !== undefined) updateData.participationPercent = String(data.participationPercent);
+      await updatePartner(id, updateData);
+      return { success: true };
+    }),
+
+  draws: protectedProcedure
+    .input(z.object({ partnerId: z.number().optional() }).optional())
+    .query(({ input }) => getOwnerDraws(input?.partnerId)),
+
+  drawsByPeriod: protectedProcedure
+    .input(z.object({ period: z.string() }))
+    .query(({ input }) => getDrawsByPeriod(input.period)),
+
+  createDraw: protectedProcedure
+    .input(z.object({
+      partnerId: z.number(),
+      amount: z.number().positive(),
+      period: z.string(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const id = await createOwnerDraw({
+        ...input,
+        amount: String(input.amount) as any,
+        createdBy: ctx.user.id,
+      });
+      const partners = await getPartners();
+      const partner = partners.find((p) => p.id === input.partnerId);
+      await notifyOwner({
+        title: "💸 Retiro de Socio Registrado",
+        content: `${partner?.partnerName ?? "Socio"} realizó un retiro (Owner's Draw) de $${input.amount} para el período ${input.period}.`,
+      });
+      return { id };
+    }),
+
+  distribution: protectedProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .query(async ({ input }) => {
+      const [partners, summary] = await Promise.all([
+        getPartners(),
+        getFinancialSummary(input.year, input.month),
+      ]);
+      const payroll = summary.byCategory.find((c) => c.category === "payroll")?.total ?? 0;
+      const netAfterPayroll = summary.netProfit - payroll;
+      return {
+        grossIncome: summary.income,
+        totalExpenses: summary.expenses,
+        payroll,
+        netProfit: summary.netProfit,
+        netAfterPayroll,
+        partners: partners.map((p) => ({
+          ...p,
+          distribution: (netAfterPayroll * parseFloat(String(p.participationPercent))) / 100,
+        })),
+      };
+    }),
+});
+
+// ─── Driver Router ────────────────────────────────────────────────────────────
+
+const driverRouter = router({
+  myLoads: protectedProcedure.query(({ ctx }) =>
+    getLoads({ driverId: ctx.user.id })
+  ),
+
+  allDrivers: protectedProcedure.query(() => getAllDrivers()),
+
+  logFuel: protectedProcedure
+    .input(z.object({
+      loadId: z.number().optional(),
+      amount: z.number().positive(),
+      gallons: z.number().optional(),
+      pricePerGallon: z.number().optional(),
+      location: z.string().optional(),
+      receiptBase64: z.string().optional(),
+      receiptFileName: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      let receiptUrl: string | undefined;
+      if (input.receiptBase64 && input.receiptFileName) {
+        const buffer = Buffer.from(input.receiptBase64, "base64");
+        const key = `fuel-receipts/${Date.now()}-${input.receiptFileName}`;
+        const { url } = await storagePut(key, buffer, "image/jpeg");
+        receiptUrl = url;
+      }
+
+      const id = await createFuelLog({
+        driverId: ctx.user.id,
+        loadId: input.loadId,
+        amount: String(input.amount) as any,
+        gallons: input.gallons ? String(input.gallons) as any : undefined,
+        pricePerGallon: input.pricePerGallon ? String(input.pricePerGallon) as any : undefined,
+        location: input.location,
+        receiptUrl,
+      });
+
+      // Also create a transaction for the fuel expense
+      await createTransaction({
+        type: "expense",
+        category: "fuel",
+        amount: String(input.amount) as any,
+        description: `Gasolina - Chofer ID ${ctx.user.id}${input.location ? ` en ${input.location}` : ""}`,
+        referenceLoadId: input.loadId,
+        transactionDate: new Date(),
+        createdBy: ctx.user.id,
+      });
+
+      return { id };
+    }),
+
+  fuelLogs: protectedProcedure
+    .input(z.object({ loadId: z.number().optional() }).optional())
+    .query(({ ctx, input }) => getFuelLogs(ctx.user.id, input?.loadId)),
+
+  uploadBOL: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      fileBase64: z.string(),
+      fileName: z.string(),
+      mimeType: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const key = `bol/${input.loadId}-${Date.now()}-${input.fileName}`;
+      const { url } = await storagePut(key, buffer, input.mimeType);
+      await updateLoad(input.loadId, { bolImageUrl: url });
+      await notifyOwner({
+        title: "📄 BOL Subido",
+        content: `Se subió el comprobante de entrega (BOL) para la carga #${input.loadId}.`,
+      });
+      return { url };
+    }),
+
+  updateLoadStatus: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      status: z.enum(["in_transit", "delivered"]),
+    }))
+    .mutation(async ({ input }) => {
+      await updateLoadStatus(input.id, input.status);
+      if (input.status === "delivered") {
+        const load = await getLoadById(input.id);
+        if (load) {
+          await notifyOwner({
+            title: "✅ Carga Entregada",
+            content: `La carga #${load.id} de ${load.clientName} ha sido entregada. Dirección: ${load.deliveryAddress}`,
+          });
+        }
+      }
+      return { success: true };
+    }),
+});
+
+// ─── Dashboard Router ─────────────────────────────────────────────────────────
+
+const dashboardRouter = router({
+  kpis: protectedProcedure.query(() => getDashboardKPIs()),
+  recentLoads: protectedProcedure.query(() => getLoads()),
+});
+
+// ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
+      return { success: true } as const;
     }),
   }),
-
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  loads: loadsRouter,
+  finance: financeRouter,
+  partnership: partnershipRouter,
+  driver: driverRouter,
+  dashboard: dashboardRouter,
 });
 
 export type AppRouter = typeof appRouter;

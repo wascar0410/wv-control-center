@@ -4,35 +4,114 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+import DashboardLayout from "./components/DashboardLayout";
+import Dashboard from "./pages/Dashboard";
+import Loads from "./pages/Loads";
+import Finance from "./pages/Finance";
+import Partnership from "./pages/Partnership";
+import DriverView from "./pages/DriverView";
+import { useAuth } from "./_core/hooks/useAuth";
+import { getLoginUrl } from "./const";
+import { Loader2, Truck } from "lucide-react";
 
-function Router() {
-  // make sure to consider if you need authentication for certain routes
-  return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
-      <Route component={NotFound} />
-    </Switch>
-  );
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { loading, isAuthenticated } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Truck className="w-8 h-8 text-primary" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background flex items-center justify-center">
+              <Loader2 className="w-3 h-3 text-primary animate-spin" />
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">Cargando WV Control Center...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-8 max-w-sm w-full px-6">
+          {/* Logo */}
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Truck className="w-10 h-10 text-primary" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-foreground">WV Control Center</h1>
+              <p className="text-sm text-muted-foreground mt-1">WV Transport, LLC</p>
+            </div>
+          </div>
+
+          {/* Login card */}
+          <div className="w-full bg-card border border-border rounded-2xl p-8 flex flex-col gap-6 shadow-xl">
+            <div className="text-center">
+              <h2 className="text-lg font-semibold text-foreground">Acceder al Panel</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Inicia sesión para gestionar operaciones, finanzas y socios.
+              </p>
+            </div>
+            <a
+              href={getLoginUrl()}
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-primary/20"
+            >
+              Iniciar Sesión
+            </a>
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center">
+            Plataforma de gestión interna para WV Transport, LLC
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
+function AppRoutes() {
+  return (
+    <AuthGate>
+      <DashboardLayout>
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/loads" component={Loads} />
+          <Route path="/finance" component={Finance} />
+          <Route path="/partnership" component={Partnership} />
+          <Route path="/driver" component={DriverView} />
+          <Route path="/404" component={NotFound} />
+          <Route component={NotFound} />
+        </Switch>
+      </DashboardLayout>
+    </AuthGate>
+  );
+}
 
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <Toaster
+            theme="dark"
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: "oklch(0.14 0.014 240)",
+                border: "1px solid oklch(0.22 0.015 240)",
+                color: "oklch(0.95 0.005 240)",
+              },
+            }}
+          />
+          <AppRoutes />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
