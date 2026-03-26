@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { MapView } from "@/components/Map";
 import { PODUploadModal } from "@/components/PODUploadModal";
+import LoadStatusCard from "@/components/LoadStatusCard";
 import {
   Truck, MapPin, Package, Fuel, Camera, CheckCircle2, Navigation,
   Upload, Loader2, ArrowRight, Clock, Weight, FileCheck
@@ -236,16 +237,10 @@ export default function DriverView() {
                 </Card>
               ) : (
                 activeAssignedLoads.map((load: any) => (
-                  <LoadCard
+                  <LoadStatusCard
                     key={load.id}
                     load={load}
-                    isSelected={selectedLoad?.id === load.id}
-                    onSelect={() => handleSelectLoad(load)}
-                    onStartTransit={() => statusMutation.mutate({ id: load.id, status: "in_transit" })}
-                    onMarkDelivered={() => statusMutation.mutate({ id: load.id, status: "delivered" })}
-                    onUploadBOL={() => { setSelectedLoad(load); setShowBOLUpload(true); }}
-                    onUploadPOD={() => { setSelectedLoad(load); setShowPODUpload(true); }}
-                    onLogFuel={() => { setSelectedLoad(load); setShowFuelForm(true); }}
+                    onStatusChange={() => utils.driver.myLoads.invalidate()}
                   />
                 ))
               )}

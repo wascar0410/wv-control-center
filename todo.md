@@ -193,3 +193,15 @@
 - [x] Usar tRPC router existente loads.create para crear carga desde cotización
 - [x] Tests para nuevo flujo integrado (117/117 tests pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 23: Gestión de Estado de Cargas para Chofer
+- [x] Crear componentes UI para mostrar estado de carga (LoadStatusCard con badges de color)
+- [x] Integrar Google Maps para iniciar ruta con destino (botón "Ir a Destino")
+- [x] Implementar cambio de estado: Disponible → En Tránsito → Entregada
+- [x] Agregar confirmación de entrega con foto (captura de cámara + preview)
+- [x] Agregar notas de entrega opcionales
+- [x] Integrar en DriverView con reemplazo de LoadCard anterior
+- [x] Mostrar información de carga (cliente, peso, mercancía, precio)
+- [x] Tests para gestión de estado (117/117 tests pasando)
+- [x] Checkpoint y entrega
