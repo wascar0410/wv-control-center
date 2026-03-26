@@ -60,3 +60,12 @@
 - [x] Tests Vitest para routers principales (20/20 tests pasan)
 - [x] Checkpoint guardado
 - [x] Entrega al usuario
+
+
+## Fase 10: Mejora de Fuel Logs y BOL Upload
+- [x] Mejorar validación de archivos en backend (tamaño, tipo MIME)
+- [x] Implementar almacenamiento S3 para BOL con URLs presignadas
+- [x] Agregar validación de montos de gasolina (rango razonable)
+- [x] Mejorar UX móvil: captura de cámara, preview de imagen, progreso de carga
+- [x] Tests para fuel logs y BOL upload (12 tests nuevos, 33/33 total pasando)
+- [x] Notificaciones al propietario cuando se sube BOL o registra gasto importante

@@ -352,3 +352,211 @@ describe("driver", () => {
     );
   });
 });
+
+
+// ─── Fuel Logs Tests ──────────────────────────────────────────────────────────
+
+describe("driver.logFuel", () => {
+  it("rejects fuel amount less than $5", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    try {
+      await caller.driver.logFuel({
+        amount: 3,
+        gallons: 1,
+        pricePerGallon: 3,
+        location: "Shell",
+      });
+      expect.fail("Should have thrown error");
+    } catch (error: any) {
+      expect(error.message).toContain("al menos $5");
+    }
+  });
+
+  it("rejects fuel amount greater than $5000", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    try {
+      await caller.driver.logFuel({
+        amount: 6000,
+        location: "Shell",
+      });
+      expect.fail("Should have thrown error");
+    } catch (error: any) {
+      expect(error.message).toContain("sospechosamente alto");
+    }
+  });
+
+  it("accepts valid fuel log with amount between $5 and $5000", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.driver.logFuel({
+      amount: 75.50,
+      gallons: 20,
+      pricePerGallon: 3.775,
+      location: "Shell Station, Miami",
+    });
+    expect(result.id).toBe(1);
+  });
+
+  it("warns about discrepancy between gallons*price and amount", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.driver.logFuel({
+      amount: 100,
+      gallons: 20,
+      pricePerGallon: 3.5,
+      location: "Chevron",
+    });
+    // Should still succeed but log a warning (70 vs 100)
+    expect(result.id).toBe(1);
+  });
+
+  it("rejects invalid MIME type for receipt", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    try {
+      await caller.driver.logFuel({
+        amount: 50,
+        location: "Shell",
+        receiptBase64: "dGVzdA==",
+        receiptFileName: "receipt.txt",
+        receiptMimeType: "text/plain",
+      });
+      expect.fail("Should have thrown error");
+    } catch (error: any) {
+      expect(error.message).toContain("Tipo no permitido");
+    }
+  });
+
+  it("creates transaction when fuel is logged", async () => {
+    const { createTransaction } = await import("./db");
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    await caller.driver.logFuel({
+      amount: 80,
+      location: "Exxon",
+    });
+    expect(createTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "expense",
+        category: "fuel",
+        amount: "80",
+      })
+    );
+  });
+
+  it("notifies owner when fuel expense is >= $100", async () => {
+    const { notifyOwner } = await import("./_core/notification");
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    await caller.driver.logFuel({
+      amount: 150,
+      location: "BP Station",
+    });
+    expect(notifyOwner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringContaining("Combustible"),
+        content: expect.stringContaining("150"),
+      })
+    );
+  });
+});
+
+// ─── BOL Upload Tests ─────────────────────────────────────────────────────────
+
+describe("driver.uploadBOL", () => {
+  it("rejects file larger than 10MB", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const largeBuffer = Buffer.alloc(11 * 1024 * 1024);
+    const base64 = largeBuffer.toString("base64");
+    try {
+      await caller.driver.uploadBOL({
+        loadId: 1,
+        fileBase64: base64,
+        fileName: "bol.jpg",
+        mimeType: "image/jpeg",
+      });
+      expect.fail("Should have thrown error");
+    } catch (error: any) {
+      expect(error.message).toContain("demasiado grande");
+    }
+  });
+
+  it("rejects invalid MIME type", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    try {
+      await caller.driver.uploadBOL({
+        loadId: 1,
+        fileBase64: "dGVzdA==",
+        fileName: "bol.txt",
+        mimeType: "text/plain",
+      });
+      expect.fail("Should have thrown error");
+    } catch (error: any) {
+      expect(error.message).toContain("Tipo no permitido");
+    }
+  });
+
+  it("accepts valid BOL upload with image", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.driver.uploadBOL({
+      loadId: 1,
+      fileBase64: Buffer.from("fake image data").toString("base64"),
+      fileName: "bol_001.jpg",
+      mimeType: "image/jpeg",
+    });
+    expect(result.url).toBe("https://cdn.example.com/test.jpg");
+  });
+
+  it("accepts valid BOL upload with PDF", async () => {
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.driver.uploadBOL({
+      loadId: 1,
+      fileBase64: Buffer.from("fake pdf data").toString("base64"),
+      fileName: "bol_001.pdf",
+      mimeType: "application/pdf",
+    });
+    expect(result.url).toBe("https://cdn.example.com/test.jpg");
+  });
+
+  it("notifies owner when BOL is uploaded", async () => {
+    const { notifyOwner } = await import("./_core/notification");
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    await caller.driver.uploadBOL({
+      loadId: 5,
+      fileBase64: Buffer.from("fake image").toString("base64"),
+      fileName: "bol_005.jpg",
+      mimeType: "image/jpeg",
+    });
+    expect(notifyOwner).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: expect.stringContaining("BOL"),
+        content: expect.stringContaining("carga #5"),
+      })
+    );
+  });
+
+  it("updates load with BOL image URL", async () => {
+    const { updateLoad } = await import("./db");
+    const ctx = createDriverContext();
+    const caller = appRouter.createCaller(ctx);
+    await caller.driver.uploadBOL({
+      loadId: 3,
+      fileBase64: Buffer.from("fake image").toString("base64"),
+      fileName: "bol_003.jpg",
+      mimeType: "image/jpeg",
+    });
+    expect(updateLoad).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        bolImageUrl: "https://cdn.example.com/test.jpg",
+      })
+    );
+  });
+});

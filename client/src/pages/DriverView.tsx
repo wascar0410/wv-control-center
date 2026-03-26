@@ -113,10 +113,22 @@ export default function DriverView() {
   const handleBOLFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { toast.error("El archivo no debe superar 5MB"); return; }
+    
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(`Tipo no permitido. Usa: ${allowedTypes.join(", ")}`);
+      return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("El archivo no debe superar 10MB");
+      return;
+    }
+    
     setBolFile(file);
     const reader = new FileReader();
     reader.onload = (ev) => setBolPreview(ev.target?.result as string);
+    reader.onerror = () => toast.error("Error al leer el archivo");
     reader.readAsDataURL(file);
   };
 
@@ -136,13 +148,31 @@ export default function DriverView() {
   };
 
   const handleLogFuel = () => {
-    if (!fuelForm.amount) { toast.error("Ingresa el monto de gasolina"); return; }
+    const amount = parseFloat(fuelForm.amount);
+    if (!fuelForm.amount || isNaN(amount)) { toast.error("Ingresa un monto válido"); return; }
+    if (amount < 5) { toast.error("El monto debe ser al menos $5"); return; }
+    if (amount > 5000) { toast.error("Monto sospechosamente alto. Verifica el valor."); return; }
+    
+    const gallons = fuelForm.gallons ? parseFloat(fuelForm.gallons) : undefined;
+    const pricePerGallon = fuelForm.pricePerGallon ? parseFloat(fuelForm.pricePerGallon) : undefined;
+    
+    if (gallons && pricePerGallon) {
+      const calculated = parseFloat((gallons * pricePerGallon).toFixed(2));
+      const difference = Math.abs(calculated - amount);
+      if (difference > 1) {
+        toast.warning(`Discrepancia: ${gallons}gal × $${pricePerGallon}/gal = $${calculated}, pero reportaste $${amount}`);
+      }
+    }
+    
     fuelMutation.mutate({
       loadId: selectedLoad?.id,
-      amount: parseFloat(fuelForm.amount),
-      gallons: fuelForm.gallons ? parseFloat(fuelForm.gallons) : undefined,
-      pricePerGallon: fuelForm.pricePerGallon ? parseFloat(fuelForm.pricePerGallon) : undefined,
+      amount,
+      gallons,
+      pricePerGallon,
       location: fuelForm.location || undefined,
+      receiptFileName: undefined,
+      receiptBase64: undefined,
+      receiptMimeType: undefined,
     });
   };
 
@@ -307,12 +337,18 @@ export default function DriverView() {
             )}
             <div className="space-y-2">
               <Label>Monto Total ($) *</Label>
-              <Input
-                type="number" placeholder="0.00"
-                value={fuelForm.amount}
-                onChange={(e) => setFuelForm((f) => ({ ...f, amount: e.target.value }))}
-                className="bg-background border-border"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
+                <Input
+                  type="number" placeholder="0.00" step="0.01" min="5" max="5000"
+                  value={fuelForm.amount}
+                  onChange={(e) => setFuelForm((f) => ({ ...f, amount: e.target.value }))}
+                  className="bg-background border-border pl-7"
+                />
+              </div>
+              {fuelForm.amount && (parseFloat(fuelForm.amount) < 5 || parseFloat(fuelForm.amount) > 5000) && (
+                <p className="text-xs text-red-400">Debe estar entre $5 y $5,000</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -345,9 +381,9 @@ export default function DriverView() {
             </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowFuelForm(false)}>Cancelar</Button>
-            <Button onClick={handleLogFuel} disabled={fuelMutation.isPending} className="bg-amber-500 hover:bg-amber-600 text-white">
-              {fuelMutation.isPending ? "Registrando..." : "Registrar Gasto"}
+            <Button variant="outline" onClick={() => setShowFuelForm(false)} disabled={fuelMutation.isPending}>Cancelar</Button>
+            <Button onClick={handleLogFuel} disabled={fuelMutation.isPending || !fuelForm.amount} className="bg-amber-500 hover:bg-amber-600 text-white">
+              {fuelMutation.isPending ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Registrando...</>) : "Registrar Gasto"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -382,7 +418,7 @@ export default function DriverView() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground">Toca para seleccionar foto</p>
-                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, PDF — máx. 5MB</p>
+                    <p className="text-xs text-muted-foreground mt-1">JPG, PNG, WebP, PDF — máx. 10MB</p>
                   </div>
                 </div>
               )}

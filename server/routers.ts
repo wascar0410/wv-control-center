@@ -319,20 +319,45 @@ const driverRouter = router({
   logFuel: protectedProcedure
     .input(z.object({
       loadId: z.number().optional(),
-      amount: z.number().positive(),
-      gallons: z.number().optional(),
-      pricePerGallon: z.number().optional(),
-      location: z.string().optional(),
+      amount: z.number().positive().max(10000),
+      gallons: z.number().positive().max(500).optional(),
+      pricePerGallon: z.number().positive().max(100).optional(),
+      location: z.string().max(255).optional(),
       receiptBase64: z.string().optional(),
-      receiptFileName: z.string().optional(),
+      receiptFileName: z.string().max(255).optional(),
+      receiptMimeType: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Validate fuel amount is reasonable
+      if (input.amount < 5) throw new Error("El monto debe ser al menos $5");
+      if (input.amount > 5000) throw new Error("Monto sospechosamente alto (>$5000). Verifica el valor.");
+
+      // Validate consistency between gallons and price
+      if (input.gallons && input.pricePerGallon) {
+        const calculated = parseFloat((input.gallons * input.pricePerGallon).toFixed(2));
+        const difference = Math.abs(calculated - input.amount);
+        if (difference > 1) {
+          console.warn(`[Fuel] Discrepancia: ${input.gallons}gal x $${input.pricePerGallon}/gal = $${calculated}, pero se reporto $${input.amount}`);
+        }
+      }
+
       let receiptUrl: string | undefined;
       if (input.receiptBase64 && input.receiptFileName) {
         const buffer = Buffer.from(input.receiptBase64, "base64");
-        const key = `fuel-receipts/${Date.now()}-${input.receiptFileName}`;
-        const { url } = await storagePut(key, buffer, "image/jpeg");
-        receiptUrl = url;
+        if (buffer.length > 5 * 1024 * 1024) throw new Error("Archivo demasiado grande (max 5MB)");
+
+        const allowedMimes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+        const mimeType = input.receiptMimeType || "image/jpeg";
+        if (!allowedMimes.includes(mimeType)) throw new Error(`Tipo no permitido. Usa: ${allowedMimes.join(", ")}`);
+
+        try {
+          const key = `fuel-receipts/${ctx.user.id}/${Date.now()}-${input.receiptFileName}`;
+          const { url } = await storagePut(key, buffer, mimeType);
+          receiptUrl = url;
+        } catch (error) {
+          console.error("[Fuel] Upload error:", error);
+          throw new Error("No se pudo subir el recibo. Intenta de nuevo.");
+        }
       }
 
       const id = await createFuelLog({
@@ -345,18 +370,26 @@ const driverRouter = router({
         receiptUrl,
       });
 
-      // Also create a transaction for the fuel expense
       await createTransaction({
         type: "expense",
         category: "fuel",
         amount: String(input.amount) as any,
-        description: `Gasolina - Chofer ID ${ctx.user.id}${input.location ? ` en ${input.location}` : ""}`,
+        description: `Gasolina - ${ctx.user.name}${input.location ? ` en ${input.location}` : ""}`,
         referenceLoadId: input.loadId,
+        receiptUrl,
         transactionDate: new Date(),
         createdBy: ctx.user.id,
       });
 
-      return { id };
+      // Notify owner if expense is significant (>= $100)
+      if (input.amount >= 100) {
+        await notifyOwner({
+          title: "⛽ Gasto de Combustible",
+          content: `${ctx.user.name} registro $${input.amount.toFixed(2)} en combustible${input.location ? ` en ${input.location}` : ""}`,
+        });
+      }
+
+      return { id, receiptUrl };
     }),
 
   fuelLogs: protectedProcedure
@@ -367,19 +400,36 @@ const driverRouter = router({
     .input(z.object({
       loadId: z.number(),
       fileBase64: z.string(),
-      fileName: z.string(),
+      fileName: z.string().max(255),
       mimeType: z.string(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
-      const key = `bol/${input.loadId}-${Date.now()}-${input.fileName}`;
-      const { url } = await storagePut(key, buffer, input.mimeType);
-      await updateLoad(input.loadId, { bolImageUrl: url });
-      await notifyOwner({
-        title: "📄 BOL Subido",
-        content: `Se subió el comprobante de entrega (BOL) para la carga #${input.loadId}.`,
-      });
-      return { url };
+      
+      if (buffer.length > 10 * 1024 * 1024) {
+        throw new Error("Archivo BOL demasiado grande (max 10MB)");
+      }
+
+      const allowedMimes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+      if (!allowedMimes.includes(input.mimeType)) {
+        throw new Error(`Tipo no permitido. Usa: ${allowedMimes.join(", ")}`);
+      }
+
+      try {
+        const key = `bol/${input.loadId}/${Date.now()}-${input.fileName}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        await updateLoad(input.loadId, { bolImageUrl: url });
+        
+        await notifyOwner({
+          title: "📄 BOL Subido",
+          content: `${ctx.user.name} subio el comprobante de entrega (BOL) para la carga #${input.loadId}.`,
+        });
+        
+        return { url };
+      } catch (error) {
+        console.error("[BOL Upload] Error:", error);
+        throw new Error("No se pudo subir el BOL. Intenta de nuevo.");
+      }
     }),
 
   updateLoadStatus: protectedProcedure
