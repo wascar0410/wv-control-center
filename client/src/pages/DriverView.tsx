@@ -198,7 +198,7 @@ export default function DriverView() {
 
   const assignedLoads = (loads ?? []).filter((l) => l?.assignedDriverId !== null && l?.assignedDriverId !== undefined);
   const unassignedAvailableLoads = (loads ?? []).filter((l) => (l?.assignedDriverId === null || l?.assignedDriverId === undefined) && l?.status === "available");
-  const activeAssignedLoads = assignedLoads.filter((l) => l?.status === "in_transit" || l?.status === "available");
+  const activeAssignedLoads = assignedLoads.filter((l) => l?.status !== "delivered" && l?.status !== "paid" && l?.status !== "invoiced");
   const completedLoads = (loads ?? []).filter((l) => l?.status === "delivered" || l?.status === "paid" || l?.status === "invoiced");
 
   return (
@@ -325,6 +325,9 @@ export default function DriverView() {
             onSelectLoad={(loadId) => {
               const load = loads?.find((l) => l?.id === loadId);
               if (load) setSelectedLoad(load);
+            }}
+            onStatusChange={(loadId, newStatus) => {
+              statusMutation.mutate({ id: loadId, status: newStatus as any });
             }}
             isLoading={isLoading}
           />
