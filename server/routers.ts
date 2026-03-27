@@ -9,6 +9,7 @@ import { geocodingRouter } from "./_core/geocodingRouter";
 import { routesRouter } from "./_core/routesRouter";
 import { multiStopRouter } from "./_core/multiStopRouter";
 import { locationRouter } from "./_core/locationRouter";
+import { paymentRouter } from "./_core/paymentRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -808,6 +809,7 @@ export const appRouter = router({
   routes: routesRouter,
   multiStop: multiStopRouter,
   location: locationRouter,
+  payment: paymentRouter,
 });
 
 export type AppRouter = typeof appRouter;

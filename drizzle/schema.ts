@@ -320,3 +320,27 @@ export const driverLocations = mysqlTable("driver_locations", {
 
 export type DriverLocation = typeof driverLocations.$inferSelect;
 export type InsertDriverLocation = typeof driverLocations.$inferInsert;
+
+
+/**
+ * Driver Payments - Automatic payment processing when load is delivered
+ */
+export const driverPayments = mysqlTable("driver_payments", {
+  id: int("id").autoincrement().primaryKey(),
+  driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+  quotationId: int("quotationId").references(() => loadQuotations.id, { onDelete: "set null" }),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(), // Payment amount in USD
+  currency: varchar("currency", { length: 3 }).default("USD"),
+  status: mysqlEnum("status", ["pending", "processing", "completed", "failed", "refunded"]).default("pending"),
+  paymentMethod: mysqlEnum("paymentMethod", ["bank_transfer", "stripe", "cash", "check"]).default("bank_transfer"),
+  stripePaymentId: varchar("stripePaymentId", { length: 255 }), // Stripe payment ID if applicable
+  bankAccountId: int("bankAccountId").references(() => bankAccounts.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  processedAt: timestamp("processedAt"),
+  failureReason: text("failureReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type DriverPayment = typeof driverPayments.$inferSelect;
+export type InsertDriverPayment = typeof driverPayments.$inferInsert;

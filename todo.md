@@ -220,10 +220,21 @@
 
 
 ## Fase 25: Corrección del Flujo de Estado de Cargas para Chofer (Empleado de Compañía)
-- [ ] Verificar y corregir router loads.updateStatus - asegurar que funciona correctamente
-- [ ] Implementar flujo: Carga asignada → Chofer clica "Iniciar Entrega" → Abre Google Maps
-- [ ] Cambio automático a "En Tránsito" cuando inicia entrega
-- [ ] Implementar cambio de estado a "Entregada" con foto/POD obligatoria
-- [ ] Verificar permisos: solo chofer asignado puede cambiar estado
-- [ ] Tests para flujo completo de cambio de estado
-- [ ] Checkpoint y entrega
+- [x] Verificar y corregir router loads.updateStatus - asegurar que funciona correctamente
+- [x] Implementar flujo: Carga asignada → Chofer clica "Iniciar Entrega" → Abre Google Maps
+- [x] Cambio automático a "En Tránsito" cuando inicia entrega
+- [x] Implementar cambio de estado a "Entregada" con foto/POD obligatoria
+- [x] Verificar permisos: solo chofer asignado puede cambiar estado
+- [x] Tests para flujo completo de cambio de estado (127/127 tests pasando)
+- [x] Checkpoint y entrega
+
+
+## Fase 26: Automatización de Pagos al Marcar Entregada
+- [x] Actualizar esquema DB: tabla driver_payments (13 campos)
+- [x] Backend: 8 queries para cálculo de pago basado en cotización y distancia real
+- [x] Backend: paymentRouter tRPC con 5 procedimientos (processDeliveryPayment, getMyPayments, getMyPaymentStats, getPayment, updatePaymentStatus)
+- [x] Backend: trigger automático de pago cuando status = 'delivered' (integrado en LoadStatusCard)
+- [x] Frontend: integración automática en LoadStatusCard - pago se procesa al marcar entregada
+- [x] Frontend: notificaciones "Carga entregada y pago procesado"
+- [x] Tests para automatización de pagos (10 tests nuevos, 127/127 total pasando)
+- [x] Checkpoint y entrega

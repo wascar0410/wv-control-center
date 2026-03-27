@@ -57,6 +57,13 @@
       "when": 1774561977398,
       "tag": "0007_productive_silk_fever",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1774572658793,
+      "tag": "0008_bright_blizzard",
+      "breakpoints": true
     }
   ]
 }

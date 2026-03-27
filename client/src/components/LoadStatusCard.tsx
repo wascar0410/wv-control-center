@@ -50,6 +50,13 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
       utils.driver.myLoads.invalidate();
     },
   });
+  
+  const processPaymentMutation = trpc.payment.processDeliveryPayment.useMutation({
+    onSuccess: () => {
+      utils.payment.getMyPaymentStats.invalidate();
+      utils.payment.getMyPayments.invalidate();
+    },
+  });
 
   const handleStartRoute = () => {
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(load.deliveryAddress)}&travelmode=driving`;
@@ -88,11 +95,19 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
     } else if (newStatus === "delivered") {
       setIsUpdating(true);
       try {
+        // Mark load as delivered
         await updateStatusMutation.mutateAsync({
           id: load.id,
           status: "delivered",
         });
-        toast.success("✓ Carga marcada como Entregada");
+        
+        // Automatically process payment
+        await processPaymentMutation.mutateAsync({
+          loadId: load.id,
+          notes: deliveryNotes || undefined,
+        });
+        
+        toast.success("✓ Carga entregada y pago procesado");
         setShowStatusDialog(false);
         setDeliveryNotes("");
         setDeliveryPhoto(null);

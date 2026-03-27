@@ -3,9 +3,11 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   bankAccounts,
   driverLocations,
+  driverPayments,
   fuelLogs,
   InsertBankAccount,
   InsertDriverLocation,
+  InsertDriverPayment,
   InsertFuelLog,
   InsertLoad,
   InsertLoadAssignment,
@@ -1029,4 +1031,79 @@ export async function deleteOldDriverLocations(daysOld: number = 30) {
   await db
     .delete(driverLocations)
     .where(lte(driverLocations.createdAt, cutoffDate));
+}
+
+
+// ─── Driver Payments ──────────────────────────────────────────────────────────
+
+export async function createDriverPayment(data: InsertDriverPayment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(driverPayments).values(data).execute() as any;
+  return result.insertId as number;
+}
+
+export async function getDriverPaymentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(driverPayments).where(eq(driverPayments.id, id)).limit(1);
+  return result[0];
+}
+
+export async function getDriverPaymentsByLoadId(loadId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(driverPayments).where(eq(driverPayments.loadId, loadId));
+}
+
+export async function getDriverPayments(driverId: number, filters?: { status?: string; startDate?: Date; endDate?: Date }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(driverPayments.driverId, driverId)];
+  if (filters?.status) conditions.push(eq(driverPayments.status, filters.status as any));
+  if (filters?.startDate) conditions.push(gte(driverPayments.createdAt, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(driverPayments.createdAt, filters.endDate));
+  return db.select().from(driverPayments).where(and(...conditions)).orderBy(desc(driverPayments.createdAt));
+}
+
+export async function updateDriverPayment(id: number, data: Partial<InsertDriverPayment>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(driverPayments).set(data).where(eq(driverPayments.id, id));
+}
+
+export async function getDriverPaymentStats(driverId: number) {
+  const db = await getDb();
+  if (!db) return { totalEarned: 0, totalPending: 0, totalCompleted: 0, averagePayment: 0 };
+  
+  const result = await db
+    .select({
+      status: driverPayments.status,
+      total: sql<string>`SUM(${driverPayments.amount})`,
+      count: sql<string>`COUNT(*)`,
+    })
+    .from(driverPayments)
+    .where(eq(driverPayments.driverId, driverId))
+    .groupBy(driverPayments.status);
+
+  let totalEarned = 0;
+  let totalPending = 0;
+  let totalCompleted = 0;
+  let totalCount = 0;
+
+  result.forEach((r) => {
+    const total = parseFloat(r.total ?? "0");
+    const count = parseInt(String(r.count ?? "0"));
+    totalEarned += total;
+    totalCount += count;
+    if (r.status === "pending") totalPending += total;
+    if (r.status === "completed") totalCompleted += total;
+  });
+
+  return {
+    totalEarned,
+    totalPending,
+    totalCompleted,
+    averagePayment: totalCount > 0 ? totalEarned / totalCount : 0,
+  };
 }
