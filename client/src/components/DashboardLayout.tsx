@@ -35,6 +35,7 @@ import {
   CreditCard,
   Calculator,
   Zap,
+  BarChart3,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -47,6 +48,7 @@ const menuItems = [
   { icon: Package, label: "Cargas", path: "/loads", description: "Gestión de envíos" },
   { icon: Calculator, label: "Cotización", path: "/quotation", description: "Calcular precio y rentabilidad" },
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
+  { icon: BarChart3, label: "Finanzas Contables", path: "/accounting-finance", description: "Reportes y auditoría" },
   { icon: CreditCard, label: "Transacciones", path: "/transactions", description: "Seguimiento de gastos e ingresos" },
   { icon: Zap, label: "Pagos Masivos", path: "/batch-payments", description: "Procesamiento de lotes de pago" },
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },

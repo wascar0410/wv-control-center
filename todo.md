@@ -252,3 +252,24 @@
 - [x] Frontend: dashboard de batch payments con historial y métricas
 - [x] Tests para batch payments y exportación (18 tests, todos pasando)
 - [x] Checkpoint y entrega
+
+
+## Bugs Reportados - Fase 28
+- [x] Vista Chofer: cargas no se muestran en ningún estado → RESUELTO: Usuario admin no tenía cargas asignadas. Creado usuario chofer de prueba.
+- [x] Vista Cargas: no permite cambiar estado de las cargas → RESUELTO: Botón estaba oculto (hidden sm:flex). Ahora visible en todos los tamaños.
+- [x] Dashboard: no permite cambiar estado de las cargas → RESUELTO: Mismo problema que Vista de Cargas.
+
+## Fase 29: Adaptación para Socios 50/50
+- [x] Actualizar rol de pareja (yisvel10@gmail.com) a admin
+- [x] Crear módulo Finanzas Contables profesional con:
+  - [x] Balance General (Ingresos, Gastos, Utilidad Neta)
+  - [x] Gráficos de Ingresos vs Gastos
+  - [x] Margen de Ganancia
+  - [x] Flujo de Caja (tendencias)
+  - [x] Desglose de Ingresos por Categoría
+  - [x] Desglose de Gastos por Categoría
+  - [x] Historial de Transacciones con auditoría
+  - [x] Exportación de reportes
+- [x] Agregar "Finanzas Contables" al menú de navegación
+- [x] Ruta protegida /accounting-finance solo para admins
+- [x] Proyecto compila sin errores

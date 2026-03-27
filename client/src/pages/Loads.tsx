@@ -282,7 +282,7 @@ export default function Loads() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 text-xs px-2 hidden sm:flex"
+                              className="h-7 text-xs px-2"
                               onClick={() => statusMutation.mutate({ id: load?.id ?? 0, status: statusCfg.next as any })}
                               disabled={statusMutation.isPending}
                             >
