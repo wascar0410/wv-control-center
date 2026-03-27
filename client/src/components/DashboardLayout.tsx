@@ -34,6 +34,7 @@ import {
   TrendingUp,
   CreditCard,
   Calculator,
+  Zap,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -47,6 +48,7 @@ const menuItems = [
   { icon: Calculator, label: "Cotización", path: "/quotation", description: "Calcular precio y rentabilidad" },
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
   { icon: CreditCard, label: "Transacciones", path: "/transactions", description: "Seguimiento de gastos e ingresos" },
+  { icon: Zap, label: "Pagos Masivos", path: "/batch-payments", description: "Procesamiento de lotes de pago" },
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },
   { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },

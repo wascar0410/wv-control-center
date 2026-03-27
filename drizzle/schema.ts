@@ -7,6 +7,7 @@ import {
   varchar,
   decimal,
   boolean,
+  json,
 } from "drizzle-orm/mysql-core";
 
 /**
@@ -344,3 +345,67 @@ export const driverPayments = mysqlTable("driver_payments", {
 });
 export type DriverPayment = typeof driverPayments.$inferSelect;
 export type InsertDriverPayment = typeof driverPayments.$inferInsert;
+
+
+/**
+ * Payment Batches - Batch processing of driver payments
+ */
+export const paymentBatches = mysqlTable("payment_batches", {
+  id: int("id").autoincrement().primaryKey(),
+  batchNumber: varchar("batchNumber", { length: 50 }).unique().notNull(),
+  createdBy: int("createdBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+  period: varchar("period", { length: 20 }).notNull(),
+  status: mysqlEnum("status", ["draft", "pending_review", "approved", "processing", "completed", "failed", "cancelled"]).default("draft"),
+  totalAmount: decimal("totalAmount", { precision: 15, scale: 2 }).notNull(),
+  totalPayments: int("totalPayments").notNull(),
+  successfulPayments: int("successfulPayments").default(0),
+  failedPayments: int("failedPayments").default(0),
+  paymentMethod: mysqlEnum("paymentMethod", ["bank_transfer", "stripe", "mixed"]).default("bank_transfer"),
+  scheduledDate: timestamp("scheduledDate"),
+  processedDate: timestamp("processedDate"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PaymentBatch = typeof paymentBatches.$inferSelect;
+export type InsertPaymentBatch = typeof paymentBatches.$inferInsert;
+
+/**
+ * Payment Audit - Audit trail for all payment transactions
+ */
+export const paymentAudit = mysqlTable("payment_audit", {
+  id: int("id").autoincrement().primaryKey(),
+  paymentId: int("paymentId").notNull().references(() => driverPayments.id, { onDelete: "cascade" }),
+  batchId: int("batchId").references(() => paymentBatches.id, { onDelete: "set null" }),
+  action: mysqlEnum("action", ["created", "updated", "processed", "failed", "refunded", "cancelled"]).notNull(),
+  previousStatus: varchar("previousStatus", { length: 50 }),
+  newStatus: varchar("newStatus", { length: 50 }),
+  performedBy: int("performedBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+  reason: text("reason"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PaymentAudit = typeof paymentAudit.$inferSelect;
+export type InsertPaymentAudit = typeof paymentAudit.$inferInsert;
+
+/**
+ * Export Logs - Track all data exports for accounting and compliance
+ */
+export const exportLogs = mysqlTable("export_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  exportType: mysqlEnum("exportType", ["accounting", "payroll", "payments", "transactions", "loads", "custom"]).notNull(),
+  format: mysqlEnum("format", ["excel", "pdf", "csv", "json"]).notNull(),
+  startDate: varchar("startDate", { length: 10 }),
+  endDate: varchar("endDate", { length: 10 }),
+  recordCount: int("recordCount").notNull(),
+  fileSize: int("fileSize"),
+  fileUrl: varchar("fileUrl", { length: 500 }),
+  exportedBy: int("exportedBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+  filters: json("filters"),
+  status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+export type ExportLog = typeof exportLogs.$inferSelect;
+export type InsertExportLog = typeof exportLogs.$inferInsert;

@@ -13,6 +13,8 @@ import DriverView from "./pages/DriverView";
 import DriverPerformance from "./pages/DriverPerformance";
 import Transactions from "./pages/Transactions";
 import Quotation from "./pages/Quotation";
+import { BatchPayments } from "./pages/BatchPayments";
+import { BatchPaymentsDashboard } from "./pages/BatchPaymentsDashboard";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
 import { Loader2, Truck } from "lucide-react";
@@ -106,6 +108,8 @@ function AppRoutes() {
           <Route path="/driver-performance" component={DriverPerformance} />
           <Route path="/transactions" component={Transactions} />
           <Route path="/quotation" component={Quotation} />
+          <Route path="/batch-payments" component={() => <ProtectedRoute component={BatchPayments} requiredRole="admin" />} />
+          <Route path="/batch-payments-dashboard" component={() => <ProtectedRoute component={BatchPaymentsDashboard} requiredRole="admin" />} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

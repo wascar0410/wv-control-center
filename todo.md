@@ -238,3 +238,17 @@
 - [x] Frontend: notificaciones "Carga entregada y pago procesado"
 - [x] Tests para automatización de pagos (10 tests nuevos, 127/127 total pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 27: Procesamiento Masivo de Pagos y Exportación de Datos
+- [x] Actualizar esquema DB: tabla paymentBatches, paymentAudit, exportLogs
+- [x] Backend: queries para crear y gestionar batch payments (18 queries)
+- [x] Backend: batchPaymentRouter tRPC con 9 procedimientos (createBatch, getBatch, listBatches, submitForReview, approveBatch, rejectBatch, processBatch, getBatchAuditTrail, cancelBatch)
+- [x] Backend: exportRouter tRPC con 4 procedimientos (exportTransactions, exportLoads, exportPayments, getExportHistory)
+- [x] Frontend: componente BatchPayments.tsx para gestión completa de lotes
+- [x] Frontend: componente ExportDataModal.tsx para exportación con múltiples formatos
+- [x] Frontend: componente BatchPaymentsDashboard.tsx con analytics y visualizaciones
+- [x] Frontend: implementar exportación a Excel, PDF, CSV, JSON
+- [x] Frontend: dashboard de batch payments con historial y métricas
+- [x] Tests para batch payments y exportación (18 tests, todos pasando)
+- [x] Checkpoint y entrega

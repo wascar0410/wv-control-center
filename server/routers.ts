@@ -10,6 +10,8 @@ import { routesRouter } from "./_core/routesRouter";
 import { multiStopRouter } from "./_core/multiStopRouter";
 import { locationRouter } from "./_core/locationRouter";
 import { paymentRouter } from "./_core/paymentRouter";
+import { batchPaymentRouter } from "./_core/batchPaymentRouter";
+import { exportRouter } from "./_core/exportRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -810,6 +812,8 @@ export const appRouter = router({
   multiStop: multiStopRouter,
   location: locationRouter,
   payment: paymentRouter,
+  batchPayment: batchPaymentRouter,
+  export: exportRouter,
 });
 
 export type AppRouter = typeof appRouter;

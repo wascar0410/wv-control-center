@@ -4,16 +4,20 @@ import {
   bankAccounts,
   driverLocations,
   driverPayments,
+  exportLogs,
   fuelLogs,
   InsertBankAccount,
   InsertDriverLocation,
   InsertDriverPayment,
+  InsertExportLog,
   InsertFuelLog,
   InsertLoad,
   InsertLoadAssignment,
   InsertLoadQuotation,
   InsertOwnerDraw,
   InsertPartner,
+  InsertPaymentAudit,
+  InsertPaymentBatch,
   InsertPODDocument,
   InsertRouteStop,
   InsertTransaction,
@@ -24,6 +28,8 @@ import {
   loads,
   ownerDraws,
   partnership,
+  paymentAudit,
+  paymentBatches,
   podDocuments,
   routeStops,
   transactions,
@@ -1106,4 +1112,270 @@ export async function getDriverPaymentStats(driverId: number) {
     totalCompleted,
     averagePayment: totalCount > 0 ? totalEarned / totalCount : 0,
   };
+}
+
+
+// ─── Payment Batches ──────────────────────────────────────────────────────────
+
+export async function createPaymentBatch(data: InsertPaymentBatch) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(paymentBatches).values(data);
+  return result;
+}
+
+export async function getPaymentBatchById(batchId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select()
+    .from(paymentBatches)
+    .where(eq(paymentBatches.id, batchId))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getPaymentBatches(filters?: {
+  status?: string;
+  period?: string;
+  startDate?: Date;
+  endDate?: Date;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters?.status) conditions.push(eq(paymentBatches.status, filters.status as any));
+  if (filters?.period) conditions.push(eq(paymentBatches.period, filters.period));
+  if (filters?.startDate) conditions.push(gte(paymentBatches.createdAt, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(paymentBatches.createdAt, filters.endDate));
+
+  const query = db.select().from(paymentBatches);
+  if (conditions.length > 0) {
+    return query.where(and(...conditions)).orderBy(desc(paymentBatches.createdAt));
+  }
+  return query.orderBy(desc(paymentBatches.createdAt));
+}
+
+export async function updatePaymentBatch(batchId: number, data: Partial<InsertPaymentBatch>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(paymentBatches)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(paymentBatches.id, batchId));
+}
+
+export async function getPaymentsByBatchId(batchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(driverPayments)
+    .innerJoin(paymentAudit, eq(driverPayments.id, paymentAudit.paymentId))
+    .where(eq(paymentAudit.batchId, batchId))
+    .orderBy(desc(driverPayments.createdAt));
+}
+
+export async function getPendingPaymentsForBatch(limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(driverPayments)
+    .where(eq(driverPayments.status, "pending"))
+    .orderBy(desc(driverPayments.createdAt))
+    .limit(limit);
+}
+
+export async function getPaymentBatchStats(batchId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const batch = await getPaymentBatchById(batchId);
+  if (!batch) return null;
+
+  const payments = await db
+    .select({
+      status: driverPayments.status,
+      total: sql<string>`SUM(${driverPayments.amount})`,
+      count: sql<string>`COUNT(*)`,
+    })
+    .from(driverPayments)
+    .innerJoin(paymentAudit, eq(driverPayments.id, paymentAudit.paymentId))
+    .where(eq(paymentAudit.batchId, batchId))
+    .groupBy(driverPayments.status);
+
+  let totalAmount = 0;
+  let completedAmount = 0;
+  let failedAmount = 0;
+  let completedCount = 0;
+  let failedCount = 0;
+
+  payments.forEach((p) => {
+    const total = parseFloat(p.total ?? "0");
+    const count = parseInt(String(p.count ?? "0"));
+    totalAmount += total;
+    if (p.status === "completed") {
+      completedAmount += total;
+      completedCount += count;
+    } else if (p.status === "failed") {
+      failedAmount += total;
+      failedCount += count;
+    }
+  });
+
+  return {
+    totalAmount,
+    completedAmount,
+    failedAmount,
+    completedCount,
+    failedCount,
+    successRate: batch.totalPayments > 0 ? (completedCount / batch.totalPayments) * 100 : 0,
+  };
+}
+
+// ─── Payment Audit ────────────────────────────────────────────────────────────
+
+export async function createPaymentAuditLog(data: InsertPaymentAudit) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(paymentAudit).values(data);
+  return result;
+}
+
+export async function getPaymentAuditByPaymentId(paymentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(paymentAudit)
+    .where(eq(paymentAudit.paymentId, paymentId))
+    .orderBy(desc(paymentAudit.createdAt));
+}
+
+export async function getPaymentAuditByBatchId(batchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(paymentAudit)
+    .where(eq(paymentAudit.batchId, batchId))
+    .orderBy(desc(paymentAudit.createdAt));
+}
+
+// ─── Export Logs ──────────────────────────────────────────────────────────────
+
+export async function createExportLog(data: InsertExportLog) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(exportLogs).values(data);
+  return result;
+}
+
+export async function getExportLogById(exportId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select()
+    .from(exportLogs)
+    .where(eq(exportLogs.id, exportId))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getExportLogs(filters?: {
+  exportType?: string;
+  status?: string;
+  startDate?: Date;
+  endDate?: Date;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters?.exportType) conditions.push(eq(exportLogs.exportType, filters.exportType as any));
+  if (filters?.status) conditions.push(eq(exportLogs.status, filters.status as any));
+  if (filters?.startDate) conditions.push(gte(exportLogs.createdAt, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(exportLogs.createdAt, filters.endDate));
+
+  const query = db.select().from(exportLogs);
+  if (conditions.length > 0) {
+    return query
+      .where(and(...conditions))
+      .orderBy(desc(exportLogs.createdAt))
+      .limit(filters?.limit || 100);
+  }
+  return query.orderBy(desc(exportLogs.createdAt)).limit(filters?.limit || 100);
+}
+
+export async function updateExportLog(exportId: number, data: Partial<InsertExportLog>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(exportLogs)
+    .set(data)
+    .where(eq(exportLogs.id, exportId));
+}
+
+export async function getTransactionsForExport(filters?: {
+  startDate?: Date;
+  endDate?: Date;
+  category?: string;
+  type?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters?.startDate) conditions.push(gte(transactions.transactionDate, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(transactions.transactionDate, filters.endDate));
+  if (filters?.category) conditions.push(eq(transactions.category, filters.category as any));
+  if (filters?.type) conditions.push(eq(transactions.type, filters.type as any));
+
+  const query = db.select().from(transactions);
+  if (conditions.length > 0) {
+    return query.where(and(...conditions)).orderBy(desc(transactions.transactionDate));
+  }
+  return query.orderBy(desc(transactions.transactionDate));
+}
+
+export async function getLoadsForExport(filters?: {
+  startDate?: Date;
+  endDate?: Date;
+  status?: string;
+  driverId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters?.startDate) conditions.push(gte(loads.createdAt, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(loads.createdAt, filters.endDate));
+  if (filters?.status) conditions.push(eq(loads.status, filters.status as any));
+  if (filters?.driverId) conditions.push(eq(loads.assignedDriverId, filters.driverId));
+
+  const query = db.select().from(loads);
+  if (conditions.length > 0) {
+    return query.where(and(...conditions)).orderBy(desc(loads.createdAt));
+  }
+  return query.orderBy(desc(loads.createdAt));
+}
+
+export async function getPaymentsForExport(filters?: {
+  startDate?: Date;
+  endDate?: Date;
+  status?: string;
+  driverId?: number;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions: any[] = [];
+  if (filters?.startDate) conditions.push(gte(driverPayments.createdAt, filters.startDate));
+  if (filters?.endDate) conditions.push(lte(driverPayments.createdAt, filters.endDate));
+  if (filters?.status) conditions.push(eq(driverPayments.status, filters.status as any));
+  if (filters?.driverId) conditions.push(eq(driverPayments.driverId, filters.driverId));
+
+  const query = db.select().from(driverPayments);
+  if (conditions.length > 0) {
+    return query.where(and(...conditions)).orderBy(desc(driverPayments.createdAt));
+  }
+  return query.orderBy(desc(driverPayments.createdAt));
 }
