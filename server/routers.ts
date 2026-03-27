@@ -469,13 +469,9 @@ const partnershipRouter = router({
 // ─── Driver Router ────────────────────────────────────────────────────────────
 
 const driverRouter = router({
-  myLoads: protectedProcedure.query(({ ctx }) => {
-    // Admins see all loads, drivers see only their assigned loads
-    if (ctx.user.role === 'admin') {
-      return getLoads({ includeUnassigned: true });
-    }
-    return getLoads({ driverId: ctx.user.id, includeUnassigned: true });
-  }),
+  myLoads: protectedProcedure.query(({ ctx }) =>
+    getLoads({ driverId: ctx.user.id, includeUnassigned: true })
+  ),
 
   allDrivers: protectedProcedure.query(() => getAllDrivers()),
 
