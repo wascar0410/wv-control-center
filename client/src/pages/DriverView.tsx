@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { MapView } from "@/components/Map";
 import { PODUploadModal } from "@/components/PODUploadModal";
 import LoadStatusCard from "@/components/LoadStatusCard";
+import { LoadsMap } from "@/components/LoadsMap";
 import {
   Truck, MapPin, Package, Fuel, Camera, CheckCircle2, Navigation,
   Upload, Loader2, ArrowRight, Clock, Weight, FileCheck
@@ -311,26 +312,27 @@ export default function DriverView() {
 
         {/* Map */}
         <div className="lg:col-span-3">
-          <Card className="bg-card border-border overflow-hidden">
-            <CardHeader className="pb-2 flex flex-row items-center gap-2">
-              <Navigation className="w-4 h-4 text-primary" />
-              <CardTitle className="text-base font-semibold">
-                {selectedLoad ? `Ruta: ${selectedLoad.clientName}` : "Mapa de Rutas"}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="h-[420px] rounded-b-xl overflow-hidden">
-                <MapView
-                  onMapReady={(map) => {
-                    handleMapReady(map);
-                    if (selectedLoad) showRoute(selectedLoad);
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <LoadsMap
+            loads={(loads || []).map((l: any) => ({
+              ...l,
+              price: typeof l.price === 'string' ? parseFloat(l.price) : l.price,
+              pickupLat: typeof l.pickupLat === 'string' ? parseFloat(l.pickupLat) : l.pickupLat,
+              pickupLng: typeof l.pickupLng === 'string' ? parseFloat(l.pickupLng) : l.pickupLng,
+              deliveryLat: typeof l.deliveryLat === 'string' ? parseFloat(l.deliveryLat) : l.deliveryLat,
+              deliveryLng: typeof l.deliveryLng === 'string' ? parseFloat(l.deliveryLng) : l.deliveryLng,
+            }))}
+            selectedLoadId={selectedLoad?.id}
+            onSelectLoad={(loadId) => {
+              const load = loads?.find((l) => l?.id === loadId);
+              if (load) setSelectedLoad(load);
+            }}
+            isLoading={isLoading}
+          />
 
           {/* Selected Load Details */}
+          {selectedLoad && (
+            <div className="mt-4"></div>
+          )}
           {selectedLoad && (
             <Card className="bg-card border-border mt-4">
               <CardContent className="p-4">
