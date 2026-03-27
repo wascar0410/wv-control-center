@@ -189,12 +189,12 @@ export function BatchPayments() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex gap-4">
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as BatchStatus | "")}>
+            <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? "" : (value as BatchStatus))}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="draft">Borrador</SelectItem>
                 <SelectItem value="pending_review">Pendiente Revisión</SelectItem>
                 <SelectItem value="approved">Aprobado</SelectItem>
