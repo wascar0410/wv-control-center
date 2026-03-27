@@ -273,3 +273,13 @@
 - [x] Agregar "Finanzas Contables" al menú de navegación
 - [x] Ruta protegida /accounting-finance solo para admins
 - [x] Proyecto compila sin errores
+
+
+## Fase 30: Reorganizar Flujo de Cargas y Arreglar Estado
+- [x] Arreglar mutación updateStatus - FUNCIONA correctamente
+- [x] Remover botón "Nueva Carga" de página Cargas
+- [x] Crear cargas SOLO desde Cotizaciones
+- [x] Mejorar página Cargas: mostrar lista con detalles y cambiar estado
+- [x] Arreglar Vista del Chofer para mostrar cargas asignadas (admins ven todas, choferes ven sus asignadas)
+- [x] Flujo: Cotizaciones → Crear Carga → Ir a Cargas para gestionar
+- [x] Proyecto compila sin errores
