@@ -44,7 +44,12 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
   const [isUpdating, setIsUpdating] = useState(false);
   const photoInputRef = React.useRef<HTMLInputElement>(null);
 
-  const updateStatusMutation = trpc.loads.updateStatus.useMutation();
+  const utils = trpc.useUtils();
+  const updateStatusMutation = trpc.loads.updateStatus.useMutation({
+    onSuccess: () => {
+      utils.driver.myLoads.invalidate();
+    },
+  });
 
   const handleStartRoute = () => {
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(load.deliveryAddress)}&travelmode=driving`;

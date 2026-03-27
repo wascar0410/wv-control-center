@@ -217,3 +217,13 @@
 - [x] Frontend: mostrar múltiples choferes con información de velocidad y carga
 - [x] Tests para seguimiento de ubicación (117/117 tests pasando)
 - [x] Checkpoint y entrega
+
+
+## Fase 25: Corrección del Flujo de Estado de Cargas para Chofer (Empleado de Compañía)
+- [ ] Verificar y corregir router loads.updateStatus - asegurar que funciona correctamente
+- [ ] Implementar flujo: Carga asignada → Chofer clica "Iniciar Entrega" → Abre Google Maps
+- [ ] Cambio automático a "En Tránsito" cuando inicia entrega
+- [ ] Implementar cambio de estado a "Entregada" con foto/POD obligatoria
+- [ ] Verificar permisos: solo chofer asignado puede cambiar estado
+- [ ] Tests para flujo completo de cambio de estado
+- [ ] Checkpoint y entrega
