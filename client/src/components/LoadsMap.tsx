@@ -47,16 +47,14 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
 const STATUS_NEXT_LABEL: Record<string, string> = {
   available: "Iniciar Tránsito",
   in_transit: "Marcar Entregada",
-  delivered: "Facturar",
-  invoiced: "Marcar Pagada",
 };
 
 const STATUS_NEXT: Record<string, string> = {
   available: "in_transit",
   in_transit: "delivered",
-  delivered: "invoiced",
-  invoiced: "paid",
 };
+
+const ALLOWED_STATUSES = ["available", "in_transit", "delivered"];
 
 export function LoadsMap({ loads, selectedLoadId, onSelectLoad, onStatusChange, isLoading }: LoadsMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -199,9 +197,10 @@ export function LoadsMap({ loads, selectedLoadId, onSelectLoad, onStatusChange, 
 
   const filteredLoads = loads.filter(
     (load) =>
-      load.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (load.clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       load.pickupAddress.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      load.deliveryAddress.toLowerCase().includes(searchQuery.toLowerCase())
+      load.deliveryAddress.toLowerCase().includes(searchQuery.toLowerCase())) &&
+      ALLOWED_STATUSES.includes(load.status)
   );
 
   return (
