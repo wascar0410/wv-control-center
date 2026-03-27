@@ -89,7 +89,7 @@ function ProtectedRoute({ component: Component, requiredRole }: { component: Rea
   if (requiredRole === 'admin' && user?.role !== 'admin') {
     return <NotFound />;
   }
-  if (requiredRole === 'driver' && user?.role !== 'admin') {
+  if (requiredRole === 'driver' && user?.role !== 'driver' && user?.role !== 'admin') {
     return <NotFound />;
   }
   

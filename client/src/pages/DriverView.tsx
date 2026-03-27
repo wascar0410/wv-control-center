@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { MapView } from "@/components/Map";
+
 import { PODUploadModal } from "@/components/PODUploadModal";
 import LoadStatusCard from "@/components/LoadStatusCard";
 import { LoadsMap } from "@/components/LoadsMap";
@@ -37,9 +37,6 @@ export default function DriverView() {
   const [fuelForm, setFuelForm] = useState({ amount: "", gallons: "", pricePerGallon: "", location: "" });
   const [bolFile, setBolFile] = useState<File | null>(null);
   const [bolPreview, setBolPreview] = useState<string | null>(null);
-  const [mapReady, setMapReady] = useState(false);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const utils = trpc.useUtils();
@@ -91,44 +88,7 @@ export default function DriverView() {
     onError: (e) => toast.error(e.message),
   });
 
-  const handleMapReady = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    setMapReady(true);
-  }, []);
 
-  const showRoute = useCallback((load: any) => {
-    if (!mapRef.current) return;
-    const directionsService = new google.maps.DirectionsService();
-    if (directionsRendererRef.current) {
-      directionsRendererRef.current.setMap(null);
-    }
-    const renderer = new google.maps.DirectionsRenderer({
-      polylineOptions: { strokeColor: "#6366f1", strokeWeight: 4, strokeOpacity: 0.8 },
-      suppressMarkers: false,
-    });
-    renderer.setMap(mapRef.current);
-    directionsRendererRef.current = renderer;
-
-    directionsService.route(
-      {
-        origin: load.pickupAddress,
-        destination: load.deliveryAddress,
-        travelMode: google.maps.TravelMode.DRIVING,
-      },
-      (result, status) => {
-        if (status === "OK" && result) {
-          renderer.setDirections(result);
-        } else {
-          toast.error("No se pudo calcular la ruta");
-        }
-      }
-    );
-  }, []);
-
-  const handleSelectLoad = (load: any) => {
-    setSelectedLoad(load);
-    if (mapReady) showRoute(load);
-  };
 
   const handleBOLFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -265,7 +225,7 @@ export default function DriverView() {
                     key={load?.id ?? Math.random()}
                     load={load}
                     isSelected={selectedLoad?.id === load?.id}
-                    onSelect={() => handleSelectLoad(load)}
+                    onSelect={() => setSelectedLoad(load)}
                     onAccept={assignment ? () => acceptMutation.mutate({ assignmentId: assignment.id }) : undefined}
                     onReject={assignment ? () => rejectMutation.mutate({ assignmentId: assignment.id }) : undefined}
                     onStartTransit={() => statusMutation.mutate({ id: load?.id, status: "in_transit" })}
@@ -291,7 +251,7 @@ export default function DriverView() {
                     key={load.id}
                     load={load}
                     isSelected={selectedLoad?.id === load.id}
-                    onSelect={() => handleSelectLoad(load)}
+                    onSelect={() => setSelectedLoad(load)}
                     readonly
                   />
                 ))
