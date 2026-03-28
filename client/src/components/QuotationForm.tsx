@@ -29,6 +29,7 @@ export interface QuotationFormData {
   ratePerMile: number;
   ratePerPound?: number;
   fuelSurcharge: number;
+  offeredPrice: number;
   includeReturnEmpty: boolean;
 }
 
@@ -49,6 +50,7 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
     ratePerMile: 2.5,
     ratePerPound: 0,
     fuelSurcharge: 0,
+    offeredPrice: 0,
     includeReturnEmpty: false,
   });
 
@@ -73,8 +75,8 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
       return;
     }
 
-    if (formData.ratePerMile <= 0) {
-      toast.error("La tarifa por milla debe ser mayor a 0");
+    if (formData.offeredPrice <= 0) {
+      toast.error("El precio ofrecido debe ser mayor a 0");
       return;
     }
 
@@ -215,12 +217,25 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
             <DollarSign className="w-5 h-5" />
             Tarificación
           </CardTitle>
-          <CardDescription>Configura las tarifas para esta carga</CardDescription>
+          <CardDescription>Configura el precio ofrecido por el broker</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="offeredPrice">Precio Ofrecido por el Broker ($) *</Label>
+            <Input
+              id="offeredPrice"
+              type="number"
+              step="0.01"
+              placeholder="425.00"
+              value={formData.offeredPrice || ""}
+              onChange={(e) => handleInputChange("offeredPrice", parseFloat(e.target.value))}
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">Este es el precio total que ofrece el broker por la carga</p>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="ratePerMile">Tarifa por Milla ($)</Label>
+              <Label htmlFor="ratePerMile">Tarifa por Milla ($) - Referencia</Label>
               <Input
                 id="ratePerMile"
                 type="number"
@@ -230,6 +245,7 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
                 onChange={(e) => handleInputChange("ratePerMile", parseFloat(e.target.value))}
                 className="mt-1"
               />
+              <p className="text-xs text-muted-foreground mt-1">Para referencia</p>
             </div>
             <div>
               <Label htmlFor="ratePerPound">Tarifa por Libra ($) - Opcional</Label>
