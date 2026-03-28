@@ -72,9 +72,18 @@ export const batchPaymentRouter = router({
         notes: input.notes,
       });
 
-      const batchId = typeof batchResult === "object" && "insertId" in batchResult 
-        ? (batchResult as any).insertId 
-        : 0;
+      let batchId = 0;
+      if (typeof batchResult === "object" && "insertId" in batchResult) {
+        batchId = (batchResult as any).insertId;
+      } else if (Array.isArray(batchResult) && batchResult.length > 0) {
+        batchId = (batchResult[0] as any).id || 0;
+      } else if (typeof batchResult === "object" && "id" in batchResult) {
+        batchId = (batchResult as any).id;
+      }
+      
+      if (batchId === 0) {
+        throw new Error("Failed to create payment batch");
+      }
 
       for (const payment of pendingPayments) {
         await createPaymentAuditLog({
