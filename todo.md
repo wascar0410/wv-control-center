@@ -339,3 +339,14 @@
 - [ ] Dashboard: alertas si margen < ganancia mínima deseada
 - [ ] Tests para sistema de costos
 - [x] Checkpoint y entrega
+
+## Fase 36: Sistema de Alertas para Cargas Bajo Mínimo
+- [x] Crear tabla priceAlerts en BD
+- [x] Agregar lógica de alertas en calculateQuotation
+- [x] Backend: endpoint para obtener alertas activas (getUnreadAlerts, getAlerts, getAlertStats)
+- [x] Backend: endpoint para marcar alerta como leída (markAsRead, markAllAsRead)
+- [x] Frontend: componente AlertBanner en Quotation
+- [x] Frontend: notificación visual cuando se detecta carga bajo mínimo
+- [x] Frontend: widget AlertsWidget en Dashboard
+- [x] Integrar con sistema de notificaciones existente
+- [x] Checkpoint y entrega

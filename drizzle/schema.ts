@@ -472,3 +472,32 @@ export const exportLogs = mysqlTable("export_logs", {
 });
 export type ExportLog = typeof exportLogs.$inferSelect;
 export type InsertExportLog = typeof exportLogs.$inferInsert;
+
+
+/**
+ * Price Alerts - Alerts for loads below minimum profit threshold
+ */
+export const priceAlerts = mysqlTable("price_alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  quotationId: int("quotationId").notNull().references(() => loadQuotations.id, { onDelete: "cascade" }),
+  // Load details
+  clientName: varchar("clientName", { length: 255 }),
+  pickupAddress: text("pickupAddress").notNull(),
+  deliveryAddress: text("deliveryAddress").notNull(),
+  // Pricing info
+  offeredPrice: decimal("offeredPrice", { precision: 10, scale: 2 }).notNull(),
+  ratePerLoadedMile: decimal("ratePerLoadedMile", { precision: 10, scale: 2 }).notNull(),
+  minimumProfitPerMile: decimal("minimumProfitPerMile", { precision: 6, scale: 2 }).notNull(),
+  differenceFromMinimum: decimal("differenceFromMinimum", { precision: 10, scale: 2 }).notNull(),
+  // Alert status
+  severity: mysqlEnum("severity", ["warning", "critical"]).notNull(), // warning: $0-0.50 below, critical: below minimum
+  isRead: boolean("isRead").default(false).notNull(),
+  readAt: timestamp("readAt"),
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PriceAlert = typeof priceAlerts.$inferSelect;
+export type InsertPriceAlert = typeof priceAlerts.$inferInsert;

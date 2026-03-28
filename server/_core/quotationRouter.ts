@@ -10,6 +10,7 @@ import {
 } from "../db";
 import { calculateMultipleRoutes } from "./routes";
 import { getBusinessConfig, getApplicableDistanceSurcharge, getApplicableWeightSurcharge } from "../db-business-config";
+import { createPriceAlert } from "../db-price-alerts";
 
 // Haversine formula to calculate distance between two points
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -175,6 +176,27 @@ export const quotationRouter = router({
         profitMarginPercent: profitability.profitMarginPercent as any,
         status: "draft",
       });
+
+      // Create alert if rate per loaded mile is below minimum
+      const quotationId = (result as any).insertId || 0;
+      const minimumProfitPerMile = profitability.minimumRatePerMile;
+      const ratePerLoadedMile = profitability.ratePerLoadedMile;
+      
+      if (ratePerLoadedMile < minimumProfitPerMile) {
+        const severity = ratePerLoadedMile < minimumProfitPerMile - 0.50 ? "critical" : "warning";
+        await createPriceAlert({
+          userId: ctx.user.id,
+          quotationId: quotationId,
+          clientName: "",
+          pickupAddress: input.pickupAddress,
+          deliveryAddress: input.deliveryAddress,
+          offeredPrice: totalPrice as any,
+          ratePerLoadedMile: ratePerLoadedMile as any,
+          minimumProfitPerMile: minimumProfitPerMile as any,
+          differenceFromMinimum: (ratePerLoadedMile - minimumProfitPerMile) as any,
+          severity: severity as any,
+        });
+      }
 
       return {
         quotationId: (result as any).insertId || 0,

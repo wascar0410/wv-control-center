@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { AssignLoadModal } from "@/components/AssignLoadModal";
 import { DriverLocationMap } from "@/components/DriverLocationMap";
+import { AlertsWidget } from "@/components/AlertsWidget";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   available: { label: "Disponible", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
@@ -163,6 +164,9 @@ export default function Dashboard() {
 
         {/* Quick Actions */}
         <div className="space-y-4">
+          {/* Alerts Widget */}
+          <AlertsWidget />
+
           <Card className="bg-card border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold">Acciones Rápidas</CardTitle>

@@ -85,6 +85,13 @@
       "when": 1774709667297,
       "tag": "0011_soft_garia",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1774710155277,
+      "tag": "0012_huge_spirit",
+      "breakpoints": true
     }
   ]
 }

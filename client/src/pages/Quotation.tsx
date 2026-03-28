@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import QuotationForm, { type QuotationFormData } from "@/components/QuotationForm";
 import QuotationResultsTable from "@/components/QuotationResultsTable";
 import CreateLoadModal from "@/components/CreateLoadModal";
+import { AlertBanner } from "@/components/AlertBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, RotateCcw } from "lucide-react";
@@ -33,6 +34,19 @@ export default function Quotation() {
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateLoadModal, setShowCreateLoadModal] = useState(false);
   const [formDataForLoad, setFormDataForLoad] = useState<QuotationFormData | null>(null);
+  const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
+
+  // Get unread alerts
+  const { data: unreadAlerts = [] } = trpc.priceAlerts.getUnreadAlerts.useQuery();
+  const visibleAlerts = unreadAlerts
+    .filter((a) => !dismissedAlerts.includes(a.id))
+    .map((a) => ({
+      ...a,
+      offeredPrice: Number(a.offeredPrice),
+      ratePerLoadedMile: Number(a.ratePerLoadedMile),
+      minimumProfitPerMile: Number(a.minimumProfitPerMile),
+      differenceFromMinimum: Number(a.differenceFromMinimum),
+    }));
 
   const calculateQuotation = trpc.quotation.calculateQuotation.useMutation({
     onSuccess: (data) => {
@@ -68,6 +82,16 @@ export default function Quotation() {
             Calcula el precio, millas y rentabilidad de una carga antes de aceptarla
           </p>
         </div>
+
+        {/* Display Alerts */}
+        {visibleAlerts.length > 0 && (
+          <div className="mb-8">
+            <AlertBanner
+              alerts={visibleAlerts}
+              onDismiss={(alertId) => setDismissedAlerts((prev) => [...prev, alertId])}
+            />
+          </div>
+        )}
 
         {!result ? (
           // Form View
