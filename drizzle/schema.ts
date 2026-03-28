@@ -284,6 +284,64 @@ export type LoadQuotation = typeof loadQuotations.$inferSelect;
 export type InsertLoadQuotation = typeof loadQuotations.$inferInsert;
 
 /**
+ * Business Configuration - Costs and pricing parameters
+ */
+export const businessConfig = mysqlTable("business_config", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  // Fuel costs
+  fuelPricePerGallon: decimal("fuelPricePerGallon", { precision: 6, scale: 2 }).default("3.60"),
+  vanMpg: decimal("vanMpg", { precision: 5, scale: 1 }).default("18.0"),
+  // Operating costs per mile
+  maintenancePerMile: decimal("maintenancePerMile", { precision: 6, scale: 3 }).default("0.12"),
+  tiresPerMile: decimal("tiresPerMile", { precision: 6, scale: 3 }).default("0.03"),
+  // Fixed monthly costs
+  insuranceMonthly: decimal("insuranceMonthly", { precision: 8, scale: 2 }).default("450.00"),
+  phoneInternetMonthly: decimal("phoneInternetMonthly", { precision: 8, scale: 2 }).default("70.00"),
+  loadBoardAppsMonthly: decimal("loadBoardAppsMonthly", { precision: 8, scale: 2 }).default("45.00"),
+  accountingSoftwareMonthly: decimal("accountingSoftwareMonthly", { precision: 8, scale: 2 }).default("30.00"),
+  otherFixedMonthly: decimal("otherFixedMonthly", { precision: 8, scale: 2 }).default("80.00"),
+  // Goals and targets
+  targetMilesPerMonth: int("targetMilesPerMonth").default(4000),
+  minimumProfitPerMile: decimal("minimumProfitPerMile", { precision: 6, scale: 2 }).default("1.50"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BusinessConfig = typeof businessConfig.$inferSelect;
+export type InsertBusinessConfig = typeof businessConfig.$inferInsert;
+
+/**
+ * Distance Surcharge - Dynamic pricing based on loaded miles
+ */
+export const distanceSurcharge = mysqlTable("distance_surcharge", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  fromMiles: int("fromMiles").notNull(),
+  surchargePerMile: decimal("surchargePerMile", { precision: 6, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DistanceSurcharge = typeof distanceSurcharge.$inferSelect;
+export type InsertDistanceSurcharge = typeof distanceSurcharge.$inferInsert;
+
+/**
+ * Weight Surcharge - Dynamic pricing based on weight
+ */
+export const weightSurcharge = mysqlTable("weight_surcharge", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  fromLbs: int("fromLbs").notNull(),
+  surchargePerMile: decimal("surchargePerMile", { precision: 6, scale: 3 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WeightSurcharge = typeof weightSurcharge.$inferSelect;
+export type InsertWeightSurcharge = typeof weightSurcharge.$inferInsert;
+
+/**
  * Route Stops - Multiple pickup/delivery stops for optimized routes
  */
 export const routeStops = mysqlTable("route_stops", {

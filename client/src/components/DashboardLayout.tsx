@@ -36,6 +36,7 @@ import {
   Calculator,
   Zap,
   BarChart3,
+  Settings,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -55,6 +56,7 @@ const menuItems = [
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },
   { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },
+  { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

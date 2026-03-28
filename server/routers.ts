@@ -12,6 +12,7 @@ import { locationRouter } from "./_core/locationRouter";
 import { paymentRouter } from "./_core/paymentRouter";
 import { batchPaymentRouter } from "./_core/batchPaymentRouter";
 import { exportRouter } from "./_core/exportRouter";
+import { businessConfigRouter } from "./_core/businessConfigRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -840,6 +841,7 @@ export const appRouter = router({
   payment: paymentRouter,
   batchPayment: batchPaymentRouter,
   export: exportRouter,
+  businessConfig: businessConfigRouter,
 });
 
 export type AppRouter = typeof appRouter;

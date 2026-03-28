@@ -325,3 +325,17 @@
 - [x] Crear endpoint saveVerdictOverride en backend
 - [x] Integrar guardado en frontend
 - [x] Checkpoint y entrega
+
+## Fase 35: Sistema de Costos y Configuración Personalizada
+- [x] Crear tabla businessConfig en BD con costos fijos y variables
+- [x] Crear tabla distanceRecargo y weightRecargo para recargos dinámicos
+- [x] Backend: routers para get/update businessConfig
+- [x] Backend: routers para get/update distanceRecargo y weightRecargo
+- [x] Frontend: página Settings/Configuration para editar costos
+- [x] Frontend: tablas interactivas para editar recargos por distancia y peso
+- [x] Actualizar lógica de cotización para usar costos personalizados
+- [x] Aplicar recargos automáticos en cotizaciones según distancia y peso
+- [ ] Dashboard: mostrar proyección de ganancia mensual
+- [ ] Dashboard: alertas si margen < ganancia mínima deseada
+- [ ] Tests para sistema de costos
+- [x] Checkpoint y entrega

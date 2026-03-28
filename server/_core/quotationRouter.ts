@@ -9,6 +9,7 @@ import {
   getQuotationsByStatus
 } from "../db";
 import { calculateMultipleRoutes } from "./routes";
+import { getBusinessConfig, getApplicableDistanceSurcharge, getApplicableWeightSurcharge } from "../db-business-config";
 
 // Haversine formula to calculate distance between two points
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -25,32 +26,59 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
   return R * c;
 }
 
-// Calculate profitability metrics
-function calculateProfitability(
+// Calculate profitability metrics using business config
+async function calculateProfitability(
+  userId: number,
   totalPrice: number,
   totalMiles: number,
   loadedMiles: number,
-  weight: number,
-  fuelCostPerMile: number = 0.35,
-  operatingCostPerMile: number = 0.65,
-  minimumMarginPercent: number = 50
+  weight: number
 ) {
+  const config = await getBusinessConfig(userId);
+  
+  // Calculate fuel cost per mile
+  const fuelCostPerMile = Number(config?.fuelPricePerGallon || 3.60) / Number(config?.vanMpg || 18.0);
+  
+  // Calculate operating costs per mile
+  const maintenancePerMile = Number(config?.maintenancePerMile || 0.12);
+  const tiresPerMile = Number(config?.tiresPerMile || 0.03);
+  const operatingCostPerMile = fuelCostPerMile + maintenancePerMile + tiresPerMile;
+  
+  // Calculate fixed costs per mile
+  const totalFixedMonthly = 
+    Number(config?.insuranceMonthly || 450) +
+    Number(config?.phoneInternetMonthly || 70) +
+    Number(config?.loadBoardAppsMonthly || 45) +
+    Number(config?.accountingSoftwareMonthly || 30) +
+    Number(config?.otherFixedMonthly || 80);
+  const fixedCostPerMile = totalFixedMonthly / (Number(config?.targetMilesPerMonth || 4000));
+  
+  // Get applicable surcharges
+  const distanceSurcharge = await getApplicableDistanceSurcharge(userId, loadedMiles);
+  const weightSurcharge = await getApplicableWeightSurcharge(userId, weight);
+  
+  // Calculate costs
   const estimatedFuelCost = totalMiles * fuelCostPerMile;
-  const estimatedOperatingCost = totalMiles * operatingCostPerMile;
+  const estimatedOperatingCost = totalMiles * (operatingCostPerMile + fixedCostPerMile);
   const totalCost = estimatedFuelCost + estimatedOperatingCost;
   const estimatedProfit = totalPrice - totalCost;
   const profitMarginPercent = totalPrice > 0 ? (estimatedProfit / totalPrice) * 100 : 0;
-  const minimumRatePerMile = 2.50;
-  const minimumIncome = loadedMiles * minimumRatePerMile;
-  const differenceVsMinimum = totalPrice - minimumIncome;
+  
+  // Calculate rate per loaded mile
   const ratePerLoadedMile = loadedMiles > 0 ? totalPrice / loadedMiles : 0;
+  const minimumProfitPerMile = Number(config?.minimumProfitPerMile || 1.50);
+  const minimumIncome = loadedMiles * minimumProfitPerMile;
+  const differenceVsMinimum = totalPrice - minimumIncome;
+  
+  // Determine verdict based on minimum profit per mile
   let verdict = "ACEPTAR";
-  if (profitMarginPercent < minimumMarginPercent) {
+  if (ratePerLoadedMile < minimumProfitPerMile + 0.50) {
     verdict = "NEGOCIAR";
   }
-  if (profitMarginPercent < 30) {
+  if (ratePerLoadedMile < minimumProfitPerMile) {
     verdict = "RECHAZAR";
   }
+  
   return {
     estimatedFuelCost: Math.round(estimatedFuelCost * 100) / 100,
     estimatedOperatingCost: Math.round(estimatedOperatingCost * 100) / 100,
@@ -59,9 +87,11 @@ function calculateProfitability(
     profitMarginPercent: Math.round(profitMarginPercent * 100) / 100,
     minimumIncome: Math.round(minimumIncome * 100) / 100,
     ratePerLoadedMile: Math.round(ratePerLoadedMile * 100) / 100,
-    minimumRatePerMile: minimumRatePerMile,
+    minimumRatePerMile: minimumProfitPerMile,
     differenceVsMinimum: Math.round(differenceVsMinimum * 100) / 100,
     verdict: verdict,
+    distanceSurcharge: Math.round(Number(distanceSurcharge) * 100) / 100,
+    weightSurcharge: Math.round(Number(weightSurcharge) * 100) / 100,
   };
 }
 
@@ -113,8 +143,8 @@ export const quotationRouter = router({
       // Use offered price from broker
       const totalPrice = input.offeredPrice;
 
-      // Calculate profitability
-      const profitability = calculateProfitability(totalPrice, totalMiles, loadedMiles, input.weight);
+      // Calculate profitability using business config
+      const profitability = await calculateProfitability(ctx.user.id, totalPrice, totalMiles, loadedMiles, input.weight);
 
       // Create quotation record
       const result = await createLoadQuotation({

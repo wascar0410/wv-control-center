@@ -78,6 +78,13 @@
       "when": 1774708908101,
       "tag": "0010_first_thaddeus_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1774709667297,
+      "tag": "0011_soft_garia",
+      "breakpoints": true
     }
   ]
 }
