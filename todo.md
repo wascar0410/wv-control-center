@@ -442,3 +442,12 @@
 - [x] Eliminar componentes redundantes
 - [x] Optimizar queries tRPC
 - [x] Probar y validar
+
+
+## Fase 46: Vista Anual de Comparación
+- [x] Crear backend helper para calcular métricas de todos los meses del año
+- [x] Agregar endpoint tRPC para comparación anual
+- [x] Integrar vista anual en ComparisonAnalytics con pestaña adicional
+- [x] Crear gráficos anuales (línea de tendencia, heatmap de meses)
+- [x] Agregar análisis de desempeño anual
+- [x] Probar y validar

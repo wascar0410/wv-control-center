@@ -38,6 +38,7 @@ export default function Dashboard() {
   const { data: projections, isLoading: projectionsLoading } = trpc.dashboard.monthlyProjections.useQuery();
   const { data: historicalComparison, isLoading: historicalLoading } = trpc.dashboard.historicalComparison.useQuery();
   const { data: quarterlyComparison, isLoading: quarterlyLoading } = trpc.dashboard.quarterlyComparison.useQuery();
+  const { data: annualComparison, isLoading: annualLoading } = trpc.dashboard.annualComparison.useQuery();
   const utils = trpc.useUtils();
 
   const recentLoads = loads?.slice(0, 5) ?? [];
@@ -118,7 +119,11 @@ export default function Dashboard() {
 
       {/* Comparison Analytics */}
       {historicalComparison && quarterlyComparison && !historicalLoading && !quarterlyLoading && (
-        <ComparisonAnalytics historicalData={historicalComparison} quarterlyData={quarterlyComparison} />
+        <ComparisonAnalytics 
+          historicalData={historicalComparison} 
+          quarterlyData={quarterlyComparison}
+          annualData={annualComparison}
+        />
       )}
 
       {/* Driver Location Tracking */}

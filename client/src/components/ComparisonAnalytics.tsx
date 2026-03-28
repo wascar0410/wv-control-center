@@ -529,16 +529,312 @@ function QuarterlyView({ data }: { data: QuarterlyComparisonData }) {
   );
 }
 
+// Annual View Component
+function AnnualView({ data }: { data: AnnualComparisonData }) {
+  const annualChartData = data.months.map(m => ({
+    name: m.month,
+    miles: m.miles,
+    ganancia: m.profit,
+    cotizaciones: m.quotationsCount,
+  }));
+
+  const profitPerMileData = data.months.map(m => ({
+    name: m.month,
+    "ganancia/milla": m.averageProfitPerMile,
+  }));
+
+  const quarterlyData = [
+    { name: "Q1", miles: data.quarterlyBreakdown.q1.miles, ganancia: data.quarterlyBreakdown.q1.profit },
+    { name: "Q2", miles: data.quarterlyBreakdown.q2.miles, ganancia: data.quarterlyBreakdown.q2.profit },
+    { name: "Q3", miles: data.quarterlyBreakdown.q3.miles, ganancia: data.quarterlyBreakdown.q3.profit },
+    { name: "Q4", miles: data.quarterlyBreakdown.q4.miles, ganancia: data.quarterlyBreakdown.q4.profit },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Annual Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border border-border bg-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Totales Anuales {data.year}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Total Millas</span>
+                <span className="font-semibold">{data.annualTotals.totalMiles.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Total Ganancia</span>
+                <span className="font-semibold text-green-600">${data.annualTotals.totalProfit.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Total Cotizaciones</span>
+                <span className="font-semibold">{data.annualTotals.totalQuotations}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Ganancia/Milla</span>
+                <span className="font-semibold text-blue-600">${data.annualTotals.averageProfitPerMile.toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border bg-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Promedios Mensuales</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Promedio Millas/Mes</span>
+                <span className="font-semibold">{data.annualTotals.averageMilesPerMonth.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Promedio Ganancia/Mes</span>
+                <span className="font-semibold text-green-600">${data.annualTotals.averageProfitPerMonth.toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Best and Worst Months */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border border-border bg-card border-green-500/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Mejor Mes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between p-2 bg-green-500/10 rounded">
+                <span className="text-foreground/70">Mes</span>
+                <span className="font-semibold text-green-600">{data.bestMonth.month}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Millas</span>
+                <span className="font-semibold">{data.bestMonth.miles.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Ganancia</span>
+                <span className="font-semibold text-green-600">${data.bestMonth.profit.toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border bg-card border-red-500/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Peor Mes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between p-2 bg-red-500/10 rounded">
+                <span className="text-foreground/70">Mes</span>
+                <span className="font-semibold text-red-600">{data.worstMonth.month}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Millas</span>
+                <span className="font-semibold">{data.worstMonth.miles.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded">
+                <span className="text-foreground/70">Ganancia</span>
+                <span className="font-semibold text-red-600">${data.worstMonth.profit.toFixed(2)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quarterly Breakdown */}
+      <Card className="border border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Desglose Trimestral</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={quarterlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip 
+                formatter={(value) => (typeof value === 'number' ? value.toLocaleString() : value)}
+                contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
+              />
+              <Legend />
+              <Bar dataKey="miles" fill="#3b82f6" name="Millas" />
+              <Bar dataKey="ganancia" fill="#10b981" name="Ganancia ($)" />
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Annual Trend */}
+      <Card className="border border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Tendencia Anual</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={annualChartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip 
+                formatter={(value) => (typeof value === 'number' ? value.toLocaleString() : value)}
+                contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="miles"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                name="Millas"
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Profit Trend */}
+      <Card className="border border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Ganancia por Milla (Anual)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={profitPerMileData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="name" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" label={{ value: "Ganancia/Milla ($)", angle: -90, position: "insideLeft" }} />
+              <Tooltip 
+                formatter={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : value)}
+                contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="ganancia/milla"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                name="Ganancia/Milla"
+                dot={{ fill: "#8b5cf6", r: 3 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Half-Year Comparison */}
+      <Card className="border border-border bg-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Comparación Primer vs Segundo Semestre</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm">Primer Semestre (Ene-Jun)</h4>
+              <div className="flex justify-between p-2 bg-background/50 rounded text-sm">
+                <span className="text-foreground/70">Millas</span>
+                <span className="font-semibold">{data.comparison.firstHalfMiles.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded text-sm">
+                <span className="text-foreground/70">Ganancia</span>
+                <span className="font-semibold text-green-600">${data.comparison.firstHalfProfit.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-semibold text-sm">Segundo Semestre (Jul-Dic)</h4>
+              <div className="flex justify-between p-2 bg-background/50 rounded text-sm">
+                <span className="text-foreground/70">Millas</span>
+                <span className="font-semibold">{data.comparison.secondHalfMiles.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-background/50 rounded text-sm">
+                <span className="text-foreground/70">Ganancia</span>
+                <span className="font-semibold text-green-600">${data.comparison.secondHalfProfit.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <h4 className="font-semibold text-sm mb-2">Variación</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="flex items-center justify-between p-2 bg-background/50 rounded text-sm">
+                <span className="text-foreground/70">Millas</span>
+                <VariationBadge 
+                  value={data.comparison.secondHalfMiles - data.comparison.firstHalfMiles}
+                  percent={data.comparison.milesVariationPercent}
+                />
+              </div>
+              <div className="flex items-center justify-between p-2 bg-background/50 rounded text-sm">
+                <span className="text-foreground/70">Ganancia</span>
+                <VariationBadge 
+                  value={data.comparison.secondHalfProfit - data.comparison.firstHalfProfit}
+                  percent={data.comparison.profitVariationPercent}
+                />
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Main Component
+// Annual Comparison Types
+interface AnnualComparisonData {
+  year: number;
+  months: MonthlyMetrics[];
+  annualTotals: {
+    totalMiles: number;
+    totalProfit: number;
+    totalQuotations: number;
+    averageMilesPerMonth: number;
+    averageProfitPerMonth: number;
+    averageProfitPerMile: number;
+  };
+  quarterlyBreakdown: {
+    q1: { miles: number; profit: number; quotations: number };
+    q2: { miles: number; profit: number; quotations: number };
+    q3: { miles: number; profit: number; quotations: number };
+    q4: { miles: number; profit: number; quotations: number };
+  };
+  bestMonth: {
+    month: string;
+    miles: number;
+    profit: number;
+  };
+  worstMonth: {
+    month: string;
+    miles: number;
+    profit: number;
+  };
+  comparison: {
+    firstHalfMiles: number;
+    secondHalfMiles: number;
+    firstHalfProfit: number;
+    secondHalfProfit: number;
+    milesVariationPercent: number;
+    profitVariationPercent: number;
+    trend: "improving" | "declining" | "stable";
+  };
+}
+
 export function ComparisonAnalytics({ 
   historicalData, 
-  quarterlyData 
+  quarterlyData,
+  annualData
 }: { 
   historicalData: HistoricalComparisonData;
   quarterlyData: QuarterlyComparisonData;
+  annualData?: AnnualComparisonData;
 }) {
-  const [activeTab, setActiveTab] = useState<"monthly" | "quarterly">("monthly");
-  const trend = activeTab === "monthly" ? historicalData.comparison.trend : quarterlyData.comparison.trend;
+  const [activeTab, setActiveTab] = useState<"monthly" | "quarterly" | "annual">("monthly");
+  const trend = activeTab === "monthly" ? historicalData.comparison.trend : activeTab === "quarterly" ? quarterlyData.comparison.trend : annualData?.comparison.trend || "stable";
 
   return (
     <div className="space-y-4">
@@ -575,6 +871,16 @@ export function ComparisonAnalytics({
             >
               Trimestral
             </Button>
+            {annualData && (
+              <Button
+                variant={activeTab === "annual" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab("annual")}
+                className="text-xs"
+              >
+                Anual
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -582,8 +888,10 @@ export function ComparisonAnalytics({
       {/* Content */}
       {activeTab === "monthly" ? (
         <MonthlyView data={historicalData} />
-      ) : (
+      ) : activeTab === "quarterly" ? (
         <QuarterlyView data={quarterlyData} />
+      ) : (
+        annualData && <AnnualView data={annualData} />
       )}
     </div>
   );
