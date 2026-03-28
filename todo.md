@@ -388,3 +388,11 @@
 - [x] Integrar con backend brokerLoadsRouter
 - [x] Agregar navegación en sidebar
 - [x] Probar y validar
+
+
+## Fase 40: Indicador de Carga en Pagos en Lote
+- [x] Agregar loading state en mutación de creación de lote
+- [x] Mostrar spinner/indicador visual durante creación
+- [x] Deshabilitar botón mientras se crea el lote
+- [x] Mostrar toast de éxito/error (ya estaba implementado)
+- [x] Probar y validar

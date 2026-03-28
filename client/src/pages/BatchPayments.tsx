@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle2, Clock, DollarSign, Plus, Trash2, Eye } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, DollarSign, Plus, Trash2, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type BatchStatus = "draft" | "pending_review" | "approved" | "processing" | "completed" | "failed" | "cancelled";
@@ -179,9 +179,13 @@ export function BatchPayments() {
           <h1 className="text-3xl font-bold">Procesamiento de Pagos</h1>
           <p className="text-muted-foreground mt-1">Gestiona lotes de pagos a conductores</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} size="lg">
-          <Plus className="w-4 h-4 mr-2" />
-          Crear Lote
+        <Button onClick={() => setShowCreateDialog(true)} size="lg" disabled={createBatchMutation.isPending}>
+          {createBatchMutation.isPending ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Plus className="w-4 h-4 mr-2" />
+          )}
+          {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
         </Button>
       </div>
 
@@ -429,7 +433,8 @@ export function BatchPayments() {
                 onClick={handleCreateBatch}
                 disabled={createBatchMutation.isPending}
               >
-                Crear Lote
+                {createBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
               </Button>
             </div>
           </div>
