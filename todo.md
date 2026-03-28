@@ -350,3 +350,13 @@
 - [x] Frontend: widget AlertsWidget en Dashboard
 - [x] Integrar con sistema de notificaciones existente
 - [x] Checkpoint y entrega
+
+## Fase 37: Historial de Cotizaciones con Filtros y Exportación PDF
+- [ ] Backend: endpoint para obtener historial de cotizaciones con filtros
+- [ ] Frontend: página QuotationHistory con tabla de cotizaciones
+- [ ] Frontend: filtros por estado (draft, accepted, rejected, negotiated)
+- [ ] Frontend: búsqueda por cliente o dirección
+- [ ] Frontend: exportación a PDF con detalles de cotización
+- [ ] Frontend: agregar link a QuotationHistory en navegación
+- [ ] Tests para historial de cotizaciones
+- [ ] Checkpoint y entrega

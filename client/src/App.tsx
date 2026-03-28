@@ -13,6 +13,7 @@ import DriverView from "./pages/DriverView";
 import DriverPerformance from "./pages/DriverPerformance";
 import Transactions from "./pages/Transactions";
 import Quotation from "./pages/Quotation";
+import QuotationHistory from "./pages/QuotationHistory";
 import { BatchPayments } from "./pages/BatchPayments";
 import { BatchPaymentsDashboard } from "./pages/BatchPaymentsDashboard";
 import AccountingFinance from "./pages/AccountingFinance";
@@ -111,6 +112,7 @@ function AppRoutes() {
           <Route path="/driver-performance" component={DriverPerformance} />
           <Route path="/transactions" component={Transactions} />
           <Route path="/quotation" component={Quotation} />
+          <Route path="/quotation-history" component={() => <ProtectedRoute component={QuotationHistory} requiredRole="admin" />} />
           <Route path="/batch-payments" component={() => <ProtectedRoute component={BatchPayments} requiredRole="admin" />} />
           <Route path="/batch-payments-dashboard" component={() => <ProtectedRoute component={BatchPaymentsDashboard} requiredRole="admin" />} />
           <Route path="/accounting-finance" component={() => <ProtectedRoute component={AccountingFinance} requiredRole="admin" />} />
