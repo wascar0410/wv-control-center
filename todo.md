@@ -451,3 +451,11 @@
 - [x] Crear gráficos anuales (línea de tendencia, heatmap de meses)
 - [x] Agregar análisis de desempeño anual
 - [x] Probar y validar
+
+
+## Fase 47: Corrección de Error en /business-settings
+- [x] Revisar página BusinessSettings.tsx
+- [x] Revisar endpoints tRPC relacionados
+- [x] Identificar qué query está retornando HTML en lugar de JSON
+- [x] Corregir el error en backend
+- [x] Probar y validar la corrección

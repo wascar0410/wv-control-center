@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,7 +139,14 @@ export default function BusinessSettings() {
 // ─── Costs Tab ────────────────────────────────────────────────────────────────
 
 function CostsTab({ config, updateConfigMutation, isSaving, setIsSaving }: any) {
-  const [formData, setFormData] = useState(config);
+  const [formData, setFormData] = useState(config || {});
+
+  // Update formData when config changes
+  useEffect(() => {
+    if (config) {
+      setFormData(config);
+    }
+  }, [config]);
 
   const handleSave = async () => {
     setIsSaving(true);
