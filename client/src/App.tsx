@@ -22,6 +22,7 @@ import AccountingFinance from "./pages/AccountingFinance";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import BusinessSettings from "./pages/BusinessSettings";
 import LoadEvaluator from "./pages/LoadEvaluator";
+import TaxCompliance from "./pages/TaxCompliance";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
 import { Loader2, Truck } from "lucide-react";
@@ -124,6 +125,7 @@ function AppRoutes() {
           <Route path="/accounting-finance" component={() => <ProtectedRoute component={AccountingFinance} requiredRole="admin" />} />
           <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} requiredRole="admin" />} />
           <Route path="/business-settings" component={() => <ProtectedRoute component={BusinessSettings} requiredRole="admin" />} />
+          <Route path="/tax-compliance" component={TaxCompliance} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>
