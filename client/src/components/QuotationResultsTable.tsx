@@ -1,7 +1,12 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { DollarSign, TrendingUp, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { DollarSign, TrendingUp, CheckCircle, AlertCircle, XCircle, Edit2 } from "lucide-react";
 
 interface QuotationResultsTableProps {
   quotationId: number;
@@ -30,6 +35,12 @@ export default function QuotationResultsTable({
   loadedMiles = 0,
   totalMiles = 0,
 }: QuotationResultsTableProps) {
+  const [manualVerdict, setManualVerdict] = useState<string | null>(null);
+  const [verdictNotes, setVerdictNotes] = useState("");
+  const [showVerdictDialog, setShowVerdictDialog] = useState(false);
+  
+  const currentVerdict = manualVerdict || verdict;
+  const isVerdictOverridden = manualVerdict !== null && manualVerdict !== verdict;
   // Determine verdict color and icon
   const verdictConfig = {
     ACEPTAR: { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Aceptar" },
@@ -182,13 +193,75 @@ export default function QuotationResultsTable({
       {/* Verdict Explanation */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <VerdictIcon className="w-5 h-5" />
-            Recomendación
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <VerdictIcon className="w-5 h-5" />
+              Recomendación
+            </CardTitle>
+            <Dialog open={showVerdictDialog} onOpenChange={setShowVerdictDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Ajustar Veredicto
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Ajustar Veredicto de Cotización</DialogTitle>
+                  <DialogDescription>
+                    Cambia el veredicto si consideras que hay factores externos que afectan la decisión.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Veredicto Automático: {verdict}</Label>
+                    <div className="space-y-2">
+                      {["ACEPTAR", "NEGOCIAR", "RECHAZAR"].map((v) => (
+                        <Button
+                          key={v}
+                          variant={manualVerdict === v ? "default" : "outline"}
+                          className="w-full justify-start"
+                          onClick={() => setManualVerdict(v)}
+                        >
+                          {v === "ACEPTAR" && <CheckCircle className="w-4 h-4 mr-2" />}
+                          {v === "NEGOCIAR" && <AlertCircle className="w-4 h-4 mr-2" />}
+                          {v === "RECHAZAR" && <XCircle className="w-4 h-4 mr-2" />}
+                          {v}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="notes">Notas (Opcional)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Explica por qué cambias el veredicto (ej: Cliente importante, disponibilidad, etc.)"
+                      value={verdictNotes}
+                      onChange={(e) => setVerdictNotes(e.target.value)}
+                      className="mt-2"
+                    />
+                  </div>
+                  <Button onClick={() => setShowVerdictDialog(false)} className="w-full">
+                    Guardar
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          {verdict === "ACEPTAR" && (
+          {isVerdictOverridden && (
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+              <p className="font-semibold text-blue-900 dark:text-blue-100">ℹ️ Veredicto Ajustado Manualmente</p>
+              <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">
+                Veredicto original: <span className="font-semibold">{verdict}</span> → Nuevo: <span className="font-semibold">{manualVerdict}</span>
+              </p>
+              {verdictNotes && (
+                <p className="text-sm text-blue-800 dark:text-blue-200 mt-2">Notas: {verdictNotes}</p>
+              )}
+            </div>
+          )}
+          {currentVerdict === "ACEPTAR" && (
             <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <p className="font-semibold text-green-900 dark:text-green-100">✓ Carga Rentable</p>
               <p className="text-sm text-green-800 dark:text-green-200 mt-1">
@@ -196,7 +269,7 @@ export default function QuotationResultsTable({
               </p>
             </div>
           )}
-          {verdict === "NEGOCIAR" && (
+          {currentVerdict === "NEGOCIAR" && (
             <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
               <p className="font-semibold text-yellow-900 dark:text-yellow-100">⚠️ Negociar Precio</p>
               <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
@@ -205,7 +278,7 @@ export default function QuotationResultsTable({
               </p>
             </div>
           )}
-          {verdict === "RECHAZAR" && (
+          {currentVerdict === "RECHAZAR" && (
             <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
               <p className="font-semibold text-red-900 dark:text-red-100">✗ No Rentable</p>
               <p className="text-sm text-red-800 dark:text-red-200 mt-1">
