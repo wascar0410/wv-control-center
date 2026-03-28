@@ -501,3 +501,86 @@ export const priceAlerts = mysqlTable("price_alerts", {
 
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type InsertPriceAlert = typeof priceAlerts.$inferInsert;
+
+
+/**
+ * Broker Credentials - API credentials for load board integrations
+ */
+export const brokerCredentials = mysqlTable("broker_credentials", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  brokerName: mysqlEnum("brokerName", ["coyote", "dat", "other"]).notNull(),
+  encryptedApiKey: text("encryptedApiKey").notNull(),
+  encryptedApiSecret: text("encryptedApiSecret").notNull(),
+  syncIntervalMinutes: int("syncIntervalMinutes").default(15).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  lastSyncAt: timestamp("lastSyncAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BrokerCredential = typeof brokerCredentials.$inferSelect;
+export type InsertBrokerCredential = typeof brokerCredentials.$inferInsert;
+
+/**
+ * Broker Loads - Loads imported from broker APIs
+ */
+export const brokerLoads = mysqlTable("broker_loads", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  brokerId: varchar("brokerId", { length: 100 }).notNull(), // External ID from broker (e.g., "COYOTE-12345")
+  brokerName: mysqlEnum("brokerName", ["coyote", "dat", "manual", "other"]).notNull(),
+  // Route details
+  pickupAddress: text("pickupAddress").notNull(),
+  deliveryAddress: text("deliveryAddress").notNull(),
+  pickupLat: decimal("pickupLat", { precision: 10, scale: 7 }),
+  pickupLng: decimal("pickupLng", { precision: 10, scale: 7 }),
+  deliveryLat: decimal("deliveryLat", { precision: 10, scale: 7 }),
+  deliveryLng: decimal("deliveryLng", { precision: 10, scale: 7 }),
+  // Cargo details
+  weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
+  weightUnit: varchar("weightUnit", { length: 10 }).default("lbs").notNull(),
+  commodity: varchar("commodity", { length: 255 }),
+  // Pricing from broker
+  offeredRate: decimal("offeredRate", { precision: 10, scale: 2 }).notNull(),
+  // Calculated metrics
+  calculatedDistance: decimal("calculatedDistance", { precision: 10, scale: 2 }),
+  calculatedProfit: decimal("calculatedProfit", { precision: 10, scale: 2 }),
+  marginPercent: decimal("marginPercent", { precision: 5, scale: 2 }),
+  // Verdict
+  verdict: mysqlEnum("verdict", ["ACEPTAR", "NEGOCIAR", "RECHAZAR"]).default("NEGOCIAR"),
+  // Status
+  status: mysqlEnum("status", ["new", "reviewed", "accepted", "rejected", "expired", "converted"]).default("new").notNull(),
+  // Dates
+  pickupDate: timestamp("pickupDate"),
+  deliveryDate: timestamp("deliveryDate"),
+  expiresAt: timestamp("expiresAt"),
+  // Link to converted load quotation
+  convertedQuotationId: int("convertedQuotationId").references(() => loadQuotations.id, { onDelete: "set null" }),
+  // Metadata
+  rawData: json("rawData"), // Store original broker response for reference
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type BrokerLoad = typeof brokerLoads.$inferSelect;
+export type InsertBrokerLoad = typeof brokerLoads.$inferInsert;
+
+/**
+ * Sync Logs - Audit trail for broker synchronizations
+ */
+export const syncLogs = mysqlTable("sync_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  brokerName: mysqlEnum("brokerName", ["coyote", "dat", "manual", "other"]).notNull(),
+  loadsFound: int("loadsFound").default(0),
+  loadsImported: int("loadsImported").default(0),
+  loadsSkipped: int("loadsSkipped").default(0),
+  status: mysqlEnum("status", ["success", "failed", "partial"]).notNull(),
+  errorMessage: text("errorMessage"),
+  executedAt: timestamp("executedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SyncLog = typeof syncLogs.$inferSelect;
+export type InsertSyncLog = typeof syncLogs.$inferInsert;

@@ -360,3 +360,15 @@
 - [ ] Frontend: agregar link a QuotationHistory en navegación
 - [ ] Tests para historial de cotizaciones
 - [ ] Checkpoint y entrega
+
+
+## Fase 38: Módulo de Importación de Cargas (Brokers)
+- [x] Crear tablas broker_credentials, broker_loads, sync_logs en BD
+- [x] Crear db-broker-loads.ts con helpers para operaciones CRUD
+- [x] Crear brokerLoadsRouter con endpoints para importar cargas
+- [x] Integrar brokerLoadsRouter en appRouter
+- [x] Exportar calculateDistance para reutilización
+- [ ] Crear página ImportBrokerLoads (frontend) - PRÓXIMA FASE
+- [ ] Crear página BrokerLoadsManagement (frontend) - PRÓXIMA FASE
+- [ ] Agregar navegación en sidebar - PRÓXIMA FASE
+- [ ] Estructura lista para APIs futuras (Coyote, DAT) - PRÓXIMA FASE

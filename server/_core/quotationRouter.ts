@@ -13,7 +13,7 @@ import { getBusinessConfig, getApplicableDistanceSurcharge, getApplicableWeightS
 import { createPriceAlert } from "../db-price-alerts";
 
 // Haversine formula to calculate distance between two points
-function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+export function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 3959; // Earth's radius in miles
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
