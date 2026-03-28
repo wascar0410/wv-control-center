@@ -14,9 +14,7 @@ import { DriverLocationMap } from "@/components/DriverLocationMap";
 import { AlertsWidget } from "@/components/AlertsWidget";
 import { ProjectionsCard } from "@/components/ProjectionsCard";
 import { TrendCharts } from "@/components/TrendCharts";
-import { HistoricalComparisonCard } from "@/components/HistoricalComparisonCard";
-import { HistoricalComparisonCharts } from "@/components/HistoricalComparisonCharts";
-import { QuarterlyComparisonView } from "@/components/QuarterlyComparisonView";
+import { ComparisonAnalytics } from "@/components/ComparisonAnalytics";
 import { trpc } from "@/lib/trpc";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -118,17 +116,9 @@ export default function Dashboard() {
         </>
       )}
 
-      {/* Historical Comparison */}
-      {historicalComparison && !historicalLoading && (
-        <>
-          <HistoricalComparisonCard data={historicalComparison} />
-          <HistoricalComparisonCharts data={historicalComparison} />
-        </>
-      )}
-
-      {/* Quarterly Comparison */}
-      {quarterlyComparison && !quarterlyLoading && (
-        <QuarterlyComparisonView data={quarterlyComparison} />
+      {/* Comparison Analytics */}
+      {historicalComparison && quarterlyComparison && !historicalLoading && !quarterlyLoading && (
+        <ComparisonAnalytics historicalData={historicalComparison} quarterlyData={quarterlyComparison} />
       )}
 
       {/* Driver Location Tracking */}

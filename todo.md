@@ -433,3 +433,12 @@
 - [x] Crear componente de gráficos trimestrales
 - [x] Integrar selector en Dashboard
 - [x] Probar y validar
+
+
+## Fase 45: Consolidación y Optimización del Dashboard
+- [x] Revisar componentes duplicados en dashboard
+- [x] Unificar HistoricalComparisonCard y HistoricalComparisonCharts en un componente con pestañas
+- [x] Unificar comparación mensual y trimestral en un único componente con pestañas
+- [x] Eliminar componentes redundantes
+- [x] Optimizar queries tRPC
+- [x] Probar y validar
