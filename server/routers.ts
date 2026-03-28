@@ -17,6 +17,7 @@ import { priceAlertsRouter } from "./_core/priceAlertsRouter";
 import { brokerLoadsRouter } from "./_core/brokerLoadsRouter";
 import { loadEvaluatorRouter } from "./_core/loadEvaluatorRouter";
 import { taxComplianceRouter } from "./_core/taxComplianceRouter";
+import { ocrRouter } from "./_core/ocrRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -858,6 +859,7 @@ export const appRouter = router({
   brokerLoads: brokerLoadsRouter,
   loadEvaluator: loadEvaluatorRouter,
   taxCompliance: taxComplianceRouter,
+  ocr: ocrRouter,
 });
 
 export type AppRouter = typeof appRouter;

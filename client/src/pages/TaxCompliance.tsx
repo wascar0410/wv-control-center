@@ -6,10 +6,10 @@ import { trpc } from "@/lib/trpc";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import jsPDF from "jspdf";
+import OCRDocumentUpload from "@/components/OCRDocumentUpload";
 
 export default function TaxCompliance() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   // Fetch tax summary
   const { data: taxSummary, isLoading: summaryLoading } = trpc.taxCompliance.getSummary.useQuery(
@@ -35,10 +35,7 @@ export default function TaxCompliance() {
     { enabled: !!selectedYear }
   );
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setUploadedFiles((prev) => [...prev, ...files]);
-  };
+
 
   const generateTaxReport = () => {
     if (!taxSummary) return;
@@ -285,50 +282,7 @@ export default function TaxCompliance() {
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload Tax Documents</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="file-upload"
-                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
-                  <p className="font-medium">Drag & drop files here</p>
-                  <p className="text-sm text-muted-foreground">or click to browse</p>
-                </label>
-              </div>
-
-              {uploadedFiles.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-medium">Uploaded Files:</h3>
-                  <div className="space-y-1">
-                    {uploadedFiles.map((file, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                        <FileText className="w-4 h-4" />
-                        <span className="text-sm">{file.name}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">
-                          {(file.size / 1024).toFixed(2)} KB
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Button className="w-full" disabled={uploadedFiles.length === 0}>
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Documents
-              </Button>
-            </CardContent>
-          </Card>
+          <OCRDocumentUpload />
         </TabsContent>
 
         {/* Quarterly Tab */}

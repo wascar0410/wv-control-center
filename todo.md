@@ -503,3 +503,15 @@
 - [x] Crear generador de reportes PDF para IRS
 - [x] Agregar búsqueda y filtrado de documentos
 - [x] Probar y validar
+
+
+## Fase 52: OCR para Escaneo de Facturas y Recibos
+- [x] Instalar dependencias de OCR (Tesseract.js o similar)
+- [x] Crear backend helper para procesamiento de imágenes OCR
+- [x] Crear helper para extraer datos de facturas (monto, fecha, proveedor, categoría)
+- [x] Crear endpoint tRPC para procesar documentos con OCR
+- [x] Crear componente UI para carga de documentos con preview
+- [x] Crear componente de revisión de datos extraídos
+- [x] Integrar OCR en Tax Compliance Dashboard
+- [x] Agregar validación de datos extraídos
+- [x] Probar y validar
