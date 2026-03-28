@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
-import { PODUploadModal } from "@/components/PODUploadModal";
+import { PODUpload } from "@/components/PODUpload";
 import LoadStatusCard from "@/components/LoadStatusCard";
 import { LoadsMap } from "@/components/LoadsMap";
 import {
@@ -34,6 +34,7 @@ export default function DriverView() {
   const [showFuelForm, setShowFuelForm] = useState(false);
   const [showBOLUpload, setShowBOLUpload] = useState(false);
   const [showPODUpload, setShowPODUpload] = useState(false);
+  const [podLoadId, setPodLoadId] = useState<number | null>(null);
   const [fuelForm, setFuelForm] = useState({ amount: "", gallons: "", pricePerGallon: "", location: "" });
   const [bolFile, setBolFile] = useState<File | null>(null);
   const [bolPreview, setBolPreview] = useState<string | null>(null);
@@ -84,6 +85,15 @@ export default function DriverView() {
     onSuccess: () => {
       utils.driver.myLoads.invalidate();
       toast.success("Carga rechazada");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const podMutation = trpc.driver.uploadPOD.useMutation({
+    onSuccess: () => {
+      utils.driver.myLoads.invalidate();
+      setShowPODUpload(false);
+      toast.success("Foto de entrega guardada");
     },
     onError: (e) => toast.error(e.message),
   });
@@ -467,16 +477,32 @@ export default function DriverView() {
       </Dialog>
 
       {/* POD Upload Modal */}
-      <PODUploadModal
+      <PODUpload
         open={showPODUpload}
-        onOpenChange={(open) => {
-          if (!open) {
-            setShowPODUpload(false);
-            setSelectedLoad(null);
-          }
+        onOpenChange={setShowPODUpload}
+        onUpload={async (file) => {
+          if (!selectedLoad) throw new Error("No load selected");
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64 = (e.target?.result as string).split(",")[1];
+            try {
+              const key = `pod/${selectedLoad.id}/${Date.now()}-${file.name}`;
+              await podMutation.mutateAsync({
+                loadId: selectedLoad.id,
+                fileKey: key,
+                fileName: file.name,
+                fileSize: file.size,
+                mimeType: file.type,
+                documentUrl: `data:${file.type};base64,${base64}`,
+              });
+            } catch (error) {
+              console.error(error);
+              throw error;
+            }
+          };
+          reader.readAsDataURL(file);
         }}
-        loadId={selectedLoad?.id ?? 0}
-        clientName={selectedLoad?.clientName}
+        isLoading={podMutation.isPending}
       />
     </div>
   );

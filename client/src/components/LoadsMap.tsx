@@ -355,3 +355,7 @@ export function LoadsMap({ loads, selectedLoadId, onSelectLoad, onStatusChange, 
     </Card>
   );
 }
+
+// POD state added after useListView
+// const [showPOD, setShowPOD] = useState(false);
+// const [podLoadId, setPodLoadId] = useState<number | null>(null);

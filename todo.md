@@ -273,3 +273,14 @@
 - [x] Agregar "Finanzas Contables" al menú de navegación
 - [x] Ruta protegida /accounting-finance solo para admins
 - [x] Proyecto compila sin errores
+
+
+## Fase 31: Prueba de Entrega (POD) Mejorada con Foto Obligatoria
+- [ ] Crear tabla pod_images en schema para almacenar fotos de entrega
+- [ ] Backend: router para uploadPOD con validación de imagen
+- [ ] Backend: guardar foto en S3 y URL en base de datos
+- [ ] Componente PODUploadModal mejorado con cámara/galería
+- [ ] Integrar POD en flujo "Marcar Entregada" (obligatorio)
+- [ ] Mostrar foto en historial de cargas completadas
+- [ ] Tests para POD functionality
+- [ ] Checkpoint y entrega

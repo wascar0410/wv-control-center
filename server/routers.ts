@@ -613,6 +613,28 @@ const driverRouter = router({
       }
       return { success: true };
     }),
+
+  uploadPOD: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      fileKey: z.string(),
+      fileName: z.string(),
+      fileSize: z.number(),
+      mimeType: z.string(),
+      documentUrl: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const pod = await uploadPOD({
+        loadId: input.loadId,
+        driverId: ctx.user.id,
+        documentUrl: input.documentUrl,
+        documentKey: input.fileKey,
+        fileName: input.fileName,
+        fileSize: input.fileSize,
+        mimeType: input.mimeType,
+      });
+      return pod;
+    }),
 });
 
 // ─── Dashboard Router ─────────────────────────────────────────────────────────
