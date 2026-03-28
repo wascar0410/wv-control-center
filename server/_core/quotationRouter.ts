@@ -29,21 +29,39 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 function calculateProfitability(
   totalPrice: number,
   totalMiles: number,
+  loadedMiles: number,
   weight: number,
-  fuelCostPerMile: number = 0.35, // Average diesel cost per mile
-  operatingCostPerMile: number = 0.65 // Maintenance, insurance, depreciation
+  fuelCostPerMile: number = 0.35,
+  operatingCostPerMile: number = 0.65,
+  minimumMarginPercent: number = 50
 ) {
   const estimatedFuelCost = totalMiles * fuelCostPerMile;
   const estimatedOperatingCost = totalMiles * operatingCostPerMile;
   const totalCost = estimatedFuelCost + estimatedOperatingCost;
   const estimatedProfit = totalPrice - totalCost;
   const profitMarginPercent = totalPrice > 0 ? (estimatedProfit / totalPrice) * 100 : 0;
-
+  const minimumRatePerMile = 2.50;
+  const minimumIncome = loadedMiles * minimumRatePerMile;
+  const differenceVsMinimum = totalPrice - minimumIncome;
+  const ratePerLoadedMile = loadedMiles > 0 ? totalPrice / loadedMiles : 0;
+  let verdict = "ACEPTAR";
+  if (profitMarginPercent < minimumMarginPercent) {
+    verdict = "NEGOCIAR";
+  }
+  if (profitMarginPercent < 30) {
+    verdict = "RECHAZAR";
+  }
   return {
     estimatedFuelCost: Math.round(estimatedFuelCost * 100) / 100,
     estimatedOperatingCost: Math.round(estimatedOperatingCost * 100) / 100,
+    totalOperatingCost: Math.round((estimatedFuelCost + estimatedOperatingCost) * 100) / 100,
     estimatedProfit: Math.round(estimatedProfit * 100) / 100,
     profitMarginPercent: Math.round(profitMarginPercent * 100) / 100,
+    minimumIncome: Math.round(minimumIncome * 100) / 100,
+    ratePerLoadedMile: Math.round(ratePerLoadedMile * 100) / 100,
+    minimumRatePerMile: minimumRatePerMile,
+    differenceVsMinimum: Math.round(differenceVsMinimum * 100) / 100,
+    verdict: verdict,
   };
 }
 
@@ -103,7 +121,7 @@ export const quotationRouter = router({
       totalPrice += input.fuelSurcharge;
 
       // Calculate profitability
-      const profitability = calculateProfitability(totalPrice, totalMiles, input.weight);
+      const profitability = calculateProfitability(totalPrice, totalMiles, loadedMiles, input.weight);
 
       // Create quotation record
       const result = await createLoadQuotation({

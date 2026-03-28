@@ -284,3 +284,23 @@
 - [ ] Mostrar foto en historial de cargas completadas
 - [ ] Tests para POD functionality
 - [ ] Checkpoint y entrega
+
+
+## Fase 32: Reorganización del Sistema - Seguimiento Interno y Cotizaciones Inteligentes
+- [ ] Revisar arquitectura actual y flujo de trabajo
+- [ ] Crear módulo de cotizaciones mejorado con análisis de rentabilidad automático:
+  - [ ] Inputs: Cliente/Broker, Origen, Destino, Peso, Millas, Tarifa base, Extras
+  - [ ] Cálculos automáticos: Ingreso total, Millas, Costo operativo, Ganancia, Margen
+  - [ ] Veredicto automático: ACEPTAR/NEGOCIAR/RECHAZAR
+  - [ ] Historial de cotizaciones con análisis
+- [ ] Simplificar Vista del Chofer para seguimiento interno:
+  - [ ] Solo cargas de la compañía (no del broker)
+  - [ ] Foto de entrega (POD)
+  - [ ] Registro de gastos (combustible, peajes)
+  - [ ] Estado de carga
+- [ ] Mejorar módulo de Finanzas:
+  - [ ] Auditoría completa de transacciones
+  - [ ] Rentabilidad por carga
+  - [ ] Reportes mensuales
+- [ ] Probar y validar cambios
+- [ ] Checkpoint final
