@@ -11,27 +11,81 @@ import {
 } from "recharts";
 import { 
   TrendingUp, TrendingDown, DollarSign, Truck, Target, AlertCircle,
-  Calendar, ArrowUpRight, ArrowDownRight
+  Calendar, ArrowUpRight, ArrowDownRight, X
 } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { es as esLocale } from "date-fns/locale";
+
+type DateRangeType = {
+  startDate: Date;
+  endDate: Date;
+  label: string;
+};
 
 export default function ExecutiveDashboard() {
-  const [dateRange, setDateRange] = useState({ days: 30 });
+  const today = new Date();
+  const [dateRange, setDateRange] = useState<DateRangeType>({
+    startDate: new Date(today.getFullYear(), today.getMonth(), 1),
+    endDate: today,
+    label: "Este mes",
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customStart, setCustomStart] = useState(dateRange.startDate.toISOString().split('T')[0]);
+  const [customEnd, setCustomEnd] = useState(dateRange.endDate.toISOString().split('T')[0]);
 
   // Fetch all loads for analysis
   const { data: loads = [] } = trpc.loads.list.useQuery({});
 
+  // Preset date ranges
+  const datePresets = [
+    {
+      label: "Hoy",
+      startDate: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+      endDate: new Date(),
+    },
+    {
+      label: "Esta semana",
+      startDate: new Date(today.getTime() - today.getDay() * 24 * 60 * 60 * 1000),
+      endDate: new Date(),
+    },
+    {
+      label: "Este mes",
+      startDate: new Date(today.getFullYear(), today.getMonth(), 1),
+      endDate: new Date(),
+    },
+    {
+      label: "Este trimestre",
+      startDate: new Date(today.getFullYear(), Math.floor(today.getMonth() / 3) * 3, 1),
+      endDate: new Date(),
+    },
+    {
+      label: "Este año",
+      startDate: new Date(today.getFullYear(), 0, 1),
+      endDate: new Date(),
+    },
+    {
+      label: "Últimos 30 días",
+      startDate: subDays(today, 30),
+      endDate: new Date(),
+    },
+    {
+      label: "Últimos 90 días",
+      startDate: subDays(today, 90),
+      endDate: new Date(),
+    },
+  ];
+
   // Calculate KPIs
   const kpis = useMemo(() => {
-    const now = new Date();
-    const startDate = subDays(now, dateRange.days);
+    const startDate = dateRange.startDate;
+    const endDate = dateRange.endDate;
 
     // Filter loads in date range and completed
     const completedLoads = loads.filter(
       (load: any) =>
         load.status === "paid" &&
         new Date(load.updatedAt) >= startDate &&
-        new Date(load.updatedAt) <= now
+        new Date(load.updatedAt) <= endDate
     );
 
     // Calculate metrics
@@ -42,8 +96,9 @@ export default function ExecutiveDashboard() {
       ? (totalProfit / totalIncome) * 100 
       : 0;
 
-    const loadsPerDay = completedLoads.length / Math.max(dateRange.days, 1);
-    const incomePerDay = totalIncome / Math.max(dateRange.days, 1);
+    const daysInRange = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const loadsPerDay = completedLoads.length / Math.max(daysInRange, 1);
+    const incomePerDay = totalIncome / Math.max(daysInRange, 1);
 
     // Group by day for trends
     const dailyData: { [key: string]: any } = {};
@@ -90,6 +145,40 @@ export default function ExecutiveDashboard() {
     };
   }, [loads, dateRange]);
 
+  // Calculate previous period for comparison
+  const previousPeriodKpis = useMemo(() => {
+    const daysInRange = Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const previousStart = new Date(dateRange.startDate.getTime() - daysInRange * 24 * 60 * 60 * 1000);
+    const previousEnd = new Date(dateRange.startDate.getTime() - 1);
+
+    const previousLoads = loads.filter(
+      (load: any) =>
+        load.status === "paid" &&
+        new Date(load.updatedAt) >= previousStart &&
+        new Date(load.updatedAt) <= previousEnd
+    );
+
+    const previousIncome = previousLoads.reduce((sum: number, load: any) => sum + (load.totalPrice || 0), 0);
+    const previousProfit = previousIncome - previousLoads.reduce((sum: number, load: any) => sum + (load.estimatedOperatingCost || 0), 0);
+
+    return {
+      income: previousIncome,
+      profit: previousProfit,
+      loads: previousLoads.length,
+    };
+  }, [loads, dateRange]);
+
+  // Calculate percentage changes
+  const incomeChange = previousPeriodKpis.income > 0
+    ? ((kpis.totalIncome - previousPeriodKpis.income) / previousPeriodKpis.income) * 100
+    : 0;
+  const profitChange = previousPeriodKpis.profit > 0
+    ? ((kpis.totalProfit - previousPeriodKpis.profit) / previousPeriodKpis.profit) * 100
+    : 0;
+  const loadsChange = previousPeriodKpis.loads > 0
+    ? ((kpis.completedLoads - previousPeriodKpis.loads) / previousPeriodKpis.loads) * 100
+    : 0;
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
@@ -102,16 +191,79 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* Date Range Selector */}
-        <div className="flex gap-2 mb-8">
-          {[7, 30, 90].map((days) => (
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-wrap gap-2">
+            {datePresets.map((preset) => (
+              <Button
+                key={preset.label}
+                variant={dateRange.label === preset.label ? "default" : "outline"}
+                onClick={() => setDateRange({ ...preset, label: preset.label })}
+                size="sm"
+              >
+                {preset.label}
+              </Button>
+            ))}
             <Button
-              key={days}
-              variant={dateRange.days === days ? "default" : "outline"}
-              onClick={() => setDateRange({ days })}
+              variant={dateRange.label === "Personalizado" ? "default" : "outline"}
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              size="sm"
             >
-              Últimos {days} días
+              Personalizado
             </Button>
-          ))}
+          </div>
+
+          {/* Custom Date Range Picker */}
+          {showDatePicker && (
+            <div className="p-4 bg-card border border-border rounded-lg space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Desde</label>
+                  <input
+                    type="date"
+                    value={customStart}
+                    onChange={(e) => setCustomStart(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Hasta</label>
+                  <input
+                    type="date"
+                    value={customEnd}
+                    onChange={(e) => setCustomEnd(e.target.value)}
+                    className="w-full mt-1 px-3 py-2 border border-input rounded-lg bg-background text-foreground"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    setDateRange({
+                      startDate: new Date(customStart),
+                      endDate: new Date(customEnd),
+                      label: "Personalizado",
+                    });
+                    setShowDatePicker(false);
+                  }}
+                  size="sm"
+                >
+                  Aplicar
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDatePicker(false)}
+                  size="sm"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Date Range Display */}
+          <div className="text-sm text-muted-foreground">
+            Período: {format(dateRange.startDate, "dd MMM yyyy", { locale: esLocale })} - {format(dateRange.endDate, "dd MMM yyyy", { locale: esLocale })}
+          </div>
         </div>
 
         {/* KPI Cards */}
@@ -127,9 +279,13 @@ export default function ExecutiveDashboard() {
               <p className="text-xs text-muted-foreground">
                 ${kpis.incomePerDay.toFixed(2)} por día
               </p>
-              <div className="flex items-center mt-2 text-green-600">
-                <ArrowUpRight className="w-4 h-4 mr-1" />
-                <span className="text-xs">+12% vs período anterior</span>
+              <div className={`flex items-center mt-2 ${incomeChange >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {incomeChange >= 0 ? (
+                  <ArrowUpRight className="w-4 h-4 mr-1" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 mr-1" />
+                )}
+                <span className="text-xs">{incomeChange >= 0 ? "+" : ""}{incomeChange.toFixed(1)}% vs período anterior</span>
               </div>
             </CardContent>
           </Card>
@@ -145,9 +301,13 @@ export default function ExecutiveDashboard() {
               <p className="text-xs text-muted-foreground">
                 Margen: {kpis.averageMargin.toFixed(1)}%
               </p>
-              <div className="flex items-center mt-2 text-blue-600">
-                <ArrowUpRight className="w-4 h-4 mr-1" />
-                <span className="text-xs">Rentabilidad saludable</span>
+              <div className={`flex items-center mt-2 ${profitChange >= 0 ? "text-blue-600" : "text-orange-600"}`}>
+                {profitChange >= 0 ? (
+                  <ArrowUpRight className="w-4 h-4 mr-1" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 mr-1" />
+                )}
+                <span className="text-xs">{profitChange >= 0 ? "+" : ""}{profitChange.toFixed(1)}% vs período anterior</span>
               </div>
             </CardContent>
           </Card>
@@ -161,11 +321,15 @@ export default function ExecutiveDashboard() {
             <CardContent>
               <div className="text-2xl font-bold">{kpis.completedLoads}</div>
               <p className="text-xs text-muted-foreground">
-                {kpis.loadsPerDay.toFixed(1)} cargas/día
+                {kpis.loadsPerDay.toFixed(1)} cargas/día promedio
               </p>
-              <div className="flex items-center mt-2 text-purple-600">
-                <ArrowUpRight className="w-4 h-4 mr-1" />
-                <span className="text-xs">+8% vs período anterior</span>
+              <div className={`flex items-center mt-2 ${loadsChange >= 0 ? "text-purple-600" : "text-red-600"}`}>
+                {loadsChange >= 0 ? (
+                  <ArrowUpRight className="w-4 h-4 mr-1" />
+                ) : (
+                  <ArrowDownRight className="w-4 h-4 mr-1" />
+                )}
+                <span className="text-xs">{loadsChange >= 0 ? "+" : ""}{loadsChange.toFixed(1)}% vs período anterior</span>
               </div>
             </CardContent>
           </Card>
@@ -202,7 +366,7 @@ export default function ExecutiveDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Tendencia de Ingresos</CardTitle>
-              <CardDescription>Ingresos diarios últimos {dateRange.days} días</CardDescription>
+              <CardDescription>Ingresos diarios en el período seleccionado</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -216,7 +380,9 @@ export default function ExecutiveDashboard() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip formatter={(value: any) => `$${value.toFixed(2)}`} />
+                  <Tooltip 
+                    formatter={(value: any) => `$${typeof value === 'number' ? value.toFixed(2) : value}`}
+                  />
                   <Area
                     type="monotone"
                     dataKey="income"
@@ -233,7 +399,7 @@ export default function ExecutiveDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Tendencia de Margen</CardTitle>
-              <CardDescription>Margen de ganancia diario últimos {dateRange.days} días</CardDescription>
+              <CardDescription>Margen de ganancia diario en el período seleccionado</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -241,7 +407,9 @@ export default function ExecutiveDashboard() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip formatter={(value: any) => `${value.toFixed(1)}`} />
+                  <Tooltip 
+                    formatter={(value: any) => `${typeof value === 'number' ? value.toFixed(1) : value}%`}
+                  />
                   <Legend />
                   <Line
                     type="monotone"
@@ -317,7 +485,7 @@ export default function ExecutiveDashboard() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Período Analizado</span>
-                  <span className="font-semibold">{dateRange.days} días</span>
+                  <span className="font-semibold">{Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1} días</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Eficiencia</span>
