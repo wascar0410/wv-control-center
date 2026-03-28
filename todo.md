@@ -378,3 +378,13 @@
 - [x] Integrar con backend brokerLoadsRouter
 - [x] Agregar navegación en sidebar
 - [x] Probar y validar
+
+
+## Fase 39: Dashboard de Gestión de Cargas Importadas
+- [x] Crear página BrokerLoadsManagement con tabla de cargas
+- [x] Agregar filtros por estado (new, reviewed, accepted, rejected, expired, converted)
+- [x] Agregar búsqueda por dirección
+- [x] Crear modal para convertir carga a cotización
+- [x] Integrar con backend brokerLoadsRouter
+- [x] Agregar navegación en sidebar
+- [x] Probar y validar
