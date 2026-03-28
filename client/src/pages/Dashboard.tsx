@@ -14,6 +14,8 @@ import { DriverLocationMap } from "@/components/DriverLocationMap";
 import { AlertsWidget } from "@/components/AlertsWidget";
 import { ProjectionsCard } from "@/components/ProjectionsCard";
 import { TrendCharts } from "@/components/TrendCharts";
+import { HistoricalComparisonCard } from "@/components/HistoricalComparisonCard";
+import { HistoricalComparisonCharts } from "@/components/HistoricalComparisonCharts";
 import { trpc } from "@/lib/trpc";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -35,6 +37,7 @@ export default function Dashboard() {
   const { data: kpis, isLoading: kpisLoading } = trpc.dashboard.kpis.useQuery();
   const { data: loads, isLoading: loadsLoading } = trpc.dashboard.recentLoads.useQuery();
   const { data: projections, isLoading: projectionsLoading } = trpc.dashboard.monthlyProjections.useQuery();
+  const { data: historicalComparison, isLoading: historicalLoading } = trpc.dashboard.historicalComparison.useQuery();
   const utils = trpc.useUtils();
 
   const recentLoads = loads?.slice(0, 5) ?? [];
@@ -110,6 +113,14 @@ export default function Dashboard() {
         <>
           <ProjectionsCard data={projections} />
           <TrendCharts data={projections} />
+        </>
+      )}
+
+      {/* Historical Comparison */}
+      {historicalComparison && !historicalLoading && (
+        <>
+          <HistoricalComparisonCard data={historicalComparison} />
+          <HistoricalComparisonCharts data={historicalComparison} />
         </>
       )}
 

@@ -415,3 +415,12 @@
 - [x] Agregar gráfico de progreso hacia meta de 4,000 millas
 - [x] Integrar en Dashboard Ejecutivo
 - [x] Probar y validar
+
+
+## Fase 43: Comparación Histórica de Millas y Ganancias
+- [x] Crear backend helper para calcular métricas del mes anterior
+- [x] Calcular variación porcentual (mes actual vs mes anterior)
+- [x] Crear componente de tarjeta de comparación
+- [x] Agregar gráficos comparativos (barras, líneas)
+- [x] Integrar en Dashboard
+- [x] Probar y validar
