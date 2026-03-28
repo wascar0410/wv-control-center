@@ -1,4 +1,3 @@
-import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,13 +6,13 @@ import {
   Package, DollarSign, TrendingUp, TrendingDown, Truck, ArrowRight,
   Clock, CheckCircle2, AlertCircle, FileText, Plus
 } from "lucide-react";
-import { useState } from "react";
-
 "use client";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { AssignLoadModal } from "@/components/AssignLoadModal";
 import { DriverLocationMap } from "@/components/DriverLocationMap";
 import { AlertsWidget } from "@/components/AlertsWidget";
+import { trpc } from "@/lib/trpc";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   available: { label: "Disponible", className: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
