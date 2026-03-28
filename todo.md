@@ -396,3 +396,12 @@
 - [x] Deshabilitar botón mientras se crea el lote
 - [x] Mostrar toast de éxito/error (ya estaba implementado)
 - [x] Probar y validar
+
+
+## Fase 41: Indicadores de Carga en Operaciones de Lotes
+- [x] Agregar loading state en mutación de procesar lote
+- [x] Agregar loading state en mutación de aprobar lote
+- [x] Agregar loading state en mutación de rechazar lote
+- [x] Mostrar spinner animado durante operaciones
+- [x] Deshabilitar botones mientras se procesan
+- [x] Probar y validar

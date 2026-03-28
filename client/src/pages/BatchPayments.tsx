@@ -352,13 +352,15 @@ export function BatchPayments() {
                       onClick={() => setShowRejectionDialog(selectedBatch)}
                       disabled={rejectBatchMutation.isPending}
                     >
-                      Rechazar
+                      {rejectBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {rejectBatchMutation.isPending ? "Rechazando..." : "Rechazar"}
                     </Button>
                     <Button
                       onClick={() => setShowApprovalDialog(selectedBatch)}
                       disabled={approveBatchMutation.isPending}
                     >
-                      Aprobar
+                      {approveBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {approveBatchMutation.isPending ? "Aprobando..." : "Aprobar"}
                     </Button>
                   </>
                 )}
@@ -370,7 +372,8 @@ export function BatchPayments() {
                     }}
                     disabled={processBatchMutation.isPending}
                   >
-                    Procesar Lote
+                    {processBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {processBatchMutation.isPending ? "Procesando..." : "Procesar Lote"}
                   </Button>
                 )}
               </div>
