@@ -16,6 +16,7 @@ import Quotation from "./pages/Quotation";
 import { BatchPayments } from "./pages/BatchPayments";
 import { BatchPaymentsDashboard } from "./pages/BatchPaymentsDashboard";
 import AccountingFinance from "./pages/AccountingFinance";
+import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
 import { Loader2, Truck } from "lucide-react";
@@ -112,6 +113,7 @@ function AppRoutes() {
           <Route path="/batch-payments" component={() => <ProtectedRoute component={BatchPayments} requiredRole="admin" />} />
           <Route path="/batch-payments-dashboard" component={() => <ProtectedRoute component={BatchPaymentsDashboard} requiredRole="admin" />} />
           <Route path="/accounting-finance" component={() => <ProtectedRoute component={AccountingFinance} requiredRole="admin" />} />
+          <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} requiredRole="admin" />} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

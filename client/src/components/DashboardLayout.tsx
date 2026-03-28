@@ -45,6 +45,7 @@ import { Badge } from "./ui/badge";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
+  { icon: BarChart3, label: "Dashboard Ejecutivo", path: "/executive-dashboard", description: "KPIs en tiempo real" },
   { icon: Package, label: "Cargas", path: "/loads", description: "Gestión de envíos" },
   { icon: Calculator, label: "Cotización", path: "/quotation", description: "Calcular precio y rentabilidad" },
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
