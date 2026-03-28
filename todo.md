@@ -459,3 +459,13 @@
 - [x] Identificar qué query está retornando HTML en lugar de JSON
 - [x] Corregir el error en backend
 - [x] Probar y validar la corrección
+
+
+## Fase 48: Integración de Evaluador de Cargas Unificado
+- [x] Crear backend helper para evaluación de cargas (db-load-evaluator.ts)
+- [x] Crear endpoint tRPC para evaluación
+- [x] Crear componentes reutilizables de UI para evaluador
+- [x] Crear página LoadEvaluator con interfaz mejorada
+- [x] Integrar con configuración real del usuario desde backend
+- [x] Agregar persistencia de evaluaciones
+- [x] Probar y validar

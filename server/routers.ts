@@ -15,6 +15,7 @@ import { exportRouter } from "./_core/exportRouter";
 import { businessConfigRouter } from "./_core/businessConfigRouter";
 import { priceAlertsRouter } from "./_core/priceAlertsRouter";
 import { brokerLoadsRouter } from "./_core/brokerLoadsRouter";
+import { loadEvaluatorRouter } from "./_core/loadEvaluatorRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -854,6 +855,7 @@ export const appRouter = router({
   businessConfig: businessConfigRouter,
   priceAlerts: priceAlertsRouter,
   brokerLoads: brokerLoadsRouter,
+  loadEvaluator: loadEvaluatorRouter,
 });
 
 export type AppRouter = typeof appRouter;
