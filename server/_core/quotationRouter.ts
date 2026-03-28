@@ -199,6 +199,30 @@ export const quotationRouter = router({
       return { success: true };
     }),
 
+  saveVerdictOverride: protectedProcedure
+    .input(
+      z.object({
+        quotationId: z.number(),
+        manualVerdict: z.enum(["ACEPTAR", "NEGOCIAR", "RECHAZAR"]),
+        verdictNotes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const quotation = await getLoadQuotationById(input.quotationId);
+      if (!quotation || quotation.userId !== ctx.user.id) {
+        throw new Error("Cotización no encontrada");
+      }
+
+      await updateLoadQuotation(input.quotationId, {
+        manualVerdict: input.manualVerdict,
+        verdictNotes: input.verdictNotes || null,
+        verdictOverriddenBy: ctx.user.id,
+        verdictOverriddenAt: new Date(),
+      });
+
+      return { success: true };
+    }),
+
   deleteQuotation: protectedProcedure
     .input(z.object({ quotationId: z.number() }))
     .mutation(async ({ input, ctx }) => {

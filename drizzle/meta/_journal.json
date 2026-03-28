@@ -71,6 +71,13 @@
       "when": 1774573123881,
       "tag": "0009_known_nick_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1774708908101,
+      "tag": "0010_first_thaddeus_ross",
+      "breakpoints": true
     }
   ]
 }

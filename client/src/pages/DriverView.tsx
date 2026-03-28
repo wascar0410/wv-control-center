@@ -55,8 +55,8 @@ export default function DriverView() {
   });
 
   const bolMutation = trpc.driver.uploadBOL.useMutation({
-    onSuccess: (data) => {
-      utils.driver.myLoads.invalidate();
+    onSuccess: async (data) => {
+      await utils.driver.myLoads.refetch();
       setShowBOLUpload(false);
       setBolFile(null);
       setBolPreview(null);
@@ -66,32 +66,32 @@ export default function DriverView() {
   });
 
   const statusMutation = trpc.driver.updateLoadStatus.useMutation({
-    onSuccess: () => {
-      utils.driver.myLoads.invalidate();
+    onSuccess: async () => {
+      await utils.driver.myLoads.refetch();
       toast.success("Estado actualizado");
     },
     onError: (e) => toast.error(e.message),
   });
 
   const acceptMutation = trpc.assignment.accept.useMutation({
-    onSuccess: () => {
-      utils.driver.myLoads.invalidate();
+    onSuccess: async () => {
+      await utils.driver.myLoads.refetch();
       toast.success("Carga aceptada exitosamente");
     },
     onError: (e) => toast.error(e.message),
   });
 
   const rejectMutation = trpc.assignment.reject.useMutation({
-    onSuccess: () => {
-      utils.driver.myLoads.invalidate();
+    onSuccess: async () => {
+      await utils.driver.myLoads.refetch();
       toast.success("Carga rechazada");
     },
     onError: (e) => toast.error(e.message),
   });
 
   const podMutation = trpc.driver.uploadPOD.useMutation({
-    onSuccess: () => {
-      utils.driver.myLoads.invalidate();
+    onSuccess: async () => {
+      await utils.driver.myLoads.refetch();
       setShowPODUpload(false);
       toast.success("Foto de entrega guardada");
     },
@@ -211,7 +211,7 @@ export default function DriverView() {
                   <LoadStatusCard
                     key={load.id}
                     load={load}
-                    onStatusChange={() => utils.driver.myLoads.invalidate()}
+                    onStatusChange={async () => await utils.driver.myLoads.refetch()}
                   />
                 ))
               )}

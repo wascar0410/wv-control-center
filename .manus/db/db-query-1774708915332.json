@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `load_quotations` ADD `manualVerdict` varchar(50);\nALTER TABLE `load_quotations` ADD `verdictNotes` text;\nALTER TABLE `load_quotations` ADD `verdictOverriddenBy` int;\nALTER TABLE `load_quotations` ADD `verdictOverriddenAt` timestamp;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute ALTER TABLE `load_quotations` ADD `manualVerdict` varchar(50);\nALTER TABLE `load_quotations` ADD `verdictNotes` text;\nALTER TABLE `load_quotations` ADD `verdictOverriddenBy` int;\nALTER TABLE `load_quotations` ADD `verdictOverriddenAt` timestamp;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 1088
+}

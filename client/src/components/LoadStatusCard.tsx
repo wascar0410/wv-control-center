@@ -46,8 +46,8 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
 
   const utils = trpc.useUtils();
   const updateStatusMutation = trpc.loads.updateStatus.useMutation({
-    onSuccess: () => {
-      utils.driver.myLoads.invalidate();
+    onSuccess: async () => {
+      await utils.driver.myLoads.refetch();
     },
   });
   

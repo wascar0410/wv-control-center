@@ -270,6 +270,11 @@ export const loadQuotations = mysqlTable("load_quotations", {
   profitMarginPercent: decimal("profitMarginPercent", { precision: 5, scale: 2 }).default("0"),
   // Status
   status: mysqlEnum("status", ["draft", "quoted", "accepted", "rejected", "expired"]).default("draft").notNull(),
+  // Manual verdict override
+  manualVerdict: varchar("manualVerdict", { length: 50 }),
+  verdictNotes: text("verdictNotes"),
+  verdictOverriddenBy: int("verdictOverriddenBy"),
+  verdictOverriddenAt: timestamp("verdictOverriddenAt"),
   expiresAt: timestamp("expiresAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

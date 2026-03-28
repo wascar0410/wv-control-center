@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE load_quotations \nADD COLUMN manualVerdict VARCHAR(50) DEFAULT NULL AFTER status,\nADD COLUMN verdictNotes TEXT DEFAULT NULL AFTER manualVerdict,\nADD COLUMN verdictOverriddenBy INT DEFAULT NULL AFTER verdictNotes,\nADD COLUMN verdictOverriddenAt TIMESTAMP DEFAULT NULL AFTER verdictOverriddenBy;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute ALTER TABLE load_quotations \nADD COLUMN manualVerdict VARCHAR(50) DEFAULT NULL AFTER status,\nADD COLUMN verdictNotes TEXT DEFAULT NULL AFTER manualVerdict,\nADD COLUMN verdictOverriddenBy INT DEFAULT NULL AFTER verdictNotes,\nADD COLUMN verdictOverriddenAt TIMESTAMP DEFAULT NULL AFTER verdictOverriddenBy;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'manualverdict' in 'load_quotations'"
+  ]
+}

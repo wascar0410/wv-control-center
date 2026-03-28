@@ -6,7 +6,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { DollarSign, TrendingUp, CheckCircle, AlertCircle, XCircle, Edit2 } from "lucide-react";
+import { DollarSign, TrendingUp, CheckCircle, AlertCircle, XCircle, Edit2, Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 interface QuotationResultsTableProps {
   quotationId: number;
@@ -38,6 +40,17 @@ export default function QuotationResultsTable({
   const [manualVerdict, setManualVerdict] = useState<string | null>(null);
   const [verdictNotes, setVerdictNotes] = useState("");
   const [showVerdictDialog, setShowVerdictDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const saveVerdictMutation = trpc.quotation.saveVerdictOverride.useMutation({
+    onSuccess: () => {
+      toast.success("Veredicto guardado exitosamente");
+      setShowVerdictDialog(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al guardar veredicto");
+    },
+  });
   
   const currentVerdict = manualVerdict || verdict;
   const isVerdictOverridden = manualVerdict !== null && manualVerdict !== verdict;
@@ -241,8 +254,34 @@ export default function QuotationResultsTable({
                       className="mt-2"
                     />
                   </div>
-                  <Button onClick={() => setShowVerdictDialog(false)} className="w-full">
-                    Guardar
+                  <Button 
+                    onClick={async () => {
+                      if (!manualVerdict) {
+                        toast.error("Selecciona un veredicto");
+                        return;
+                      }
+                      setIsSaving(true);
+                      try {
+                        await saveVerdictMutation.mutateAsync({
+                          quotationId,
+                          manualVerdict: manualVerdict as "ACEPTAR" | "NEGOCIAR" | "RECHAZAR",
+                          verdictNotes: verdictNotes || undefined,
+                        });
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }} 
+                    disabled={isSaving || !manualVerdict}
+                    className="w-full"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Guardando...
+                      </>
+                    ) : (
+                      "Guardar"
+                    )}
                   </Button>
                 </div>
               </DialogContent>
