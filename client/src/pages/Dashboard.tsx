@@ -12,6 +12,8 @@ import { useLocation } from "wouter";
 import { AssignLoadModal } from "@/components/AssignLoadModal";
 import { DriverLocationMap } from "@/components/DriverLocationMap";
 import { AlertsWidget } from "@/components/AlertsWidget";
+import { ProjectionsCard } from "@/components/ProjectionsCard";
+import { TrendCharts } from "@/components/TrendCharts";
 import { trpc } from "@/lib/trpc";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -32,6 +34,7 @@ export default function Dashboard() {
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const { data: kpis, isLoading: kpisLoading } = trpc.dashboard.kpis.useQuery();
   const { data: loads, isLoading: loadsLoading } = trpc.dashboard.recentLoads.useQuery();
+  const { data: projections, isLoading: projectionsLoading } = trpc.dashboard.monthlyProjections.useQuery();
   const utils = trpc.useUtils();
 
   const recentLoads = loads?.slice(0, 5) ?? [];
@@ -101,6 +104,14 @@ export default function Dashboard() {
           highlight
         />
       </div>
+
+      {/* Monthly Projections */}
+      {projections && !projectionsLoading && (
+        <>
+          <ProjectionsCard data={projections} />
+          <TrendCharts data={projections} />
+        </>
+      )}
 
       {/* Driver Location Tracking */}
       {user?.role === "admin" && (

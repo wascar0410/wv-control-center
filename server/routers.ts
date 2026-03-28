@@ -18,6 +18,7 @@ import { brokerLoadsRouter } from "./_core/brokerLoadsRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
+import { getMonthlyProjections } from "./db-projections";
 import {
   createLoad, createOwnerDraw, createPartner, createTransaction, createFuelLog,
   deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
@@ -645,6 +646,7 @@ const driverRouter = router({
 const dashboardRouter = router({
   kpis: protectedProcedure.query(() => getDashboardKPIs()),
   recentLoads: protectedProcedure.query(() => getLoads()),
+  monthlyProjections: protectedProcedure.query(({ ctx }) => getMonthlyProjections(ctx.user.id)),
 });
 
 // ─── Assignment Router ────────────────────────────────────────────────────────

@@ -405,3 +405,13 @@
 - [x] Mostrar spinner animado durante operaciones
 - [x] Deshabilitar botones mientras se procesan
 - [x] Probar y validar
+
+
+## Fase 42: Dashboard de Proyecciones de Millas y Ganancia
+- [x] Crear backend endpoint para calcular proyecciones mensuales
+- [x] Calcular millas completadas y proyectadas hasta fin de mes
+- [x] Calcular ganancia total proyectada
+- [x] Crear componente de tarjetas de proyecciones
+- [x] Agregar gráfico de progreso hacia meta de 4,000 millas
+- [x] Integrar en Dashboard Ejecutivo
+- [x] Probar y validar
