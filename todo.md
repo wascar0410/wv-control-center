@@ -372,3 +372,9 @@
 - [ ] Crear página BrokerLoadsManagement (frontend) - PRÓXIMA FASE
 - [ ] Agregar navegación en sidebar - PRÓXIMA FASE
 - [ ] Estructura lista para APIs futuras (Coyote, DAT) - PRÓXIMA FASE
+
+- [x] Crear página ImportBrokerLoads con formulario manual
+- [x] Crear componente CSV uploader con validación
+- [x] Integrar con backend brokerLoadsRouter
+- [x] Agregar navegación en sidebar
+- [x] Probar y validar

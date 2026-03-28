@@ -38,6 +38,7 @@ import {
   BarChart3,
   Settings,
   FileText,
+  Download,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -51,6 +52,7 @@ const menuItems = [
   { icon: Package, label: "Cargas", path: "/loads", description: "Gestión de envíos" },
   { icon: Calculator, label: "Cotización", path: "/quotation", description: "Calcular precio y rentabilidad" },
   { icon: BarChart3, label: "Historial de Cotizaciones", path: "/quotation-history", description: "Ver y exportar cotizaciones" },
+  { icon: Download, label: "Importar Cargas", path: "/import-broker-loads", description: "Importar desde brokers" },
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
   { icon: BarChart3, label: "Finanzas Contables", path: "/accounting-finance", description: "Reportes y auditoría" },
   { icon: CreditCard, label: "Transacciones", path: "/transactions", description: "Seguimiento de gastos e ingresos" },
