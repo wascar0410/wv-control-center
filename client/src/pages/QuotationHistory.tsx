@@ -175,14 +175,14 @@ export default function QuotationHistory() {
 
             {/* Status Filter */}
             <Select value={status} onValueChange={(val) => {
-              setStatus(val);
+              setStatus(val === "all" ? "" : val);
               setPage(0);
             }}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos los estados</SelectItem>
+                <SelectItem value="all">Todos los estados</SelectItem>
                 <SelectItem value="draft">Borrador</SelectItem>
                 <SelectItem value="quoted">Cotizado</SelectItem>
                 <SelectItem value="accepted">Aceptado</SelectItem>
