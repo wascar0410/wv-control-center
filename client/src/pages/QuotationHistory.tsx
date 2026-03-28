@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+"use client";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,6 @@ import { Badge } from "@/components/ui/badge";
 import { FileDown, Search, Filter } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
@@ -64,16 +64,20 @@ export default function QuotationHistory() {
     }
 
     try {
-      const doc = new jsPDF() as any;
+      const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const margin = 10;
+      let yPosition = margin + 10;
 
       // Header
       doc.setFontSize(16);
-      doc.text("Historial de Cotizaciones", margin, margin + 5);
+      doc.text("Historial de Cotizaciones", margin, yPosition);
+      yPosition += 8;
+
       doc.setFontSize(10);
-      doc.text(`Generado: ${new Date().toLocaleDateString("es-ES")}`, margin, margin + 12);
+      doc.text(`Generado: ${new Date().toLocaleDateString("es-ES")}`, margin, yPosition);
+      yPosition += 8;
 
       // Filters info
       const filterText = [];
@@ -81,87 +85,93 @@ export default function QuotationHistory() {
       if (search) filterText.push(`Búsqueda: ${search}`);
       if (filterText.length > 0) {
         doc.setFontSize(9);
-        doc.text(`Filtros: ${filterText.join(" | ")}`, margin, margin + 18);
+        doc.text(`Filtros: ${filterText.join(" | ")}`, margin, yPosition);
+        yPosition += 6;
       }
 
-      // Table
-      const tableData = quotations.map((q) => [
-        new Date(q.createdAt).toLocaleDateString("es-ES"),
-        q.pickupAddress.substring(0, 30),
-        q.deliveryAddress.substring(0, 30),
-        `$${Number(q.totalPrice).toFixed(2)}`,
-        `$${Number(q.estimatedProfit).toFixed(2)}`,
-        `${Number(q.profitMarginPercent).toFixed(1)}%`,
-        STATUS_LABELS[q.status] || q.status,
-      ]);
+      yPosition += 4;
 
-      (doc as any).autoTable({
-        head: [
-          [
-            "Fecha",
-            "Origen",
-            "Destino",
-            "Precio",
-            "Ganancia",
-            "Margen",
-            "Estado",
-          ],
-        ],
-        body: tableData,
-        startY: margin + 25,
-        margin: margin,
-        didDrawPage: (data: any) => {
-          const pageCount = doc.internal.getPages().length;
-          doc.setFontSize(8);
-          doc.text(
-            `Página ${pageCount}`,
-            pageWidth / 2,
-            pageHeight - 5,
-            { align: "center" }
-          );
-        },
+      // Table headers
+      const colWidths = [20, 35, 35, 25, 25, 20, 25];
+      const headers = ["Fecha", "Origen", "Destino", "Precio", "Ganancia", "Margen", "Estado"];
+
+      doc.setFontSize(9);
+      (doc as any).setFont(undefined, "bold");
+      let xPos = margin;
+      headers.forEach((header, i) => {
+        doc.text(header, xPos, yPosition, { maxWidth: colWidths[i] - 2 } as any);
+        xPos += colWidths[i];
+      });
+      yPosition += 6;
+
+      // Table rows
+      (doc as any).setFont(undefined, "normal");
+      doc.setFontSize(8);
+      quotations.forEach((q) => {
+        if (yPosition > pageHeight - 15) {
+          doc.addPage();
+          yPosition = margin;
+        }
+
+        const rowData = [
+          new Date(q.createdAt).toLocaleDateString("es-ES"),
+          q.pickupAddress.substring(0, 30),
+          q.deliveryAddress.substring(0, 30),
+          `$${Number(q.totalPrice).toFixed(2)}`,
+          `$${Number(q.estimatedProfit).toFixed(2)}`,
+          `${Number(q.profitMarginPercent).toFixed(1)}%`,
+          STATUS_LABELS[q.status] || q.status,
+        ];
+
+        xPos = margin;
+        rowData.forEach((cell, i) => {
+          doc.text(String(cell), xPos, yPosition, { maxWidth: colWidths[i] - 2 } as any);
+          xPos += colWidths[i];
+        });
+        yPosition += 5;
       });
 
       // Summary
-      const finalY = (doc as any).lastAutoTable.finalY + 10;
+      yPosition += 5;
       doc.setFontSize(10);
-      doc.text(`Total de cotizaciones: ${quotations.length}`, margin, finalY);
+      (doc as any).setFont(undefined, "bold");
+      doc.text(`Total de cotizaciones: ${quotations.length}`, margin, yPosition);
+      yPosition += 6;
+
       const totalPrice = quotations.reduce((sum, q) => sum + Number(q.totalPrice), 0);
       const totalProfit = quotations.reduce((sum, q) => sum + Number(q.estimatedProfit), 0);
-      doc.text(`Ingresos totales: $${totalPrice.toFixed(2)}`, margin, finalY + 6);
-      doc.text(`Ganancia total: $${totalProfit.toFixed(2)}`, margin, finalY + 12);
+      const avgMargin =
+        quotations.length > 0
+          ? quotations.reduce((sum, q) => sum + Number(q.profitMarginPercent), 0) /
+            quotations.length
+          : 0;
 
+      doc.text(`Ingresos totales: $${totalPrice.toFixed(2)}`, margin, yPosition);
+      yPosition += 5;
+      doc.text(`Ganancia total: $${totalProfit.toFixed(2)}`, margin, yPosition);
+      yPosition += 5;
+      doc.text(`Margen promedio: ${avgMargin.toFixed(1)}%`, margin, yPosition);
+
+      // Save
       doc.save(`cotizaciones-${new Date().toISOString().split("T")[0]}.pdf`);
       toast.success("PDF exportado exitosamente");
     } catch (error) {
-      console.error(error);
+      console.error("Error exporting PDF:", error);
       toast.error("Error al exportar PDF");
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Historial de Cotizaciones</h1>
-        <p className="text-muted-foreground mt-1">
-          Visualiza, filtra y exporta todas tus cotizaciones
-        </p>
-      </div>
-
-      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Filter className="w-4 h-4" />
-            Filtros
-          </CardTitle>
+          <CardTitle>Historial de Cotizaciones</CardTitle>
+          <CardDescription>Ver y exportar todas tus cotizaciones calculadas</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+          {/* Filters */}
+          <div className="flex gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
               <Input
                 placeholder="Buscar por dirección..."
                 value={search}
@@ -169,16 +179,14 @@ export default function QuotationHistory() {
                   setSearch(e.target.value);
                   setPage(0);
                 }}
-                className="pl-10"
               />
             </div>
 
-            {/* Status Filter */}
-            <Select value={status} onValueChange={(val) => {
-              setStatus(val === "all" ? "" : val);
+            <Select value={status} onValueChange={(value) => {
+              setStatus(value);
               setPage(0);
             }}>
-              <SelectTrigger>
+              <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
               <SelectContent>
@@ -191,107 +199,87 @@ export default function QuotationHistory() {
               </SelectContent>
             </Select>
 
-            {/* Export Button */}
-            <Button onClick={handleExportPDF} className="gap-2" disabled={isLoading}>
+            <Button onClick={handleExportPDF} variant="outline" className="gap-2">
               <FileDown className="w-4 h-4" />
-              Exportar a PDF
+              Exportar PDF
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Results */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Resultados ({total} cotizaciones)
-          </CardTitle>
-          <CardDescription>
-            Página {page + 1} de {Math.max(1, totalPages)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Cargando...</div>
-          ) : quotations.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No se encontraron cotizaciones
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+          {/* Table */}
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Origen</TableHead>
+                  <TableHead>Destino</TableHead>
+                  <TableHead>Precio</TableHead>
+                  <TableHead>Ganancia</TableHead>
+                  <TableHead>Margen</TableHead>
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
                   <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Origen</TableHead>
-                    <TableHead>Destino</TableHead>
-                    <TableHead className="text-right">Precio</TableHead>
-                    <TableHead className="text-right">Ganancia</TableHead>
-                    <TableHead className="text-right">Margen</TableHead>
-                    <TableHead>Estado</TableHead>
+                    <TableCell colSpan={7} className="text-center py-8">
+                      Cargando...
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {quotations.map((q) => (
+                ) : quotations.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      No hay cotizaciones
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  quotations.map((q) => (
                     <TableRow key={q.id}>
-                      <TableCell className="text-sm">
-                        {new Date(q.createdAt).toLocaleDateString("es-ES")}
-                      </TableCell>
-                      <TableCell className="text-sm max-w-[150px] truncate">
-                        {q.pickupAddress}
-                      </TableCell>
-                      <TableCell className="text-sm max-w-[150px] truncate">
+                      <TableCell>{new Date(q.createdAt).toLocaleDateString("es-ES")}</TableCell>
+                      <TableCell className="max-w-[150px] truncate">{q.pickupAddress}</TableCell>
+                      <TableCell className="max-w-[150px] truncate">
                         {q.deliveryAddress}
                       </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        ${Number(q.totalPrice).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className={Number(q.estimatedProfit) >= 0 ? "text-green-600" : "text-red-600"}>
-                          ${Number(q.estimatedProfit).toFixed(2)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number(q.profitMarginPercent).toFixed(1)}%
-                      </TableCell>
+                      <TableCell>${Number(q.totalPrice).toFixed(2)}</TableCell>
+                      <TableCell>${Number(q.estimatedProfit).toFixed(2)}</TableCell>
+                      <TableCell>{Number(q.profitMarginPercent).toFixed(1)}%</TableCell>
                       <TableCell>
-                        <Badge className={STATUS_COLORS[q.status] || ""}>
+                        <Badge className={STATUS_COLORS[q.status] || "bg-gray-100"}>
                           {STATUS_LABELS[q.status] || q.status}
                         </Badge>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Mostrando {quotations.length > 0 ? page * pageSize + 1 : 0} a{" "}
+              {Math.min((page + 1) * pageSize, total)} de {total} cotizaciones
             </div>
-          )}
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPage(Math.max(0, page - 1))}
+                disabled={page === 0}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                disabled={page >= totalPages - 1}
+              >
+                Siguiente
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-muted-foreground">
-            Mostrando {page * pageSize + 1} a {Math.min((page + 1) * pageSize, total)} de {total}
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setPage(Math.max(0, page - 1))}
-              disabled={page === 0}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-              disabled={page === totalPages - 1}
-            >
-              Siguiente
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
