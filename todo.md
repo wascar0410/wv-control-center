@@ -477,3 +477,12 @@
 - [x] Mejorar separación de responsabilidades
 - [x] Mantener integración tRPC directa
 - [x] Probar y validar
+
+
+## Fase 50: Exportar Evaluación a PDF
+- [x] Crear helper para generar PDF con evaluación
+- [x] Agregar botón de descarga en componente de resultados
+- [x] Incluir desglose de costos en PDF
+- [x] Incluir recomendación y decisión en PDF
+- [x] Agregar información del cliente y carga
+- [x] Probar y validar

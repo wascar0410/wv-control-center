@@ -35,7 +35,7 @@ export default function LoadEvaluator() {
         {/* Right column: Results */}
         <div>
           {canEvaluate && evaluation ? (
-            <LoadEvaluatorResults result={evaluation} />
+            <LoadEvaluatorResults result={evaluation} form={form} />
           ) : (
             <LoadEvaluatorEmptyState />
           )}

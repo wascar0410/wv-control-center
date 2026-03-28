@@ -1,4 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
+import { generateEvaluationPDF } from "@/lib/generateEvaluationPDF";
+import { LoadEvaluatorFormData } from "@/hooks/useLoadEvaluatorForm";
 
 interface EvaluationResult {
   decision: "ACCEPT" | "NEGOTIATE" | "REJECT";
@@ -20,9 +24,13 @@ interface EvaluationResult {
 
 interface LoadEvaluatorResultsProps {
   result: EvaluationResult;
+  form: LoadEvaluatorFormData;
 }
 
-export function LoadEvaluatorResults({ result }: LoadEvaluatorResultsProps) {
+export function LoadEvaluatorResults({ result, form }: LoadEvaluatorResultsProps) {
+  const handleDownloadPDF = () => {
+    generateEvaluationPDF(form, result);
+  };
   const decisionStyles = {
     ACCEPT: "border-green-500 bg-green-50 dark:bg-green-950",
     NEGOTIATE: "border-yellow-500 bg-yellow-50 dark:bg-yellow-950",
@@ -45,10 +53,19 @@ export function LoadEvaluatorResults({ result }: LoadEvaluatorResultsProps) {
     <div className="space-y-6">
       {/* Decision Card */}
       <Card className={`border-2 ${decisionStyles[result.decision]}`}>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className={decisionTextStyles[result.decision]}>
             {decisionLabels[result.decision]}
           </CardTitle>
+          <Button
+            onClick={handleDownloadPDF}
+            size="sm"
+            variant="outline"
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            PDF
+          </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
