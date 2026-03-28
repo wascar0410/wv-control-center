@@ -11,7 +11,7 @@ import {
   checkDuplicateBrokerLoad,
   deleteBrokerLoad,
 } from "../db-broker-loads";
-import { calculateDistance } from "./quotationRouter";
+import { geocodeAddresses, calculateDistanceFromCoordinates } from "../geocoding";
 
 export const brokerLoadsRouter = router({
   // Import a single broker load manually
@@ -46,16 +46,33 @@ export const brokerLoadsRouter = router({
         throw new Error("This load already exists in the system");
       }
 
-      // Calculate distance if coordinates provided
+      // Calculate distance using coordinates or geocoding
       let calculatedDistance: number | undefined;
-      if (input.pickupLat && input.pickupLng && input.deliveryLat && input.deliveryLng) {
-        calculatedDistance = calculateDistance(
-          input.pickupLat,
-          input.pickupLng,
-          input.deliveryLat,
-          input.deliveryLng
+      let finalPickupLat = input.pickupLat;
+      let finalPickupLng = input.pickupLng;
+      let finalDeliveryLat = input.deliveryLat;
+      let finalDeliveryLng = input.deliveryLng;
+
+      // If coordinates not provided, geocode the addresses
+      if (!finalPickupLat || !finalPickupLng || !finalDeliveryLat || !finalDeliveryLng) {
+        const geocodeResult = await geocodeAddresses(input.pickupAddress, input.deliveryAddress);
+        if (geocodeResult) {
+          finalPickupLat = geocodeResult.originLat;
+          finalPickupLng = geocodeResult.originLng;
+          finalDeliveryLat = geocodeResult.destinationLat;
+          finalDeliveryLng = geocodeResult.destinationLng;
+          calculatedDistance = geocodeResult.distance;
+        }
+      } else {
+        // Calculate distance from provided coordinates
+        calculatedDistance = calculateDistanceFromCoordinates(
+          finalPickupLat || 0,
+          finalPickupLng || 0,
+          finalDeliveryLat || 0,
+          finalDeliveryLng || 0
         );
       }
+
 
       // Create broker load
       const result = await createBrokerLoad({
@@ -64,10 +81,10 @@ export const brokerLoadsRouter = router({
         brokerName: input.brokerName,
         pickupAddress: input.pickupAddress,
         deliveryAddress: input.deliveryAddress,
-        pickupLat: input.pickupLat,
-        pickupLng: input.pickupLng,
-        deliveryLat: input.deliveryLat,
-        deliveryLng: input.deliveryLng,
+        pickupLat: finalPickupLat || 0,
+        pickupLng: finalPickupLng || 0,
+        deliveryLat: finalDeliveryLat || 0,
+        deliveryLng: finalDeliveryLng || 0,
         weight: input.weight,
         weightUnit: input.weightUnit,
         commodity: input.commodity,
@@ -136,7 +153,7 @@ export const brokerLoadsRouter = router({
           // Calculate distance if coordinates provided
           let calculatedDistance: number | undefined;
           if (load.pickupLat && load.pickupLng && load.deliveryLat && load.deliveryLng) {
-            calculatedDistance = calculateDistance(
+            calculatedDistance = calculateDistanceFromCoordinates(
               load.pickupLat,
               load.pickupLng,
               load.deliveryLat,
