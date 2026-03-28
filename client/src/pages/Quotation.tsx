@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import QuotationForm, { type QuotationFormData } from "@/components/QuotationForm";
-import QuotationResults from "@/components/QuotationResults";
+import QuotationResultsTable from "@/components/QuotationResultsTable";
 import CreateLoadModal from "@/components/CreateLoadModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,10 @@ interface QuotationResult {
   estimatedOperatingCost: number;
   estimatedProfit: number;
   profitMarginPercent: number;
+  verdict: string;
+  minimumIncome?: number;
+  ratePerLoadedMile?: number;
+  differenceVsMinimum?: number;
   pickupAddress?: string;
   deliveryAddress?: string;
   weight?: number;
@@ -137,7 +141,7 @@ export default function Quotation() {
               </Button>
             </div>
 
-            <QuotationResults {...result} />
+            <QuotationResultsTable {...result} />
 
             {/* Action Buttons */}
             <div className="flex gap-4 justify-center">

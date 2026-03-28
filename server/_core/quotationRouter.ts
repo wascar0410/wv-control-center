@@ -84,6 +84,7 @@ export const quotationRouter = router({
         ratePerMile: z.number().positive(),
         ratePerPound: z.number().optional(),
         fuelSurcharge: z.number().default(0),
+        offeredPrice: z.number().positive(),
         includeReturnEmpty: z.boolean().default(false),
       })
     )
@@ -109,16 +110,8 @@ export const quotationRouter = router({
       const totalMiles = routesData.totalDistanceMiles;
       const totalDurationHours = routesData.totalDurationHours;
 
-      // Calculate base price
-      let totalPrice = totalMiles * input.ratePerMile;
-      
-      // Add per-pound charge if applicable
-      if (input.ratePerPound && input.ratePerPound > 0) {
-        totalPrice += input.weight * input.ratePerPound;
-      }
-
-      // Add fuel surcharge
-      totalPrice += input.fuelSurcharge;
+      // Use offered price from broker
+      const totalPrice = input.offeredPrice;
 
       // Calculate profitability
       const profitability = calculateProfitability(totalPrice, totalMiles, loadedMiles, input.weight);
