@@ -16,6 +16,7 @@ import { ProjectionsCard } from "@/components/ProjectionsCard";
 import { TrendCharts } from "@/components/TrendCharts";
 import { HistoricalComparisonCard } from "@/components/HistoricalComparisonCard";
 import { HistoricalComparisonCharts } from "@/components/HistoricalComparisonCharts";
+import { QuarterlyComparisonView } from "@/components/QuarterlyComparisonView";
 import { trpc } from "@/lib/trpc";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -38,6 +39,7 @@ export default function Dashboard() {
   const { data: loads, isLoading: loadsLoading } = trpc.dashboard.recentLoads.useQuery();
   const { data: projections, isLoading: projectionsLoading } = trpc.dashboard.monthlyProjections.useQuery();
   const { data: historicalComparison, isLoading: historicalLoading } = trpc.dashboard.historicalComparison.useQuery();
+  const { data: quarterlyComparison, isLoading: quarterlyLoading } = trpc.dashboard.quarterlyComparison.useQuery();
   const utils = trpc.useUtils();
 
   const recentLoads = loads?.slice(0, 5) ?? [];
@@ -122,6 +124,11 @@ export default function Dashboard() {
           <HistoricalComparisonCard data={historicalComparison} />
           <HistoricalComparisonCharts data={historicalComparison} />
         </>
+      )}
+
+      {/* Quarterly Comparison */}
+      {quarterlyComparison && !quarterlyLoading && (
+        <QuarterlyComparisonView data={quarterlyComparison} />
       )}
 
       {/* Driver Location Tracking */}

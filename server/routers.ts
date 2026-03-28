@@ -20,6 +20,7 @@ import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
 import { getMonthlyProjections } from "./db-projections";
 import { getHistoricalComparison } from "./db-historical-comparison";
+import { getQuarterlyComparison } from "./db-quarterly-comparison";
 import {
   createLoad, createOwnerDraw, createPartner, createTransaction, createFuelLog,
   deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
@@ -649,6 +650,7 @@ const dashboardRouter = router({
   recentLoads: protectedProcedure.query(() => getLoads()),
   monthlyProjections: protectedProcedure.query(({ ctx }) => getMonthlyProjections(ctx.user.id)),
   historicalComparison: protectedProcedure.query(({ ctx }) => getHistoricalComparison(ctx.user.id)),
+  quarterlyComparison: protectedProcedure.query(({ ctx }) => getQuarterlyComparison(ctx.user.id)),
 });
 
 // ─── Assignment Router ────────────────────────────────────────────────────────

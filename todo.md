@@ -424,3 +424,12 @@
 - [x] Agregar gráficos comparativos (barras, líneas)
 - [x] Integrar en Dashboard
 - [x] Probar y validar
+
+
+## Fase 44: Vista Trimestral de Comparación Histórica
+- [x] Crear backend helper para calcular métricas de últimos 3 meses
+- [x] Agregar endpoint tRPC para comparación trimestral
+- [x] Crear componente de selector de vista (mensual/trimestral)
+- [x] Crear componente de gráficos trimestrales
+- [x] Integrar selector en Dashboard
+- [x] Probar y validar
