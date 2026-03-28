@@ -80,11 +80,12 @@ export const batchPaymentRouter = router({
         await createPaymentAuditLog({
           paymentId: payment.id,
           batchId,
-          action: "created",
+          action: "created" as any,
           previousStatus: payment.status,
           newStatus: "pending",
           performedBy: ctx.user.id,
           reason: `Added to batch ${batchNumber}`,
+          metadata: null,
         });
       }
 
@@ -276,11 +277,12 @@ export const batchPaymentRouter = router({
           await createPaymentAuditLog({
             paymentId,
             batchId: input.batchId,
-            action: "processed",
+            action: "processed" as any,
             previousStatus: "pending",
             newStatus: "completed",
             performedBy: ctx.user.id,
             reason: `Processed in batch ${batch.batchNumber}`,
+            metadata: null,
           });
 
           successfulPayments++;
