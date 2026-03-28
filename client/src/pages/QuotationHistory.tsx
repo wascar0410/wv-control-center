@@ -95,7 +95,7 @@ export default function QuotationHistory() {
         STATUS_LABELS[q.status] || q.status,
       ]);
 
-      doc.autoTable({
+      (doc as any).autoTable({
         head: [
           [
             "Fecha",
