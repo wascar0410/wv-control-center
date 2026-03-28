@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `price_alerts` MODIFY COLUMN `quotationId` int; ALTER TABLE `route_stops` MODIFY COLUMN `quotationId` int;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute ALTER TABLE `price_alerts` MODIFY COLUMN `quotationId` int; ALTER TABLE `route_stops` MODIFY COLUMN `quotationId` int;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 561
+}

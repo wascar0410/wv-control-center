@@ -178,7 +178,7 @@ export const quotationRouter = router({
       });
 
       // Create alert if rate per loaded mile is below minimum
-      const quotationId = (result as any).insertId || 0;
+      const quotationId = (result as any).insertId || null;
       const minimumProfitPerMile = profitability.minimumRatePerMile;
       const ratePerLoadedMile = profitability.ratePerLoadedMile;
       
@@ -186,7 +186,7 @@ export const quotationRouter = router({
         const severity = ratePerLoadedMile < minimumProfitPerMile - 0.50 ? "critical" : "warning";
         await createPriceAlert({
           userId: ctx.user.id,
-          quotationId: quotationId,
+          quotationId: quotationId || undefined,
           clientName: "",
           pickupAddress: input.pickupAddress,
           deliveryAddress: input.deliveryAddress,
@@ -199,7 +199,7 @@ export const quotationRouter = router({
       }
 
       return {
-        quotationId: (result as any).insertId || 0,
+        quotationId: (result as any).insertId || null,
         emptyMiles: Math.round(emptyMiles * 100) / 100,
         loadedMiles: Math.round(loadedMiles * 100) / 100,
         returnEmptyMiles: Math.round(returnEmptyMiles * 100) / 100,

@@ -346,7 +346,7 @@ export type InsertWeightSurcharge = typeof weightSurcharge.$inferInsert;
  */
 export const routeStops = mysqlTable("route_stops", {
   id: int("id").autoincrement().primaryKey(),
-  quotationId: int("quotationId").notNull().references(() => loadQuotations.id, { onDelete: "cascade" }),
+  quotationId: int("quotationId").references(() => loadQuotations.id, { onDelete: "cascade" }),
   stopOrder: int("stopOrder").notNull(), // Order in optimized route (1, 2, 3, etc.)
   stopType: mysqlEnum("stopType", ["pickup", "delivery"]).notNull(),
   address: text("address").notNull(),
@@ -477,10 +477,13 @@ export type InsertExportLog = typeof exportLogs.$inferInsert;
 /**
  * Price Alerts - Alerts for loads below minimum profit threshold
  */
+/**
+ * Price Alerts - Track quotations below minimum profit margin
+ */
 export const priceAlerts = mysqlTable("price_alerts", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().references(() => users.id),
-  quotationId: int("quotationId").notNull().references(() => loadQuotations.id, { onDelete: "cascade" }),
+  quotationId: int("quotationId").references(() => loadQuotations.id, { onDelete: "cascade" }),
   // Load details
   clientName: varchar("clientName", { length: 255 }),
   pickupAddress: text("pickupAddress").notNull(),
