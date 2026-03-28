@@ -241,7 +241,7 @@ export default function ExecutiveDashboard() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip formatter={(value: any) => `${value.toFixed(1)}%`} />
+                  <Tooltip formatter={(value: any) => `${value.toFixed(1)}`} />
                   <Legend />
                   <Line
                     type="monotone"
@@ -250,14 +250,6 @@ export default function ExecutiveDashboard() {
                     strokeWidth={2}
                     name="Margen %"
                     dot={{ r: 4 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="loads"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    name="Cargas"
-                    yAxisId="right"
                   />
                 </LineChart>
               </ResponsiveContainer>
