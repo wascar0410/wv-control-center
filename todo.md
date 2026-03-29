@@ -701,3 +701,14 @@
 - [x] Deshabilitar botón de envío si email no es válido
 - [x] Tests para validación de email
 - [x] Checkpoint y entrega
+
+
+## Fase 68: Confirmación de Contraseña para Agregar Choferes
+- [x] Actualizar endpoint createDriver para aceptar contraseña
+- [x] Implementar hash de contraseña con bcrypt
+- [x] Crear hook usePasswordValidation con validación de coincidencia
+- [x] Agregar campos de contraseña y confirmación en formulario
+- [x] Mostrar indicadores visuales de fortaleza de contraseña
+- [x] Validar requisitos mínimos (longitud, caracteres especiales)
+- [x] Tests para validación de contraseña
+- [x] Checkpoint y entrega

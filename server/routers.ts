@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import * as bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -797,6 +798,7 @@ const adminRouter = router({
     .input(z.object({
       email: z.string().email(),
       name: z.string(),
+      password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
       phoneNumber: z.string().optional(),
       licenseNumber: z.string().optional(),
     }))
@@ -815,6 +817,9 @@ const adminRouter = router({
         throw new Error("El correo ya está registrado en el sistema");
       }
 
+      // Hash password
+      const passwordHash = await bcrypt.hash(input.password, 10);
+
       // Create new driver user with unique openId
       const openId = `google-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
@@ -822,6 +827,7 @@ const adminRouter = router({
         openId,
         name: input.name,
         email: input.email,
+        passwordHash,
         role: "driver",
         loginMethod: "manual",
         createdAt: new Date(),

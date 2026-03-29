@@ -20,6 +20,8 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin", "driver", "owner"]).default("user").notNull(),
+  // Authentication
+  passwordHash: text("passwordHash"),
   // Contact information
   phone: varchar("phone", { length: 20 }),
   address: text("address"),
