@@ -571,3 +571,11 @@
 - [x] Agregar endpoint tRPC para exportar reporte en Excel
 - [x] Crear UI para descargar reportes (botones en Tax Compliance Dashboard)
 - [x] Probar y validar exportación
+
+
+## Fase 58: Integración de Botones de Descarga en Tax Compliance Dashboard
+- [x] Crear componente FiscalReportDownload con botones PDF/Excel
+- [x] Integrar en Tax Compliance Dashboard
+- [x] Agregar selector de período (mes/trimestre/año)
+- [x] Agregar indicador de carga durante descarga
+- [x] Probar y validar

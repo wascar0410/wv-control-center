@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import jsPDF from "jspdf";
 import OCRDocumentUpload from "@/components/OCRDocumentUpload";
+import FiscalReportDownload from "@/components/FiscalReportDownload";
 
 export default function TaxCompliance() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -227,6 +228,7 @@ export default function TaxCompliance() {
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-6">
+          <FiscalReportDownload year={selectedYear} onYearChange={setSelectedYear} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
               <CardHeader>
