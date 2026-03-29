@@ -1,0 +1,16 @@
+{
+  "query": "\n-- Create a test driver user\nINSERT INTO users (openId, name, email, loginMethod, role, createdAt, updatedAt, lastSignedIn)\nVALUES (\n  CONCAT('driver_test_', UUID()),\n  'Carlos Mendoza',\n  'carlos.driver@example.com',\n  'test',\n  'driver',\n  NOW(),\n  NOW(),\n  NOW()\n);\n\n-- Verify the user was created\nSELECT id, email, name, role FROM users WHERE email = 'carlos.driver@example.com';\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute \n-- Create a test driver user\nINSERT INTO users (openId, name, email, loginMethod, role, createdAt, updatedAt, lastSignedIn)\nVALUES (\n  CONCAT('driver_test_', UUID()),\n  'Carlos Mendoza',\n  'carlos.driver@example.com',\n  'test',\n  'driver',\n  NOW(),\n  NOW(),\n  NOW()\n);\n\n-- Verify the user was created\nSELECT id, email, name, role FROM users WHERE email = 'carlos.driver@example.com';\n",
+  "rows": [
+    {
+      "id": "660862",
+      "email": "carlos.driver@example.com",
+      "name": "Carlos Mendoza",
+      "role": "driver"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\n660862\tcarlos.driver@example.com\tCarlos Mendoza\tdriver\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}
