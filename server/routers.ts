@@ -45,9 +45,13 @@ import { getHistoricalComparison } from "./db-historical-comparison";
 import { getQuarterlyComparison } from "./db-quarterly-comparison";
 import { getAnnualComparison } from "./db-annual-comparison";
 import {
-  createContactSubmission, getContactSubmissions, updateContactSubmissionStatus,
-  createLoad, createOwnerDraw, createPartner, createTransaction, createFuelLog,
-  deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
+  createContactSubmission,
+  getContactSubmissions,
+  updateContactSubmissionStatus,
+  getContactStatistics,
+  getContactTrends,
+  createOwnerDraw, createPartner, createTransaction, createFuelLog,
+  createLoad, deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
   getLoads, getMonthlyCashFlow, getOwnerDraws, getPartners, getTransactions,
   updateLoad, updateLoadStatus, updatePartner, getDrawsByPeriod, getAllDrivers,
   createLoadAssignment, getLoadAssignments, getAssignmentById, updateAssignmentStatus, getAvailableLoads, getPendingAssignmentsForDriver,
@@ -784,7 +788,7 @@ const adminRouter = router({
       if (!db) throw new Error("Database connection failed");
 
       // Check if user already exists
-      const existingUser = await db.query.users.findFirst({
+      const existingUser = await db.query.usersTable.findFirst({
         where: (users: any, { eq }: any) => eq(users.email, input.email),
       });
 
@@ -1137,6 +1141,22 @@ const contactRouter = router({
         input.notes
       );
       return { success: true };
+    }),
+
+  getStatistics: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
+      throw new Error("No tienes permiso para ver estadísticas");
+    }
+    return getContactStatistics();
+  }),
+
+  getTrends: protectedProcedure
+    .input(z.object({ days: z.number().optional() }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
+        throw new Error("No tienes permiso para ver tendencias");
+      }
+      return getContactTrends(input.days || 30);
     }),
 });
 

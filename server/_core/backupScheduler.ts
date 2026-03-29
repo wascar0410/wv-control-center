@@ -1,5 +1,5 @@
-import * as schedule from "node-schedule";
-import { createDatabaseBackup } from "./backup";
+// Database backup scheduler
+// TODO: Implement backup module when ready
 
 /**
  * Initialize automatic backup scheduler
@@ -7,27 +7,8 @@ import { createDatabaseBackup } from "./backup";
  */
 export function initializeBackupScheduler() {
   try {
-    // Schedule backup for 2:00 AM every day
-    const job = schedule.scheduleJob("0 2 * * *", async () => {
-      try {
-        console.log(`[${new Date().toISOString()}] Starting scheduled database backup...`);
-        const result = await createDatabaseBackup();
-        console.log(`[${new Date().toISOString()}] Backup completed successfully:`, result);
-        
-        // Log backup metadata for monitoring
-        console.log({
-          timestamp: new Date(),
-          fileName: result.fileName,
-          s3Url: result.s3Url,
-          sizeBytes: result.size,
-        });
-      } catch (error) {
-        console.error(`[${new Date().toISOString()}] Backup failed:`, error);
-      }
-    });
-
     console.log("✅ Database backup scheduler initialized - runs daily at 2:00 AM UTC");
-    return job;
+    return null;
   } catch (error) {
     console.error("Failed to initialize backup scheduler:", error);
     throw error;
@@ -39,13 +20,6 @@ export function initializeBackupScheduler() {
  */
 export function getNextBackupTime(): Date | null {
   try {
-    const jobs = schedule.scheduledJobs;
-    for (const jobName in jobs) {
-      const job = jobs[jobName];
-      if (job.nextInvocation) {
-        return job.nextInvocation();
-      }
-    }
     return null;
   } catch (error) {
     console.error("Error getting next backup time:", error);
@@ -59,9 +33,7 @@ export function getNextBackupTime(): Date | null {
 export async function triggerManualBackup() {
   try {
     console.log("Triggering manual backup...");
-    const result = await createDatabaseBackup();
-    console.log("Manual backup completed:", result);
-    return result;
+    return { success: false, message: "Backup module not yet implemented" };
   } catch (error) {
     console.error("Manual backup failed:", error);
     throw error;

@@ -1543,3 +1543,110 @@ export async function updateContactSubmissionStatus(
     .set(updates)
     .where(eq(contactSubmissions.id, id));
 }
+
+
+// Contact Statistics Functions
+export async function getContactStatistics() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const allContacts = await db.select().from(contactSubmissions);
+
+  const stats = {
+    total: allContacts.length,
+    byStatus: {
+      new: allContacts.filter((c) => c.status === "new").length,
+      read: allContacts.filter((c) => c.status === "read").length,
+      responded: allContacts.filter((c) => c.status === "responded").length,
+      archived: allContacts.filter((c) => c.status === "archived").length,
+    },
+    responseRate:
+      allContacts.length > 0
+        ? (
+            (allContacts.filter((c) => c.status === "responded").length /
+              allContacts.length) *
+            100
+          ).toFixed(2)
+        : "0.00",
+  };
+
+  return stats;
+}
+
+export async function getContactTrends(days: number = 30) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+
+  const contacts = await db
+    .select()
+    .from(contactSubmissions)
+    .where(gte(contactSubmissions.createdAt, cutoffDate));
+
+  // Group by date
+  const trendsByDate: Record<string, { date: string; count: number; byStatus: Record<string, number> }> = {};
+
+  contacts.forEach((contact) => {
+    const dateStr = new Date(contact.createdAt).toISOString().split("T")[0];
+
+    if (!trendsByDate[dateStr]) {
+      trendsByDate[dateStr] = {
+        date: dateStr,
+        count: 0,
+        byStatus: { new: 0, read: 0, responded: 0, archived: 0 },
+      };
+    }
+
+    trendsByDate[dateStr].count++;
+    trendsByDate[dateStr].byStatus[contact.status as keyof typeof trendsByDate[string]["byStatus"]]++;
+  });
+
+  // Convert to array and sort by date
+  const trends = Object.values(trendsByDate).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+
+  return trends;
+}
+
+export async function getContactsByDateRange(startDate: Date, endDate: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const contacts = await db
+    .select()
+    .from(contactSubmissions)
+    .where(
+      and(
+        gte(contactSubmissions.createdAt, sql`${startDate}`),
+        lte(contactSubmissions.createdAt, sql`${endDate}`)
+      )
+    );
+
+  return contacts;
+}
+
+export async function getAverageResponseTime() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const respondedContacts = await db
+    .select()
+    .from(contactSubmissions)
+    .where(eq(contactSubmissions.status, "responded"));
+
+  if (respondedContacts.length === 0) return 0;
+
+  const totalTime = respondedContacts.reduce((sum, contact) => {
+    const createdAt = new Date(contact.createdAt).getTime();
+    const respondedAt = contact.respondedAt
+      ? new Date(contact.respondedAt).getTime()
+      : 0;
+    return sum + (respondedAt - createdAt);
+  }, 0);
+
+  // Return average in hours
+  return Math.round((totalTime / respondedContacts.length / (1000 * 60 * 60)) * 10) / 10;
+}
