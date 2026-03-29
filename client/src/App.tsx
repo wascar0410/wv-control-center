@@ -25,10 +25,11 @@ import LoadEvaluator from "./pages/LoadEvaluator";
 import TaxCompliance from "./pages/TaxCompliance";
 import { Chat } from "./pages/Chat";
 import UserProfile from "./pages/UserProfile";
+import About from "./pages/About";
 import { FloatingChatButton } from "./components/FloatingChatButton";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
-import { Loader2, Truck } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { loading, isAuthenticated } = useAuth();
@@ -145,6 +146,7 @@ function AppRoutes() {
           <Route path="/tax-compliance" component={TaxCompliance} />
           <Route path="/chat" component={Chat} />
           <Route path="/profile" component={UserProfile} />
+          <Route path="/about" component={About} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

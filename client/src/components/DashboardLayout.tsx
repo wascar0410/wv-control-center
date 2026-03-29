@@ -42,6 +42,7 @@ import {
   MessageSquare,
   Search,
   User as UserIcon,
+  Info,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -68,6 +69,7 @@ const menuItems = [
   { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },
   { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
+  { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
