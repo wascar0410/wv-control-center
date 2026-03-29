@@ -23,6 +23,7 @@ import {
   InsertTransaction,
   InsertTransactionImport,
   InsertUser,
+  InsertUserPreferences,
   loadAssignments,
   loadQuotations,
   loads,
@@ -35,6 +36,7 @@ import {
   transactions,
   transactionImports,
   users,
+  userPreferences,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1378,4 +1380,92 @@ export async function getPaymentsForExport(filters?: {
     return query.where(and(...conditions)).orderBy(desc(driverPayments.createdAt));
   }
   return query.orderBy(desc(driverPayments.createdAt));
+}
+
+
+// ─── User Profile & Preferences ──────────────────────────────────────────────
+
+export async function updateUserProfile(userId: number, data: {
+  name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  profileImageUrl?: string;
+  bio?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const updateData: any = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.phone !== undefined) updateData.phone = data.phone;
+  if (data.address !== undefined) updateData.address = data.address;
+  if (data.city !== undefined) updateData.city = data.city;
+  if (data.state !== undefined) updateData.state = data.state;
+  if (data.zipCode !== undefined) updateData.zipCode = data.zipCode;
+  if (data.profileImageUrl !== undefined) updateData.profileImageUrl = data.profileImageUrl;
+  if (data.bio !== undefined) updateData.bio = data.bio;
+  updateData.updatedAt = new Date();
+
+  await db.update(users).set(updateData).where(eq(users.id, userId));
+}
+
+export async function getUserProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function getOrCreateUserPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const existing = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  
+  if (existing.length > 0) {
+    return existing[0];
+  }
+  
+  // Create default preferences
+  const newPrefs: InsertUserPreferences = {
+    userId,
+    emailNotifications: true,
+    smsNotifications: true,
+    pushNotifications: true,
+    notifyOnLoadAssignment: true,
+    notifyOnLoadStatus: true,
+    notifyOnPayment: true,
+    notifyOnMessage: true,
+    notifyOnBonus: true,
+    theme: "dark",
+    language: "es",
+    timezone: "America/New_York",
+    showOnlineStatus: true,
+    allowLocationTracking: false,
+  };
+  
+  await db.insert(userPreferences).values(newPrefs);
+  return newPrefs;
+}
+
+export async function updateUserPreferences(userId: number, data: Partial<InsertUserPreferences>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const updateData: any = { ...data };
+  updateData.updatedAt = new Date();
+  
+  await db.update(userPreferences).set(updateData).where(eq(userPreferences.userId, userId));
+}
+
+export async function getUserPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
 }

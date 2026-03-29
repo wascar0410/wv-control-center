@@ -20,6 +20,15 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin", "driver", "owner"]).default("user").notNull(),
+  // Contact information
+  phone: varchar("phone", { length: 20 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  zipCode: varchar("zipCode", { length: 10 }),
+  // Profile info
+  profileImageUrl: text("profileImageUrl"),
+  bio: text("bio"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -27,6 +36,36 @@ export const users = mysqlTable("users", {
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * User Preferences - Notification and system preferences
+ */
+export const userPreferences = mysqlTable("user_preferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  // Notification preferences
+  emailNotifications: boolean("emailNotifications").default(true).notNull(),
+  smsNotifications: boolean("smsNotifications").default(true).notNull(),
+  pushNotifications: boolean("pushNotifications").default(true).notNull(),
+  // Notification types
+  notifyOnLoadAssignment: boolean("notifyOnLoadAssignment").default(true).notNull(),
+  notifyOnLoadStatus: boolean("notifyOnLoadStatus").default(true).notNull(),
+  notifyOnPayment: boolean("notifyOnPayment").default(true).notNull(),
+  notifyOnMessage: boolean("notifyOnMessage").default(true).notNull(),
+  notifyOnBonus: boolean("notifyOnBonus").default(true).notNull(),
+  // System preferences
+  theme: mysqlEnum("theme", ["dark", "light", "auto"]).default("dark").notNull(),
+  language: varchar("language", { length: 10 }).default("es").notNull(),
+  timezone: varchar("timezone", { length: 50 }).default("America/New_York").notNull(),
+  // Privacy
+  showOnlineStatus: boolean("showOnlineStatus").default(true).notNull(),
+  allowLocationTracking: boolean("allowLocationTracking").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type InsertUserPreferences = typeof userPreferences.$inferInsert;
 
 /**
  * Loads (Cargas) - Core shipment records

@@ -41,6 +41,7 @@ import {
   Download,
   MessageSquare,
   Search,
+  User as UserIcon,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -243,15 +244,20 @@ function DashboardLayoutContent({
                   <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Mi Perfil
+                </DropdownMenuItem>
                 {(user?.role === 'admin' || user?.role === 'owner') && (
                   <>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setShowAddDriver(true)} className="cursor-pointer">
                       <UserPlus className="mr-2 h-4 w-4" />
                       Agregar Chofer
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar Sesión

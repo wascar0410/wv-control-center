@@ -890,6 +890,56 @@ const podRouter = router({
     }),
 });
 
+// ─── Profile Router ──────────────────────────────────────────────────────────
+
+const profileRouter = router({
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    const { getUserProfile, getUserPreferences, getOrCreateUserPreferences } = await import("./db");
+    const profile = await getUserProfile(ctx.user.id);
+    const preferences = await getOrCreateUserPreferences(ctx.user.id);
+    return { profile, preferences };
+  }),
+
+  updateProfile: protectedProcedure
+    .input(z.object({
+      name: z.string().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      zipCode: z.string().optional(),
+      profileImageUrl: z.string().optional(),
+      bio: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { updateUserProfile } = await import("./db");
+      await updateUserProfile(ctx.user.id, input);
+      return { success: true };
+    }),
+
+  updatePreferences: protectedProcedure
+    .input(z.object({
+      emailNotifications: z.boolean().optional(),
+      smsNotifications: z.boolean().optional(),
+      pushNotifications: z.boolean().optional(),
+      notifyOnLoadAssignment: z.boolean().optional(),
+      notifyOnLoadStatus: z.boolean().optional(),
+      notifyOnPayment: z.boolean().optional(),
+      notifyOnMessage: z.boolean().optional(),
+      notifyOnBonus: z.boolean().optional(),
+      theme: z.enum(["dark", "light", "auto"]).optional(),
+      language: z.string().optional(),
+      timezone: z.string().optional(),
+      showOnlineStatus: z.boolean().optional(),
+      allowLocationTracking: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { updateUserPreferences } = await import("./db");
+      await updateUserPreferences(ctx.user.id, input);
+      return { success: true };
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -931,6 +981,7 @@ export const appRouter = router({
   advancedSearch: advancedSearchRouter,
   chat: chatRouter,
   admin: adminRouter,
+  profile: profileRouter,
 });
 
 export type AppRouter = typeof appRouter;

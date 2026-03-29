@@ -24,6 +24,7 @@ import BusinessSettings from "./pages/BusinessSettings";
 import LoadEvaluator from "./pages/LoadEvaluator";
 import TaxCompliance from "./pages/TaxCompliance";
 import { Chat } from "./pages/Chat";
+import UserProfile from "./pages/UserProfile";
 import { FloatingChatButton } from "./components/FloatingChatButton";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
@@ -135,6 +136,7 @@ function AppRoutes() {
           <Route path="/business-settings" component={() => <ProtectedRoute component={BusinessSettings} requiredRole="admin" />} />
           <Route path="/tax-compliance" component={TaxCompliance} />
           <Route path="/chat" component={Chat} />
+          <Route path="/profile" component={UserProfile} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>

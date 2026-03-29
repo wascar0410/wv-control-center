@@ -642,3 +642,25 @@
 - [x] Integrar en DriverView y Dashboard
 - [x] Agregar notificaciones de nuevos mensajes
 - [x] Probar y validar
+
+## Fase 50: Sección de Perfil de Usuario
+- [ ] Actualizar esquema DB: tabla user_preferences con 15 campos
+- [ ] Backend: queries para gestionar preferencias del usuario
+- [ ] Backend: routers tRPC para updateProfile, getProfile, updatePreferences
+- [ ] Frontend: componente ProfileForm con información de contacto
+- [ ] Frontend: componente PreferencesForm con opciones de notificación
+- [ ] Frontend: página UserProfile con tabs (Perfil, Preferencias, Seguridad)
+- [ ] Frontend: integrar en navegación del Dashboard
+- [ ] Tests para perfil de usuario (8 tests nuevos)
+- [ ] Checkpoint y entrega
+
+## Fase 50: Sección de Perfil de Usuario
+- [x] Actualizar esquema DB: tabla user_preferences con 15 campos
+- [x] Backend: queries para gestionar preferencias del usuario
+- [x] Backend: routers tRPC para updateProfile, getProfile, updatePreferences
+- [x] Frontend: componente ProfileForm con información de contacto
+- [x] Frontend: componente PreferencesForm con opciones de notificación
+- [x] Frontend: página UserProfile con tabs (Perfil, Preferencias, Seguridad)
+- [x] Frontend: integrar en navegación del Dashboard
+- [x] Tests para perfil de usuario (8 tests nuevos)
+- [x] Checkpoint y entrega
