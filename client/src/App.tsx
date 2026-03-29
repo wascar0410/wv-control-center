@@ -24,6 +24,7 @@ import BusinessSettings from "./pages/BusinessSettings";
 import LoadEvaluator from "./pages/LoadEvaluator";
 import TaxCompliance from "./pages/TaxCompliance";
 import { Chat } from "./pages/Chat";
+import { FloatingChatButton } from "./components/FloatingChatButton";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
 import { Loader2, Truck } from "lucide-react";
@@ -107,6 +108,7 @@ function ProtectedRoute({ component: Component, requiredRole }: { component: Rea
 function AppRoutes() {
   return (
     <AuthGate>
+      <FloatingChatButton />
       <DashboardLayout>
         <Switch>
           <Route path="/" component={Dashboard} />
