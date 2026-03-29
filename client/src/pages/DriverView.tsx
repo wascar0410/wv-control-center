@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { PODUpload } from "@/components/PODUpload";
 import LoadStatusCard from "@/components/LoadStatusCard";
 import DeliveryProofUpload from "@/components/DeliveryProofUpload";
+import { DriverChatWidget } from "@/components/DriverChatWidget";
 
 import {
   Truck, MapPin, Package, Fuel, Camera, CheckCircle2, Navigation,
@@ -494,6 +495,7 @@ export default function DriverView() {
         }}
         isLoading={podMutation.isPending}
       />
+      <DriverChatWidget />
     </div>
   );
 }

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { MessageCircle, X, Send, Loader2, Search, Smile, Download, BarChart3, Clock } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Search, Smile, Download, BarChart3, Clock, Paperclip, File } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { requestNotificationPermission, sendChatNotification, playNotificationSound, isNotificationEnabled } from "@/lib/notifications";
 
 const EMOJI_REACTIONS = ["👍", "❌", "⏰", "🚚", "💰", "✅", "⚠️", "🤔"];
 
@@ -20,6 +21,8 @@ export function FloatingChatButton() {
   const [selectedMessageId, setSelectedMessageId] = useState<number | null>(null);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [activeTab, setActiveTab] = useState("chats");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const scrollRef = React.useRef<HTMLDivElement | null>(null);
   const pulseIntervalRef = React.useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
@@ -41,10 +44,37 @@ export function FloatingChatButton() {
     { enabled: !!user }
   );
 
+  // Request notification permission on mount
+  React.useEffect(() => {
+    if (user?.role === "admin" && !isNotificationEnabled()) {
+      requestNotificationPermission();
+    }
+  }, [user]);
+
+  // Monitor for new messages and send notifications
+  React.useEffect(() => {
+    if (unreadCount > 0 && !isOpen && user?.role === "admin") {
+      const latestChat = recentChats[0];
+      if (latestChat) {
+        playNotificationSound();
+        sendChatNotification(
+          latestChat.name,
+          latestChat.lastMessage || "Nuevo mensaje",
+          () => {
+            setIsOpen(true);
+            setSelectedUserId(latestChat.id);
+          }
+        );
+      }
+    }
+  }, [unreadCount, isOpen, recentChats, user]);
+
+
   // Send message mutation
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onSuccess: () => {
       setMessageText("");
+      setSelectedFile(null);
       setShowEmojiPicker(false);
       trpc.useUtils().chat.getMessages.invalidate();
       trpc.useUtils().chat.getRecentChats.invalidate();
@@ -52,7 +82,7 @@ export function FloatingChatButton() {
   });
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedUserId || !user) return;
+    if ((!messageText.trim() && !selectedFile) || !selectedUserId || !user) return;
 
     setIsLoading(true);
     try {
@@ -64,6 +94,14 @@ export function FloatingChatButton() {
       setIsLoading(false);
     }
   };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+
 
   // Auto-scroll to bottom
   React.useEffect(() => {
@@ -360,6 +398,15 @@ export function FloatingChatButton() {
                   <Button
                     size="sm"
                     variant="ghost"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-8 w-8 p-0"
+                    title="Adjuntar archivo"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                     className="h-8 w-8 p-0"
                   >
@@ -391,11 +438,36 @@ export function FloatingChatButton() {
                         }}
                         className="text-lg hover:bg-background rounded p-1 transition-colors"
                       >
-                        {emoji}
+                                        {emoji}
                       </button>
                     ))}
                   </div>
                 )}
+
+                {/* File attachment preview */}
+                {selectedFile && (
+                  <div className="bg-muted rounded-lg p-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <File className="h-4 w-4 text-primary" />
+                      <span className="text-xs truncate">{selectedFile.name}</span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedFile(null)}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                />
               </div>
 
               {/* Actions */}

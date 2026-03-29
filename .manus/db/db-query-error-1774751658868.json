@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE chat_messages ADD COLUMN attachments JSON DEFAULT NULL AFTER content;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute ALTER TABLE chat_messages ADD COLUMN attachments JSON DEFAULT NULL AFTER content;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'content' in 'chat_messages'"
+  ]
+}
