@@ -7,7 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { DriverChatWidget } from "@/components/DriverChatWidget";
+import { DriverSMSNotifications } from "@/components/DriverSMSNotifications";
+import { DriverPerformanceComparison } from "@/components/DriverPerformanceComparison";
+import { DriverBonusSystem } from "@/components/DriverBonusSystem";
 import DashboardLayout from "@/components/DashboardLayout";
 // useAuth hook will be provided by DashboardLayout context
 import { toast } from "sonner";
@@ -207,11 +211,13 @@ export default function DriverViewImproved() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="cargas" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="cargas">Cargas</TabsTrigger>
             <TabsTrigger value="ganancias">Ganancias</TabsTrigger>
             <TabsTrigger value="documentos">Documentos</TabsTrigger>
             <TabsTrigger value="desempeño">Desempeño</TabsTrigger>
+            <TabsTrigger value="notificaciones">Notificaciones</TabsTrigger>
+            <TabsTrigger value="bonus">Bonus</TabsTrigger>
           </TabsList>
 
           {/* Cargas Tab */}
@@ -348,6 +354,16 @@ export default function DriverViewImproved() {
             </Card>
           </TabsContent>
 
+          {/* Notificaciones Tab */}
+          <TabsContent value="notificaciones" className="space-y-4">
+            <DriverSMSNotifications />
+          </TabsContent>
+
+          {/* Bonus Tab */}
+          <TabsContent value="bonus" className="space-y-4">
+            <DriverBonusSystem />
+          </TabsContent>
+
           {/* Desempeño Tab */}
           <TabsContent value="desempeño" className="space-y-4">
             <Card>
@@ -395,13 +411,17 @@ export default function DriverViewImproved() {
                     </div>
                   </CardContent>
                 </Card>
+
+                <DriverPerformanceComparison />
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
 
         {/* Chat Widget */}
-        <DriverChatWidget />
+        <div className="mt-8">
+          <DriverChatWidget />
+        </div>
       </div>
 
       {/* Confirm Delivery Dialog */}
