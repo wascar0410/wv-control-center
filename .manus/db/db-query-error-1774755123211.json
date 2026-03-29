@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO users (email, name, role, phoneNumber, licenseNumber, createdAt, updatedAt) \nVALUES ('driver.test@example.com', 'Pedro García - Chofer', 'driver', '+1-555-0123', 'DL123456789', NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute INSERT INTO users (email, name, role, phoneNumber, licenseNumber, createdAt, updatedAt) \nVALUES ('driver.test@example.com', 'Pedro García - Chofer', 'driver', '+1-555-0123', 'DL123456789', NOW(), NOW());",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'phoneNumber' in 'field list'"
+  ]
+}

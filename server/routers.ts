@@ -23,6 +23,8 @@ import { irsComplianceRouter } from "./_core/irsComplianceRouter";
 import { advancedSearchRouter } from "./_core/advancedSearchRouter";
 import { chatRouter } from "./_core/chatRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { getDb } from "./db";
+import { users as usersTable } from "../drizzle/schema";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
 import { getMonthlyProjections } from "./db-projections";
@@ -748,6 +750,58 @@ const assignmentRouter = router({
     }),
 });
 
+// ─── Admin Router ────────────────────────────────────────────────────────────
+
+const adminRouter = router({
+  createDriver: protectedProcedure
+    .input(z.object({
+      email: z.string().email(),
+      name: z.string(),
+      phoneNumber: z.string().optional(),
+      licenseNumber: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Only owner and admin can create drivers
+      if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para crear choferes");
+      }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+
+      // Check if user already exists
+      const existingUser = await db.query.users.findFirst({
+        where: (users: any, { eq }: any) => eq(users.email, input.email),
+      });
+
+      if (existingUser) {
+        throw new Error("El correo ya está registrado en el sistema");
+      }
+
+      // Create new driver user
+      const newDriver = await db.insert(usersTable).values({
+        email: input.email,
+        name: input.name,
+        role: "driver",
+        phoneNumber: input.phoneNumber,
+        licenseNumber: input.licenseNumber,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).returning();
+
+      await notifyOwner({
+        title: "Nuevo Chofer Agregado",
+        content: `Se agregó un nuevo chofer: ${input.name} (${input.email})`,
+      });
+
+      return {
+        success: true,
+        driver: newDriver[0],
+        message: `Chofer ${input.name} creado exitosamente`,
+      };
+    }),
+});
+
 // ─── POD Router ───────────────────────────────────────────────────────────────
 
 const podRouter = router({
@@ -868,6 +922,7 @@ export const appRouter = router({
   irsCompliance: irsComplianceRouter,
   advancedSearch: advancedSearchRouter,
   chat: chatRouter,
+  admin: adminRouter,
 });
 
 export type AppRouter = typeof appRouter;

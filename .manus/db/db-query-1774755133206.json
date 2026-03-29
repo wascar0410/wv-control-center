@@ -1,0 +1,9 @@
+{
+  "query": "INSERT INTO users (openId, email, name, role, loginMethod, createdAt, updatedAt, lastSignedIn) \nVALUES ('driver-test-123', 'driver.test@example.com', 'Pedro García - Chofer', 'driver', 'oauth', NOW(), NOW(), NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute INSERT INTO users (openId, email, name, role, loginMethod, createdAt, updatedAt, lastSignedIn) \nVALUES ('driver-test-123', 'driver.test@example.com', 'Pedro García - Chofer', 'driver', 'oauth', NOW(), NOW(), NOW());",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 64
+}
