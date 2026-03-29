@@ -800,3 +800,18 @@
 - [x] Agregar sonido y badge de notificación
 - [x] Tests para WebSocket (eventos, conexión, desconexión) - 16 tests pasando
 - [x] Checkpoint y entrega
+
+
+## Fase 78: Dashboard en Tiempo Real para Administradores
+- [ ] Crear tabla driver_locations con campos de geolocalización
+- [ ] Generar migración SQL para tabla driver_locations
+- [ ] Crear endpoints tRPC para obtener ubicaciones activas
+- [ ] Crear endpoints tRPC para obtener cargas activas con estado
+- [ ] Implementar componente RealtimeMap con Google Maps
+- [ ] Agregar marcadores de choferes con información emergente
+- [ ] Agregar marcadores de cargas con colores por estado
+- [ ] Crear página RealtimeDashboard con filtros
+- [ ] Integrar WebSocket para actualizaciones en vivo
+- [ ] Agregar panel lateral con detalles de chofer/carga
+- [ ] Tests para endpoints y componentes
+- [ ] Checkpoint y entrega

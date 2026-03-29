@@ -24,6 +24,7 @@ import { ocrStorageRouter } from "./_core/ocrStorageRouter";
 import { irsComplianceRouter } from "./_core/irsComplianceRouter";
 import { advancedSearchRouter } from "./_core/advancedSearchRouter";
 import { chatRouter } from "./_core/chatRouter";
+import { realtimeDashboardRouter } from "./_core/realtimeDashboardRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
@@ -1315,6 +1316,7 @@ export const appRouter = router({
   driver: driverRouter,
   driverStats: driverStatsRouter,
   dashboard: dashboardRouter,
+  realtimeDashboard: realtimeDashboardRouter,
   assignment: assignmentRouter,
   pod: podRouter,
   bankTransaction: bankTransactionRouter,
