@@ -21,6 +21,7 @@ import { ocrRouter } from "./_core/ocrRouter";
 import { ocrStorageRouter } from "./_core/ocrStorageRouter";
 import { irsComplianceRouter } from "./_core/irsComplianceRouter";
 import { advancedSearchRouter } from "./_core/advancedSearchRouter";
+import { chatRouter } from "./_core/chatRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -866,6 +867,7 @@ export const appRouter = router({
   ocrStorage: ocrStorageRouter,
   irsCompliance: irsComplianceRouter,
   advancedSearch: advancedSearchRouter,
+  chat: chatRouter,
 });
 
 export type AppRouter = typeof appRouter;

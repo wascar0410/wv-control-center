@@ -120,6 +120,13 @@
       "when": 1774743250488,
       "tag": "0016_loud_giant_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1774748003404,
+      "tag": "0017_equal_anita_blake",
+      "breakpoints": true
     }
   ]
 }

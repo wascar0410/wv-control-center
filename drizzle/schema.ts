@@ -919,3 +919,73 @@ export const auditReports = mysqlTable("audit_reports", {
 
 export type AuditReport = typeof auditReports.$inferSelect;
 export type InsertAuditReport = typeof auditReports.$inferInsert;
+
+
+/**
+ * Chat Messages - Direct communication between dispatcher and drivers
+ */
+export const chatMessages = mysqlTable("chat_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  senderId: int("senderId").notNull().references(() => users.id),
+  recipientId: int("recipientId").notNull().references(() => users.id),
+  loadId: int("loadId").references(() => loads.id),
+  message: text("message").notNull(),
+  attachmentUrl: varchar("attachmentUrl", { length: 512 }),
+  attachmentType: varchar("attachmentType", { length: 50 }), // "image", "document", "location"
+  isRead: boolean("isRead").notNull().default(false),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatMessage = typeof chatMessages.$inferInsert;
+
+/**
+ * Chat Conversations - Group chats between dispatcher and multiple drivers
+ */
+export const chatConversations = mysqlTable("chat_conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  dispatcherId: int("dispatcherId").notNull().references(() => users.id),
+  loadId: int("loadId").references(() => loads.id),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  isActive: boolean("isActive").notNull().default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type ChatConversation = typeof chatConversations.$inferSelect;
+export type InsertChatConversation = typeof chatConversations.$inferInsert;
+
+/**
+ * Chat Conversation Participants - Track who's in each conversation
+ */
+export const chatParticipants = mysqlTable("chat_participants", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversationId").notNull().references(() => chatConversations.id),
+  userId: int("userId").notNull().references(() => users.id),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+  lastReadAt: timestamp("lastReadAt"),
+});
+
+export type ChatParticipant = typeof chatParticipants.$inferSelect;
+export type InsertChatParticipant = typeof chatParticipants.$inferInsert;
+
+/**
+ * Chat Notifications - Track unread messages and notifications
+ */
+export const chatNotifications = mysqlTable("chat_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  senderId: int("senderId").notNull().references(() => users.id),
+  messageId: int("messageId").notNull().references(() => chatMessages.id),
+  conversationId: int("conversationId").references(() => chatConversations.id),
+  isRead: boolean("isRead").notNull().default(false),
+  readAt: timestamp("readAt"),
+  notificationType: mysqlEnum("notificationType", ["direct_message", "group_message", "assignment_update", "status_change"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatNotification = typeof chatNotifications.$inferSelect;
+export type InsertChatNotification = typeof chatNotifications.$inferInsert;
