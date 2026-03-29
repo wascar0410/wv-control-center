@@ -127,6 +127,9 @@ export const loads = mysqlTable("loads", {
   status: mysqlEnum("status", ["available", "in_transit", "delivered", "invoiced", "paid"]).default("available").notNull(),
   // Assignment
   assignedDriverId: int("assignedDriverId"),
+  driverAcceptedAt: timestamp("driverAcceptedAt"),
+  driverRejectedAt: timestamp("driverRejectedAt"),
+  driverRejectionReason: varchar("driverRejectionReason", { length: 500 }),
   // Notes
   notes: text("notes"),
   bolImageUrl: text("bolImageUrl"),

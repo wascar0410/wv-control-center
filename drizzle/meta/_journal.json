@@ -176,6 +176,13 @@
       "when": 1774810392393,
       "tag": "0024_boring_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1774812641706,
+      "tag": "0025_dizzy_cannonball",
+      "breakpoints": true
     }
   ]
 }

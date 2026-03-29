@@ -772,13 +772,13 @@
 - [ ] Crear tests para DriverLoginPage
 
 ## Fase 76: Botones de Aceptar/Rechazar Cargas
-- [ ] Crear endpoint loads.acceptLoad en routers
-- [ ] Crear endpoint loads.rejectLoad en routers
-- [ ] Actualizar tabla loads con campo loadStatus
-- [ ] Agregar botones en DriverView
-- [ ] Implementar confirmación antes de aceptar/rechazar
-- [ ] Mostrar notificación de éxito
-- [ ] Tests para aceptar/rechazar cargas
+- [x] Crear endpoint loads.acceptLoad en routers
+- [x] Crear endpoint loads.rejectLoad en routers
+- [x] Actualizar tabla loads con campo loadStatus
+- [x] Agregar botones en DriverView
+- [x] Implementar confirmación antes de aceptar/rechazar
+- [x] Mostrar notificación de éxito
+- [x] Tests para aceptar/rechazar cargas (14 tests pasando)
 
 ## Fase 77: Notificaciones en Tiempo Real (WebSocket)
 - [ ] Instalar ws (WebSocket) package

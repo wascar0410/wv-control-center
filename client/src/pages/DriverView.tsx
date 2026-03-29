@@ -13,6 +13,7 @@ import { PODUpload } from "@/components/PODUpload";
 import LoadStatusCard from "@/components/LoadStatusCard";
 import DeliveryProofUpload from "@/components/DeliveryProofUpload";
 import { DriverChatWidget } from "@/components/DriverChatWidget";
+import LoadActionConfirmModal from "@/components/LoadActionConfirmModal";
 
 import {
   Truck, MapPin, Package, Fuel, Camera, CheckCircle2, Navigation,
@@ -37,7 +38,7 @@ function formatTime(date: Date | string | null | undefined): string {
   return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
-function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTransit, onUploadBOL, onLogFuel, readonly = false }: any) {
+function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTransit, onUploadBOL, onLogFuel, readonly = false, onAcceptLoad, onRejectLoad }: any) {
   return (
     <Card
       className={`cursor-pointer transition-all ${
@@ -75,8 +76,8 @@ function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTrans
 
         {!readonly && isSelected && (
           <div className="mt-4 flex gap-2 flex-wrap">
-            {onAccept && <Button size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); onAccept(); }}>Aceptar</Button>}
-            {onReject && <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onReject(); }}>Rechazar</Button>}
+            {onAcceptLoad && <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={(e) => { e.stopPropagation(); onAcceptLoad(); }}>Aceptar</Button>}
+            {onRejectLoad && <Button size="sm" variant="destructive" className="flex-1" onClick={(e) => { e.stopPropagation(); onRejectLoad(); }}>Rechazar</Button>}
             {onStartTransit && load.status === "available" && <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onStartTransit(); }}>Iniciar</Button>}
             {onUploadBOL && <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onUploadBOL(); }}><Upload className="w-3 h-3" /></Button>}
             {onLogFuel && <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onLogFuel(); }}><Fuel className="w-3 h-3" /></Button>}
@@ -96,6 +97,8 @@ export default function DriverView() {
   const [fuelForm, setFuelForm] = useState({ amount: "", gallons: "", pricePerGallon: "", location: "" });
   const [bolFile, setBolFile] = useState<File | null>(null);
   const [bolPreview, setBolPreview] = useState<string | null>(null);
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [actionType, setActionType] = useState<"accept" | "reject" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const utils = trpc.useUtils();
@@ -155,6 +158,50 @@ export default function DriverView() {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  const acceptLoadMutation = trpc.loads.acceptLoad.useMutation({
+    onSuccess: async () => {
+      await utils.driver.myLoads.refetch();
+      setSelectedLoad(null);
+      setShowActionModal(false);
+      setActionType(null);
+      toast.success("Carga aceptada exitosamente");
+    },
+    onError: (e) => toast.error(e.message || "Error al aceptar carga"),
+  });
+
+  const rejectLoadMutation = trpc.loads.rejectLoad.useMutation({
+    onSuccess: async () => {
+      await utils.driver.myLoads.refetch();
+      setSelectedLoad(null);
+      setShowActionModal(false);
+      setActionType(null);
+      toast.success("Carga rechazada exitosamente");
+    },
+    onError: (e) => toast.error(e.message || "Error al rechazar carga"),
+  });
+
+  const handleAcceptLoad = () => {
+    if (!selectedLoad) return;
+    setActionType("accept");
+    setShowActionModal(true);
+  };
+
+  const handleRejectLoad = () => {
+    if (!selectedLoad) return;
+    setActionType("reject");
+    setShowActionModal(true);
+  };
+
+  const handleConfirmAction = async (reason?: string) => {
+    if (!selectedLoad) return;
+    
+    if (actionType === "accept") {
+      await acceptLoadMutation.mutateAsync({ loadId: selectedLoad.id });
+    } else if (actionType === "reject" && reason) {
+      await rejectLoadMutation.mutateAsync({ loadId: selectedLoad.id, reason });
+    }
+  };
 
   if (!loads) return null;
 
@@ -577,6 +624,20 @@ export default function DriverView() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Load Action Confirmation Modal */}
+      <LoadActionConfirmModal
+        isOpen={showActionModal}
+        onClose={() => {
+          setShowActionModal(false);
+          setActionType(null);
+        }}
+        onConfirm={handleConfirmAction}
+        action={actionType || "accept"}
+        loadId={selectedLoad?.id || 0}
+        clientName={selectedLoad?.clientName || ""}
+        isLoading={acceptLoadMutation.isPending || rejectLoadMutation.isPending}
+      />
     </div>
   );
 }
