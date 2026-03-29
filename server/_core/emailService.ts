@@ -48,9 +48,16 @@ export function getEmailConfig(): EmailConfig {
   return {
     provider,
     enabled: provider !== "none",
-    fromEmail: process.env.SMTP_FROM_EMAIL || "noreply@wvtransports.com",
+    fromEmail: process.env.SMTP_USER || process.env.SMTP_FROM_EMAIL || "noreply@wvtransports.com",
     fromName: process.env.SMTP_FROM_NAME || "WV Transport Control",
   };
+}
+
+/**
+ * Get admin email for notifications
+ */
+export function getAdminEmail(): string {
+  return process.env.ADMIN_EMAIL || process.env.SMTP_USER || "wascardely@gmail.com";
 }
 
 /**

@@ -32,7 +32,7 @@ import {
   resetRateLimitForHost,
   unblockHost,
 } from "./_core/rateLimiter";
-import { sendEmail } from "./_core/emailService";
+import { sendEmail, getAdminEmail } from "./_core/emailService";
 import {
   getHostRejectionStats,
   getAllRejectionStats,
@@ -786,11 +786,10 @@ const adminRouter = router({
 
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
-
       // Check if user already exists
-      const existingUser = await db.query.usersTable.findFirst({
+      const existingUser = await db.query.users.findFirst({
         where: (users: any, { eq }: any) => eq(users.email, input.email),
-      });
+      });;
 
       if (existingUser) {
         throw new Error("El correo ya está registrado en el sistema");
@@ -1084,7 +1083,7 @@ const contactRouter = router({
         );
 
         // Send notification email to owner
-        const primaryEmail = process.env.PRIMARY_CONTACT_EMAIL || "wascardely@gmail.com";
+        const primaryEmail = getAdminEmail();
         const ownerNotificationHtml = `<div style="font-family: Arial; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 30px; border-radius: 8px;"><h2 style="color: #001F3F;">Nueva Solicitud de Contacto</h2><p><strong>De:</strong> ${input.name}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Empresa:</strong> ${input.company || "No especificada"}</p><p><strong>Mensaje:</strong><br/>${input.message}</p><p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">Recibido el: ${new Date().toLocaleString("es-ES")}</p></div>`;
 
         await sendEmail(

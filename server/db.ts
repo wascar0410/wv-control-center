@@ -1595,12 +1595,13 @@ export async function getContactTrends(days: number = 30) {
       trendsByDate[dateStr] = {
         date: dateStr,
         count: 0,
-        byStatus: { new: 0, read: 0, responded: 0, archived: 0 },
+        byStatus: {},
       };
     }
 
     trendsByDate[dateStr].count++;
-    trendsByDate[dateStr].byStatus[contact.status as keyof typeof trendsByDate[string]["byStatus"]]++;
+    const status = contact.status || "new";
+    trendsByDate[dateStr].byStatus[status] = (trendsByDate[dateStr].byStatus[status] || 0) + 1;
   });
 
   // Convert to array and sort by date
