@@ -169,6 +169,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    middlewareMode: false,
     host: true,
     allowedHosts: [
       ".manuspre.computer",
@@ -179,14 +180,14 @@ export default defineConfig({
       "localhost",
       "127.0.0.1",
     ],
-    hmr: {
+    hmr: process.env.NODE_ENV === "production" ? false : {
       protocol: "wss",
       host: "3000-iop08n4oqcm170ethc0yz-164a9fa2.us2.manus.computer",
       port: 443,
     },
     fs: {
-      strict: true,
-      deny: ["**/..*"],
+      strict: false,
+      deny: [],
     },
   },
 });

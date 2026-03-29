@@ -7,6 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import wsTokenRouter from "./wsTokenEndpoint";
+import { wsManager } from "./websocket";
 import { serveStatic, setupVite } from "./vite";
 import { rateLimitMiddleware } from "./rateLimiter";
 import { recordHostRejection } from "./hostMonitoring";
@@ -136,6 +137,9 @@ async function startServer() {
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
+
+  // Initialize WebSocket server
+  wsManager.initialize(server);
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
