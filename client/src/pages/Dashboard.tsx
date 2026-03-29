@@ -34,7 +34,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Redirect drivers to their view
+  // Redirect drivers to their view (but not owners)
   React.useEffect(() => {
     if (user?.role === 'driver') {
       setLocation('/driver');

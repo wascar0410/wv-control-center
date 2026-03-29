@@ -95,6 +95,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function ProtectedRoute({ component: Component, requiredRole }: { component: React.ComponentType; requiredRole?: 'admin' | 'user' | 'driver' }) {
   const { user } = useAuth();
   
+  // Owner has access to everything
+  if (user?.role === 'owner') {
+    return <Component />;
+  }
+  
   if (requiredRole === 'admin' && user?.role !== 'admin') {
     return <NotFound />;
   }

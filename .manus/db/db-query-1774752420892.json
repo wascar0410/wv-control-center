@@ -1,0 +1,16 @@
+{
+  "query": "\nSELECT id, email, role, name FROM users WHERE email LIKE '%yisvel%' OR email LIKE '%gmail%' LIMIT 5;\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute \nSELECT id, email, role, name FROM users WHERE email LIKE '%yisvel%' OR email LIKE '%gmail%' LIMIT 5;\n",
+  "rows": [
+    {
+      "id": "1",
+      "email": "wascar.ortiz0410@gmail.com",
+      "role": "owner",
+      "name": "Wascar Ortiz"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\trole\tname\n1\twascar.ortiz0410@gmail.com\towner\tWascar Ortiz\n",
+  "stderr": "",
+  "execution_time_ms": 58
+}

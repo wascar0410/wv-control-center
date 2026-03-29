@@ -1,0 +1,8 @@
+{
+  "query": "\nUPDATE users SET role = 'owner' WHERE email = 'wascar.ortiz0410@gmail.com';\nUPDATE users SET role = 'admin' WHERE email = 'yisvel10@gmail.com';\nSELECT id, email, role FROM users WHERE email IN ('wascar.ortiz0410@gmail.com', 'yisvel10@gmail.com');\n",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute \nUPDATE users SET role = 'owner' WHERE email = 'wascar.ortiz0410@gmail.com';\nUPDATE users SET role = 'admin' WHERE email = 'yisvel10@gmail.com';\nSELECT id, email, role FROM users WHERE email IN ('wascar.ortiz0410@gmail.com', 'yisvel10@gmail.com');\n",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1265 (01000) at line 2: Data truncated for column '%s' at row %d"
+  ]
+}

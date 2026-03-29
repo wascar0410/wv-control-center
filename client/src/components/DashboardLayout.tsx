@@ -47,6 +47,8 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
+import { AddDriverModal } from "./AddDriverModal";
+import { UserPlus } from "lucide-react";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
@@ -125,12 +127,13 @@ function DashboardLayoutContent({
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
+  const [showAddDriver, setShowAddDriver] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   const activeMenuItem = menuItems.find((item) => item.path === location);
 
-  const roleLabel = user?.role === "admin" ? "Admin" : user?.role === "driver" ? "Chofer" : "Usuario";
-  const roleColor = user?.role === "admin" ? "text-primary" : user?.role === "driver" ? "text-amber-400" : "text-muted-foreground";
+  const roleLabel = user?.role === "admin" ? "Admin" : user?.role === "driver" ? "Chofer" : user?.role === "owner" ? "Propietario" : "Usuario";
+  const roleColor = user?.role === "admin" ? "text-primary" : user?.role === "driver" ? "text-amber-400" : user?.role === "owner" ? "text-green-400" : "text-muted-foreground";
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
@@ -240,6 +243,15 @@ function DashboardLayoutContent({
                   <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
                 </div>
                 <DropdownMenuSeparator />
+                {(user?.role === 'admin' || user?.role === 'owner') && (
+                  <>
+                    <DropdownMenuItem onClick={() => setShowAddDriver(true)} className="cursor-pointer">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Agregar Chofer
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   Cerrar Sesión
@@ -274,6 +286,7 @@ function DashboardLayoutContent({
         )}
         <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
       </SidebarInset>
+      <AddDriverModal open={showAddDriver} onOpenChange={setShowAddDriver} />
     </>
   );
 }

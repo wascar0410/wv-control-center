@@ -1,0 +1,298 @@
+{
+  "query": "SELECT id, email, role, name FROM users ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute SELECT id, email, role, name FROM users ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "email": "wascar.ortiz0410@gmail.com",
+      "role": "owner",
+      "name": "Wascar Ortiz"
+    },
+    {
+      "id": "279",
+      "email": "juan@example.com",
+      "role": "driver",
+      "name": "Juan Pérez"
+    },
+    {
+      "id": "90089",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "90092",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "90120",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "90123",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120042",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120069",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120070",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120073",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120094",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120141",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120158",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120165",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120216",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "120232",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "180061",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "180099",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "180102",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "180105",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "180271",
+      "email": "driver.test@example.com",
+      "role": "driver",
+      "name": "Juan Pérez (Chofer)"
+    },
+    {
+      "id": "450182",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "450184",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "450207",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "450249",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "450260",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "450305",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "480068",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "480075",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "540034",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "540039",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "540110",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "540115",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "570056",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "600046",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "600053",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "600074",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "630036",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "630101",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "630110",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "660231",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "660494",
+      "email": "test-comparison@example.com",
+      "role": "user",
+      "name": "Test User Comparison"
+    },
+    {
+      "id": "660495",
+      "email": "test-annual@example.com",
+      "role": "user",
+      "name": "Test User Annual"
+    },
+    {
+      "id": "660503",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "660638",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "660732",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "660779",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    },
+    {
+      "id": "660814",
+      "email": "quotation@test.com",
+      "role": "admin",
+      "name": "Test Quotation User"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\trole\tname\n1\twascar.ortiz0410@gmail.com\towner\tWascar Ortiz\n279\tjuan@example.com\tdriver\tJuan Pérez\n90089\tquotation@test.com\tadmin\tTest Quotation User\n90092\tquotation@test.com\tadmin\tTest Quotation User\n90120\tquotation@test.com\tadmin\tTest Quotation User\n90123\tquotation@test.com\tadmin\tTest Quotation User\n120042\tquotation@test.com\tadmin\tTest Quotation User\n120069\tquotation@test.com\tadmin\tTest Quotation User\n120070\tquotation@test.com\tadmin\tTest Quotation User\n120073\tquotation@test.com\tadmin\tTest Quotation User\n120094\tquotation@test.com\tadmin\tTest Quotation User\n120141\tquotation@test.com\tadmin\tTest Quotation User\n120158\tquotation@test.com\tadmin\tTest Quotation User\n120165\tquotation@test.com\tadmin\tTest Quotation User\n120216\tquotation@test.com\tadmin\tTest Quotation User\n120232\tquotation@test.com\tadmin\tTest Quotation User\n180061\tquotation@test.com\tadmin\tTest Quotation User\n180099\tquotation@test.com\tadmin\tTest Quotation User\n180102\tquotation@test.com\tadmin\tTest Quotation User\n180105\tquotation@test.com\tadmin\tTest Quotation User\n180271\tdriver.test@example.com\tdriver\tJuan Pérez (Chofer)\n450182\tquotation@test.com\tadmin\tTest Quotation User\n450184\tquotation@test.com\tadmin\tTest Quotation User\n450207\tquotation@test.com\tadmin\tTest Quotation User\n450249\tquotation@test.com\tadmin\tTest Quotation User\n450260\tquotation@test.com\tadmin\tTest Quotation User\n450305\tquotation@test.com\tadmin\tTest Quotation User\n480068\tquotation@test.com\tadmin\tTest Quotation User\n480075\tquotation@test.com\tadmin\tTest Quotation User\n540034\tquotation@test.com\tadmin\tTest Quotation User\n540039\tquotation@test.com\tadmin\tTest Quotation User\n540110\tquotation@test.com\tadmin\tTest Quotation User\n540115\tquotation@test.com\tadmin\tTest Quotation User\n570056\tquotation@test.com\tadmin\tTest Quotation User\n600046\tquotation@test.com\tadmin\tTest Quotation User\n600053\tquotation@test.com\tadmin\tTest Quotation User\n600074\tquotation@test.com\tadmin\tTest Quotation User\n630036\tquotation@test.com\tadmin\tTest Quotation User\n630101\tquotation@test.com\tadmin\tTest Quotation User\n630110\tquotation@test.com\tadmin\tTest Quotation User\n660231\tquotation@test.com\tadmin\tTest Quotation User\n660494\ttest-comparison@example.com\tuser\tTest User Comparison\n660495\ttest-annual@example.com\tuser\tTest User Annual\n660503\tquotation@test.com\tadmin\tTest Quotation User\n660638\tquotation@test.com\tadmin\tTest Quotation User\n660732\tquotation@test.com\tadmin\tTest Quotation User\n660779\tquotation@test.com\tadmin\tTest Quotation User\n660814\tquotation@test.com\tadmin\tTest Quotation User\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}
