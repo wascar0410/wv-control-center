@@ -30,6 +30,76 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  
+  // Allowed hosts configuration - can be overridden via environment variable
+  const defaultAllowedHosts = [
+    "localhost",
+    "localhost:3000",
+    "127.0.0.1",
+    "127.0.0.1:3000",
+    "app.wvtransports.com",
+    "api.wvtransports.com",
+    "3000-iop08n4oqcm170ethc0yz-164a9fa2.us2.manus.computer",
+  ];
+  
+  const envHosts = process.env.ALLOWED_HOSTS ? process.env.ALLOWED_HOSTS.split(",").map((h: string) => h.trim()) : [];
+  const allowedHosts = [...defaultAllowedHosts, ...envHosts];
+  
+  console.log("[Host Validation] Allowed hosts:", allowedHosts);
+
+  // Host validation middleware
+  app.use((req, res, next) => {
+    const host = req.get("host")?.split(":")[0]; // Get hostname without port
+    const fullHost = req.get("host"); // Get full host with port
+    
+    // Allow if host matches or is in allowed list
+    const isAllowed = allowedHosts.some(
+      (allowed) => allowed === host || allowed === fullHost || allowed.includes(host || "")
+    );
+    
+    if (!isAllowed && process.env.NODE_ENV === "production") {
+      console.warn(`[Host Validation] Rejected request from host: ${fullHost}`);
+      return res.status(400).json({ error: "Invalid host" });
+    }
+    
+    next();
+  });
+
+  // CORS middleware - can be overridden via environment variable
+  const defaultCorsOrigins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "https://app.wvtransports.com",
+    "https://api.wvtransports.com",
+    "https://3000-iop08n4oqcm170ethc0yz-164a9fa2.us2.manus.computer",
+  ];
+  
+  const envOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(",").map((o: string) => o.trim()) : [];
+  const corsOrigins = [...defaultCorsOrigins, ...envOrigins];
+  
+  console.log("[CORS] Allowed origins:", corsOrigins);
+
+  app.use((req, res, next) => {
+    const origin = req.get("origin");
+    
+    // Allow CORS for matching origins
+    if (origin && corsOrigins.some((allowed) => origin.includes(allowed) || allowed.includes(origin))) {
+      res.set("Access-Control-Allow-Origin", origin);
+      res.set("Access-Control-Allow-Credentials", "true");
+      res.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Cookie");
+    }
+    
+    // Handle preflight requests
+    if (req.method === "OPTIONS") {
+      return res.sendStatus(200);
+    }
+    
+    next();
+  });
+  
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
