@@ -579,3 +579,12 @@
 - [x] Agregar selector de período (mes/trimestre/año)
 - [x] Agregar indicador de carga durante descarga
 - [x] Probar y validar
+
+
+## Fase 59: Optimización de Vista de Chofer
+- [x] Remover componente de mapa de vista de chofer
+- [x] Crear componente para carga de fotos de recibos/pruebas de entrega
+- [x] Agregar funcionalidad de seguimiento de entregas
+- [x] Mantener cambio de estatus de cargas
+- [x] Agregar galería de fotos de entregas
+- [x] Probar y validar

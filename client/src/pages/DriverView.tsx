@@ -11,7 +11,8 @@ import { toast } from "sonner";
 
 import { PODUpload } from "@/components/PODUpload";
 import LoadStatusCard from "@/components/LoadStatusCard";
-import { LoadsMap } from "@/components/LoadsMap";
+import DeliveryProofUpload from "@/components/DeliveryProofUpload";
+
 import {
   Truck, MapPin, Package, Fuel, Camera, CheckCircle2, Navigation,
   Upload, Loader2, ArrowRight, Clock, Weight, FileCheck
@@ -280,27 +281,16 @@ export default function DriverView() {
           </Button>
         </div>
 
-        {/* Map */}
+        {/* Load Details Section */}
         <div className="lg:col-span-3">
-          <LoadsMap
-            loads={(loads || []).map((l: any) => ({
-              ...l,
-              price: typeof l.price === 'string' ? parseFloat(l.price) : l.price,
-              pickupLat: typeof l.pickupLat === 'string' ? parseFloat(l.pickupLat) : l.pickupLat,
-              pickupLng: typeof l.pickupLng === 'string' ? parseFloat(l.pickupLng) : l.pickupLng,
-              deliveryLat: typeof l.deliveryLat === 'string' ? parseFloat(l.deliveryLat) : l.deliveryLat,
-              deliveryLng: typeof l.deliveryLng === 'string' ? parseFloat(l.deliveryLng) : l.deliveryLng,
-            }))}
-            selectedLoadId={selectedLoad?.id}
-            onSelectLoad={(loadId) => {
-              const load = loads?.find((l) => l?.id === loadId);
-              if (load) setSelectedLoad(load);
-            }}
-            onStatusChange={(loadId, newStatus) => {
-              statusMutation.mutate({ id: loadId, status: newStatus as any });
-            }}
-            isLoading={isLoading}
-          />
+
+          {/* Delivery Proof Upload */}
+          {selectedLoad && selectedLoad.status === "in_transit" && (
+            <DeliveryProofUpload
+              loadId={selectedLoad.id}
+              onUploadSuccess={() => utils.driver.myLoads.refetch()}
+            />
+          )}
 
           {/* Selected Load Details */}
           {selectedLoad && (
