@@ -39,7 +39,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Truck className="w-8 h-8 text-primary" />
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/mSbbvEPZCkmEtZbYVdHD74/LogodeWVTransportControl(1)_686a838d.png"
+                alt="WV Control Logo"
+                className="w-10 h-10 object-contain"
+              />
             </div>
             <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-background flex items-center justify-center">
               <Loader2 className="w-3 h-3 text-primary animate-spin" />
@@ -57,8 +61,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col items-center gap-8 max-w-sm w-full px-6">
           {/* Logo */}
           <div className="flex flex-col items-center gap-3">
-            <div className="w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-              <Truck className="w-10 h-10 text-primary" />
+            <div className="w-24 h-24 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <img
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/mSbbvEPZCkmEtZbYVdHD74/LogodeWVTransportControl(1)_686a838d.png"
+                alt="WV Control Logo"
+                className="w-16 h-16 object-contain"
+              />
             </div>
             <div className="text-center">
               <h1 className="text-2xl font-bold text-foreground">WV Control Center</h1>

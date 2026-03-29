@@ -178,9 +178,11 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed && (
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                    <Truck className="w-4 h-4 text-primary" />
-                  </div>
+                  <img
+                    src="https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/mSbbvEPZCkmEtZbYVdHD74/LogodeWVTransportControl(1)_686a838d.png"
+                    alt="WV Control Logo"
+                    className="w-7 h-7 shrink-0 object-contain"
+                  />
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-sidebar-foreground truncate leading-none">WV Control</p>
                     <p className="text-xs text-sidebar-foreground/50 truncate mt-0.5">Transport, LLC</p>
