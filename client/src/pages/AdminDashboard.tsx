@@ -34,7 +34,7 @@ export function AdminDashboard() {
 
   // Fetch statistics
   const { data: stats, isLoading: statsLoading } =
-    trpc.contact.getStatistics.useQuery({});
+    trpc.contact.getStatistics.useQuery();
 
   // Fetch trends
   const { data: trends, isLoading: trendsLoading } =

@@ -1586,7 +1586,7 @@ export async function getContactTrends(days: number = 30) {
     .where(gte(contactSubmissions.createdAt, cutoffDate));
 
   // Group by date
-  const trendsByDate: Record<string, { date: string; count: number; byStatus: Record<string, number> }> = {};
+  const trendsByDate: Record<string, { date: string; count: number; byStatus: { new: number; read: number; responded: number; archived: number } }> = {};
 
   contacts.forEach((contact) => {
     const dateStr = new Date(contact.createdAt).toISOString().split("T")[0];
@@ -1595,13 +1595,15 @@ export async function getContactTrends(days: number = 30) {
       trendsByDate[dateStr] = {
         date: dateStr,
         count: 0,
-        byStatus: {},
+        byStatus: { new: 0, read: 0, responded: 0, archived: 0 },
       };
     }
 
     trendsByDate[dateStr].count++;
-    const status = contact.status || "new";
-    trendsByDate[dateStr].byStatus[status] = (trendsByDate[dateStr].byStatus[status] || 0) + 1;
+    const status = (contact.status || "new") as "new" | "read" | "responded" | "archived";
+    if (status in trendsByDate[dateStr].byStatus) {
+      trendsByDate[dateStr].byStatus[status]++;
+    }
   });
 
   // Convert to array and sort by date

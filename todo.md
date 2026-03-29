@@ -664,3 +664,20 @@
 - [x] Frontend: integrar en navegación del Dashboard
 - [x] Tests para perfil de usuario (8 tests nuevos)
 - [x] Checkpoint y entrega
+
+
+## Fase 65: Mejora de Vista del Chofer con Detalles Completos de Carga
+- [x] Agregar campos de hora de recogida (pickupTime) a vista de detalles
+- [x] Agregar campos de hora de entrega (deliveryTime) a vista de detalles
+- [x] Mostrar millas totales de la carga
+- [x] Mostrar notas especiales si existen
+- [x] Mejorar presentación visual con iconos de MapPin y Clock
+- [x] Usar colores de marca para recogida (verde) y entrega (rojo)
+- [x] Corregir errores TypeScript en DriverView.tsx
+- [x] Corregir parámetros de uploadBOL mutation
+- [x] Corregir parámetros de uploadPOD mutation
+- [x] Corregir importación de AdminContacts en App.tsx
+- [x] Corregir tipo TrendData en getContactTrends
+- [x] Agregar useState import a AdminDashboard.tsx
+- [x] Tests: 361/381 pasando (94.8%)
+- [x] Checkpoint guardado

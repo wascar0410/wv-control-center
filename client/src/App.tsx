@@ -27,7 +27,7 @@ import { Chat } from "./pages/Chat";
 import UserProfile from "./pages/UserProfile";
 import About from "./pages/About";
 import { AdminDashboard } from "./pages/AdminDashboard";
-import AdminContacts from "./pages/AdminContacts";
+import { AdminContacts } from "./pages/AdminContacts";
 import { FloatingChatButton } from "./components/FloatingChatButton";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";

@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -787,9 +788,7 @@ const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
       // Check if user already exists
-      const existingUser = await db.query.users.findFirst({
-        where: (users: any, { eq }: any) => eq(users.email, input.email),
-      });;
+      const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1).then(rows => rows[0]);
 
       if (existingUser) {
         throw new Error("El correo ya está registrado en el sistema");

@@ -262,6 +262,10 @@ export default function QuotationResultsTable({
                       }
                       setIsSaving(true);
                       try {
+                        if (!quotationId || quotationId <= 0) {
+                          toast.error("ID de cotización inválido");
+                          return;
+                        }
                         await saveVerdictMutation.mutateAsync({
                           quotationId,
                           manualVerdict: manualVerdict as "ACEPTAR" | "NEGOCIAR" | "RECHAZAR",
