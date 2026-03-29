@@ -25,11 +25,39 @@ const rateLimitStore: RateLimitStore = {};
 export const rateLimitConfig: RateLimitConfig = {
   enabled: process.env.RATE_LIMITING_ENABLED !== "false",
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes default
-  maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "1000"),
-  suspiciousMaxRequests: parseInt(process.env.RATE_LIMIT_SUSPICIOUS_MAX_REQUESTS || "100"),
+  maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "5000"), // Increased from 1000 to 5000
+  suspiciousMaxRequests: parseInt(process.env.RATE_LIMIT_SUSPICIOUS_MAX_REQUESTS || "500"), // Increased from 100 to 500
   autoBlockSuspicious: process.env.AUTO_BLOCK_SUSPICIOUS_HOSTS !== "false",
-  blockDurationMs: parseInt(process.env.SUSPICIOUS_HOST_BLOCK_DURATION_MS || "86400000"), // 24 hours default
+  blockDurationMs: parseInt(process.env.SUSPICIOUS_HOST_BLOCK_DURATION_MS || "3600000"), // Reduced from 24h to 1h
 };
+
+// Hosts that should be excluded from rate limiting
+const EXCLUDED_HOSTS = new Set([
+  'localhost',
+  '127.0.0.1',
+  '::1', // IPv6 localhost
+  'localhost:3000',
+  'localhost:5173',
+  'app.wvtransports.com',
+  'api.wvtransports.com',
+]);
+
+// Static asset paths that should not be rate limited
+const STATIC_ASSET_PATHS = [
+  '.js',
+  '.css',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.svg',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.ico',
+  '.map', // Source maps
+];
 
 /**
  * Get the rate limit key for a request (based on host or IP)
@@ -116,6 +144,28 @@ function cleanupExpiredEntries(): void {
 }
 
 /**
+ * Check if a request should be excluded from rate limiting
+ */
+function shouldExcludeFromRateLimit(req: Request, key: string): boolean {
+  // Extract host without port
+  const host = req.get('host') || '';
+  const hostWithoutPort = host.split(':')[0];
+  
+  // Check if host is in excluded list
+  if (EXCLUDED_HOSTS.has(hostWithoutPort) || EXCLUDED_HOSTS.has(host)) {
+    return true;
+  }
+  
+  // Check if request is for a static asset
+  const path = req.path || '';
+  if (STATIC_ASSET_PATHS.some(ext => path.endsWith(ext))) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Rate limiting middleware
  */
 export function rateLimitMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -130,6 +180,11 @@ export function rateLimitMiddleware(req: Request, res: Response, next: NextFunct
 
   const key = getRateLimitKey(req);
   const now = Date.now();
+  
+  // Skip rate limiting for excluded hosts and static assets
+  if (shouldExcludeFromRateLimit(req, key)) {
+    return next();
+  }
 
   // Check if host is blocked
   if (isHostBlocked(key)) {
