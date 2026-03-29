@@ -788,3 +788,15 @@
 - [ ] Emitir eventos cuando se asignan nuevas cargas
 - [ ] Mostrar toast de notificación en tiempo real
 - [ ] Tests para WebSocket
+
+
+## Fase 77: Notificaciones en Tiempo Real con WebSocket
+- [x] Instalar paquete ws para WebSocket
+- [x] Crear servidor WebSocket en server/_core/websocket.ts
+- [x] Implementar gestor de conexiones por usuario
+- [x] Crear eventos: loadAssigned, loadUpdated, loadCancelled
+- [x] Implementar cliente WebSocket en React (hook useWebSocket)
+- [x] Integrar notificaciones en DriverView
+- [x] Agregar sonido y badge de notificación
+- [x] Tests para WebSocket (eventos, conexión, desconexión) - 16 tests pasando
+- [x] Checkpoint y entrega

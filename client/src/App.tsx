@@ -31,6 +31,7 @@ import { AdminContacts } from "./pages/AdminContacts";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { FloatingChatButton } from "./components/FloatingChatButton";
+import { LoadNotificationToast } from "./components/LoadNotificationToast";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
 import { Loader2 } from "lucide-react";
@@ -133,6 +134,7 @@ function AppRoutes() {
         <Route>
           <AuthGate>
             <FloatingChatButton />
+            <LoadNotificationToast />
             <DashboardLayout>
               <Switch>
                 <Route path="/" component={Dashboard} />
