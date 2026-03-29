@@ -44,6 +44,7 @@ import { getHistoricalComparison } from "./db-historical-comparison";
 import { getQuarterlyComparison } from "./db-quarterly-comparison";
 import { getAnnualComparison } from "./db-annual-comparison";
 import {
+  createContactSubmission, getContactSubmissions, updateContactSubmissionStatus,
   createLoad, createOwnerDraw, createPartner, createTransaction, createFuelLog,
   deleteLoad, getDashboardKPIs, getFinancialSummary, getFuelLogs, getLoadById,
   getLoads, getMonthlyCashFlow, getOwnerDraws, getPartners, getTransactions,
@@ -1044,6 +1045,79 @@ const securityMonitoringRouter = router({
     }),
 });
 
+// ─── Contact Router ──────────────────────────────────────────────────────────
+
+const contactRouter = router({
+  submit: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(2, "Nombre requerido"),
+        company: z.string().optional(),
+        email: z.string().email("Email inválido"),
+        message: z.string().min(10, "Mensaje debe tener al menos 10 caracteres"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        // Save to database
+        await createContactSubmission({
+          name: input.name,
+          company: input.company || null,
+          email: input.email,
+          message: input.message,
+          status: "new",
+        });
+
+        // Send email notification to owner
+        await notifyOwner({
+          title: "Nueva Solicitud de Contacto",
+          content: `De: ${input.name} (${input.email})\nEmpresa: ${input.company || "No especificada"}\n\nMensaje:\n${input.message}`,
+        });
+
+        return {
+          success: true,
+          message: "Solicitud enviada exitosamente. Nos pondremos en contacto pronto.",
+        };
+      } catch (error) {
+        console.error("Error submitting contact form:", error);
+        return {
+          success: false,
+          message: "Error al enviar la solicitud. Por favor intenta de nuevo.",
+        };
+      }
+    }),
+
+  list: protectedProcedure
+    .input(z.object({ status: z.string().optional() }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
+        throw new Error("No tienes permiso para ver estas solicitudes");
+      }
+      return getContactSubmissions(input.status);
+    }),
+
+  updateStatus: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        status: z.enum(["new", "read", "responded", "archived"]),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
+        throw new Error("No tienes permiso para actualizar solicitudes");
+      }
+      await updateContactSubmissionStatus(
+        input.id,
+        input.status,
+        ctx.user.id,
+        input.notes
+      );
+      return { success: true };
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -1056,6 +1130,7 @@ export const appRouter = router({
       return { success: true } as const;
     }),
   }),
+  contact: contactRouter,
   loads: loadsRouter,
   finance: financeRouter,
   partnership: partnershipRouter,

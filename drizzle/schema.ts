@@ -1028,3 +1028,22 @@ export const chatNotifications = mysqlTable("chat_notifications", {
 
 export type ChatNotification = typeof chatNotifications.$inferSelect;
 export type InsertChatNotification = typeof chatNotifications.$inferInsert;
+
+/**
+ * Contact Submissions - Form submissions from About page
+ */
+export const contactSubmissions = mysqlTable("contact_submissions", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  company: varchar("company", { length: 255 }),
+  email: varchar("email", { length: 320 }).notNull(),
+  message: text("message").notNull(),
+  status: mysqlEnum("status", ["new", "read", "responded", "archived"]).default("new").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  respondedAt: timestamp("respondedAt"),
+  respondedBy: int("respondedBy"),
+});
+
+export type ContactSubmission = typeof contactSubmissions.$inferSelect;
+export type InsertContactSubmission = typeof contactSubmissions.$inferInsert;

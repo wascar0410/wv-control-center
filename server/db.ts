@@ -2,11 +2,13 @@ import { and, desc, eq, gte, isNull, lte, or, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   bankAccounts,
+  contactSubmissions,
   driverLocations,
   driverPayments,
   exportLogs,
   fuelLogs,
   InsertBankAccount,
+  InsertContactSubmission,
   InsertDriverLocation,
   InsertDriverPayment,
   InsertExportLog,
@@ -1493,4 +1495,51 @@ export async function getUserPreferences(userId: number) {
   
   const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
   return result.length > 0 ? result[0] : null;
+}
+
+/**
+ * Contact Submissions
+ */
+export async function createContactSubmission(data: InsertContactSubmission) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(contactSubmissions).values(data);
+  return result;
+}
+
+export async function getContactSubmissions(status?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  let query: any = db.select().from(contactSubmissions);
+  
+  if (status) {
+    query = query.where(eq(contactSubmissions.status, status as any));
+  }
+  
+  return query.orderBy(desc(contactSubmissions.createdAt));
+}
+
+export async function updateContactSubmissionStatus(
+  id: number,
+  status: string,
+  respondedBy?: number,
+  notes?: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const updates: any = {
+    status: status as any,
+    respondedAt: new Date(),
+  };
+  
+  if (respondedBy) updates.respondedBy = respondedBy;
+  if (notes) updates.notes = notes;
+  
+  return db
+    .update(contactSubmissions)
+    .set(updates)
+    .where(eq(contactSubmissions.id, id));
 }

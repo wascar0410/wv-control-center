@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `contact_submissions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`name` varchar(255) NOT NULL,\n\t`company` varchar(255),\n\t`email` varchar(320) NOT NULL,\n\t`message` text NOT NULL,\n\t`status` enum('new','read','responded','archived') NOT NULL DEFAULT 'new',\n\t`notes` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`respondedAt` timestamp,\n\t`respondedBy` int,\n\tCONSTRAINT `contact_submissions_id` PRIMARY KEY(`id`)\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute CREATE TABLE `contact_submissions` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`name` varchar(255) NOT NULL,\n\t`company` varchar(255),\n\t`email` varchar(320) NOT NULL,\n\t`message` text NOT NULL,\n\t`status` enum('new','read','responded','archived') NOT NULL DEFAULT 'new',\n\t`notes` text,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\t`respondedAt` timestamp,\n\t`respondedBy` int,\n\tCONSTRAINT `contact_submissions_id` PRIMARY KEY(`id`)\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 175
+}

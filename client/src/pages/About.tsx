@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +32,15 @@ const EMAIL = "support@wvtransports.com";
 
 export default function About() {
   const [, setLocation] = useLocation();
+  const contactMutation = trpc.contact.submit.useMutation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const [parallaxOffset, setParallaxOffset] = useState(0);
+
+  const { ref: valuesRef, isVisible: valuesVisible } = useIntersectionObserver();
+  const { ref: servicesRef, isVisible: servicesVisible } = useIntersectionObserver();
+  const { ref: teamRef, isVisible: teamVisible } = useIntersectionObserver();
+  const { ref: statsRef, isVisible: statsVisible } = useIntersectionObserver();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -36,6 +48,19 @@ export default function About() {
     email: "",
     message: "",
   });
+
+  // Parallax effect
+  useEffect(() => {
+    const handleScroll = () => {
+      if (heroRef.current) {
+        const scrollY = window.scrollY;
+        setParallaxOffset(scrollY * 0.5);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const values = [
     {
@@ -220,27 +245,46 @@ export default function About() {
       [e.target.name]: e.target.value,
     }));
   };
-
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    const subject = encodeURIComponent("Solicitud de información - WV Transport");
-    const body = encodeURIComponent(
-      `Nombre: ${formData.name}
-Empresa: ${formData.company}
-Email: ${formData.email}
+    try {
+      const result = await contactMutation.mutateAsync({
+        name: formData.name,
+        company: formData.company || undefined,
+        email: formData.email,
+        message: formData.message,
+      });
 
-Mensaje:
-${formData.message}`
-    );
-
-    window.location.href = `mailto:${EMAIL}?subject=${subject}&body=${body}`;
+      if (result.success) {
+        toast.success(result.message);
+        setFormData({
+          name: "",
+          company: "",
+          email: "",
+          message: "",
+        });
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error al enviar la solicitud");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
-      <div className="relative border-b border-border bg-gradient-to-r from-primary/10 to-primary/5 py-16">
+      <div
+        ref={heroRef}
+        className="relative border-b border-border bg-gradient-to-r from-primary/10 to-primary/5 py-16 overflow-hidden"
+        style={{
+          backgroundPosition: `0 ${parallaxOffset}px`,
+        }}
+      >
         <div className="container mx-auto px-4">
           <div className="flex flex-col items-center gap-10 md:flex-row">
             <div className="flex-1">
@@ -325,8 +369,13 @@ ${formData.message}`
       </div>
 
       {/* Values */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+      <div
+        ref={valuesRef}
+        className="container mx-auto px-4 py-16"
+      >
+        <h2 className={`mb-12 text-center text-3xl font-bold text-foreground transition-all duration-700 ${
+          valuesVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}>
           Nuestros Valores
         </h2>
 
@@ -334,7 +383,14 @@ ${formData.message}`
           {values.map((value, idx) => (
             <Card
               key={idx}
-              className="border border-border bg-card p-6 transition-shadow hover:shadow-lg"
+              className={`border border-border bg-card p-6 transition-all duration-700 hover:shadow-lg ${
+                valuesVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+              style={{
+                transitionDelay: valuesVisible ? `${idx * 100}ms` : "0ms",
+              }}
             >
               <value.icon className="mb-4 h-10 w-10 text-primary" />
               <h3 className="mb-2 text-lg font-bold text-foreground">
@@ -349,9 +405,14 @@ ${formData.message}`
       </div>
 
       {/* Services */}
-      <div className="border-y border-border bg-card py-16">
+      <div
+        ref={servicesRef}
+        className="border-y border-border bg-card py-16"
+      >
         <div className="container mx-auto px-4">
-          <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+          <h2 className={`mb-12 text-center text-3xl font-bold text-foreground transition-all duration-700 ${
+            servicesVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+          }`}>
             Nuestros Servicios
           </h2>
 
@@ -359,7 +420,14 @@ ${formData.message}`
             {services.map((service, idx) => (
               <Card
                 key={idx}
-                className="border border-border bg-background p-6 transition-colors hover:border-primary"
+                className={`border border-border bg-background p-6 transition-all duration-700 hover:border-primary ${
+                  servicesVisible
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-10"
+                }`}
+                style={{
+                  transitionDelay: servicesVisible ? `${idx * 100}ms` : "0ms",
+                }}
               >
                 <service.icon className="mb-4 h-12 w-12 text-primary" />
                 <h3 className="mb-2 text-lg font-bold text-foreground">
@@ -399,8 +467,13 @@ ${formData.message}`
       </div>
 
       {/* Team */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+      <div
+        ref={teamRef}
+        className="container mx-auto px-4 py-16"
+      >
+        <h2 className={`mb-12 text-center text-3xl font-bold text-foreground transition-all duration-700 ${
+          teamVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}>
           Nuestro Equipo
         </h2>
 
@@ -408,7 +481,14 @@ ${formData.message}`
           {team.map((member, idx) => (
             <Card
               key={idx}
-              className="border border-border bg-card p-6 text-center transition-shadow hover:shadow-lg"
+              className={`border border-border bg-card p-6 text-center transition-all duration-700 hover:shadow-lg ${
+                teamVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+              style={{
+                transitionDelay: teamVisible ? `${idx * 100}ms` : "0ms",
+              }}
             >
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <Users className="h-8 w-8 text-primary" />
@@ -532,8 +612,12 @@ ${formData.message}`
             />
 
             <div className="flex flex-wrap gap-4 pt-2">
-              <Button type="submit" className="bg-primary hover:bg-primary/90">
-                Enviar Solicitud
+              <Button
+                type="submit"
+                disabled={isSubmitting || contactMutation.isPending}
+                className="bg-primary hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSubmitting || contactMutation.isPending ? "Enviando..." : "Enviar Solicitud"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
 
@@ -551,8 +635,13 @@ ${formData.message}`
       </div>
 
       {/* Stats */}
-      <div className="container mx-auto px-4 py-16">
-        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+      <div
+        ref={statsRef}
+        className="container mx-auto px-4 py-16"
+      >
+        <h2 className={`mb-12 text-center text-3xl font-bold text-foreground transition-all duration-700 ${
+          statsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
+        }`}>
           Por los Números
         </h2>
 
@@ -560,7 +649,14 @@ ${formData.message}`
           {stats.map((stat, idx) => (
             <Card
               key={idx}
-              className="border border-border bg-card p-6 text-center transition-colors hover:border-primary"
+              className={`border border-border bg-card p-6 text-center transition-all duration-700 hover:border-primary ${
+                statsVisible
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-10"
+              }`}
+              style={{
+                transitionDelay: statsVisible ? `${idx * 100}ms` : "0ms",
+              }}
             >
               <p className="mb-2 text-4xl font-bold text-primary">
                 {stat.number}
