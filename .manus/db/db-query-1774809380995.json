@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `password_reset_tokens` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`token` varchar(255) NOT NULL,\n\t`expiresAt` timestamp NOT NULL,\n\t`usedAt` timestamp,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `password_reset_tokens_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `password_reset_tokens_token_unique` UNIQUE(`token`)\n);\nALTER TABLE `password_reset_tokens` ADD CONSTRAINT `password_reset_tokens_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute CREATE TABLE `password_reset_tokens` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`token` varchar(255) NOT NULL,\n\t`expiresAt` timestamp NOT NULL,\n\t`usedAt` timestamp,\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `password_reset_tokens_id` PRIMARY KEY(`id`),\n\tCONSTRAINT `password_reset_tokens_token_unique` UNIQUE(`token`)\n);\nALTER TABLE `password_reset_tokens` ADD CONSTRAINT `password_reset_tokens_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 682
+}

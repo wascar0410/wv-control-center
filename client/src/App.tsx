@@ -28,6 +28,8 @@ import UserProfile from "./pages/UserProfile";
 import About from "./pages/About";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminContacts } from "./pages/AdminContacts";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { FloatingChatButton } from "./components/FloatingChatButton";
 import { useAuth } from "./_core/hooks/useAuth";
 import { getLoginUrl } from "./const";
@@ -124,36 +126,44 @@ function ProtectedRoute({ component: Component, requiredRole }: { component: Rea
 
 function AppRoutes() {
   return (
-    <AuthGate>
-      <FloatingChatButton />
-      <DashboardLayout>
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/loads" component={() => <ProtectedRoute component={Loads} requiredRole="admin" />} />
-          <Route path="/finance" component={() => <ProtectedRoute component={Finance} requiredRole="admin" />} />
-          <Route path="/partnership" component={() => <ProtectedRoute component={Partnership} requiredRole="admin" />} />
-          <Route path="/driver" component={DriverView} />
-          <Route path="/driver-performance" component={DriverPerformance} />
-          <Route path="/transactions" component={Transactions} />
-          <Route path="/quotation" component={Quotation} />
-          <Route path="/quotation-history" component={() => <ProtectedRoute component={QuotationHistory} requiredRole="admin" />} />
-          <Route path="/load-evaluator" component={LoadEvaluator} />
-          <Route path="/import-broker-loads" component={() => <ProtectedRoute component={ImportBrokerLoads} requiredRole="admin" />} />
-          <Route path="/broker-loads-management" component={() => <ProtectedRoute component={BrokerLoadsManagement} requiredRole="admin" />} />
-          <Route path="/batch-payments" component={() => <ProtectedRoute component={BatchPayments} requiredRole="admin" />} />
-          <Route path="/batch-payments-dashboard" component={() => <ProtectedRoute component={BatchPaymentsDashboard} requiredRole="admin" />} />
-          <Route path="/accounting-finance" component={() => <ProtectedRoute component={AccountingFinance} requiredRole="admin" />} />
-          <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} requiredRole="admin" />} />
-          <Route path="/business-settings" component={() => <ProtectedRoute component={BusinessSettings} requiredRole="admin" />} />
-          <Route path="/tax-compliance" component={TaxCompliance} />
-          <Route path="/chat" component={Chat} />
-          <Route path="/profile" component={UserProfile} />
-          <Route path="/about" component={About} />
-          <Route path="/404" component={NotFound} />
-          <Route component={NotFound} />
-        </Switch>
-      </DashboardLayout>
-    </AuthGate>
+    <>
+      <Switch>
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route>
+          <AuthGate>
+            <FloatingChatButton />
+            <DashboardLayout>
+              <Switch>
+                <Route path="/" component={Dashboard} />
+                <Route path="/loads" component={() => <ProtectedRoute component={Loads} requiredRole="admin" />} />
+                <Route path="/finance" component={() => <ProtectedRoute component={Finance} requiredRole="admin" />} />
+                <Route path="/partnership" component={() => <ProtectedRoute component={Partnership} requiredRole="admin" />} />
+                <Route path="/driver" component={DriverView} />
+                <Route path="/driver-performance" component={DriverPerformance} />
+                <Route path="/transactions" component={Transactions} />
+                <Route path="/quotation" component={Quotation} />
+                <Route path="/quotation-history" component={() => <ProtectedRoute component={QuotationHistory} requiredRole="admin" />} />
+                <Route path="/load-evaluator" component={LoadEvaluator} />
+                <Route path="/import-broker-loads" component={() => <ProtectedRoute component={ImportBrokerLoads} requiredRole="admin" />} />
+                <Route path="/broker-loads-management" component={() => <ProtectedRoute component={BrokerLoadsManagement} requiredRole="admin" />} />
+                <Route path="/batch-payments" component={() => <ProtectedRoute component={BatchPayments} requiredRole="admin" />} />
+                <Route path="/batch-payments-dashboard" component={() => <ProtectedRoute component={BatchPaymentsDashboard} requiredRole="admin" />} />
+                <Route path="/accounting-finance" component={() => <ProtectedRoute component={AccountingFinance} requiredRole="admin" />} />
+                <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} requiredRole="admin" />} />
+                <Route path="/business-settings" component={() => <ProtectedRoute component={BusinessSettings} requiredRole="admin" />} />
+                <Route path="/tax-compliance" component={TaxCompliance} />
+                <Route path="/chat" component={Chat} />
+                <Route path="/profile" component={UserProfile} />
+                <Route path="/about" component={About} />
+                <Route path="/404" component={NotFound} />
+                <Route component={NotFound} />
+              </Switch>
+            </DashboardLayout>
+          </AuthGate>
+        </Route>
+      </Switch>
+    </>
   );
 }
 

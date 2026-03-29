@@ -36,6 +36,12 @@ import {
 } from "./_core/rateLimiter";
 import { sendEmail, getAdminEmail } from "./_core/emailService";
 import {
+  generateResetToken,
+  sendPasswordResetEmail,
+  getTokenExpirationTime,
+  isTokenExpired,
+} from "./_core/passwordReset";
+import {
   getHostRejectionStats,
   getAllRejectionStats,
   getRejectionHistory,
@@ -1196,6 +1202,46 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    requestPasswordReset: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database connection failed");
+        const user = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1).then(rows => rows[0]);
+        if (!user) return { success: true, message: "Si el email existe, recibirás un enlace de recuperación" };
+        const token = generateResetToken();
+        const expiresAt = getTokenExpirationTime();
+        const { passwordResetTokens } = await import("../drizzle/schema");
+        await db.insert(passwordResetTokens).values({ userId: user.id, token, expiresAt });
+        const resetLink = `${process.env.VITE_OAUTH_PORTAL_URL || "http://localhost:3000"}/reset-password?token=${token}`;
+        await sendPasswordResetEmail(user.email || "", user.name || "Usuario", resetLink);
+        return { success: true, message: "Si el email existe, recibirás un enlace de recuperación" };
+      }),
+    validateResetToken: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database connection failed");
+        const { passwordResetTokens } = await import("../drizzle/schema");
+        const resetToken = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, input.token)).limit(1).then(rows => rows[0]);
+        if (!resetToken) return { valid: false, error: "Token inválido o expirado" };
+        if (isTokenExpired(resetToken.expiresAt)) return { valid: false, error: "El token ha expirado" };
+        if (resetToken.usedAt) return { valid: false, error: "Este token ya fue utilizado" };
+        return { valid: true, userId: resetToken.userId };
+      }),
+    resetPassword: publicProcedure
+      .input(z.object({ token: z.string(), newPassword: z.string().min(8) }))
+      .mutation(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new Error("Database connection failed");
+        const { passwordResetTokens } = await import("../drizzle/schema");
+        const resetToken = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, input.token)).limit(1).then(rows => rows[0]);
+        if (!resetToken || isTokenExpired(resetToken.expiresAt) || resetToken.usedAt) throw new Error("Token inválido");
+        const passwordHash = await bcrypt.hash(input.newPassword, 10);
+        await db.update(usersTable).set({ passwordHash, updatedAt: new Date() }).where(eq(usersTable.id, resetToken.userId));
+        await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, resetToken.id));
+        return { success: true, message: "Contraseña actualizada" };
+      }),
   }),
   contact: contactRouter,
   loads: loadsRouter,

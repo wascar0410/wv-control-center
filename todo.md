@@ -712,3 +712,16 @@
 - [x] Validar requisitos mínimos (longitud, caracteres especiales)
 - [x] Tests para validación de contraseña
 - [x] Checkpoint y entrega
+
+
+## Fase 69: Recuperación de Contraseña por Correo
+- [x] Crear tabla passwordResetTokens en schema
+- [x] Generar tokens de reset con expiración (24h)
+- [x] Crear endpoint requestPasswordReset
+- [x] Crear endpoint validateResetToken
+- [x] Crear endpoint resetPassword
+- [x] Implementar servicio de envío de emails
+- [x] Crear página de solicitud de reset
+- [x] Crear página de confirmación de reset
+- [x] Tests para flujo de recuperación
+- [x] Checkpoint y entrega
