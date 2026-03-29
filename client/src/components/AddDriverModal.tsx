@@ -26,6 +26,19 @@ export function AddDriverModal({ open, onOpenChange, onSuccess }: AddDriverModal
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const createDriverMutation = trpc.admin.createDriver.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Chofer ${data.driver.name} creado exitosamente`);
+      setFormData({ name: "", email: "", phone: "" });
+      onOpenChange(false);
+      utils.driver.myLoads.invalidate();
+      onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al crear chofer");
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -34,35 +47,11 @@ export function AddDriverModal({ open, onOpenChange, onSuccess }: AddDriverModal
       return;
     }
 
-    setIsLoading(true);
-    try {
-      // Create driver user through API
-      const response = await fetch("/api/trpc/admin.createDriver", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al crear chofer");
-      }
-
-      toast.success(`Chofer ${formData.name} creado exitosamente`);
-      setFormData({ name: "", email: "", phone: "" });
-      onOpenChange(false);
-      
-      // Invalidate drivers list
-      utils.driver.myLoads.invalidate();
-      onSuccess?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Error al crear chofer");
-    } finally {
-      setIsLoading(false);
-    }
+    createDriverMutation.mutate({
+      name: formData.name,
+      email: formData.email,
+      phoneNumber: formData.phone || undefined,
+    });
   };
 
   return (
@@ -114,8 +103,8 @@ export function AddDriverModal({ open, onOpenChange, onSuccess }: AddDriverModal
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creando..." : "Crear Chofer"}
+            <Button type="submit" disabled={createDriverMutation.isPending}>
+              {createDriverMutation.isPending ? "Creando..." : "Crear Chofer"}
             </Button>
           </DialogFooter>
         </form>

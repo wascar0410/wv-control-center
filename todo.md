@@ -681,3 +681,13 @@
 - [x] Agregar useState import a AdminDashboard.tsx
 - [x] Tests: 361/381 pasando (94.8%)
 - [x] Checkpoint guardado
+
+
+## Fase 66: Corrección de Error en Agregar Chofer
+- [x] Identificado: AddDriverModal usaba fetch en lugar de tRPC
+- [x] Identificado: Campo "phone" no coincidía con "phoneNumber" del servidor
+- [x] Corregido: Cambiar AddDriverModal a usar tRPC mutation
+- [x] Corregido: Mapear "phone" a "phoneNumber" en payload
+- [x] Corregido: Usar isPending en lugar de isLoading
+- [x] Tests: 361/381 pasando (94.8%)
+- [x] Checkpoint guardado
