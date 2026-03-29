@@ -7,7 +7,7 @@ import {
   Clock, CheckCircle2, AlertCircle, FileText, Plus
 } from "lucide-react";
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { AssignLoadModal } from "@/components/AssignLoadModal";
 import { DriverLocationMap } from "@/components/DriverLocationMap";
@@ -33,6 +33,17 @@ function formatCurrency(value: number) {
 export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Redirect drivers to their view
+  React.useEffect(() => {
+    if (user?.role === 'driver') {
+      setLocation('/driver');
+    }
+  }, [user?.role, setLocation]);
+
+  if (user?.role === 'driver') {
+    return null; // Will redirect
+  }
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const { data: kpis, isLoading: kpisLoading } = trpc.dashboard.kpis.useQuery();
   const { data: loads, isLoading: loadsLoading } = trpc.dashboard.recentLoads.useQuery();

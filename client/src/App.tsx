@@ -129,7 +129,7 @@ function AppRoutes() {
           <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} requiredRole="admin" />} />
           <Route path="/business-settings" component={() => <ProtectedRoute component={BusinessSettings} requiredRole="admin" />} />
           <Route path="/tax-compliance" component={TaxCompliance} />
-          <Route path="/chat" component={() => <ProtectedRoute component={Chat} requiredRole="admin" />} />
+          <Route path="/chat" component={Chat} />
           <Route path="/404" component={NotFound} />
           <Route component={NotFound} />
         </Switch>
