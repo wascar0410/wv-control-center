@@ -691,3 +691,13 @@
 - [x] Corregido: Usar isPending en lugar de isLoading
 - [x] Tests: 361/381 pasando (94.8%)
 - [x] Checkpoint guardado
+
+
+## Fase 67: Validación de Email en Tiempo Real para Agregar Choferes
+- [x] Crear endpoint tRPC admin.checkEmailAvailability
+- [x] Implementar hook useEmailValidation con debounce
+- [x] Agregar indicadores visuales (checkmark/error) en el input
+- [x] Mostrar mensaje de estado (disponible/no disponible)
+- [x] Deshabilitar botón de envío si email no es válido
+- [x] Tests para validación de email
+- [x] Checkpoint y entrega

@@ -772,6 +772,27 @@ const assignmentRouter = router({
 // ─── Admin Router ────────────────────────────────────────────────────────────
 
 const adminRouter = router({
+  checkEmailAvailability: protectedProcedure
+    .input(z.object({
+      email: z.string().email(),
+    }))
+    .query(async ({ input, ctx }) => {
+      // Only owner and admin can check
+      if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para verificar emails");
+      }
+
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      
+      const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1).then(rows => rows[0]);
+      
+      return {
+        available: !existingUser,
+        email: input.email,
+      };
+    }),
+
   createDriver: protectedProcedure
     .input(z.object({
       email: z.string().email(),
