@@ -698,3 +698,224 @@ export const ocrVerification = mysqlTable("ocr_verification", {
 
 export type OcrVerification = typeof ocrVerification.$inferSelect;
 export type InsertOcrVerification = typeof ocrVerification.$inferInsert;
+
+
+// ─── IRS Compliance & Audit Trail ──────────────────────────────────────────────
+
+/**
+ * Compliance Audit Trail - Complete record of all compliance-related events
+ */
+export const complianceAuditLog = mysqlTable("compliance_audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  eventType: mysqlEnum("eventType", [
+    "mileage_recorded",
+    "expense_recorded",
+    "income_recorded",
+    "document_uploaded",
+    "validation_passed",
+    "validation_failed",
+    "alert_generated",
+    "report_generated",
+    "correction_made",
+    "audit_review",
+  ]).notNull(),
+  entityType: varchar("entityType", { length: 50 }).notNull(),
+  entityId: int("entityId").notNull(),
+  description: text("description"),
+  metadata: text("metadata"),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: varchar("userAgent", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ComplianceAuditLog = typeof complianceAuditLog.$inferSelect;
+export type InsertComplianceAuditLog = typeof complianceAuditLog.$inferInsert;
+
+/**
+ * Mileage Records - IRS requires detailed mileage documentation
+ */
+export const mileageRecords = mysqlTable("mileage_records", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  date: timestamp("date").notNull(),
+  startMileage: decimal("startMileage", { precision: 10, scale: 1 }).notNull(),
+  endMileage: decimal("endMileage", { precision: 10, scale: 1 }).notNull(),
+  businessMiles: decimal("businessMiles", { precision: 10, scale: 1 }).notNull(),
+  personalMiles: decimal("personalMiles", { precision: 10, scale: 1 }).notNull(),
+  purpose: varchar("purpose", { length: 255 }).notNull(),
+  loadId: int("loadId"),
+  notes: text("notes"),
+  documentedBy: varchar("documentedBy", { length: 100 }),
+  verifiedBy: int("verifiedBy").references(() => users.id),
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type MileageRecord = typeof mileageRecords.$inferSelect;
+export type InsertMileageRecord = typeof mileageRecords.$inferInsert;
+
+/**
+ * Expense Receipts - IRS requires receipts for all deductible expenses
+ */
+export const expenseReceipts = mysqlTable("expense_receipts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  transactionId: int("transactionId"),
+  date: timestamp("date").notNull(),
+  vendor: varchar("vendor", { length: 255 }).notNull(),
+  category: mysqlEnum("category", [
+    "fuel",
+    "maintenance",
+    "tolls",
+    "insurance",
+    "parking",
+    "meals",
+    "supplies",
+    "utilities",
+    "equipment",
+    "depreciation",
+    "other",
+  ]).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  description: text("description"),
+  receiptUrl: varchar("receiptUrl", { length: 512 }),
+  receiptFileName: varchar("receiptFileName", { length: 255 }),
+  ocrExtractedData: text("ocrExtractedData"),
+  ocrConfidence: decimal("ocrConfidence", { precision: 3, scale: 2 }),
+  isDeductible: boolean("isDeductible").notNull().default(true),
+  deductionReason: varchar("deductionReason", { length: 255 }),
+  verifiedBy: int("verifiedBy").references(() => users.id),
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type ExpenseReceipt = typeof expenseReceipts.$inferSelect;
+export type InsertExpenseReceipt = typeof expenseReceipts.$inferInsert;
+
+/**
+ * Income Verification - IRS requires proof of all business income
+ */
+export const incomeVerification = mysqlTable("income_verification", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  loadId: int("loadId"),
+  date: timestamp("date").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  source: varchar("source", { length: 100 }).notNull(),
+  brokerName: varchar("brokerName", { length: 255 }),
+  invoiceNumber: varchar("invoiceNumber", { length: 100 }),
+  invoiceUrl: varchar("invoiceUrl", { length: 512 }),
+  paymentMethod: mysqlEnum("paymentMethod", [
+    "check",
+    "ach",
+    "wire",
+    "cash",
+    "credit_card",
+    "other",
+  ]).notNull(),
+  paymentDate: timestamp("paymentDate"),
+  reconciled: boolean("reconciled").notNull().default(false),
+  reconciledWith: varchar("reconciledWith", { length: 100 }),
+  verifiedBy: int("verifiedBy").references(() => users.id),
+  verifiedAt: timestamp("verifiedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type IncomeVerification = typeof incomeVerification.$inferSelect;
+export type InsertIncomeVerification = typeof incomeVerification.$inferInsert;
+
+/**
+ * Compliance Alerts - System-generated alerts for compliance issues
+ */
+export const complianceAlerts = mysqlTable("compliance_alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  alertType: mysqlEnum("alertType", [
+    "missing_documentation",
+    "mileage_discrepancy",
+    "expense_without_receipt",
+    "income_not_reconciled",
+    "unusual_expense",
+    "missing_mileage_record",
+    "deduction_limit_exceeded",
+    "suspicious_pattern",
+    "audit_flag",
+  ]).notNull(),
+  severity: mysqlEnum("severity", ["info", "warning", "critical"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  relatedEntityType: varchar("relatedEntityType", { length: 50 }),
+  relatedEntityId: int("relatedEntityId"),
+  recommendedAction: text("recommendedAction"),
+  resolved: boolean("resolved").notNull().default(false),
+  resolvedAt: timestamp("resolvedAt"),
+  resolvedBy: int("resolvedBy").references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type ComplianceAlert = typeof complianceAlerts.$inferSelect;
+export type InsertComplianceAlert = typeof complianceAlerts.$inferInsert;
+
+/**
+ * Compliance Rules - Configurable IRS rules and limits
+ */
+export const complianceRules = mysqlTable("compliance_rules", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  ruleType: mysqlEnum("ruleType", [
+    "deduction_limit",
+    "mileage_rate",
+    "meal_percentage",
+    "home_office_limit",
+    "vehicle_depreciation",
+    "expense_category_limit",
+  ]).notNull(),
+  category: varchar("category", { length: 100 }),
+  limitAmount: decimal("limitAmount", { precision: 12, scale: 2 }),
+  percentage: decimal("percentage", { precision: 5, scale: 2 }),
+  active: boolean("active").notNull().default(true),
+  year: int("year").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+export type ComplianceRule = typeof complianceRules.$inferSelect;
+export type InsertComplianceRule = typeof complianceRules.$inferInsert;
+
+/**
+ * Audit Reports - Generated reports for IRS compliance
+ */
+export const auditReports = mysqlTable("audit_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id),
+  reportType: mysqlEnum("reportType", [
+    "monthly_summary",
+    "quarterly_summary",
+    "annual_summary",
+    "audit_preparation",
+    "irs_form_1040",
+    "schedule_c",
+  ]).notNull(),
+  year: int("year").notNull(),
+  month: int("month"),
+  totalIncome: decimal("totalIncome", { precision: 12, scale: 2 }).notNull(),
+  totalExpenses: decimal("totalExpenses", { precision: 12, scale: 2 }).notNull(),
+  totalMileage: decimal("totalMileage", { precision: 10, scale: 1 }).notNull(),
+  mileageDeduction: decimal("mileageDeduction", { precision: 12, scale: 2 }).notNull(),
+  documentedExpenses: int("documentedExpenses").notNull(),
+  undocumentedExpenses: int("undocumentedExpenses").notNull(),
+  complianceScore: decimal("complianceScore", { precision: 5, scale: 2 }).notNull(),
+  alerts: int("alerts").notNull(),
+  reportUrl: varchar("reportUrl", { length: 512 }),
+  generatedAt: timestamp("generatedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type AuditReport = typeof auditReports.$inferSelect;
+export type InsertAuditReport = typeof auditReports.$inferInsert;
