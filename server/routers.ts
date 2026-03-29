@@ -42,6 +42,12 @@ import {
   isTokenExpired,
 } from "./_core/passwordReset";
 import {
+  driverLogin,
+  logPasswordChange,
+  logPasswordReset,
+  getPasswordAuditHistory,
+} from "./_core/driverAuth";
+import {
   getHostRejectionStats,
   getAllRejectionStats,
   getRejectionHistory,
@@ -1231,7 +1237,7 @@ export const appRouter = router({
       }),
     resetPassword: publicProcedure
       .input(z.object({ token: z.string(), newPassword: z.string().min(8) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const db = await getDb();
         if (!db) throw new Error("Database connection failed");
         const { passwordResetTokens } = await import("../drizzle/schema");
@@ -1240,8 +1246,18 @@ export const appRouter = router({
         const passwordHash = await bcrypt.hash(input.newPassword, 10);
         await db.update(usersTable).set({ passwordHash, updatedAt: new Date() }).where(eq(usersTable.id, resetToken.userId));
         await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(eq(passwordResetTokens.id, resetToken.id));
+        await logPasswordReset(resetToken.userId, ctx.req.ip, ctx.req.headers["user-agent"] as string);
         return { success: true, message: "Contraseña actualizada" };
       }),
+    driverLogin: publicProcedure
+      .input(z.object({ email: z.string().email(), password: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        return await driverLogin({ email: input.email, password: input.password, ipAddress: ctx.req.ip, userAgent: ctx.req.headers["user-agent"] as string });
+      }),
+    getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {
+      if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") throw new Error("No autorizado");
+      return await getPasswordAuditHistory(ctx.user.id, 20);
+    }),
   }),
   contact: contactRouter,
   loads: loadsRouter,

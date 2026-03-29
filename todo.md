@@ -725,3 +725,32 @@
 - [x] Crear página de confirmación de reset
 - [x] Tests para flujo de recuperación
 - [x] Checkpoint y entrega
+
+
+## Fase 70: Corrección de Roles y Permisos
+- [x] Revisar roles actuales (owner, admin, driver, user)
+- [x] Asegurar que solo Wascar y Yisvel tengan acceso admin completo
+- [x] Restringir acceso de choferes a panel de cargas únicamente
+- [x] Verificar permisos en todas las rutas protegidas
+- [x] Crear procedimiento para promover/degradar usuarios
+
+## Fase 71: Autenticación Manual de Choferes
+- [x] Crear tabla passwordAuditLog para auditoría
+- [x] Crear endpoint auth.driverLogin con validación de email/contraseña
+- [x] Generar JWT para sesiones de chofer
+- [x] Crear endpoint para renovar tokens JWT
+- [x] Validar que choferes solo accedan a sus datos
+
+## Fase 72: Notificaciones por Email de Cargas
+- [x] Crear tabla loadNotifications para tracking
+- [x] Crear endpoint para enviar notificación de nueva carga
+- [x] Implementar template de email con detalles de carga
+- [x] Agregar endpoint para marcar notificaciones como leídas
+- [x] Tests para notificaciones
+
+## Fase 73: Auditoría de Cambios de Contraseña
+- [x] Registrar cambios en passwordAuditLog
+- [x] Incluir timestamp, usuario y IP
+- [x] Crear vista de historial para admins
+- [x] Endpoint para obtener historial de auditoría
+- [x] Tests para auditoría

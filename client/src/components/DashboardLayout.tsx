@@ -52,7 +52,7 @@ import { Badge } from "./ui/badge";
 import { AddDriverModal } from "./AddDriverModal";
 import { UserPlus } from "lucide-react";
 
-const menuItems = [
+const adminMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
   { icon: BarChart3, label: "Dashboard Ejecutivo", path: "/executive-dashboard", description: "KPIs en tiempo real" },
   { icon: Package, label: "Cargas", path: "/loads", description: "Gestión de envíos" },
@@ -71,6 +71,21 @@ const menuItems = [
   { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
 ];
+
+const driverMenuItems = [
+  { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
+  { icon: Truck, label: "Mis Cargas", path: "/driver", description: "Operaciones en campo" },
+  { icon: TrendingUp, label: "Mi Desempeño", path: "/driver-performance", description: "Mis estadísticas" },
+  { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
+  { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
+];
+
+const getMenuItems = (role?: string) => {
+  if (role === 'driver') return driverMenuItems;
+  return adminMenuItems;
+};
+
+const menuItems = adminMenuItems;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
@@ -197,7 +212,7 @@ function DashboardLayoutContent({
           {/* Navigation */}
           <SidebarContent className="gap-0 py-3">
             <SidebarMenu className="px-2 gap-1">
-              {menuItems.map((item) => {
+              {getMenuItems(user?.role).map((item) => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

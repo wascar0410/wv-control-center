@@ -162,6 +162,20 @@
       "when": 1774809365733,
       "tag": "0022_melodic_hardball",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1774810241072,
+      "tag": "0023_calm_wilson_fisk",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1774810392393,
+      "tag": "0024_boring_luckman",
+      "breakpoints": true
     }
   ]
 }

@@ -55,6 +55,22 @@ export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 
 /**
+ * Password Audit Log - Track password changes for security and compliance
+ */
+export const passwordAuditLog = mysqlTable("password_audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  action: mysqlEnum("action", ["changed", "reset", "created"]).notNull(),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  reason: varchar("reason", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type PasswordAuditLog = typeof passwordAuditLog.$inferSelect;
+export type InsertPasswordAuditLog = typeof passwordAuditLog.$inferInsert;
+
+/**
  * User Preferences - Notification and system preferences
  */
 export const userPreferences = mysqlTable("user_preferences", {
@@ -124,6 +140,24 @@ export const loads = mysqlTable("loads", {
 
 export type Load = typeof loads.$inferSelect;
 export type InsertLoad = typeof loads.$inferInsert;
+
+/**
+ * Load Notifications - Track notifications sent to drivers
+ */
+export const loadNotifications = mysqlTable("load_notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+  driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  status: mysqlEnum("status", ["sent", "read", "accepted", "rejected"]).default("sent").notNull(),
+  emailSent: boolean("emailSent").default(false).notNull(),
+  emailSentAt: timestamp("emailSentAt"),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type LoadNotification = typeof loadNotifications.$inferSelect;
+export type InsertLoadNotification = typeof loadNotifications.$inferInsert;
 
 /**
  * Transactions - Income and expense records

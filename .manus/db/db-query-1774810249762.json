@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE `password_audit_log` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`action` enum('changed','reset','created') NOT NULL,\n\t`ipAddress` varchar(45),\n\t`userAgent` text,\n\t`reason` varchar(255),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `password_audit_log_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `password_audit_log` ADD CONSTRAINT `password_audit_log_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute CREATE TABLE `password_audit_log` (\n\t`id` int AUTO_INCREMENT NOT NULL,\n\t`userId` int NOT NULL,\n\t`action` enum('changed','reset','created') NOT NULL,\n\t`ipAddress` varchar(45),\n\t`userAgent` text,\n\t`reason` varchar(255),\n\t`createdAt` timestamp NOT NULL DEFAULT (now()),\n\tCONSTRAINT `password_audit_log_id` PRIMARY KEY(`id`)\n);\nALTER TABLE `password_audit_log` ADD CONSTRAINT `password_audit_log_userId_users_id_fk` FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 442
+}
