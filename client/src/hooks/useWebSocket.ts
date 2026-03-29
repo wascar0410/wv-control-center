@@ -21,7 +21,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     onConnect,
     onDisconnect,
     onError,
-    autoConnect = true,
+    autoConnect = false, // Disabled by default due to connection issues
   } = options;
 
   const { user } = useAuth();
