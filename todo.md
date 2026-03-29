@@ -562,3 +562,12 @@
 - [x] Integrar irsComplianceRouter en appRouter
 - [x] Crear tests para endpoints
 - [x] Probar y validar
+
+
+## Fase 57: Exportación de Reportes Fiscales en PDF y Excel
+- [x] Crear helper para generar PDF de reportes fiscales (Schedule C, Form 1040, Mileage Log)
+- [x] Crear helper para generar Excel de reportes fiscales
+- [x] Agregar endpoint tRPC para exportar reporte en PDF
+- [x] Agregar endpoint tRPC para exportar reporte en Excel
+- [x] Crear UI para descargar reportes (botones en Tax Compliance Dashboard)
+- [x] Probar y validar exportación
