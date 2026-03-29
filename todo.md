@@ -762,3 +762,29 @@
 - [x] Asegurar que choferes solo vean 5 items de menú
 - [x] Verificar que rutas protegidas rechacen acceso a choferes
 - [x] Actualizar roles en base de datos (Wascar y Yisvel = admin, otros = driver)
+
+
+## Fase 75: Revisión de Código y Página de Login de Chofer
+- [x] Revisar componente Quotation - crear documento CODE_REVIEW.md
+- [x] Crear página DriverLoginPage.tsx con validación
+- [x] Implementar tRPC endpoint auth.driverLogin
+- [ ] Agregar ruta /driver-login en App.tsx
+- [ ] Crear tests para DriverLoginPage
+
+## Fase 76: Botones de Aceptar/Rechazar Cargas
+- [ ] Crear endpoint loads.acceptLoad en routers
+- [ ] Crear endpoint loads.rejectLoad en routers
+- [ ] Actualizar tabla loads con campo loadStatus
+- [ ] Agregar botones en DriverView
+- [ ] Implementar confirmación antes de aceptar/rechazar
+- [ ] Mostrar notificación de éxito
+- [ ] Tests para aceptar/rechazar cargas
+
+## Fase 77: Notificaciones en Tiempo Real (WebSocket)
+- [ ] Instalar ws (WebSocket) package
+- [ ] Crear WebSocket server en server/_core/websocket.ts
+- [ ] Implementar conexión WebSocket en cliente
+- [ ] Crear hook useLoadNotifications
+- [ ] Emitir eventos cuando se asignan nuevas cargas
+- [ ] Mostrar toast de notificación en tiempo real
+- [ ] Tests para WebSocket
