@@ -20,6 +20,7 @@ import { taxComplianceRouter } from "./_core/taxComplianceRouter";
 import { ocrRouter } from "./_core/ocrRouter";
 import { ocrStorageRouter } from "./_core/ocrStorageRouter";
 import { irsComplianceRouter } from "./_core/irsComplianceRouter";
+import { advancedSearchRouter } from "./_core/advancedSearchRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
@@ -864,6 +865,7 @@ export const appRouter = router({
   ocr: ocrRouter,
   ocrStorage: ocrStorageRouter,
   irsCompliance: irsComplianceRouter,
+  advancedSearch: advancedSearchRouter,
 });
 
 export type AppRouter = typeof appRouter;
