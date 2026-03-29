@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,52 +12,287 @@ import {
   MapPin,
   Phone,
   Mail,
+  Clock3,
+  Route,
+  CheckCircle2,
+  BarChart3,
+  MessageCircle,
+  ArrowRight,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
 const LOGO_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/mSbbvEPZCkmEtZbYVdHD74/LogodeWVTransportControl(1)_686a838d.png";
 
+const WHATSAPP_URL = "https://wa.me/19739558328";
+const EMAIL = "support@wvtransports.com";
+
 export default function About() {
   const [, setLocation] = useLocation();
 
+  const [formData, setFormData] = useState({
+    name: "",
+    company: "",
+    email: "",
+    message: "",
+  });
+
+  const values = [
+    {
+      icon: Shield,
+      title: "Confiabilidad",
+      description:
+        "Trabajamos con enfoque en puntualidad, seguridad y cumplimiento en cada operación.",
+    },
+    {
+      icon: Zap,
+      title: "Eficiencia",
+      description:
+        "Optimizamos tiempos, rutas y procesos para mejorar el rendimiento operativo.",
+    },
+    {
+      icon: TrendingUp,
+      title: "Crecimiento",
+      description:
+        "Construimos sistemas y procesos que permiten escalar con orden y rentabilidad.",
+    },
+    {
+      icon: Users,
+      title: "Colaboración",
+      description:
+        "Coordinamos operaciones, despacho y control financiero para tomar mejores decisiones.",
+    },
+  ];
+
+  const steps = [
+    {
+      icon: Target,
+      title: "Recibimos la solicitud",
+      description:
+        "Analizamos origen, destino, tiempo y condiciones de la carga para organizar la operación.",
+    },
+    {
+      icon: Route,
+      title: "Planificamos la ruta",
+      description:
+        "Definimos la mejor ejecución operativa según distancia, prioridad y disponibilidad.",
+    },
+    {
+      icon: Clock3,
+      title: "Monitoreamos la carga",
+      description:
+        "Damos seguimiento en tiempo real para mantener control y visibilidad de cada movimiento.",
+    },
+    {
+      icon: CheckCircle2,
+      title: "Confirmamos la entrega",
+      description:
+        "Cerramos la operación con control de cumplimiento y enfoque en servicio confiable.",
+    },
+  ];
+
+  const services = [
+    {
+      icon: Truck,
+      title: "Transporte de Carga Ligera",
+      description:
+        "Servicio con cargo van para cargas urgentes, regionales y operaciones de última milla.",
+    },
+    {
+      icon: Target,
+      title: "Logística Integrada",
+      description:
+        "Gestión operativa desde la asignación y seguimiento hasta la entrega final.",
+    },
+    {
+      icon: BarChart3,
+      title: "Control y Rentabilidad",
+      description:
+        "Análisis de costos, seguimiento financiero y visibilidad por carga en tiempo real.",
+    },
+    {
+      icon: Shield,
+      title: "Seguimiento Operativo",
+      description:
+        "Monitoreo constante del estado de cada envío para mantener control y respuesta rápida.",
+    },
+    {
+      icon: Zap,
+      title: "Automatización",
+      description:
+        "Uso de tecnología propia para reducir errores, acelerar decisiones y mejorar eficiencia.",
+    },
+    {
+      icon: Award,
+      title: "Soporte Estratégico",
+      description:
+        "Acompañamiento operativo para organizar procesos, mejorar control y crecer con base sólida.",
+    },
+  ];
+
+  const differentiators = [
+    {
+      icon: Zap,
+      title: "Tecnología Propia",
+      description:
+        "Operamos con un sistema diseñado para logística, cargas, finanzas y seguimiento.",
+    },
+    {
+      icon: Route,
+      title: "Mejor Toma de Decisiones",
+      description:
+        "Evaluamos rutas, márgenes y operación para enfocarnos en cargas más convenientes.",
+    },
+    {
+      icon: Shield,
+      title: "Visibilidad Total",
+      description:
+        "Centralizamos la información para que cada carga tenga control claro y seguimiento real.",
+    },
+  ];
+
+  const team = [
+    {
+      name: "Wascar Ortiz Ramos",
+      role: "Managing Member",
+      bio: "Responsable de operaciones, ejecución de cargas y desarrollo estratégico del negocio.",
+    },
+    {
+      name: "Yisvel Rodriguez",
+      role: "Operations & Load Coordination",
+      bio: "Encargado de coordinación de cargas, control operativo y seguimiento del sistema.",
+    },
+    {
+      name: "WV Control Center",
+      role: "Technology & Operations Platform",
+      bio: "Plataforma interna para controlar cargas, decisiones operativas y finanzas.",
+    },
+  ];
+
+  const stats = [
+    { number: "24/7", label: "Monitoreo operativo" },
+    { number: "100%", label: "Enfoque en control" },
+    { number: "1", label: "Sistema centralizado" },
+    { number: "∞", label: "Capacidad de crecimiento" },
+  ];
+
+  const testimonials = [
+    {
+      quote:
+        "Un enfoque moderno y organizado para operaciones de transporte con mejor control diario.",
+      author: "Operaciones Internas",
+    },
+    {
+      quote:
+        "La combinación de logística y tecnología permite tomar decisiones más rápidas y más claras.",
+      author: "Gestión de Cargas",
+    },
+    {
+      quote:
+        "La plataforma centraliza información crítica para trabajar con más orden y visibilidad.",
+      author: "Control Operativo",
+    },
+  ];
+
+  const contacts = [
+    {
+      icon: MapPin,
+      title: "Ubicación",
+      content: "WV Transport, LLC\nPennsylvania, United States",
+    },
+    {
+      icon: Phone,
+      title: "Teléfono",
+      content: "+1 (973) 955-8328",
+    },
+    {
+      icon: Mail,
+      title: "Email",
+      content: EMAIL,
+    },
+  ];
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const subject = encodeURIComponent("Solicitud de información - WV Transport");
+    const body = encodeURIComponent(
+      `Nombre: ${formData.name}
+Empresa: ${formData.company}
+Email: ${formData.email}
+
+Mensaje:
+${formData.message}`
+    );
+
+    window.location.href = `mailto:${EMAIL}?subject=${subject}&body=${body}`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-primary/10 to-primary/5 border-b border-border py-16">
+      {/* Hero */}
+      <div className="relative border-b border-border bg-gradient-to-r from-primary/10 to-primary/5 py-16">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center gap-8">
+          <div className="flex flex-col items-center gap-10 md:flex-row">
             <div className="flex-1">
               <img
                 src={LOGO_URL}
                 alt="WV Transport Control"
-                className="w-32 h-32 object-contain mb-6"
+                className="mb-6 h-32 w-32 object-contain"
               />
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-                WV Transport, LLC
+
+              <h1 className="mb-4 text-4xl font-bold text-foreground md:text-5xl">
+                WV Transport Control
               </h1>
-              <p className="text-xl text-muted-foreground mb-6">
-                Soluciones integrales de transporte y logística con tecnología de punta
+
+              <p className="mb-4 text-xl text-muted-foreground">
+                Transporte con cargo van, logística eficiente y control total de
+                operaciones en tiempo real.
               </p>
-              <div className="flex gap-4">
+
+              <p className="mb-6 max-w-2xl text-base text-muted-foreground">
+                Especializados en carga ligera, entregas urgentes y operaciones
+                regionales, ayudamos a mejorar control, visibilidad y rentabilidad
+                en cada carga.
+              </p>
+
+              <div className="flex flex-wrap gap-4">
                 <Button
                   onClick={() => setLocation("/")}
                   className="bg-primary hover:bg-primary/90"
                 >
                   Ir al Panel
                 </Button>
-                <Button variant="outline">Contactar Ventas</Button>
+
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(WHATSAPP_URL, "_blank")}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  WhatsApp
+                </Button>
               </div>
             </div>
+
             <div className="flex-1">
-              <div className="bg-card border border-border rounded-2xl p-8 shadow-lg">
-                <h2 className="text-2xl font-bold text-foreground mb-6">
+              <div className="rounded-2xl border border-border bg-card p-8 shadow-lg">
+                <h2 className="mb-6 text-2xl font-bold text-foreground">
                   Nuestra Misión
                 </h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  Proporcionar soluciones de transporte y logística confiables, eficientes y
-                  tecnológicamente avanzadas que permitan a nuestros clientes optimizar sus
-                  operaciones y maximizar sus ganancias.
+                <p className="leading-relaxed text-muted-foreground">
+                  Proporcionar soluciones de transporte y logística confiables,
+                  eficientes y tecnológicamente avanzadas que permitan mover
+                  mercancía con mayor control, mejor seguimiento y decisiones más
+                  rentables.
                 </p>
               </div>
             </div>
@@ -64,103 +300,69 @@ export default function About() {
         </div>
       </div>
 
-      {/* Core Values */}
+      {/* How it works */}
       <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-foreground mb-12 text-center">
-          Nuestros Valores
+        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+          Cómo Funciona
         </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              icon: Shield,
-              title: "Confiabilidad",
-              description:
-                "Comprometidos con la excelencia y la transparencia en cada operación",
-            },
-            {
-              icon: Zap,
-              title: "Eficiencia",
-              description:
-                "Optimizamos procesos para maximizar resultados y minimizar costos",
-            },
-            {
-              icon: TrendingUp,
-              title: "Crecimiento",
-              description:
-                "Impulsamos el desarrollo continuo de nuestro equipo y servicios",
-            },
-            {
-              icon: Users,
-              title: "Colaboración",
-              description:
-                "Trabajamos juntos para alcanzar objetivos comunes y compartidos",
-            },
-          ].map((value, idx) => (
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {steps.map((step, idx) => (
             <Card
               key={idx}
-              className="bg-card border border-border p-6 hover:shadow-lg transition-shadow"
+              className="border border-border bg-card p-6 text-center transition-shadow hover:shadow-lg"
             >
-              <value.icon className="w-10 h-10 text-primary mb-4" />
-              <h3 className="text-lg font-bold text-foreground mb-2">
+              <step.icon className="mx-auto mb-4 h-10 w-10 text-primary" />
+              <h3 className="mb-2 text-lg font-bold text-foreground">
+                {step.title}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {step.description}
+              </p>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Values */}
+      <div className="container mx-auto px-4 py-16">
+        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+          Nuestros Valores
+        </h2>
+
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {values.map((value, idx) => (
+            <Card
+              key={idx}
+              className="border border-border bg-card p-6 transition-shadow hover:shadow-lg"
+            >
+              <value.icon className="mb-4 h-10 w-10 text-primary" />
+              <h3 className="mb-2 text-lg font-bold text-foreground">
                 {value.title}
               </h3>
-              <p className="text-sm text-muted-foreground">{value.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {value.description}
+              </p>
             </Card>
           ))}
         </div>
       </div>
 
       {/* Services */}
-      <div className="bg-card border-y border-border py-16">
+      <div className="border-y border-border bg-card py-16">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-foreground mb-12 text-center">
+          <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
             Nuestros Servicios
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Truck,
-                title: "Transporte de Carga",
-                description:
-                  "Servicio de transporte confiable para todo tipo de mercancías con cobertura nacional",
-              },
-              {
-                icon: Target,
-                title: "Logística Integrada",
-                description:
-                  "Soluciones completas de logística desde pickup hasta entrega final",
-              },
-              {
-                icon: TrendingUp,
-                title: "Análisis y Reportes",
-                description:
-                  "Reportes detallados y análisis en tiempo real para optimizar operaciones",
-              },
-              {
-                icon: Shield,
-                title: "Seguridad y Rastreo",
-                description:
-                  "Monitoreo GPS en tiempo real y seguimiento completo de envíos",
-              },
-              {
-                icon: Zap,
-                title: "Automatización",
-                description:
-                  "Sistemas automatizados para mejorar eficiencia y reducir errores",
-              },
-              {
-                icon: Award,
-                title: "Consultoría",
-                description:
-                  "Asesoramiento experto para optimizar tu operación de transporte",
-              },
-            ].map((service, idx) => (
+
+          <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {services.map((service, idx) => (
               <Card
                 key={idx}
-                className="bg-background border border-border p-6 hover:border-primary transition-colors"
+                className="border border-border bg-background p-6 transition-colors hover:border-primary"
               >
-                <service.icon className="w-12 h-12 text-primary mb-4" />
-                <h3 className="text-lg font-bold text-foreground mb-2">
+                <service.icon className="mb-4 h-12 w-12 text-primary" />
+                <h3 className="mb-2 text-lg font-bold text-foreground">
                   {service.title}
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -172,81 +374,103 @@ export default function About() {
         </div>
       </div>
 
-      {/* Team Section */}
+      {/* Why choose us */}
       <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-foreground mb-12 text-center">
-          Nuestro Equipo
+        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+          ¿Por Qué Elegirnos?
         </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[
-            {
-              name: "Wascar Ortiz",
-              role: "Fundador & CEO",
-              bio: "Líder con más de 15 años de experiencia en transporte y logística",
-            },
-            {
-              name: "Equipo de Operaciones",
-              role: "Gestión de Flota",
-              bio: "Profesionales dedicados a optimizar cada operación diaria",
-            },
-            {
-              name: "Equipo Técnico",
-              role: "Desarrollo & Soporte",
-              bio: "Expertos en tecnología comprometidos con la innovación continua",
-            },
-          ].map((member, idx) => (
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {differentiators.map((item, idx) => (
             <Card
               key={idx}
-              className="bg-card border border-border p-6 text-center hover:shadow-lg transition-shadow"
+              className="border border-border bg-card p-6 text-center transition-shadow hover:shadow-lg"
             >
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users className="w-8 h-8 text-primary" />
+              <item.icon className="mx-auto mb-4 h-10 w-10 text-primary" />
+              <h3 className="mb-2 text-lg font-bold text-foreground">
+                {item.title}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {item.description}
+              </p>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Team */}
+      <div className="container mx-auto px-4 py-16">
+        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+          Nuestro Equipo
+        </h2>
+
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+          {team.map((member, idx) => (
+            <Card
+              key={idx}
+              className="border border-border bg-card p-6 text-center transition-shadow hover:shadow-lg"
+            >
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <Users className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-bold text-foreground mb-1">
+
+              <h3 className="mb-1 text-lg font-bold text-foreground">
                 {member.name}
               </h3>
-              <p className="text-sm text-primary font-semibold mb-3">
+
+              <p className="mb-3 text-sm font-semibold text-primary">
                 {member.role}
               </p>
+
               <p className="text-sm text-muted-foreground">{member.bio}</p>
             </Card>
           ))}
         </div>
       </div>
 
-      {/* Contact Section */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-y border-border py-16">
+      {/* Testimonials */}
+      <div className="border-y border-border bg-card py-16">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-foreground mb-12 text-center">
-            Contacto
+          <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+            Enfoque y Resultados
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: MapPin,
-                title: "Ubicación",
-                content: "WV Transport, LLC\nEstados Unidos",
-              },
-              {
-                icon: Phone,
-                title: "Teléfono",
-                content: "Disponible en el panel de control",
-              },
-              {
-                icon: Mail,
-                title: "Email",
-                content: "contacto@wvtransport.com",
-              },
-            ].map((contact, idx) => (
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {testimonials.map((item, idx) => (
               <Card
                 key={idx}
-                className="bg-card border border-border p-6 text-center"
+                className="border border-border bg-background p-6"
               >
-                <contact.icon className="w-10 h-10 text-primary mx-auto mb-4" />
-                <h3 className="text-lg font-bold text-foreground mb-2">
+                <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+                  "{item.quote}"
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {item.author}
+                </p>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Contact cards */}
+      <div className="border-y border-border bg-gradient-to-r from-primary/10 to-primary/5 py-16">
+        <div className="container mx-auto px-4">
+          <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
+            Contacto
+          </h2>
+
+          <div className="grid gap-8 md:grid-cols-3">
+            {contacts.map((contact, idx) => (
+              <Card
+                key={idx}
+                className="border border-border bg-card p-6 text-center"
+              >
+                <contact.icon className="mx-auto mb-4 h-10 w-10 text-primary" />
+                <h3 className="mb-2 text-lg font-bold text-foreground">
                   {contact.title}
                 </h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-line">
+                <p className="whitespace-pre-line text-sm text-muted-foreground">
                   {contact.content}
                 </p>
               </Card>
@@ -255,23 +479,90 @@ export default function About() {
         </div>
       </div>
 
-      {/* Statistics */}
+      {/* Contact form */}
       <div className="container mx-auto px-4 py-16">
-        <h2 className="text-3xl font-bold text-foreground mb-12 text-center">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-8 shadow-sm">
+          <h2 className="mb-4 text-3xl font-bold text-foreground">
+            Solicita Información
+          </h2>
+          <p className="mb-8 text-muted-foreground">
+            Cuéntanos qué necesitas y te contactaremos con más detalles sobre
+            nuestros servicios y operaciones.
+          </p>
+
+          <form onSubmit={handleContactSubmit} className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                name="name"
+                type="text"
+                placeholder="Nombre"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                required
+              />
+              <input
+                name="company"
+                type="text"
+                placeholder="Empresa"
+                value={formData.company}
+                onChange={handleInputChange}
+                className="rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+            </div>
+
+            <input
+              name="email"
+              type="email"
+              placeholder="Correo electrónico"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+              required
+            />
+
+            <textarea
+              name="message"
+              placeholder="Cuéntanos qué necesitas..."
+              value={formData.message}
+              onChange={handleInputChange}
+              rows={5}
+              className="rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+              required
+            />
+
+            <div className="flex flex-wrap gap-4 pt-2">
+              <Button type="submit" className="bg-primary hover:bg-primary/90">
+                Enviar Solicitud
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.open(WHATSAPP_URL, "_blank")}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Escribir por WhatsApp
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="container mx-auto px-4 py-16">
+        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
           Por los Números
         </h2>
-        <div className="grid md:grid-cols-4 gap-6">
-          {[
-            { number: "500+", label: "Cargas Completadas" },
-            { number: "50+", label: "Conductores Activos" },
-            { number: "99.8%", label: "Tasa de Entrega" },
-            { number: "24/7", label: "Soporte Disponible" },
-          ].map((stat, idx) => (
+
+        <div className="grid gap-6 md:grid-cols-4">
+          {stats.map((stat, idx) => (
             <Card
               key={idx}
-              className="bg-card border border-border p-6 text-center hover:border-primary transition-colors"
+              className="border border-border bg-card p-6 text-center transition-colors hover:border-primary"
             >
-              <p className="text-4xl font-bold text-primary mb-2">
+              <p className="mb-2 text-4xl font-bold text-primary">
                 {stat.number}
               </p>
               <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -280,31 +571,43 @@ export default function About() {
         </div>
       </div>
 
-      {/* CTA Section */}
+      {/* CTA */}
       <div className="bg-gradient-to-r from-primary to-primary/80 py-16">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-primary-foreground mb-4">
-            ¿Listo para Optimizar tu Operación?
+          <h2 className="mb-4 text-3xl font-bold text-primary-foreground">
+            ¿Necesitas mover carga rápida y segura?
           </h2>
-          <p className="text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-            Únete a cientos de empresas que ya confían en WV Control Center para
-            gestionar sus operaciones de transporte y logística.
+
+          <p className="mx-auto mb-8 max-w-2xl text-primary-foreground/90">
+            En WV Transport combinamos operación, logística y tecnología para
+            ayudarte a trabajar con más control, velocidad y eficiencia.
           </p>
-          <Button
-            onClick={() => setLocation("/")}
-            className="bg-white text-primary hover:bg-white/90"
-          >
-            Acceder al Panel de Control
-          </Button>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            <Button
+              onClick={() => setLocation("/")}
+              className="bg-white text-primary hover:bg-white/90"
+            >
+              Acceder al Panel de Control
+            </Button>
+
+            <Button
+              variant="outline"
+              className="border-white text-white hover:bg-white/10"
+              onClick={() => window.open(WHATSAPP_URL, "_blank")}
+            >
+              Hablar con Nosotros
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Footer Info */}
-      <div className="bg-card border-t border-border py-8">
+      {/* Footer */}
+      <div className="border-t border-border bg-card py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p>© 2026 WV Transport, LLC. Todos los derechos reservados.</p>
           <p className="mt-2">
-            WV Control Center - Soluciones Integrales de Transporte y Logística
+            WV Transport Control - Transporte, Logística y Operaciones en un solo lugar
           </p>
         </div>
       </div>
