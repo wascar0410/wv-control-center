@@ -20,11 +20,13 @@ interface DriverMarker {
   infoWindow?: google.maps.InfoWindow;
 }
 
+type FilterType = 'all' | 'in-service' | 'available';
+
 export function DriverMapInteractive() {
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<number, DriverMarker>>(new Map());
   const [selectedDriver, setSelectedDriver] = useState<DriverMarker | null>(null);
-  const [showOnlyActive, setShowOnlyActive] = useState(true);
+  const [filterType, setFilterType] = useState<FilterType>('all');
 
   const { data: drivers, isLoading, error } = trpc.location.getAllActiveDrivers.useQuery(
     undefined,
@@ -44,12 +46,27 @@ export function DriverMapInteractive() {
     }
   }, [drivers]);
 
+  const getFilteredDrivers = (): typeof drivers => {
+    if (!drivers) return [];
+    
+    switch (filterType) {
+      case 'in-service':
+        return drivers.filter(d => d.loadId !== undefined && d.loadId !== null);
+      case 'available':
+        return drivers.filter(d => !d.loadId);
+      case 'all':
+      default:
+        return drivers;
+    }
+  };
+
   const updateMarkers = () => {
     if (!mapRef.current || !drivers) return;
 
+    const filteredDrivers = getFilteredDrivers() || [];
     const activeDriverIds = new Set<number>();
 
-    drivers.forEach((driver) => {
+    filteredDrivers.forEach((driver) => {
       activeDriverIds.add(driver.id);
 
       const existing = markersRef.current.get(driver.id);
@@ -115,9 +132,10 @@ export function DriverMapInteractive() {
     });
 
     // Fit bounds to show all markers
-    if (drivers.length > 0) {
+    const displayedDrivers = getFilteredDrivers() || [];
+    if (displayedDrivers.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      drivers.forEach((driver) => {
+      displayedDrivers.forEach((driver) => {
         bounds.extend({
           lat: driver.latitude,
           lng: driver.longitude,
@@ -164,30 +182,50 @@ export function DriverMapInteractive() {
     );
   }
 
-  const activeDrivers = drivers || [];
+  const activeDrivers = getFilteredDrivers() || [];
 
   return (
     <div className="space-y-4">
       <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <MapPin className="w-5 h-5" />
-              Mapa de Choferes en Tiempo Real
-            </CardTitle>
-            <CardDescription>
-              {activeDrivers.length} conductor{activeDrivers.length !== 1 ? "es" : ""} activo{activeDrivers.length !== 1 ? "s" : ""}
-            </CardDescription>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Mapa de Choferes en Tiempo Real
+              </CardTitle>
+              <CardDescription>
+                {activeDrivers.length} conductor{activeDrivers.length !== 1 ? "es" : ""} activo{activeDrivers.length !== 1 ? "s" : ""}
+              </CardDescription>
+            </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowOnlyActive(!showOnlyActive)}
-            className="gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            Filtrar
-          </Button>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant={filterType === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('all')}
+              className="gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              Todos ({activeDrivers.length})
+            </Button>
+            <Button
+              variant={filterType === 'in-service' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('in-service')}
+              className="gap-2"
+            >
+              En Servicio ({activeDrivers.filter(d => d.loadId).length})
+            </Button>
+            <Button
+              variant={filterType === 'available' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('available')}
+              className="gap-2"
+            >
+              Disponibles ({activeDrivers.filter(d => !d.loadId).length})
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -197,11 +235,15 @@ export function DriverMapInteractive() {
                 <p className="text-sm text-muted-foreground">Cargando mapa...</p>
               </div>
             </div>
-          ) : activeDrivers.length === 0 ? (
+          ) : !activeDrivers || activeDrivers.length === 0 ? (
             <div className="w-full h-96 rounded-lg bg-muted/30 flex items-center justify-center">
               <div className="text-center">
                 <Truck className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No hay choferes activos en este momento</p>
+                <p className="text-sm text-muted-foreground">
+                  {filterType === 'in-service' && 'No hay choferes en servicio en este momento'}
+                  {filterType === 'available' && 'No hay choferes disponibles en este momento'}
+                  {filterType === 'all' && 'No hay choferes activos en este momento'}
+                </p>
               </div>
             </div>
           ) : (

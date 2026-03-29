@@ -825,3 +825,12 @@
 - [x] Integrar con rutas y navegación
 - [x] Tests para mapa interactivo (6 tests)
 - [x] Checkpoint y entrega
+
+
+## Fase 85: Filtrado de Choferes en Servicio en el Mapa
+- [x] Agregar estado de filtro al componente DriverMapInteractive
+- [x] Implementar lógica para mostrar/ocultar marcadores según estado
+- [x] Agregar botones de filtro en la UI (Todos, En Servicio, Disponibles)
+- [x] Actualizar contadores según filtro activo
+- [x] Tests para funcionalidad de filtrado (8 tests)
+- [x] Checkpoint y entrega

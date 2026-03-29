@@ -68,15 +68,27 @@ describe("DriverMapInteractive Component", () => {
     expect(updatedDrivers[1].longitude).toBeGreaterThan(drivers[1].longitude);
   });
 
-  it("should filter drivers by active status", () => {
+  it("should filter drivers by in-service status", () => {
     const drivers = [
       { id: 1, name: "Driver 1", loadId: 123 },
       { id: 2, name: "Driver 2", loadId: null },
       { id: 3, name: "Driver 3", loadId: 456 },
     ];
 
-    const activeDrivers = drivers.filter((d) => d.loadId !== null);
-    expect(activeDrivers).toHaveLength(2);
+    const inServiceDrivers = drivers.filter((d) => d.loadId !== null && d.loadId !== undefined);
+    expect(inServiceDrivers).toHaveLength(2);
+  });
+
+  it("should filter drivers by available status", () => {
+    const drivers = [
+      { id: 1, name: "Driver 1", loadId: 123 },
+      { id: 2, name: "Driver 2", loadId: null },
+      { id: 3, name: "Driver 3", loadId: 456 },
+      { id: 4, name: "Driver 4", loadId: null },
+    ];
+
+    const availableDrivers = drivers.filter((d) => !d.loadId);
+    expect(availableDrivers).toHaveLength(2);
   });
 
   it("should calculate driver utilization percentage", () => {
