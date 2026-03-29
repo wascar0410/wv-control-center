@@ -27,8 +27,18 @@ import { useLocation } from "wouter";
 const LOGO_URL =
   "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/mSbbvEPZCkmEtZbYVdHD74/LogodeWVTransportControl(1)_686a838d.png";
 
-const WHATSAPP_URL = "https://wa.me/19739558328";
-const EMAIL = "support@wvtransports.com";
+// Business Contact Information
+const PRIMARY_EMAIL = "wascardely@gmail.com";
+const BUSINESS_EMAIL = "info@wvtransports.com";
+const BUSINESS_PHONE = "+1 (973) 955-8328";
+const WHATSAPP_PHONE = "19739558328";
+const WHATSAPP_MESSAGE = encodeURIComponent(
+  "Hola, quiero información sobre servicios de transporte"
+);
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}?text=${WHATSAPP_MESSAGE}`;
+
+// Use primary email for contact form submissions
+const EMAIL = PRIMARY_EMAIL;
 
 export default function About() {
   const [, setLocation] = useLocation();
@@ -228,12 +238,12 @@ export default function About() {
     {
       icon: Phone,
       title: "Teléfono",
-      content: "+1 (973) 955-8328",
+      content: BUSINESS_PHONE,
     },
     {
       icon: Mail,
       title: "Email",
-      content: EMAIL,
+      content: PRIMARY_EMAIL,
     },
   ];
 

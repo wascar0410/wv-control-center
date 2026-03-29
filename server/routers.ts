@@ -32,6 +32,7 @@ import {
   resetRateLimitForHost,
   unblockHost,
 } from "./_core/rateLimiter";
+import { sendEmail } from "./_core/emailService";
 import {
   getHostRejectionStats,
   getAllRejectionStats,
