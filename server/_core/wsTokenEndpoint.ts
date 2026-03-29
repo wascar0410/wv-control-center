@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { sdk } from "./sdk";
 
 const router = Router();
 
@@ -7,12 +8,18 @@ const router = Router();
  * Generate JWT token for WebSocket authentication
  * This endpoint is called by the client to get a token for WebSocket connection
  */
-router.get("/api/auth/ws-token", (req: Request, res: Response) => {
+router.get("/api/auth/ws-token", async (req: Request, res: Response) => {
   try {
-    // Check if user is authenticated via session/cookie
-    const user = (req as any).user;
+    // Authenticate user from request (session/cookie)
+    let user = null;
+    try {
+      user = await sdk.authenticateRequest(req);
+    } catch (error) {
+      console.error("[WebSocket Token] Authentication failed:", error);
+    }
     
     if (!user || !user.id) {
+      console.error("[WebSocket Token] No authenticated user found");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
@@ -31,6 +38,7 @@ router.get("/api/auth/ws-token", (req: Request, res: Response) => {
       }
     );
 
+    console.log("[WebSocket Token] Generated token for user:", user.id);
     res.json({ token });
   } catch (error) {
     console.error("[WebSocket Token] Error generating token:", error);
