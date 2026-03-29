@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { rateLimitMiddleware } from "./rateLimiter";
+import { recordHostRejection } from "./hostMonitoring";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -47,7 +49,7 @@ async function startServer() {
   
   console.log("[Host Validation] Allowed hosts:", allowedHosts);
 
-  // Host validation middleware
+  // Host validation middleware with monitoring
   app.use((req, res, next) => {
     const host = req.get("host")?.split(":")[0]; // Get hostname without port
     const fullHost = req.get("host"); // Get full host with port
@@ -59,6 +61,8 @@ async function startServer() {
     
     if (!isAllowed && process.env.NODE_ENV === "production") {
       console.warn(`[Host Validation] Rejected request from host: ${fullHost}`);
+      // Record rejection for monitoring
+      recordHostRejection(fullHost || "unknown", "Invalid host header", req).catch(console.error);
       return res.status(400).json({ error: "Invalid host" });
     }
     
@@ -103,6 +107,9 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  
+  // Apply rate limiting middleware
+  app.use(rateLimitMiddleware);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // tRPC API

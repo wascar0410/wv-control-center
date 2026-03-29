@@ -27,6 +27,18 @@ import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
+import {
+  getRateLimitStats,
+  resetRateLimitForHost,
+  unblockHost,
+} from "./_core/rateLimiter";
+import {
+  getHostRejectionStats,
+  getAllRejectionStats,
+  getRejectionHistory,
+  clearHostStats,
+  getTopRejectedHosts,
+} from "./_core/hostMonitoring";
 import { getMonthlyProjections } from "./db-projections";
 import { getHistoricalComparison } from "./db-historical-comparison";
 import { getQuarterlyComparison } from "./db-quarterly-comparison";
@@ -940,6 +952,98 @@ const profileRouter = router({
     }),
 });
 
+// ─── Security Monitoring Router ──────────────────────────────────────────────
+
+const securityMonitoringRouter = router({
+  // Rate limiting statistics (admin only)
+  getRateLimitStats: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+      throw new Error("No tienes permiso para acceder a estas estadísticas");
+    }
+    return getRateLimitStats();
+  }),
+
+  // Reset rate limit for a host (admin only)
+  resetRateLimitForHost: protectedProcedure
+    .input(z.object({ host: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+        throw new Error("No tienes permiso para realizar esta acción");
+      }
+      const key = `ratelimit:${input.host}`;
+      const success = resetRateLimitForHost(key);
+      return { success };
+    }),
+
+  // Unblock a host (admin only)
+  unblockHost: protectedProcedure
+    .input(z.object({ host: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+        throw new Error("No tienes permiso para realizar esta acción");
+      }
+      const key = `ratelimit:${input.host}`;
+      const success = unblockHost(key);
+      return { success };
+    }),
+
+  // Get host rejection statistics (admin only)
+  getHostRejectionStats: protectedProcedure
+    .input(z.object({ host: z.string() }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+        throw new Error("No tienes permiso para acceder a estas estadísticas");
+      }
+      return getHostRejectionStats(input.host);
+    }),
+
+  // Get all rejection statistics (admin only)
+  getAllRejectionStats: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+      throw new Error("No tienes permiso para acceder a estas estadísticas");
+    }
+    return getAllRejectionStats();
+  }),
+
+  // Get rejection history (admin only)
+  getRejectionHistory: protectedProcedure
+    .input(
+      z.object({
+        host: z.string().optional(),
+        limit: z.number().optional(),
+        startTime: z.number().optional(),
+        endTime: z.number().optional(),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+        throw new Error("No tienes permiso para acceder a estos datos");
+      }
+      return getRejectionHistory(input);
+    }),
+
+  // Get top rejected hosts (admin only)
+  getTopRejectedHosts: protectedProcedure
+    .input(z.object({ limit: z.number().optional() }))
+    .query(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+        throw new Error("No tienes permiso para acceder a estas estadísticas");
+      }
+      return getTopRejectedHosts(input.limit);
+    }),
+
+  // Clear host stats (admin only)
+  clearHostStats: protectedProcedure
+    .input(z.object({ host: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+        throw new Error("No tienes permiso para realizar esta acción");
+      }
+      const success = clearHostStats(input.host);
+      return { success };
+    }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -982,6 +1086,7 @@ export const appRouter = router({
   chat: chatRouter,
   admin: adminRouter,
   profile: profileRouter,
+  securityMonitoring: securityMonitoringRouter,
 });
 
 export type AppRouter = typeof appRouter;
