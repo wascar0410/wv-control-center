@@ -754,3 +754,11 @@
 - [x] Crear vista de historial para admins
 - [x] Endpoint para obtener historial de auditoría
 - [x] Tests para auditoría
+
+
+## Fase 74: Corrección de Filtrado de Menú por Roles
+- [x] Verificar rol del usuario autenticado
+- [x] Revisar lógica de getMenuItems en DashboardLayout
+- [x] Asegurar que choferes solo vean 5 items de menú
+- [x] Verificar que rutas protegidas rechacen acceso a choferes
+- [x] Actualizar roles en base de datos (Wascar y Yisvel = admin, otros = driver)

@@ -1,0 +1,9 @@
+{
+  "query": "UPDATE users SET role = 'admin' WHERE email IN ('wascar.ortiz0410@gmail.com', 'yisvel10@gmail.com');\nUPDATE users SET role = 'driver' WHERE email NOT IN ('wascar.ortiz0410@gmail.com', 'yisvel10@gmail.com') AND role != 'admin';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute UPDATE users SET role = 'admin' WHERE email IN ('wascar.ortiz0410@gmail.com', 'yisvel10@gmail.com');\nUPDATE users SET role = 'driver' WHERE email NOT IN ('wascar.ortiz0410@gmail.com', 'yisvel10@gmail.com') AND role != 'admin';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 68
+}
