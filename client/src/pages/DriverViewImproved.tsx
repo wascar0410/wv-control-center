@@ -12,6 +12,8 @@ import { DriverChatWidget } from "@/components/DriverChatWidget";
 import { DriverSMSNotifications } from "@/components/DriverSMSNotifications";
 import { DriverPerformanceComparison } from "@/components/DriverPerformanceComparison";
 import { DriverBonusSystem } from "@/components/DriverBonusSystem";
+import { DriverInvoicing } from "@/components/DriverInvoicing";
+import { CustomerRating } from "@/components/CustomerRating";
 import DashboardLayout from "@/components/DashboardLayout";
 // useAuth hook will be provided by DashboardLayout context
 import { toast } from "sonner";
@@ -211,13 +213,15 @@ export default function DriverViewImproved() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="cargas" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="cargas">Cargas</TabsTrigger>
             <TabsTrigger value="ganancias">Ganancias</TabsTrigger>
             <TabsTrigger value="documentos">Documentos</TabsTrigger>
             <TabsTrigger value="desempeño">Desempeño</TabsTrigger>
             <TabsTrigger value="notificaciones">Notificaciones</TabsTrigger>
             <TabsTrigger value="bonus">Bonus</TabsTrigger>
+            <TabsTrigger value="facturación">Facturación</TabsTrigger>
+            <TabsTrigger value="calificaciones">Calificaciones</TabsTrigger>
           </TabsList>
 
           {/* Cargas Tab */}
@@ -362,6 +366,16 @@ export default function DriverViewImproved() {
           {/* Bonus Tab */}
           <TabsContent value="bonus" className="space-y-4">
             <DriverBonusSystem />
+          </TabsContent>
+
+          {/* Facturación Tab */}
+          <TabsContent value="facturación" className="space-y-4">
+            <DriverInvoicing />
+          </TabsContent>
+
+          {/* Calificaciones Tab */}
+          <TabsContent value="calificaciones" className="space-y-4">
+            <CustomerRating />
           </TabsContent>
 
           {/* Desempeño Tab */}
