@@ -815,3 +815,13 @@
 - [ ] Agregar panel lateral con detalles de chofer/carga
 - [ ] Tests para endpoints y componentes
 - [ ] Checkpoint y entrega
+
+
+## Fase 84: Mapa Interactivo para Dashboard de Admins
+- [x] Crear endpoints tRPC para obtener ubicaciones de choferes
+- [x] Implementar componente DriverMap con Google Maps
+- [x] Agregar marcadores con información del chofer
+- [x] Crear página RealtimeDashboard con filtros
+- [x] Integrar con rutas y navegación
+- [x] Tests para mapa interactivo (6 tests)
+- [x] Checkpoint y entrega

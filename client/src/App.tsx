@@ -30,6 +30,7 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminContacts } from "./pages/AdminContacts";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import { RealtimeDashboard } from "./pages/RealtimeDashboard";
 import { FloatingChatButton } from "./components/FloatingChatButton";
 import { LoadNotificationToast } from "./components/LoadNotificationToast";
 import { useAuth } from "./_core/hooks/useAuth";
@@ -149,7 +150,8 @@ function AppRoutes() {
                 <Route path="/load-evaluator" component={LoadEvaluator} />
                 <Route path="/import-broker-loads" component={() => <ProtectedRoute component={ImportBrokerLoads} requiredRole="admin" />} />
                 <Route path="/broker-loads-management" component={() => <ProtectedRoute component={BrokerLoadsManagement} requiredRole="admin" />} />
-                <Route path="/batch-payments" component={() => <ProtectedRoute component={BatchPayments} requiredRole="admin" />} />
+                <Route path="/admin-contacts" component={() => <ProtectedRoute component={AdminContacts} requiredRole="admin" />} />
+                <Route path="/realtime-dashboard" component={() => <ProtectedRoute component={RealtimeDashboard} requiredRole="admin" />} />
                 <Route path="/batch-payments-dashboard" component={() => <ProtectedRoute component={BatchPaymentsDashboard} requiredRole="admin" />} />
                 <Route path="/accounting-finance" component={() => <ProtectedRoute component={AccountingFinance} requiredRole="admin" />} />
                 <Route path="/executive-dashboard" component={() => <ProtectedRoute component={ExecutiveDashboard} requiredRole="admin" />} />
