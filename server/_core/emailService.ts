@@ -133,16 +133,36 @@ async function sendViaSmtp(
   text?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    // Placeholder - requires nodemailer
-    // const nodemailer = require('nodemailer');
-    // const config = getSMTPConfig();
-    // const transporter = nodemailer.createTransport({...});
-    // const result = await transporter.sendMail({...});
-    // return { success: true, messageId: result.messageId };
+    const nodemailer = await import('nodemailer');
+    const config = getSMTPConfig();
+    
+    if (!config) {
+      return { success: false, error: "SMTP not configured" };
+    }
 
-    console.warn("[Email] SMTP sending not yet implemented");
-    return { success: false, error: "SMTP sending not yet implemented" };
+    const transporter = nodemailer.default.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.port === 465,
+      auth: {
+        user: config.user,
+        pass: config.password,
+      },
+    });
+
+    const emailConfig = getEmailConfig();
+    const result = await transporter.sendMail({
+      from: `${emailConfig.fromName} <${emailConfig.fromEmail}>`,
+      to,
+      subject,
+      text: text || subject,
+      html,
+    });
+
+    console.log(`[Email] Email sent via SMTP to ${to}:`, result.messageId);
+    return { success: true, messageId: result.messageId };
   } catch (error) {
+    console.error("[Email] SMTP error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "SMTP error",

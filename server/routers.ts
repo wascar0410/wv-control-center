@@ -1069,7 +1069,28 @@ const contactRouter = router({
           status: "new",
         });
 
-        // Send email notification to owner
+        // Send confirmation email to user
+        const confirmationHtml = `<div style="font-family: Arial; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 30px; border-radius: 8px;"><h2 style="color: #0074D9;">Gracias por tu solicitud</h2><p>Hola ${input.name},</p><p>Hemos recibido tu solicitud de contacto. Nos pondremos en contacto contigo pronto.</p><p><strong>Tu mensaje:</strong><br/>${input.message}</p><p>Si tienes preguntas urgentes: wascardely@gmail.com | +1 (973) 955-8328</p><p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">WV Transport Control</p></div>`;
+
+        await sendEmail(
+          input.email,
+          "Confirmación de tu solicitud - WV Transport",
+          confirmationHtml,
+          "Gracias por tu solicitud. Nos pondremos en contacto pronto."
+        );
+
+        // Send notification email to owner
+        const primaryEmail = process.env.PRIMARY_CONTACT_EMAIL || "wascardely@gmail.com";
+        const ownerNotificationHtml = `<div style="font-family: Arial; max-width: 600px; margin: 0 auto; background: #f5f5f5; padding: 30px; border-radius: 8px;"><h2 style="color: #001F3F;">Nueva Solicitud de Contacto</h2><p><strong>De:</strong> ${input.name}</p><p><strong>Email:</strong> ${input.email}</p><p><strong>Empresa:</strong> ${input.company || "No especificada"}</p><p><strong>Mensaje:</strong><br/>${input.message}</p><p style="color: #999; font-size: 12px; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">Recibido el: ${new Date().toLocaleString("es-ES")}</p></div>`;
+
+        await sendEmail(
+          primaryEmail,
+          `Nueva Solicitud de Contacto de ${input.name}`,
+          ownerNotificationHtml,
+          `Nueva solicitud de ${input.name} (${input.email})`
+        );
+
+        // Also send to notifyOwner for backup notification
         await notifyOwner({
           title: "Nueva Solicitud de Contacto",
           content: `De: ${input.name} (${input.email})\nEmpresa: ${input.company || "No especificada"}\n\nMensaje:\n${input.message}`,
