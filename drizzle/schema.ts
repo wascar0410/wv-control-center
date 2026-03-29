@@ -587,3 +587,114 @@ export const syncLogs = mysqlTable("sync_logs", {
 
 export type SyncLog = typeof syncLogs.$inferSelect;
 export type InsertSyncLog = typeof syncLogs.$inferInsert;
+
+/**
+ * OCR Documents - Scanned invoices and receipts with S3 storage
+ */
+export const ocrDocuments = mysqlTable("ocr_documents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // S3 Storage
+  s3Key: varchar("s3Key", { length: 512 }).notNull(), // Path in S3 bucket
+  s3Url: text("s3Url").notNull(), // Public URL to S3 object
+  originalFileName: varchar("originalFileName", { length: 255 }).notNull(),
+  fileSize: int("fileSize").notNull(), // In bytes
+  mimeType: varchar("mimeType", { length: 100 }).notNull(),
+  
+  // OCR Extracted Data
+  vendor: varchar("vendor", { length: 255 }),
+  invoiceDate: varchar("invoiceDate", { length: 50 }),
+  amount: decimal("amount", { precision: 12, scale: 2 }),
+  category: mysqlEnum("category", [
+    "fuel",
+    "maintenance",
+    "tolls",
+    "insurance",
+    "parking",
+    "meals",
+    "supplies",
+    "utilities",
+    "equipment",
+    "other",
+  ]).default("other"),
+  description: text("description"),
+  
+  // OCR Quality
+  ocrConfidence: decimal("ocrConfidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  rawOcrText: text("rawOcrText"), // Full OCR output for audit trail
+  
+  // Metadata for Audit
+  processingStatus: mysqlEnum("processingStatus", ["pending", "processing", "completed", "failed"]).default("pending"),
+  processedAt: timestamp("processedAt"),
+  processingError: text("processingError"),
+  
+  // Audit Trail
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type OcrDocument = typeof ocrDocuments.$inferSelect;
+export type InsertOcrDocument = typeof ocrDocuments.$inferInsert;
+
+/**
+ * OCR Audit Log - Complete audit trail for tax compliance
+ */
+export const ocrAuditLog = mysqlTable("ocr_audit_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  ocrDocumentId: int("ocrDocumentId").notNull().references(() => ocrDocuments.id, { onDelete: "cascade" }),
+  
+  // Action Details
+  action: mysqlEnum("action", ["uploaded", "processed", "verified", "rejected", "exported", "deleted"]).notNull(),
+  actionDetails: json("actionDetails"), // JSON with action-specific details
+  
+  // User Info
+  performedBy: int("performedBy").references(() => users.id, { onDelete: "set null" }),
+  
+  // Timestamp
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type OcrAuditLog = typeof ocrAuditLog.$inferSelect;
+export type InsertOcrAuditLog = typeof ocrAuditLog.$inferInsert;
+
+/**
+ * OCR Verification - Manual verification records for audit compliance
+ */
+export const ocrVerification = mysqlTable("ocr_verification", {
+  id: int("id").autoincrement().primaryKey(),
+  ocrDocumentId: int("ocrDocumentId").notNull().references(() => ocrDocuments.id, { onDelete: "cascade" }),
+  
+  // Verification Data
+  verifiedBy: int("verifiedBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+  verificationStatus: mysqlEnum("verificationStatus", ["approved", "rejected", "needs_review"]).notNull(),
+  
+  // Corrected Data (if needed)
+  correctedVendor: varchar("correctedVendor", { length: 255 }),
+  correctedAmount: decimal("correctedAmount", { precision: 12, scale: 2 }),
+  correctedCategory: mysqlEnum("correctedCategory", [
+    "fuel",
+    "maintenance",
+    "tolls",
+    "insurance",
+    "parking",
+    "meals",
+    "supplies",
+    "utilities",
+    "equipment",
+    "other",
+  ]),
+  correctedDate: varchar("correctedDate", { length: 50 }),
+  
+  // Notes
+  notes: text("notes"),
+  
+  // Timestamps
+  verifiedAt: timestamp("verifiedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OcrVerification = typeof ocrVerification.$inferSelect;
+export type InsertOcrVerification = typeof ocrVerification.$inferInsert;
