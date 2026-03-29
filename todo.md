@@ -526,3 +526,16 @@
 - [x] Crear vista de historial de documentos con búsqueda
 - [x] Agregar descarga de documentos desde S3
 - [x] Probar y validar
+
+
+## Fase 54: Endpoints tRPC para OCR S3 Storage
+- [x] Crear ocrStorageRouter con endpoints para guardar, buscar y auditar documentos
+- [x] Agregar endpoint saveDocument (mutation) para guardar OCR en S3
+- [x] Agregar endpoint getDocument (query) para obtener documento específico
+- [x] Agregar endpoint getUserDocuments (query) con paginación
+- [x] Agregar endpoint searchDocuments (query) con filtros
+- [x] Agregar endpoint getAuditTrail (query) para historial de documento
+- [x] Agregar endpoint generateTaxReport (query) para reporte fiscal
+- [x] Integrar ocrStorageRouter en appRouter
+- [x] Crear tests para todos los endpoints
+- [x] Probar y validar
