@@ -778,16 +778,19 @@ const adminRouter = router({
         throw new Error("El correo ya está registrado en el sistema");
       }
 
-      // Create new driver user
+      // Create new driver user with unique openId
+      const openId = `google-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
       const newDriver = await db.insert(usersTable).values({
-        email: input.email,
+        openId,
         name: input.name,
+        email: input.email,
         role: "driver",
-        phoneNumber: input.phoneNumber,
-        licenseNumber: input.licenseNumber,
+        loginMethod: "manual",
         createdAt: new Date(),
         updatedAt: new Date(),
-      }).returning();
+        lastSignedIn: new Date(),
+      }).$returningId();
 
       await notifyOwner({
         title: "Nuevo Chofer Agregado",
@@ -796,7 +799,12 @@ const adminRouter = router({
 
       return {
         success: true,
-        driver: newDriver[0],
+        driver: {
+          id: newDriver[0].id,
+          name: input.name,
+          email: input.email,
+          role: "driver",
+        },
         message: `Chofer ${input.name} creado exitosamente`,
       };
     }),
