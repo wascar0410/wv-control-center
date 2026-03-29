@@ -1,0 +1,8 @@
+{
+  "query": "INSERT INTO user (id, openId, name, email, role, createdAt) VALUES (2, 'test-driver-001', 'Juan Pérez', 'juan@wvtransport.com', 'driver', NOW());",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute INSERT INTO user (id, openId, name, email, role, createdAt) VALUES (2, 'test-driver-001', 'Juan Pérez', 'juan@wvtransport.com', 'driver', NOW());",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table 'msbbvepzckmetzbyvdhd74.user' doesn't exist"
+  ]
+}

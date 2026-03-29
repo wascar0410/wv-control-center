@@ -1,0 +1,65 @@
+{
+  "query": "SELECT * FROM users LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute SELECT * FROM users LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "openId": "8PnFiKyUrtXwxo8RxNWkEP",
+      "name": "Wascar Ortiz",
+      "email": "wascar.ortiz0410@gmail.com",
+      "loginMethod": "google",
+      "role": "admin",
+      "createdAt": "2026-03-26 16:44:47",
+      "updatedAt": "2026-03-29 02:01:59",
+      "lastSignedIn": "2026-03-29 02:01:59"
+    },
+    {
+      "id": "279",
+      "openId": "driver-test-001",
+      "name": "Juan Pérez",
+      "email": "juan@example.com",
+      "loginMethod": "manual",
+      "role": "driver",
+      "createdAt": "2026-03-26 18:10:04",
+      "updatedAt": "2026-03-26 18:10:04",
+      "lastSignedIn": "2026-03-26 18:10:04"
+    },
+    {
+      "id": "90089",
+      "openId": "test-quotation-1774557456485",
+      "name": "Test Quotation User",
+      "email": "quotation@test.com",
+      "loginMethod": "test",
+      "role": "admin",
+      "createdAt": "2026-03-26 20:37:36",
+      "updatedAt": "2026-03-26 20:37:36",
+      "lastSignedIn": "2026-03-26 20:37:36"
+    },
+    {
+      "id": "90092",
+      "openId": "test-quotation-1774557474739",
+      "name": "Test Quotation User",
+      "email": "quotation@test.com",
+      "loginMethod": "test",
+      "role": "admin",
+      "createdAt": "2026-03-26 20:37:55",
+      "updatedAt": "2026-03-26 20:37:55",
+      "lastSignedIn": "2026-03-26 20:37:55"
+    },
+    {
+      "id": "90120",
+      "openId": "test-quotation-1774558064018",
+      "name": "Test Quotation User",
+      "email": "quotation@test.com",
+      "loginMethod": "test",
+      "role": "admin",
+      "createdAt": "2026-03-26 20:47:44",
+      "updatedAt": "2026-03-26 20:47:44",
+      "lastSignedIn": "2026-03-26 20:47:44"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\topenId\tname\temail\tloginMethod\trole\tcreatedAt\tupdatedAt\tlastSignedIn\n1\t8PnFiKyUrtXwxo8RxNWkEP\tWascar Ortiz\twascar.ortiz0410@gmail.com\tgoogle\tadmin\t2026-03-26 16:44:47\t2026-03-29 02:01:59\t2026-03-29 02:01:59\n279\tdriver-test-001\tJuan Pérez\tjuan@example.com\tmanual\tdriver\t2026-03-26 18:10:04\t2026-03-26 18:10:04\t2026-03-26 18:10:04\n90089\ttest-quotation-1774557456485\tTest Quotation User\tquotation@test.com\ttest\tadmin\t2026-03-26 20:37:36\t2026-03-26 20:37:36\t2026-03-26 20:37:36\n90092\ttest-quotation-1774557474739\tTest Quotation User\tquotation@test.com\ttest\tadmin\t2026-03-26 20:37:55\t2026-03-26 20:37:55\t2026-03-26 20:37:55\n90120\ttest-quotation-1774558064018\tTest Quotation User\tquotation@test.com\ttest\tadmin\t2026-03-26 20:47:44\t2026-03-26 20:47:44\t2026-03-26 20:47:44\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

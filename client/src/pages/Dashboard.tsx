@@ -15,6 +15,7 @@ import { AlertsWidget } from "@/components/AlertsWidget";
 import { ProjectionsCard } from "@/components/ProjectionsCard";
 import { TrendCharts } from "@/components/TrendCharts";
 import { ComparisonAnalytics } from "@/components/ComparisonAnalytics";
+import { ChatWidget } from "@/components/ChatWidget";
 import { trpc } from "@/lib/trpc";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -129,6 +130,18 @@ export default function Dashboard() {
       {/* Driver Location Tracking */}
       {user?.role === "admin" && (
         <DriverLocationMap />
+      )}
+
+      {/* Chat Widget */}
+      {user?.role === "admin" && (
+        <Card className="bg-card border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">Chat con Choferes</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ChatWidget />
+          </CardContent>
+        </Card>
       )}
 
       {/* Recent Loads + Quick Actions */}

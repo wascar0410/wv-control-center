@@ -1,0 +1,127 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "audit_reports"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "bank_accounts"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "broker_credentials"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "broker_loads"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "business_config"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "chat_conversations"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "chat_messages"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "chat_notifications"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "chat_participants"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "compliance_alerts"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "compliance_audit_log"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "compliance_rules"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "distance_surcharge"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "driver_locations"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "driver_payments"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "expense_receipts"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "export_logs"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "fuel_logs"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "income_verification"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "load_assignments"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "load_quotations"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "loads"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "mileage_records"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "ocr_audit_log"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "ocr_documents"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "ocr_verification"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "owner_draws"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "partnership"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "payment_audit"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "payment_batches"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "pod_documents"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "price_alerts"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "route_stops"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "sync_logs"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "transaction_imports"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "transactions"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "users"
+    },
+    {
+      "Tables_in_mSbbvEPZCkmEtZbYVdHD74": "weight_surcharge"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_mSbbvEPZCkmEtZbYVdHD74\n__drizzle_migrations\naudit_reports\nbank_accounts\nbroker_credentials\nbroker_loads\nbusiness_config\nchat_conversations\nchat_messages\nchat_notifications\nchat_participants\ncompliance_alerts\ncompliance_audit_log\ncompliance_rules\ndistance_surcharge\ndriver_locations\ndriver_payments\nexpense_receipts\nexport_logs\nfuel_logs\nincome_verification\nload_assignments\nload_quotations\nloads\nmileage_records\nocr_audit_log\nocr_documents\nocr_verification\nowner_draws\npartnership\npayment_audit\npayment_batches\npod_documents\nprice_alerts\nroute_stops\nsync_logs\ntransaction_imports\ntransactions\nusers\nweight_surcharge\n",
+  "stderr": "",
+  "execution_time_ms": 53
+}
