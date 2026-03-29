@@ -6,6 +6,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import wsTokenRouter from "./wsTokenEndpoint";
 import { serveStatic, setupVite } from "./vite";
 import { rateLimitMiddleware } from "./rateLimiter";
 import { recordHostRejection } from "./hostMonitoring";
@@ -112,6 +113,8 @@ async function startServer() {
   app.use(rateLimitMiddleware);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // WebSocket token endpoint
+  app.use(wsTokenRouter);
   // tRPC API
   app.use(
     "/api/trpc",
