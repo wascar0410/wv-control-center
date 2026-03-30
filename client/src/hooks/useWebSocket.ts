@@ -39,19 +39,35 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
    */
   const getAuthToken = useCallback(async (): Promise<string | null> => {
     try {
-      // Use existing JWT from localStorage or session
-      const token = localStorage.getItem("ws_token");
-      if (token) return token;
+      // Check cached token with expiration
+      const cached = localStorage.getItem("ws_token_cache");
+      if (cached) {
+        try {
+          const { token, expiresAt } = JSON.parse(cached);
+          // Token valid if not expired (with 5min buffer)
+          if (expiresAt && new Date(expiresAt).getTime() - 5 * 60 * 1000 > Date.now()) {
+            return token;
+          }
+        } catch {
+          // Invalid cache, ignore
+        }
+      }
 
-      // If no token, try to get from auth endpoint
+      // Fetch new token with timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch("/api/auth/ws-token", {
         credentials: "include",
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!response.ok) return null;
 
       const { token: newToken } = await response.json();
-      localStorage.setItem("ws_token", newToken);
+      const expiresAt = new Date(Date.now() + 23 * 60 * 60 * 1000); // 23 hours
+      localStorage.setItem("ws_token_cache", JSON.stringify({ token: newToken, expiresAt }));
       return newToken;
     } catch (error) {
       console.error("[WebSocket] Error getting auth token:", error);
@@ -81,7 +97,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       }
 
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/api/ws?token=${encodeURIComponent(token)}`;
+      // Use /ws route instead of /api/ws for isolation
+      const wsUrl = `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
 
       const ws = new WebSocket(wsUrl);
 
@@ -116,9 +133,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
         // Attempt to reconnect
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
+          const delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current), 30000);
           reconnectAttemptsRef.current += 1;
-          console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current})`);
+          console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
 
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();

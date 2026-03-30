@@ -30,7 +30,7 @@ export function DriverMapInteractive() {
 
   const { data: drivers, isLoading, error } = trpc.location.getAllActiveDrivers.useQuery(
     undefined,
-    { refetchInterval: 5000 }
+    { refetchInterval: 30000, staleTime: 30000, refetchOnWindowFocus: false, retry: 1 }
   );
 
   // Initialize map
