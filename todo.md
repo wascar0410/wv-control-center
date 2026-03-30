@@ -844,3 +844,44 @@
 - [x] Agregar retry logic con backoff exponencial
 - [x] Tests para rate limiting
 - [x] Checkpoint y entrega
+
+
+## Fase 87: Mejora del Dashboard - Fase 1 (KPIs y Cargas Recientes)
+- [x] Verificar que todos los endpoints tRPC existen (dashboard.kpis, dashboard.recentLoads, etc.)
+- [x] Verificar que los componentes necesarios existen (AlertsWidget, ProjectionsCard, TrendCharts, ComparisonAnalytics, ChatWidget, DriverLocationMap, AssignLoadModal)
+- [x] Corregir Dashboard.tsx con imports correctos y estructura mejorada
+- [x] Verificar que formatCurrency maneja valores null/undefined correctamente
+- [x] Verificar que los KPIs se cargan correctamente
+- [x] Verificar que las cargas recientes se muestran correctamente
+- [x] Crear tests unitarios para Dashboard.tsx (KPIs, cargas recientes, filtros)
+- [x] Ejecutar tests y verificar que pasan
+- [x] Guardar checkpoint
+
+## Fase 88: Mejora del Dashboard - Fase 2 (AlertsWidget, AssignLoadModal, Acciones Rápidas)
+- [ ] Revisar componente AlertsWidget
+- [ ] Revisar componente AssignLoadModal
+- [ ] Integrar AlertsWidget en Dashboard
+- [ ] Integrar AssignLoadModal en Dashboard
+- [ ] Crear tests para AlertsWidget y AssignLoadModal
+- [ ] Ejecutar tests y verificar que pasan
+- [ ] Guardar checkpoint
+
+## Fase 89: Mejora del Dashboard - Fase 3 (Proyecciones y Análisis Comparativo)
+- [ ] Revisar componente ProjectionsCard
+- [ ] Revisar componente TrendCharts
+- [ ] Revisar componente ComparisonAnalytics
+- [ ] Integrar ProjectionsCard en Dashboard
+- [ ] Integrar TrendCharts en Dashboard
+- [ ] Integrar ComparisonAnalytics en Dashboard
+- [ ] Crear tests para componentes de análisis
+- [ ] Ejecutar tests y verificar que pasan
+- [ ] Guardar checkpoint
+
+## Fase 90: Mejora del Dashboard - Fase 4 (ChatWidget y DriverLocationMap)
+- [ ] Revisar componente ChatWidget
+- [ ] Revisar componente DriverLocationMap
+- [ ] Integrar ChatWidget en Dashboard (solo admin)
+- [ ] Integrar DriverLocationMap en Dashboard (solo admin)
+- [ ] Crear tests para ChatWidget y DriverLocationMap
+- [ ] Ejecutar tests y verificar que pasan
+- [ ] Guardar checkpoint final
