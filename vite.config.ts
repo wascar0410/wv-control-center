@@ -184,7 +184,8 @@ export default defineConfig({
       "localhost",
       "127.0.0.1",
     ],
-    hmr: process.env.NODE_ENV === "production" ? false : undefined,
+    // Disable HMR completely to avoid WebSocket connection errors
+    hmr: false,
     fs: {
       strict: false,
       deny: [],
