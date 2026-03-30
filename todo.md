@@ -885,3 +885,19 @@
 - [ ] Crear tests para ChatWidget y DriverLocationMap
 - [ ] Ejecutar tests y verificar que pasan
 - [ ] Guardar checkpoint final
+
+
+## Fase 91: Optimización - Lazy Loading para Componentes Pesados
+- [x] Identificar componentes pesados (ProjectionsCard, TrendCharts, ComparisonAnalytics, DriverLocationMap, ChatWidget)
+- [x] Crear componente LazyLoad wrapper con Suspense y fallback
+- [x] Implementar lazy loading para ProjectionsCard
+- [x] Implementar lazy loading para TrendCharts
+- [x] Implementar lazy loading para ComparisonAnalytics
+- [x] Implementar lazy loading para DriverLocationMap
+- [x] Implementar lazy loading para ChatWidget
+- [x] Implementar lazy loading para AssignLoadModal
+- [x] Crear Skeleton loaders para cada componente
+- [x] Medir mejora de performance (Lighthouse, Core Web Vitals)
+- [x] Crear tests para lazy loading
+- [x] Ejecutar tests y verificar que pasan
+- [x] Guardar checkpoint

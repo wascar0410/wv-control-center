@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Suspense, lazy } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -10,12 +10,39 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 import { AssignLoadModal } from "@/components/AssignLoadModal";
-import { DriverLocationMap } from "@/components/DriverLocationMap";
 import { AlertsWidget } from "@/components/AlertsWidget";
-import { ProjectionsCard } from "@/components/ProjectionsCard";
-import { TrendCharts } from "@/components/TrendCharts";
-import { ComparisonAnalytics } from "@/components/ComparisonAnalytics";
-import { ChatWidget } from "@/components/ChatWidget";
+import { LazyLoad, ChartSkeleton, MapSkeleton, WidgetSkeleton } from "@/components/LazyLoad";
+
+// Lazy load heavy components
+const ProjectionsCard = lazy(() =>
+  import("@/components/ProjectionsCard").then((m) => ({
+    default: m.ProjectionsCard,
+  }))
+);
+
+const TrendCharts = lazy(() =>
+  import("@/components/TrendCharts").then((m) => ({
+    default: m.TrendCharts,
+  }))
+);
+
+const ComparisonAnalytics = lazy(() =>
+  import("@/components/ComparisonAnalytics").then((m) => ({
+    default: m.ComparisonAnalytics,
+  }))
+);
+
+const DriverLocationMap = lazy(() =>
+  import("@/components/DriverLocationMap").then((m) => ({
+    default: m.DriverLocationMap,
+  }))
+);
+
+const ChatWidget = lazy(() =>
+  import("@/components/ChatWidget").then((m) => ({
+    default: m.ChatWidget,
+  }))
+);
 
 import {
   Package,
@@ -157,7 +184,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards - Always visible, not lazy loaded */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           title="Cargas Activas"
@@ -197,41 +224,53 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Monthly Projections */}
+      {/* Monthly Projections - Lazy loaded */}
       {projections && !projectionsLoading && (
         <>
-          <ProjectionsCard data={projections} />
-          <TrendCharts data={projections} />
+          <LazyLoad fallback={<ChartSkeleton height="h-96" />}>
+            <ProjectionsCard data={projections} />
+          </LazyLoad>
+          <LazyLoad fallback={<ChartSkeleton height="h-full" />}>
+            <TrendCharts data={projections} />
+          </LazyLoad>
         </>
       )}
 
-      {/* Comparison Analytics */}
+      {/* Comparison Analytics - Lazy loaded */}
       {historicalComparison &&
         quarterlyComparison &&
         !historicalLoading &&
         !quarterlyLoading && (
-          <ComparisonAnalytics
-            historicalData={historicalComparison}
-            quarterlyData={quarterlyComparison}
-            annualData={annualComparison}
-          />
+          <LazyLoad fallback={<ChartSkeleton height="h-96" />}>
+            <ComparisonAnalytics
+              historicalData={historicalComparison}
+              quarterlyData={quarterlyComparison}
+              annualData={annualComparison}
+            />
+          </LazyLoad>
         )}
 
-      {/* Driver Location Tracking */}
-      {isAdmin && <DriverLocationMap />}
-
-      {/* Chat Widget */}
+      {/* Driver Location Tracking - Lazy loaded */}
       {isAdmin && (
-        <Card className="border-border bg-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">
-              Chat con Choferes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ChatWidget />
-          </CardContent>
-        </Card>
+        <LazyLoad fallback={<MapSkeleton height="h-96" />}>
+          <DriverLocationMap />
+        </LazyLoad>
+      )}
+
+      {/* Chat Widget - Lazy loaded */}
+      {isAdmin && (
+        <LazyLoad fallback={<WidgetSkeleton height="h-64" />}>
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">
+                Chat con Choferes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ChatWidget />
+            </CardContent>
+          </Card>
+        </LazyLoad>
       )}
 
       {/* Recent Loads + Quick Actions */}
