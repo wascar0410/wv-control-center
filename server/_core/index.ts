@@ -110,12 +110,14 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   
-  // Apply rate limiting middleware
-  app.use(rateLimitMiddleware);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // WebSocket token endpoint
   app.use(wsTokenRouter);
+  
+  // Apply rate limiting ONLY to API routes
+  app.use("/api", rateLimitMiddleware);
+  
   // tRPC API
   app.use(
     "/api/trpc",
@@ -125,6 +127,7 @@ async function startServer() {
     })
   );
   // development mode uses Vite, production mode uses static files
+  // Serve static files BEFORE rate limiting to ensure they're not affected
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
