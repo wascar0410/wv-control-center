@@ -58,7 +58,53 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Configure MIME types for static files
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      // Set correct MIME type for JavaScript files
+      if (filePath.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      }
+      // Set correct MIME type for CSS files
+      else if (filePath.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css; charset=utf-8');
+      }
+      // Set correct MIME type for JSON files
+      else if (filePath.endsWith('.json')) {
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      }
+      // Set correct MIME type for SVG files
+      else if (filePath.endsWith('.svg')) {
+        res.setHeader('Content-Type', 'image/svg+xml');
+      }
+      // Set correct MIME type for favicon
+      else if (filePath.endsWith('.ico')) {
+        res.setHeader('Content-Type', 'image/x-icon');
+      }
+      // Set correct MIME type for WOFF fonts
+      else if (filePath.endsWith('.woff')) {
+        res.setHeader('Content-Type', 'font/woff');
+      }
+      // Set correct MIME type for WOFF2 fonts
+      else if (filePath.endsWith('.woff2')) {
+        res.setHeader('Content-Type', 'font/woff2');
+      }
+      // Set correct MIME type for TTF fonts
+      else if (filePath.endsWith('.ttf')) {
+        res.setHeader('Content-Type', 'font/ttf');
+      }
+      // Set correct MIME type for EOTF fonts
+      else if (filePath.endsWith('.eot')) {
+        res.setHeader('Content-Type', 'application/vnd.ms-fontobject');
+      }
+      // Cache control headers
+      if (filePath.match(/\.(js|css|woff|woff2|ttf|eot)$/)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+      }
+    }
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {

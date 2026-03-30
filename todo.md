@@ -942,3 +942,13 @@
 - [x] Crear tests para funciones de exportación
 - [x] Verificar que los archivos se generan correctamente
 - [ ] Guardar checkpoint
+
+
+## Fase 94: Optimización del Servidor y Rate Limiter
+- [x] Mejorar configuración del rate limiter para desarrollo
+- [x] Excluir hosts Manus (.manus.computer) del rate limiting
+- [x] Excluir archivos estáticos (favicon, debug-collector, etc.) del rate limiting
+- [x] Configurar MIME types correctos para archivos estáticos
+- [x] Agregar cache control headers para assets
+- [x] Reiniciar servidor con nueva configuración
+- [x] Verificar que no hay errores 429 ni MIME type warnings

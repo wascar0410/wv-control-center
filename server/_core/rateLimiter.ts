@@ -32,7 +32,7 @@ export const rateLimitConfig: RateLimitConfig = {
 };
 
 // Hosts that should be excluded from rate limiting
-const EXCLUDED_HOSTS = new Set([
+const EXCLUDED_HOSTS: (string | RegExp)[] = [
   'localhost',
   '127.0.0.1',
   '::1', // IPv6 localhost
@@ -40,7 +40,10 @@ const EXCLUDED_HOSTS = new Set([
   'localhost:5173',
   'app.wvtransports.com',
   'api.wvtransports.com',
-]);
+  // Development hosts - exclude Manus dev URLs
+  /^3000-.*\.manus\.computer$/,
+  /^.*\.manus\.computer$/,
+];
 
 // Static asset paths that should not be rate limited
 const STATIC_ASSET_PATHS = [
@@ -57,6 +60,9 @@ const STATIC_ASSET_PATHS = [
   '.eot',
   '.ico',
   '.map', // Source maps
+  'favicon',
+  'debug-collector',
+  '__manus__',
 ];
 
 /**
@@ -152,7 +158,20 @@ function shouldExcludeFromRateLimit(req: Request, key: string): boolean {
   const hostWithoutPort = host.split(':')[0];
   
   // Check if host is in excluded list
-  if (EXCLUDED_HOSTS.has(hostWithoutPort) || EXCLUDED_HOSTS.has(host)) {
+  for (const excluded of EXCLUDED_HOSTS) {
+    if (typeof excluded === 'string') {
+      if (excluded === hostWithoutPort || excluded === host) {
+        return true;
+      }
+    } else if (excluded instanceof RegExp) {
+      if (excluded.test(hostWithoutPort) || excluded.test(host)) {
+        return true;
+      }
+    }
+  }
+  
+  // Also check if this is a development/Manus URL
+  if (host.includes('.manus.computer') || host.includes('localhost')) {
     return true;
   }
   
