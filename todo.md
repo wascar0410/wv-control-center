@@ -858,13 +858,13 @@
 - [x] Guardar checkpoint
 
 ## Fase 88: Mejora del Dashboard - Fase 2 (AlertsWidget, AssignLoadModal, Acciones Rápidas)
-- [ ] Revisar componente AlertsWidget
-- [ ] Revisar componente AssignLoadModal
-- [ ] Integrar AlertsWidget en Dashboard
-- [ ] Integrar AssignLoadModal en Dashboard
-- [ ] Crear tests para AlertsWidget y AssignLoadModal
-- [ ] Ejecutar tests y verificar que pasan
-- [ ] Guardar checkpoint
+- [x] Revisar componente AlertsWidget
+- [x] Revisar componente AssignLoadModal
+- [x] Integrar AlertsWidget en Dashboard
+- [x] Integrar AssignLoadModal en Dashboard
+- [x] Crear tests para AlertsWidget y AssignLoadModal
+- [x] Ejecutar tests y verificar que pasan
+- [x] Guardar checkpoint
 
 ## Fase 89: Mejora del Dashboard - Fase 3 (Proyecciones y Análisis Comparativo)
 - [ ] Revisar componente ProjectionsCard

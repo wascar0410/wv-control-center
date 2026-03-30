@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
