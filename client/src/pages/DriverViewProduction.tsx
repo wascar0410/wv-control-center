@@ -4,9 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import {
@@ -26,6 +24,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { ProofOfDeliveryCapture } from "@/components/ProofOfDeliveryCapture";
 
 interface LoadWithDetails {
   id: number;
@@ -131,166 +130,6 @@ function DriverStatCard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function ProofOfDeliveryModal({
-  open,
-  onOpenChange,
-  selectedLoad,
-  onSubmit,
-  isSubmitting,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedLoad: LoadWithDetails | null;
-  onSubmit: (data: { notes: string; images: File[] }) => Promise<void>;
-  isSubmitting: boolean;
-}) {
-  const [notes, setNotes] = useState("");
-  const [images, setImages] = useState<File[]>([]);
-  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
-
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    
-    const validFiles = files.filter(file => {
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} es demasiado grande (máx 10MB)`);
-        return false;
-      }
-      return true;
-    });
-
-    setImages(prev => [...prev, ...validFiles]);
-
-    validFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreviewUrls(prev => [...prev, e.target?.result as string]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, []);
-
-  const handleRemoveImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-    setPreviewUrls(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = async () => {
-    if (images.length === 0) {
-      toast.error("Debes agregar al menos una foto");
-      return;
-    }
-
-    try {
-      await onSubmit({ notes, images });
-      setNotes("");
-      setImages([]);
-      setPreviewUrls([]);
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error submitting proof:", error);
-    }
-  };
-
-  if (!selectedLoad) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Confirmar Entrega - Prueba de Entrega</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-5">
-          <div className="rounded-xl border bg-muted/40 p-4">
-            <p className="font-semibold">{selectedLoad.clientName}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {selectedLoad.deliveryAddress}
-            </p>
-            <p className="mt-2 text-sm">
-              Pago: <span className="font-semibold">{formatCurrency(selectedLoad.price)}</span>
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notas de entrega (opcional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Ej: entregado a recepción, cliente conforme, firma recibida..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-24"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Fotos de Prueba (mínimo 1)</Label>
-            <div className="rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 text-center">
-              <input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleImageSelect}
-                className="hidden"
-                id="image-upload"
-              />
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <div className="flex flex-col items-center gap-2">
-                  <Camera className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm font-medium">Haz clic para agregar fotos</p>
-                  <p className="text-xs text-muted-foreground">o arrastra archivos aquí</p>
-                </div>
-              </label>
-            </div>
-
-            {previewUrls.length > 0 && (
-              <div className="grid grid-cols-3 gap-3">
-                {previewUrls.map((url, idx) => (
-                  <div key={idx} className="relative">
-                    <img
-                      src={url}
-                      alt={`Preview ${idx + 1}`}
-                      className="h-24 w-full rounded-lg object-cover"
-                    />
-                    <button
-                      onClick={() => handleRemoveImage(idx)}
-                      className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white hover:bg-red-600"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {images.length} foto{images.length !== 1 ? "s" : ""} seleccionada{images.length !== 1 ? "s" : ""}
-            </p>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || images.length === 0}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Confirmar Entrega
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -505,6 +344,7 @@ export default function DriverViewProduction() {
             fileName: image.name,
             mimeType: image.type,
             fileSize: image.size,
+            deliveryNotes: data.notes || undefined,
           });
         };
         reader.readAsDataURL(image);
@@ -735,13 +575,18 @@ export default function DriverViewProduction() {
         onConfirmDelivery={handleConfirmDelivery}
       />
 
-      <ProofOfDeliveryModal
-        open={showProofModal}
-        onOpenChange={setShowProofModal}
-        selectedLoad={selectedLoad}
-        onSubmit={handleProofSubmit}
-        isSubmitting={uploadProofMutation.isPending || confirmDeliveryMutation.isPending}
-      />
+      {selectedLoad && (
+        <ProofOfDeliveryCapture
+          open={showProofModal}
+          onOpenChange={setShowProofModal}
+          loadId={selectedLoad.id}
+          clientName={selectedLoad.clientName}
+          deliveryAddress={selectedLoad.deliveryAddress}
+          price={selectedLoad.price}
+          onSubmit={handleProofSubmit}
+          isSubmitting={uploadProofMutation.isPending || confirmDeliveryMutation.isPending}
+        />
+      )}
     </DashboardLayout>
   );
 }

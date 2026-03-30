@@ -1,0 +1,9 @@
+{
+  "query": "ALTER TABLE `pod_documents` ADD `notes` text;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway05.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3gBRrZJZTHzqmGr.root --database mSbbvEPZCkmEtZbYVdHD74 --execute ALTER TABLE `pod_documents` ADD `notes` text;",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 287
+}

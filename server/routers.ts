@@ -820,6 +820,7 @@ const driverRouter = router({
       fileName: z.string().max(255),
       mimeType: z.string(),
       fileSize: z.number(),
+      deliveryNotes: z.string().max(1000).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       // Verify load belongs to this driver
@@ -855,7 +856,8 @@ const driverRouter = router({
           key,
           input.fileName,
           input.fileSize,
-          input.mimeType
+          input.mimeType,
+          input.deliveryNotes
         );
 
         // Notify owner

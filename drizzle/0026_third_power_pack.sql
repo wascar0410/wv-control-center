@@ -1,0 +1,1 @@
+ALTER TABLE `pod_documents` ADD `notes` text;

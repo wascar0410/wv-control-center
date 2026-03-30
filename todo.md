@@ -995,3 +995,52 @@
 - [x] Tests de upload de archivos
 - [x] Validación de flujos de usuario
 - [x] Performance testing en móvil
+
+
+## Fase 96: Driver View - Prioritized Improvements
+
+### Priority 1: Proof of Delivery Workflow
+- [x] Enhance camera capture for mobile (real camera access, not just file input)
+- [x] Support multiple proof images per load
+- [x] Add delivery notes field to POD modal
+- [x] Capture delivery timestamp automatically
+- [x] Save proof metadata to backend with S3 URLs
+- [x] Link proof records to load in database
+- [ ] Display proof history in load details
+
+### Priority 2: Full Load Detail Experience
+- [x] Show complete client information in load details
+- [x] Display pickup and delivery dates/times
+- [x] Show cargo details (weight, type, special instructions)
+- [x] Display delivery notes and instructions
+- [x] Show price information (with permission checks)
+- [x] Display current load status
+- [ ] Show proof of delivery history if available
+- [ ] Add timeline of status changes
+
+### Priority 3: Navigation Integration
+- [x] Add Google Maps button in load details
+- [x] Add Waze button in load details
+- [x] Use pickup address for initial navigation
+- [x] Use delivery address for final destination
+- [x] Generate proper navigation URLs
+
+### Priority 4: Periodic Location Tracking
+- [ ] Create location update endpoint (latitude, longitude, accuracy)
+- [ ] Implement periodic location updates (every 30 seconds when active)
+- [ ] Store latest driver location per active load
+- [ ] Admin can view latest driver location
+- [ ] Handle location permission gracefully
+
+### Priority 5: Delivery Signature Capture
+- [ ] Add signature canvas after photo proof upload
+- [ ] Capture signature as image
+- [ ] Save signature as part of proof of delivery
+- [ ] Display signature in proof history
+
+### Priority 6: Offline-Friendly Behavior
+- [ ] Queue delivery confirmations when offline
+- [ ] Queue POD uploads when offline
+- [ ] Sync queued items when connection returns
+- [ ] Show offline indicator to driver
+- [ ] Prevent duplicate submissions on reconnect

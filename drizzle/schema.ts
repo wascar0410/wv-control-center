@@ -277,6 +277,7 @@ export const podDocuments = mysqlTable("pod_documents", {
   fileName: varchar("fileName", { length: 255 }).notNull(),
   fileSize: int("fileSize"),
   mimeType: varchar("mimeType", { length: 50 }),
+  notes: text("notes"), // Delivery notes
   uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

@@ -183,6 +183,13 @@
       "when": 1774812641706,
       "tag": "0025_dizzy_cannonball",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "5",
+      "when": 1774914553320,
+      "tag": "0026_third_power_pack",
+      "breakpoints": true
     }
   ]
 }
