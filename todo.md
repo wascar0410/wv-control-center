@@ -834,3 +834,13 @@
 - [x] Actualizar contadores según filtro activo
 - [x] Tests para funcionalidad de filtrado (8 tests)
 - [x] Checkpoint y entrega
+
+
+## Fase 86: Corrección de Error 429 (Rate Limiting)
+- [x] Diagnosticar causa de demasiadas solicitudes
+- [x] Revisar queries de tRPC para evitar duplicados
+- [x] Implementar debounce en queries
+- [x] Configurar staleTime y gcTime en QueryClient
+- [x] Agregar retry logic con backoff exponencial
+- [x] Tests para rate limiting
+- [x] Checkpoint y entrega
