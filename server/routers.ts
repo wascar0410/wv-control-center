@@ -74,6 +74,17 @@ import {
   createBankAccount, getBankAccountsByUserId, getBankAccountById, updateBankAccount, deactivateBankAccount,
   createTransactionImport, getTransactionImportsByBankAccount, getUnmatchedTransactionImports, matchTransactionImport, deleteTransactionImport, getTransactionImportById,
 } from "./db";
+import {
+  getDriverLoads,
+  getLoadDetailsForDriver,
+  getNextPriorityLoad,
+  getDriverStatsForView,
+  confirmDelivery,
+  getProofOfDeliveryForLoad,
+  saveProofOfDelivery,
+  getDriverEarnings,
+  hasProofOfDelivery,
+} from "./db-driver-view";
 
 // ─── Bank & Transaction Router ─────────────────────────────────────────────────
 
@@ -731,6 +742,164 @@ const driverRouter = router({
         mimeType: input.mimeType,
       });
       return pod;
+    }),
+
+  // ─── Driver View Production Endpoints ──────────────────────────────────────
+
+  getStats: protectedProcedure
+    .input(z.object({ driverId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver estas estadísticas");
+      }
+      return await getDriverStatsForView(input.driverId);
+    }),
+
+  getLoads: protectedProcedure
+    .input(z.object({
+      driverId: z.number(),
+      status: z.enum(["available", "in_transit", "delivered"]).optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver estas cargas");
+      }
+      return await getDriverLoads(input.driverId, input.status);
+    }),
+
+  getLoadDetails: protectedProcedure
+    .input(z.object({ loadId: z.number(), driverId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver este detalle");
+      }
+      return await getLoadDetailsForDriver(input.loadId, input.driverId);
+    }),
+
+  getNextPriority: protectedProcedure
+    .input(z.object({ driverId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso");
+      }
+      return await getNextPriorityLoad(input.driverId);
+    }),
+
+  confirmDelivery: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Verify load belongs to this driver
+      const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
+      if (!load) {
+        throw new Error("Carga no encontrada o no te pertenece");
+      }
+
+      // Prevent duplicate confirmations
+      if (load.status === "delivered") {
+        throw new Error("Esta carga ya ha sido marcada como entregada");
+      }
+
+      const result = await confirmDelivery(input.loadId, ctx.user.id, input.notes);
+
+      // Notify owner
+      await notifyOwner({
+        title: "✅ Carga Entregada",
+        content: `${ctx.user.name} confirmó la entrega de carga #${input.loadId}${input.notes ? ` con notas: ${input.notes}` : ""}.`,
+      });
+
+      return result;
+    }),
+
+  uploadProofOfDelivery: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      fileBase64: z.string(),
+      fileName: z.string().max(255),
+      mimeType: z.string(),
+      fileSize: z.number(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Verify load belongs to this driver
+      const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
+      if (!load) {
+        throw new Error("Carga no encontrada o no te pertenece");
+      }
+
+      // Validate file size (max 10MB)
+      if (input.fileSize > 10 * 1024 * 1024) {
+        throw new Error("Archivo demasiado grande (máx 10MB)");
+      }
+
+      // Validate MIME type
+      const allowedMimes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+      if (!allowedMimes.includes(input.mimeType)) {
+        throw new Error(`Tipo no permitido. Usa: ${allowedMimes.join(", ")}`);
+      }
+
+      try {
+        // Convert base64 to buffer
+        const buffer = Buffer.from(input.fileBase64, "base64");
+
+        // Upload to S3
+        const key = `proof-of-delivery/${ctx.user.id}/${input.loadId}/${Date.now()}-${input.fileName}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+
+        // Save POD to database
+        await saveProofOfDelivery(
+          input.loadId,
+          ctx.user.id,
+          url,
+          key,
+          input.fileName,
+          input.fileSize,
+          input.mimeType
+        );
+
+        // Notify owner
+        await notifyOwner({
+          title: "📸 Prueba de Entrega Subida",
+          content: `${ctx.user.name} subió prueba de entrega para carga #${input.loadId}.`,
+        });
+
+        return { success: true, url };
+      } catch (error) {
+        console.error("[POD Upload] Error:", error);
+        throw new Error("No se pudo subir la prueba de entrega. Intenta de nuevo.");
+      }
+    }),
+
+  getProofOfDelivery: protectedProcedure
+    .input(z.object({ loadId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      // Verify load belongs to this driver or user is admin
+      const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
+      if (!load && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver esto");
+      }
+
+      return await getProofOfDeliveryForLoad(input.loadId);
+    }),
+
+  getEarnings: protectedProcedure
+    .input(z.object({
+      driverId: z.number(),
+      startDate: z.date().optional(),
+      endDate: z.date().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver estas ganancias");
+      }
+      return await getDriverEarnings(input.driverId, input.startDate, input.endDate);
+    }),
+
+  hasProof: protectedProcedure
+    .input(z.object({ loadId: z.number() }))
+    .query(async ({ input }) => {
+      return await hasProofOfDelivery(input.loadId);
     }),
 });
 
