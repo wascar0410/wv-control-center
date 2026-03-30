@@ -11,6 +11,8 @@ import { wsManager } from "./websocket";
 import { serveStatic, setupVite } from "./vite";
 import { rateLimitMiddleware } from "./rateLimiter";
 import { recordHostRejection } from "./hostMonitoring";
+import { requestLoggerMiddleware, getAbuseReport } from "./requestLogger";
+import { adaptiveRateLimiter, getSystemStatus } from "./adaptiveRateLimiter";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -106,6 +108,9 @@ async function startServer() {
     next();
   });
   
+  // Add request logging middleware
+  app.use(requestLoggerMiddleware);
+  
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -141,9 +146,9 @@ async function startServer() {
   // WebSocket token endpoint
   app.use(wsTokenRouter);
   
-  // Apply rate limiting ONLY to API routes in production
+  // Apply adaptive rate limiting ONLY to API routes in production
   if (process.env.NODE_ENV === "production") {
-    app.use("/api", rateLimitMiddleware);
+    app.use("/api", adaptiveRateLimiter);
   }
   
   // tRPC API
