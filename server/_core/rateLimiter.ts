@@ -23,7 +23,7 @@ const rateLimitStore: RateLimitStore = {};
 
 // Configuration from environment variables
 export const rateLimitConfig: RateLimitConfig = {
-  enabled: process.env.RATE_LIMITING_ENABLED !== "false",
+  enabled: process.env.NODE_ENV === "production" && process.env.RATE_LIMITING_ENABLED !== "false",
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000"), // 15 minutes default
   maxRequests: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || "5000"), // Increased from 1000 to 5000
   suspiciousMaxRequests: parseInt(process.env.RATE_LIMIT_SUSPICIOUS_MAX_REQUESTS || "500"), // Increased from 100 to 500

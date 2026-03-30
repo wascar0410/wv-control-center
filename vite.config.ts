@@ -79,7 +79,8 @@ function vitePluginManusDebugCollector(): Plugin {
     name: "manus-debug-collector",
 
     transformIndexHtml(html) {
-      if (process.env.NODE_ENV === "production") {
+      // Disable debug collector in development to prevent rate limiting
+      if (process.env.NODE_ENV !== "production") {
         return html;
       }
       return {
@@ -150,6 +151,8 @@ function vitePluginManusDebugCollector(): Plugin {
   };
 }
 
+
+
 const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
 
 export default defineConfig({
@@ -162,6 +165,7 @@ export default defineConfig({
     },
   },
   envDir: path.resolve(import.meta.dirname),
+
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
   build: {
@@ -180,11 +184,7 @@ export default defineConfig({
       "localhost",
       "127.0.0.1",
     ],
-    hmr: process.env.NODE_ENV === "production" ? false : {
-      protocol: "wss",
-      host: "3000-iop08n4oqcm170ethc0yz-164a9fa2.us2.manus.computer",
-      port: 443,
-    },
+    hmr: process.env.NODE_ENV === "production" ? false : undefined,
     fs: {
       strict: false,
       deny: [],

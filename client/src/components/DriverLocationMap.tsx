@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export function DriverLocationMap() {
   const { data: drivers, isLoading, error } = trpc.location.getAllActiveDrivers.useQuery(
     undefined,
-    { refetchInterval: 5000 }
+    { refetchInterval: 30000, refetchOnWindowFocus: false, staleTime: 25000 }
   );
 
   if (error) {

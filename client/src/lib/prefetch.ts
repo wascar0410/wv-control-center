@@ -87,7 +87,7 @@ export function prefetchChunks(chunkUrls: string[]): void {
  */
 const prefetchCache = new Set<string>();
 
-export function debouncedPrefetch(chunkUrl: string, delay: number = 500): void {
+export function debouncedPrefetch(chunkUrl: string, delay: number = 1000): void {
   if (prefetchCache.has(chunkUrl)) return;
 
   prefetchCache.add(chunkUrl);
@@ -117,7 +117,7 @@ export function usePrefetchOnHover(
     if (!element) return;
 
     const handleMouseEnter = () => {
-      debouncedPrefetch(chunkUrls.join(","), 100);
+      chunkUrls.forEach((url) => debouncedPrefetch(url, 500));
     };
 
     element.addEventListener("mouseenter", handleMouseEnter);
@@ -145,7 +145,7 @@ export function usePrefetchOnVisible(
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             // Prefetch when element becomes visible
-            debouncedPrefetch(chunkUrls.join(","), 200);
+            chunkUrls.forEach((url) => debouncedPrefetch(url, 800));
             // Stop observing after prefetch is triggered
             observer.unobserve(element);
           }
@@ -177,7 +177,7 @@ export function usePrefetchOnFocus(
     if (!element) return;
 
     const handleFocus = () => {
-      debouncedPrefetch(chunkUrls.join(","), 100);
+      chunkUrls.forEach((url) => debouncedPrefetch(url, 300));
     };
 
     element.addEventListener("focus", handleFocus);

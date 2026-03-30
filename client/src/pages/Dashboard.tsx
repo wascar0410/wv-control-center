@@ -124,34 +124,59 @@ export default function Dashboard() {
     }
   }, [isDriver, setLocation]);
 
+  // Stagger queries to prevent rate limiting burst
+  const [loadSecondaryQueries, setLoadSecondaryQueries] = useState(false);
+  const [loadTertiaryQueries, setLoadTertiaryQueries] = useState(false);
+
+  React.useEffect(() => {
+    if (!isDriver) {
+      const timer1 = setTimeout(() => setLoadSecondaryQueries(true), 500);
+      const timer2 = setTimeout(() => setLoadTertiaryQueries(true), 1000);
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
+    }
+  }, [isDriver]);
+
   const { data: kpis, isLoading: kpisLoading } = trpc.dashboard.kpis.useQuery(
     undefined,
-    { enabled: !isDriver }
+    { enabled: !isDriver, staleTime: 30000, refetchOnWindowFocus: false }
   );
 
   const { data: loads, isLoading: loadsLoading } =
     trpc.dashboard.recentLoads.useQuery(undefined, {
       enabled: !isDriver,
+      staleTime: 30000,
+      refetchOnWindowFocus: false,
     });
 
   const { data: projections, isLoading: projectionsLoading } =
     trpc.dashboard.monthlyProjections.useQuery(undefined, {
-      enabled: !isDriver,
+      enabled: !isDriver && loadSecondaryQueries,
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
     });
 
   const { data: historicalComparison, isLoading: historicalLoading } =
     trpc.dashboard.historicalComparison.useQuery(undefined, {
-      enabled: !isDriver,
+      enabled: !isDriver && loadSecondaryQueries,
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
     });
 
   const { data: quarterlyComparison, isLoading: quarterlyLoading } =
     trpc.dashboard.quarterlyComparison.useQuery(undefined, {
-      enabled: !isDriver,
+      enabled: !isDriver && loadTertiaryQueries,
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
     });
 
   const { data: annualComparison, isLoading: annualLoading } =
     trpc.dashboard.annualComparison.useQuery(undefined, {
-      enabled: !isDriver,
+      enabled: !isDriver && loadTertiaryQueries,
+      staleTime: 60000,
+      refetchOnWindowFocus: false,
     });
 
   const recentLoads = useMemo(() => (loads?.slice(0, 5) ?? []), [loads]);
