@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, Suspense, lazy } from "react";
+import React, { useState, useMemo, Suspense, lazy, useRef } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { usePrefetchDashboard, usePrefetchCommonFlows } from "@/hooks/usePrefetchRoute";
+import { usePrefetchOnHover } from "@/lib/prefetch";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -98,6 +100,24 @@ export default function Dashboard() {
   const isDriver = user?.role === "driver";
   const isAdmin = user?.role === "admin";
 
+  // Prefetch dashboard chunks on idle
+  usePrefetchDashboard();
+
+  // Prefetch common navigation flows
+  usePrefetchCommonFlows("/dashboard");
+
+  // Create refs for prefetch on hover
+  const newLoadBtnRef = useRef<HTMLButtonElement>(null);
+  const assignLoadBtnRef = useRef<HTMLButtonElement>(null);
+  const expenseBtnRef = useRef<HTMLButtonElement>(null);
+  const financeBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Prefetch chunks on button hover
+  usePrefetchOnHover(newLoadBtnRef as React.RefObject<HTMLElement>, ["/assets/LoadDetailsModal-*.js"]);
+  usePrefetchOnHover(assignLoadBtnRef as React.RefObject<HTMLElement>, ["/assets/AssignLoadModal-*.js"]);
+  usePrefetchOnHover(expenseBtnRef as React.RefObject<HTMLElement>, ["/assets/ExpenseForm-*.js"]);
+  usePrefetchOnHover(financeBtnRef as React.RefObject<HTMLElement>, ["/assets/FinanceCharts-*.js"])
+
   React.useEffect(() => {
     if (isDriver) {
       setLocation("/driver");
@@ -168,12 +188,13 @@ export default function Dashboard() {
         </div>
 
         <div className="flex gap-2 self-start sm:self-auto">
-          <Button onClick={() => setLocation("/loads")} className="gap-2">
+          <Button ref={newLoadBtnRef} onClick={() => setLocation("/loads")} className="gap-2">
             <Package className="h-4 w-4" />
             Nueva Carga
           </Button>
 
           <Button
+            ref={assignLoadBtnRef}
             onClick={() => setAssignModalOpen(true)}
             variant="outline"
             className="gap-2"
