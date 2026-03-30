@@ -928,3 +928,17 @@
 - [x] Verificar que los gráficos se renderizan correctamente
 - [x] Optimizar performance de gráficos (memoization)
 - [x] Guardar checkpoint
+
+
+## Fase 93: Exportación de Reportes (PDF/Excel)
+- [x] Crear utilidades para exportar proyecciones a PDF
+- [x] Crear utilidades para exportar proyecciones a Excel
+- [x] Crear utilidades para exportar análisis comparativo a PDF
+- [x] Crear utilidades para exportar análisis comparativo a Excel
+- [x] Crear componente ExportButton para Dashboard
+- [x] Integrar ExportButton en ProjectionsCard
+- [ ] Integrar ExportButton en TrendCharts
+- [ ] Integrar ExportButton en ComparisonAnalytics
+- [x] Crear tests para funciones de exportación
+- [x] Verificar que los archivos se generan correctamente
+- [ ] Guardar checkpoint

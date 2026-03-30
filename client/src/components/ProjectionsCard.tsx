@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, TrendingDown, Target } from "lucide-react";
+import { ExportButton } from "./ExportButton";
+import { exportProjectionsToExcel, exportProjectionsToPDF } from "@/lib/export";
 
 interface ProjectionsData {
   completedMiles: number;
@@ -23,14 +26,44 @@ interface ProjectionsData {
 }
 
 export function ProjectionsCard({ data }: { data: ProjectionsData }) {
+  const [isExporting, setIsExporting] = useState(false);
   const milesGoal = 4000;
   const goalReached = data.projectedTotalMiles >= milesGoal;
   const milesRemaining = Math.max(0, milesGoal - data.projectedTotalMiles);
   
   const progressPercent = Math.min(100, data.milesPercentage);
 
+  const handleExportPDF = async () => {
+    setIsExporting(true);
+    try {
+      const filename = `proyecciones-${new Date().toISOString().split('T')[0]}.pdf`;
+      await exportProjectionsToPDF(data, filename);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const filename = `proyecciones-${new Date().toISOString().split('T')[0]}.xlsx`;
+      await exportProjectionsToExcel(data, filename);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <ExportButton
+          onExportPDF={handleExportPDF}
+          onExportExcel={handleExportExcel}
+          label="Exportar Proyecciones"
+          disabled={isExporting}
+        />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Miles Projection Card */}
       <Card className="border border-border bg-card">
         <CardHeader className="pb-3">
@@ -173,6 +206,7 @@ export function ProjectionsCard({ data }: { data: ProjectionsData }) {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
