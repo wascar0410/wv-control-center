@@ -234,11 +234,11 @@ const driverStatsRouter = router({
 // ─── Loads Router ─────────────────────────────────────────────────────────────
 
 const loadsRouter = router({
-  list: protectedProcedure
+  list: publicProcedure
     .input(z.object({ status: z.string().optional(), driverId: z.number().optional() }).optional())
     .query(({ input }) => getLoads(input)),
 
-  byId: protectedProcedure
+ byId: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(({ input }) => getLoadById(input.id)),
 
