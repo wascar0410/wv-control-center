@@ -321,7 +321,7 @@ export default function About() {
 
               <div className="flex flex-wrap gap-4">
                 <Button
-                  onClick={() => setLocation("/")}
+  onClick={() => setLocation("/dashboard")}
                   className="bg-primary hover:bg-primary/90"
                 >
                   Ir al Panel
@@ -691,7 +691,7 @@ export default function About() {
 
           <div className="flex flex-wrap justify-center gap-4">
             <Button
-              onClick={() => setLocation("/")}
+  onClick={() => setLocation("/dashboard")}
               className="bg-white text-primary hover:bg-white/90"
             >
               Acceder al Panel de Control
