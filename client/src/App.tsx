@@ -1,14 +1,12 @@
 import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import About from "./pages/About";
+import Dashboard from "./pages/Dashboard";
 
-function DashboardTemp() {
+function DashboardPage() {
   return (
     <DashboardLayout>
-      <div style={{ padding: 24 }}>
-        <h1>DASHBOARD TEMPORAL</h1>
-        <p>Si ves esto sin rebote, el layout ya está estable.</p>
-      </div>
+      <Dashboard />
     </DashboardLayout>
   );
 }
@@ -18,7 +16,7 @@ function App() {
     <Switch>
       <Route path="/" component={About} />
       <Route path="/about" component={About} />
-      <Route path="/dashboard" component={DashboardTemp} />
+      <Route path="/dashboard" component={DashboardPage} />
     </Switch>
   );
 }
