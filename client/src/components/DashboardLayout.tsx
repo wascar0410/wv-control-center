@@ -123,7 +123,9 @@ function DashboardLayoutContent({
   user: { name?: string; email?: string; role?: string };
 }) {
   const auth = useAuth();
-  const logout = auth?.logout ?? (() => {});
+  const logout = () => {
+  console.log("logout disabled");
+};
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
