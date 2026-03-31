@@ -1,14 +1,17 @@
 import { Route, Switch } from "wouter";
 import About from "./pages/About";
-import NotFound from "./pages/NotFound";
 
 function App() {
   return (
     <Switch>
-      <Route path="/dashboard" component={Dashboard} />
       <Route path="/" component={About} />
       <Route path="/about" component={About} />
-      <Route component={NotFound} />
+      <Route path="/dashboard">
+        <div style={{ padding: 40, fontFamily: "sans-serif" }}>
+          <h1>DASHBOARD TEMPORAL</h1>
+          <p>Si ves esto, la navegación ya funciona.</p>
+        </div>
+      </Route>
     </Switch>
   );
 }
