@@ -278,6 +278,8 @@ export const podDocuments = mysqlTable("pod_documents", {
   fileSize: int("fileSize"),
   mimeType: varchar("mimeType", { length: 50 }),
   notes: text("notes"), // Delivery notes
+  signatureUrl: text("signatureUrl"), // Digital signature image URL
+  signatureKey: varchar("signatureKey", { length: 512 }), // S3 key for signature
   uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

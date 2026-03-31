@@ -317,7 +317,7 @@ export async function getProofOfDeliveryForLoad(loadId: number) {
 }
 
 /**
- * Save proof of delivery document with optional notes
+ * Save proof of delivery document with optional notes and signature
  */
 export async function saveProofOfDelivery(
   loadId: number,
@@ -327,7 +327,9 @@ export async function saveProofOfDelivery(
   fileName: string,
   fileSize: number,
   mimeType: string,
-  deliveryNotes?: string
+  deliveryNotes?: string,
+  signatureUrl?: string,
+  signatureKey?: string
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -342,6 +344,8 @@ export async function saveProofOfDelivery(
       fileSize,
       mimeType,
       notes: deliveryNotes || null,
+      signatureUrl: signatureUrl || null,
+      signatureKey: signatureKey || null,
       uploadedAt: new Date(),
       createdAt: new Date(),
     });

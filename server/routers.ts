@@ -821,6 +821,8 @@ const driverRouter = router({
       mimeType: z.string(),
       fileSize: z.number(),
       deliveryNotes: z.string().max(1000).optional(),
+      signatureUrl: z.string().optional(),
+      signatureKey: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       // Verify load belongs to this driver
@@ -857,7 +859,9 @@ const driverRouter = router({
           input.fileName,
           input.fileSize,
           input.mimeType,
-          input.deliveryNotes
+          input.deliveryNotes,
+          input.signatureUrl,
+          input.signatureKey
         );
 
         // Notify owner
@@ -902,6 +906,72 @@ const driverRouter = router({
     .input(z.object({ loadId: z.number() }))
     .query(async ({ input }) => {
       return await hasProofOfDelivery(input.loadId);
+    }),
+
+  updateLocation: protectedProcedure
+    .input(z.object({
+      latitude: z.number(),
+      longitude: z.number(),
+      accuracy: z.number().optional(),
+      speed: z.number().optional(),
+      heading: z.number().optional(),
+      altitude: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "driver" && ctx.user.role !== "owner") {
+        throw new Error("No tienes permiso para actualizar ubicación");
+      }
+
+      try {
+        const { saveDriverLocation } = await import("./db-location-tracking");
+        await saveDriverLocation(
+          ctx.user.id,
+          input.latitude,
+          input.longitude,
+          input.accuracy,
+          input.speed,
+          input.heading,
+          input.altitude
+        );
+        return { success: true };
+      } catch (error) {
+        console.error("[Location Update] Error:", error);
+        throw new Error("Error al actualizar ubicación");
+      }
+    }),
+
+  getLatestLocation: protectedProcedure
+    .input(z.object({ driverId: z.number().optional() }))
+    .query(async ({ input, ctx }) => {
+      const driverId = input.driverId || ctx.user.id;
+      if (driverId !== ctx.user.id && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver esta ubicación");
+      }
+
+      try {
+        const { getLatestDriverLocation } = await import("./db-location-tracking");
+        return await getLatestDriverLocation(driverId);
+      } catch (error) {
+        console.error("[Get Location] Error:", error);
+        return null;
+      }
+    }),
+
+  getLoadLocation: protectedProcedure
+    .input(z.object({ loadId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
+      if (!load && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver esta ubicación");
+      }
+
+      try {
+        const { getLatestLocationForLoad } = await import("./db-location-tracking");
+        return await getLatestLocationForLoad(input.loadId);
+      } catch (error) {
+        console.error("[Get Load Location] Error:", error);
+        return null;
+      }
     }),
 });
 

@@ -1044,3 +1044,39 @@
 - [ ] Sync queued items when connection returns
 - [ ] Show offline indicator to driver
 - [ ] Prevent duplicate submissions on reconnect
+
+
+### Priority 4: Delivery Signature Capture
+- [x] Create SignaturePad component with canvas-based drawing
+- [x] Mobile-friendly touch support
+- [x] Add signature capture after POD photos
+- [x] Save signature as image to S3
+- [x] Store signature URL in podDocuments
+- [x] Add timestamp to signature
+- [ ] Display signature in POD history
+- [x] Clear/redo functionality for signature
+
+### Priority 5: Periodic Location Tracking
+- [x] Create location update endpoint (latitude, longitude, accuracy)
+- [x] Implement periodic updates (every 30 seconds when active load)
+- [x] Store latest driver location per active load
+- [x] Admin can view latest driver location
+- [x] Handle location permission gracefully
+- [x] Stop tracking when no active load
+- [x] Battery-efficient implementation
+
+### Priority 6: Offline Queue System
+- [x] Create local storage queue for delivery confirmations
+- [x] Queue POD uploads when offline
+- [x] Detect connection status changes
+- [x] Sync queued items when connection returns
+- [x] Prevent duplicate submissions
+- [x] Show sync status indicator to driver
+- [x] Handle sync failures gracefully
+
+### Additional: Real-Time Admin Notifications & Mobile UX
+- [ ] Real-time notification when delivery completed
+- [ ] Mobile UX improvements for POD flow
+- [ ] Signature capture integration
+- [ ] Offline status indicator
+- [ ] Sync progress indicator

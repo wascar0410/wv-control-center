@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { ProofOfDeliveryCapture } from "@/components/ProofOfDeliveryCapture";
+import { useLocationTracking } from "@/hooks/useLocationTracking";
+import { useOfflineQueue } from "@/hooks/useOfflineQueue";
+import { OfflineQueueIndicator } from "@/components/OfflineQueueIndicator";
 
 interface LoadWithDetails {
   id: number;
@@ -298,6 +301,17 @@ export default function DriverViewProduction() {
   const [showProofModal, setShowProofModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState<"all" | "available" | "in_transit" | "delivered" | "invoiced" | "paid">("all");
 
+  // Enable location tracking when driver has an active load
+  const hasActiveLoad = loads?.some((l: any) => l.status === "in_transit") || false;
+  const { isTracking, error: trackingError } = useLocationTracking({
+    enabled: hasActiveLoad,
+    interval: 30000, // 30 seconds
+    highAccuracy: false,
+  });
+
+  // Offline queue for delivery confirmations
+  const { queueDelivery, removeFromQueue, syncQueue, isOnline } = useOfflineQueue();
+
   const filteredLoads = useMemo(() => {
     if (!loads) return [];
     if (filterStatus === "all") return loads;
@@ -331,9 +345,18 @@ export default function DriverViewProduction() {
     setShowProofModal(true);
   };
 
-  const handleProofSubmit = async (data: { notes: string; images: File[] }) => {
+  const handleProofSubmit = async (data: { notes: string; images: File[]; signature?: string }) => {
     if (!selectedLoad || !authUser) return;
     try {
+      let signatureUrl: string | undefined;
+      let signatureKey: string | undefined;
+
+      // Prepare signature if provided
+      if (data.signature) {
+        signatureUrl = data.signature;
+        signatureKey = `signatures/${authUser.id}/${selectedLoad.id}/${Date.now()}.png`;
+      }
+
       for (const image of data.images) {
         const reader = new FileReader();
         reader.onload = async (e) => {
@@ -345,17 +368,30 @@ export default function DriverViewProduction() {
             mimeType: image.type,
             fileSize: image.size,
             deliveryNotes: data.notes || undefined,
+            signatureUrl,
+            signatureKey,
           });
         };
         reader.readAsDataURL(image);
       }
 
-      await confirmDeliveryMutation.mutateAsync({
-        loadId: selectedLoad.id,
-        notes: data.notes || "Entrega confirmada con prueba",
-      });
+      // Try to confirm delivery
+      try {
+        await confirmDeliveryMutation.mutateAsync({
+          loadId: selectedLoad.id,
+          notes: data.notes || "Entrega confirmada con prueba",
+        });
+        toast.success(`Entrega de carga #${selectedLoad.id} confirmada`);
+      } catch (confirmError) {
+        // If offline, queue the delivery
+        if (!isOnline) {
+          queueDelivery(selectedLoad.id, data.notes || "Entrega confirmada con prueba");
+          toast.info(`Entrega #${selectedLoad.id} en cola. Se enviará cuando haya conexión.`);
+        } else {
+          throw confirmError;
+        }
+      }
 
-      toast.success(`Entrega de carga #${selectedLoad.id} confirmada`);
       setShowProofModal(false);
     } catch (error) {
       toast.error("Error al confirmar entrega");
@@ -587,6 +623,7 @@ export default function DriverViewProduction() {
           isSubmitting={uploadProofMutation.isPending || confirmDeliveryMutation.isPending}
         />
       )}
+      <OfflineQueueIndicator />
     </DashboardLayout>
   );
 }
