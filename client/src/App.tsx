@@ -8,11 +8,60 @@ import Transactions from "./pages/Transactions";
 import Partnership from "./pages/Partnership";
 import UserProfile from "./pages/UserProfile";
 import DriverViewProduction from "./pages/DriverViewProduction";
+import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 
 function DashboardPage() {
   return (
     <DashboardLayout>
       <Dashboard />
+    </DashboardLayout>
+  );
+}
+
+function LoadsPage() {
+  return (
+    <DashboardLayout>
+      <Loads />
+    </DashboardLayout>
+  );
+}
+
+function FinancePage() {
+  return (
+    <DashboardLayout>
+      <Finance />
+    </DashboardLayout>
+  );
+}
+
+function TransactionsPage() {
+  return (
+    <DashboardLayout>
+      <Transactions />
+    </DashboardLayout>
+  );
+}
+
+function PartnershipPage() {
+  return (
+    <DashboardLayout>
+      <Partnership />
+    </DashboardLayout>
+  );
+}
+
+function ProfilePage() {
+  return (
+    <DashboardLayout>
+      <UserProfile />
+    </DashboardLayout>
+  );
+}
+
+function ExecutiveDashboardPage() {
+  return (
+    <DashboardLayout>
+      <ExecutiveDashboard />
     </DashboardLayout>
   );
 }
@@ -23,12 +72,13 @@ export default function App() {
       <Route path="/" component={About} />
       <Route path="/about" component={About} />
       <Route path="/dashboard" component={DashboardPage} />
-      <Route path="/loads" component={Loads} />
-      <Route path="/finance" component={Finance} />
-      <Route path="/transactions" component={Transactions} />
-      <Route path="/partnership" component={Partnership} />
-      <Route path="/profile" component={UserProfile} />
+      <Route path="/loads" component={LoadsPage} />
+      <Route path="/finance" component={FinancePage} />
+      <Route path="/transactions" component={TransactionsPage} />
+      <Route path="/partnership" component={PartnershipPage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/driver" component={DriverViewProduction} />
+      <Route path="/executive-dashboard" component={ExecutiveDashboardPage} />
     </Switch>
   );
 }
