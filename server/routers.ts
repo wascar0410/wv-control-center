@@ -980,10 +980,10 @@ const driverRouter = router({
 const dashboardRouter = router({
   kpis: publicProcedure.query(() => getDashboardKPIs()),
   recentLoads: publicProcedure.query(() => getLoads()),
-  monthlyProjections: protectedProcedure.query(({ ctx }) => getMonthlyProjections(ctx.user.id)),
-  historicalComparison: protectedProcedure.query(({ ctx }) => getHistoricalComparison(ctx.user.id)),
-  quarterlyComparison: protectedProcedure.query(({ ctx }) => getQuarterlyComparison(ctx.user.id)),
-  annualComparison: protectedProcedure.query(({ ctx }) => getAnnualComparison(ctx.user.id)),
+  monthlyProjections: publicProcedure.query(() => null),
+  historicalComparison: publicProcedure.query(() => null),
+  quarterlyComparison: publicProcedure.query(() => null),
+  annualComparison: publicProcedure.query(() => null),
 });
 
 // ─── Assignment Router ────────────────────────────────────────────────────────
