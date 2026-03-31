@@ -7,6 +7,7 @@ import Finance from "./pages/Finance";
 import Transactions from "./pages/Transactions";
 import Partnership from "./pages/Partnership";
 import UserProfile from "./pages/UserProfile";
+import DriverViewProduction from "./pages/DriverViewProduction";
 
 function DashboardPage() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
       <Route path="/transactions" component={Transactions} />
       <Route path="/partnership" component={Partnership} />
       <Route path="/profile" component={UserProfile} />
+      <Route path="/driver" component={DriverViewProduction} />
     </Switch>
   );
 }
