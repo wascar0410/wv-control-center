@@ -1,12 +1,15 @@
 import { Route, Switch } from "wouter";
+import DashboardLayout from "./components/DashboardLayout";
 import About from "./pages/About";
 
 function DashboardTemp() {
   return (
-    <div style={{ padding: 40, fontFamily: "sans-serif" }}>
-      <h1>DASHBOARD TEMPORAL</h1>
-      <p>Si ves esto, la navegación ya funciona.</p>
-    </div>
+    <DashboardLayout>
+      <div style={{ padding: 24 }}>
+        <h1>DASHBOARD TEMPORAL</h1>
+        <p>Si ves esto sin rebote, el layout ya está estable.</p>
+      </div>
+    </DashboardLayout>
   );
 }
 
