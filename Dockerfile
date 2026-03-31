@@ -3,19 +3,14 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm
 RUN npm install -g pnpm@10.4.1
 
-# Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies
 RUN pnpm install --no-frozen-lockfile
 
-# Copy source code
 COPY . .
 
-# Build frontend and backend
 RUN pnpm build
 
 # Production stage
@@ -23,21 +18,40 @@ FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Install pnpm
 RUN npm install -g pnpm@10.4.1
 
-# Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install production dependencies only
-RUN pnpm install --prod --no-frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
-# Copy built files from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/client/public ./client/public
 
-# Set environment
 ENV NODE_ENV=production
 
-# Start application
 CMD ["pnpm", "start"]
+Qué cambié
+
+Cambié esta línea:
+
+RUN pnpm install --prod --no-frozen-lockfile
+
+por esta:
+
+RUN pnpm install --no-frozen-lockfile
+Qué haces ahora
+abre Dockerfile en GitHub
+reemplázalo completo por el bloque de arriba
+guarda con commit
+vuelve a Railway
+haz redeploy
+Después
+
+Si arranca, el siguiente paso será revisar:
+
+PORT
+base de datos
+dominio
+variables de entorno
+
+Si vuelve a fallar, pégame el nuevo error exacto.
