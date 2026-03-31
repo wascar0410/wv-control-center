@@ -1,14 +1,12 @@
 import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
 import About from "./pages/About";
+import Dashboard from "./pages/Dashboard";
 
-function DashboardTemp() {
+function DashboardPage() {
   return (
     <DashboardLayout>
-      <div style={{ padding: 24, fontFamily: "sans-serif" }}>
-        <h1>DASHBOARD TEMPORAL 1002</h1>
-        <p>Si ves esto, layout + tRPC ya funcionan juntos.</p>
-      </div>
+      <Dashboard />
     </DashboardLayout>
   );
 }
@@ -18,7 +16,7 @@ function App() {
     <Switch>
       <Route path="/" component={About} />
       <Route path="/about" component={About} />
-      <Route path="/dashboard" component={DashboardTemp} />
+      <Route path="/dashboard" component={DashboardPage} />
     </Switch>
   );
 }
