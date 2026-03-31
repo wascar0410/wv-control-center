@@ -85,7 +85,7 @@ const MIN_WIDTH = 200;
 const MAX_WIDTH = 400;
 
 const FALLBACK_USER = {
-  name: "WV Admin",
+  name: "WV Admin 2",
   email: "info@wvtransports.com",
   role: "owner",
 };
