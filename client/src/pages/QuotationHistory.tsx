@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileDown, Search, Filter } from "lucide-react";
+import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 
@@ -46,15 +47,25 @@ export default function QuotationHistory() {
   const [page, setPage] = useState(0);
   const pageSize = 20;
 
-  const { data: result, isLoading } = trpc.quotation.getQuotationHistory.useQuery({
-    status: (status as any) || undefined,
-    search: search || undefined,
-    limit: pageSize,
-    offset: page * pageSize,
-  });
+  const {
+    data,
+    isLoading,
+    error,
+  } = trpc.quotation.getQuotationHistory.useQuery(
+    {
+      status: status && status !== "all" ? (status as any) : undefined,
+      search: search || undefined,
+      limit: pageSize,
+      offset: page * pageSize,
+    },
+    {
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
+  );
 
-  const quotations = result?.quotations || [];
-  const total = result?.total || 0;
+  const quotations = Array.isArray(data?.quotations) ? data?.quotations : [];
+  const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 
   const handleExportPDF = () => {
@@ -65,132 +76,66 @@ export default function QuotationHistory() {
 
     try {
       const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 10;
-      let yPosition = margin + 10;
+      let y = 20;
 
-      // Header
       doc.setFontSize(16);
-      doc.text("Historial de Cotizaciones", margin, yPosition);
-      yPosition += 8;
+      doc.text("Historial de Cotizaciones", 10, y);
+      y += 10;
 
-      doc.setFontSize(10);
-      doc.text(`Generado: ${new Date().toLocaleDateString("es-ES")}`, margin, yPosition);
-      yPosition += 8;
-
-      // Filters info
-      const filterText = [];
-      if (status) filterText.push(`Estado: ${STATUS_LABELS[status]}`);
-      if (search) filterText.push(`Búsqueda: ${search}`);
-      if (filterText.length > 0) {
-        doc.setFontSize(9);
-        doc.text(`Filtros: ${filterText.join(" | ")}`, margin, yPosition);
-        yPosition += 6;
-      }
-
-      yPosition += 4;
-
-      // Table headers
-      const colWidths = [20, 35, 35, 25, 25, 20, 25];
-      const headers = ["Fecha", "Origen", "Destino", "Precio", "Ganancia", "Margen", "Estado"];
-
-      doc.setFontSize(9);
-      (doc as any).setFont(undefined, "bold");
-      let xPos = margin;
-      headers.forEach((header, i) => {
-        doc.text(header, xPos, yPosition, { maxWidth: colWidths[i] - 2 } as any);
-        xPos += colWidths[i];
-      });
-      yPosition += 6;
-
-      // Table rows
-      (doc as any).setFont(undefined, "normal");
-      doc.setFontSize(8);
       quotations.forEach((q) => {
-        if (yPosition > pageHeight - 15) {
-          doc.addPage();
-          yPosition = margin;
-        }
-
-        const rowData = [
-          new Date(q.createdAt).toLocaleDateString("es-ES"),
-          q.pickupAddress.substring(0, 30),
-          q.deliveryAddress.substring(0, 30),
-          `$${Number(q.totalPrice).toFixed(2)}`,
-          `$${Number(q.estimatedProfit).toFixed(2)}`,
-          `${Number(q.profitMarginPercent).toFixed(1)}%`,
-          STATUS_LABELS[q.status] || q.status,
-        ];
-
-        xPos = margin;
-        rowData.forEach((cell, i) => {
-          doc.text(String(cell), xPos, yPosition, { maxWidth: colWidths[i] - 2 } as any);
-          xPos += colWidths[i];
-        });
-        yPosition += 5;
+        doc.setFontSize(10);
+        doc.text(
+          `${new Date(q.createdAt).toLocaleDateString()} - ${q.pickupAddress} → ${q.deliveryAddress}`,
+          10,
+          y
+        );
+        y += 6;
       });
 
-      // Summary
-      yPosition += 5;
-      doc.setFontSize(10);
-      (doc as any).setFont(undefined, "bold");
-      doc.text(`Total de cotizaciones: ${quotations.length}`, margin, yPosition);
-      yPosition += 6;
-
-      const totalPrice = quotations.reduce((sum, q) => sum + Number(q.totalPrice), 0);
-      const totalProfit = quotations.reduce((sum, q) => sum + Number(q.estimatedProfit), 0);
-      const avgMargin =
-        quotations.length > 0
-          ? quotations.reduce((sum, q) => sum + Number(q.profitMarginPercent), 0) /
-            quotations.length
-          : 0;
-
-      doc.text(`Ingresos totales: $${totalPrice.toFixed(2)}`, margin, yPosition);
-      yPosition += 5;
-      doc.text(`Ganancia total: $${totalProfit.toFixed(2)}`, margin, yPosition);
-      yPosition += 5;
-      doc.text(`Margen promedio: ${avgMargin.toFixed(1)}%`, margin, yPosition);
-
-      // Save
-      doc.save(`cotizaciones-${new Date().toISOString().split("T")[0]}.pdf`);
-      toast.success("PDF exportado exitosamente");
-    } catch (error) {
-      console.error("Error exporting PDF:", error);
-      toast.error("Error al exportar PDF");
+      doc.save("cotizaciones.pdf");
+      toast.success("PDF exportado");
+    } catch (e) {
+      console.error(e);
+      toast.error("Error exportando PDF");
     }
   };
+
+  if (error) {
+    console.error("QuotationHistory error:", error);
+  }
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Historial de Cotizaciones</CardTitle>
-          <CardDescription>Ver y exportar todas tus cotizaciones calculadas</CardDescription>
+          <CardDescription>Vista segura</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Filters */}
-          <div className="flex gap-4 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <Input
-                placeholder="Buscar por dirección..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(0);
-                }}
-              />
-            </div>
 
-            <Select value={status} onValueChange={(value) => {
-              setStatus(value);
-              setPage(0);
-            }}>
+        <CardContent className="space-y-4">
+          {/* filtros */}
+          <div className="flex gap-4 flex-wrap">
+            <Input
+              placeholder="Buscar..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
+            />
+
+            <Select
+              value={status}
+              onValueChange={(v) => {
+                setStatus(v);
+                setPage(0);
+              }}
+            >
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrar por estado" />
+                <SelectValue placeholder="Estado" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="draft">Borrador</SelectItem>
                 <SelectItem value="quoted">Cotizado</SelectItem>
                 <SelectItem value="accepted">Aceptado</SelectItem>
@@ -199,13 +144,19 @@ export default function QuotationHistory() {
               </SelectContent>
             </Select>
 
-            <Button onClick={handleExportPDF} variant="outline" className="gap-2">
-              <FileDown className="w-4 h-4" />
-              Exportar PDF
+            <Button onClick={handleExportPDF}>
+              <FileDown className="w-4 h-4 mr-2" />
+              PDF
             </Button>
           </div>
 
-          {/* Table */}
+          {error && (
+            <div className="text-red-400 text-sm">
+              Error cargando historial (modo seguro)
+            </div>
+          )}
+
+          {/* tabla */}
           <div className="border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
@@ -219,6 +170,7 @@ export default function QuotationHistory() {
                   <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {isLoading ? (
                   <TableRow>
@@ -228,24 +180,24 @@ export default function QuotationHistory() {
                   </TableRow>
                 ) : quotations.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No hay cotizaciones
+                    <TableCell colSpan={7} className="text-center py-8">
+                      No hay datos
                     </TableCell>
                   </TableRow>
                 ) : (
-                  quotations.map((q) => (
+                  quotations.map((q: any) => (
                     <TableRow key={q.id}>
-                      <TableCell>{new Date(q.createdAt).toLocaleDateString("es-ES")}</TableCell>
-                      <TableCell className="max-w-[150px] truncate">{q.pickupAddress}</TableCell>
-                      <TableCell className="max-w-[150px] truncate">
-                        {q.deliveryAddress}
+                      <TableCell>
+                        {new Date(q.createdAt).toLocaleDateString()}
                       </TableCell>
+                      <TableCell>{q.pickupAddress}</TableCell>
+                      <TableCell>{q.deliveryAddress}</TableCell>
                       <TableCell>${Number(q.totalPrice).toFixed(2)}</TableCell>
                       <TableCell>${Number(q.estimatedProfit).toFixed(2)}</TableCell>
                       <TableCell>{Number(q.profitMarginPercent).toFixed(1)}%</TableCell>
                       <TableCell>
-                        <Badge className={STATUS_COLORS[q.status] || "bg-gray-100"}>
-                          {STATUS_LABELS[q.status] || q.status}
+                        <Badge className={STATUS_COLORS[q.status]}>
+                          {STATUS_LABELS[q.status]}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -255,28 +207,21 @@ export default function QuotationHistory() {
             </Table>
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Mostrando {quotations.length > 0 ? page * pageSize + 1 : 0} a{" "}
-              {Math.min((page + 1) * pageSize, total)} de {total} cotizaciones
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-              >
-                Anterior
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                disabled={page >= totalPages - 1}
-              >
-                Siguiente
-              </Button>
-            </div>
+          {/* paginación */}
+          <div className="flex justify-between">
+            <Button
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+            >
+              Anterior
+            </Button>
+
+            <Button
+              onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+              disabled={page >= totalPages - 1}
+            >
+              Siguiente
+            </Button>
           </div>
         </CardContent>
       </Card>
