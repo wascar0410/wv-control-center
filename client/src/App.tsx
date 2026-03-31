@@ -73,7 +73,7 @@ function AppRoutes() {
           <LoadNotificationToast />
           <DashboardLayout>
             <Switch>
-              <Route path="/" component={Dashboard} />
+              <Route path="/" component={DriverViewProduction} />
               <Route
                 path="/loads"
                 component={() => <ProtectedRoute component={Loads} requiredRole="admin" />}
