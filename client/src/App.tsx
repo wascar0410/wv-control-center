@@ -11,7 +11,7 @@ function DashboardPage() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <Switch>
       <Route path="/" component={About} />
@@ -20,5 +20,3 @@ function App() {
     </Switch>
   );
 }
-
-export default App;
