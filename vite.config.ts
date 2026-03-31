@@ -174,7 +174,7 @@ export default defineConfig({
   },
   server: {
     middlewareMode: false,
-    host: true,
+    host: "0.0.0.0",
     allowedHosts: [
       ".manuspre.computer",
       ".manus.computer",
@@ -184,7 +184,7 @@ export default defineConfig({
       "localhost",
       "127.0.0.1",
     ],
-    // Disable HMR completely to avoid WebSocket connection errors
+    // Disable HMR to avoid WebSocket connection errors
     hmr: false,
     fs: {
       strict: false,
