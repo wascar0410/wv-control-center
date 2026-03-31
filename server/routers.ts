@@ -235,12 +235,33 @@ const driverStatsRouter = router({
 
 const loadsRouter = router({
   list: publicProcedure
-    .input(z.object({ status: z.string().optional(), driverId: z.number().optional() }).optional())
-    .query(({ input }) => getLoads(input)),
+    .input(
+      z
+        .object({
+          status: z.string().optional(),
+          driverId: z.number().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      try {
+        return await getLoads(input);
+      } catch (error) {
+        console.error("[loads.list] error:", error);
+        return [];
+      }
+    }),
 
- byId: publicProcedure
+  byId: publicProcedure
     .input(z.object({ id: z.number() }))
-    .query(({ input }) => getLoadById(input.id)),
+    .query(async ({ input }) => {
+      try {
+        return await getLoadById(input.id);
+      } catch (error) {
+        console.error("[loads.byId] error:", error);
+        return null;
+      }
+    }),
 
   create: protectedProcedure
     .input(z.object({
@@ -279,7 +300,6 @@ const loadsRouter = router({
       });
       return { id };
     }),
-
   update: protectedProcedure
     .input(z.object({
       id: z.number(),
