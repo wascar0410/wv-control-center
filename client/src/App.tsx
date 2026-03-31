@@ -10,6 +10,7 @@ import UserProfile from "./pages/UserProfile";
 import DriverViewProduction from "./pages/DriverViewProduction";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import Quotation from "./pages/Quotation";
+import QuotationHistory from "./pages/QuotationHistory";
 
 function DashboardPage() {
   return (
@@ -67,6 +68,18 @@ function ExecutiveDashboardPage() {
   );
 }
 
+function QuotationPage() {
+  return <Quotation />;
+}
+
+function QuotationHistoryPage() {
+  return (
+    <DashboardLayout>
+      <QuotationHistory />
+    </DashboardLayout>
+  );
+}
+
 export default function App() {
   return (
     <Switch>
@@ -80,7 +93,8 @@ export default function App() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/driver" component={DriverViewProduction} />
       <Route path="/executive-dashboard" component={ExecutiveDashboardPage} />
-      <Route path="/quotation" component={Quotation} />
+      <Route path="/quotation" component={QuotationPage} />
+      <Route path="/quotation-history" component={QuotationHistoryPage} />
     </Switch>
   );
 }
