@@ -4,6 +4,7 @@ import About from "./pages/About";
 import Dashboard from "./pages/Dashboard";
 import Loads from "./pages/Loads";
 import Finance from "./pages/Finance";
+import Transactions from "./pages/Transactions";
 
 function DashboardPage() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/dashboard" component={DashboardPage} />
       <Route path="/loads" component={Loads} />
       <Route path="/finance" component={Finance} />
+      <Route path="/transactions" component={Transactions} />
     </Switch>
   );
 }
