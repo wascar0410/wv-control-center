@@ -1080,3 +1080,37 @@
 - [ ] Signature capture integration
 - [ ] Offline status indicator
 - [ ] Sync progress indicator
+
+
+## Fase 97: Admin Dashboard & Advanced Features
+
+### Feature 1: Admin Dashboard - Real-Time Driver Location Map
+- [ ] Create AdminDashboard.tsx component
+- [ ] Integrate Google Maps component for live tracking
+- [ ] Fetch active drivers with in_transit loads
+- [ ] Display driver markers with load info
+- [ ] Show driver name, load ID, pickup/delivery addresses
+- [ ] Real-time location updates (subscribe to location changes)
+- [ ] Click marker to see full load details
+- [ ] Filter by status (in_transit, available, completed)
+- [ ] Add to admin navigation in DashboardLayout
+
+### Feature 2: POD History - Photo Gallery & Signature Display
+- [ ] Create PODHistoryModal.tsx component
+- [ ] Display photo gallery with timestamps
+- [ ] Show signature image (if captured)
+- [ ] Display delivery notes
+- [ ] Show delivery timestamp
+- [ ] Add download option for POD documents
+- [ ] Integrate in LoadDetailsModal
+- [ ] Add "View POD" button in load details
+
+### Feature 3: Geofencing Alerts - Automatic Notifications
+- [ ] Create geofencing service (calculate distance)
+- [ ] Add geofence radius configuration (default 500m)
+- [ ] Detect when driver enters pickup zone
+- [ ] Detect when driver enters delivery zone
+- [ ] Send notifications to admin (notifyOwner)
+- [ ] Store geofence events in database
+- [ ] Display geofence history in admin dashboard
+- [ ] Configure alert thresholds per load
