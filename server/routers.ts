@@ -978,8 +978,8 @@ const driverRouter = router({
 // ─── Dashboard Router ─────────────────────────────────────────────────────────
 
 const dashboardRouter = router({
-  kpis: protectedProcedure.query(() => getDashboardKPIs()),
-  recentLoads: protectedProcedure.query(() => getLoads()),
+  kpis: publicProcedure.query(() => getDashboardKPIs()),
+  recentLoads: publicProcedure.query(() => getLoads()),
   monthlyProjections: protectedProcedure.query(({ ctx }) => getMonthlyProjections(ctx.user.id)),
   historicalComparison: protectedProcedure.query(({ ctx }) => getHistoricalComparison(ctx.user.id)),
   quarterlyComparison: protectedProcedure.query(({ ctx }) => getQuarterlyComparison(ctx.user.id)),
