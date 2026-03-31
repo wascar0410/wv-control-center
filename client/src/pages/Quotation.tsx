@@ -6,7 +6,7 @@ import CreateLoadModal from "@/components/CreateLoadModal";
 import { AlertBanner } from "@/components/AlertBanner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 interface QuotationResult {
@@ -36,16 +36,24 @@ export default function Quotation() {
   const [formDataForLoad, setFormDataForLoad] = useState<QuotationFormData | null>(null);
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
 
-  // Get unread alerts
-  const { data: unreadAlerts = [] } = trpc.priceAlerts.getUnreadAlerts.useQuery();
-  const visibleAlerts = unreadAlerts
-    .filter((a) => !dismissedAlerts.includes(a.id))
-    .map((a) => ({
+  const {
+    data: unreadAlerts,
+    error: alertsError,
+  } = trpc.priceAlerts.getUnreadAlerts.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const safeAlerts = Array.isArray(unreadAlerts) ? unreadAlerts : [];
+
+  const visibleAlerts = safeAlerts
+    .filter((a: any) => !dismissedAlerts.includes(a.id))
+    .map((a: any) => ({
       ...a,
-      offeredPrice: Number(a.offeredPrice),
-      ratePerLoadedMile: Number(a.ratePerLoadedMile),
-      minimumProfitPerMile: Number(a.minimumProfitPerMile),
-      differenceFromMinimum: Number(a.differenceFromMinimum),
+      offeredPrice: Number(a.offeredPrice ?? 0),
+      ratePerLoadedMile: Number(a.ratePerLoadedMile ?? 0),
+      minimumProfitPerMile: Number(a.minimumProfitPerMile ?? 0),
+      differenceFromMinimum: Number(a.differenceFromMinimum ?? 0),
     }));
 
   const calculateQuotation = trpc.quotation.calculateQuotation.useMutation({
@@ -70,31 +78,40 @@ export default function Quotation() {
 
   const handleReset = () => {
     setResult(null);
+    setFormDataForLoad(null);
+    setShowCreateLoadModal(false);
   };
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Cotización de Cargas</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Cotización de Cargas
+          </h1>
           <p className="text-muted-foreground">
             Calcula el precio, millas y rentabilidad de una carga antes de aceptarla
           </p>
         </div>
 
-        {/* Display Alerts */}
+        {alertsError && (
+          <div className="mb-6 text-sm text-yellow-600 dark:text-yellow-400">
+            Alertas no disponibles temporalmente.
+          </div>
+        )}
+
         {visibleAlerts.length > 0 && (
           <div className="mb-8">
             <AlertBanner
               alerts={visibleAlerts}
-              onDismiss={(alertId) => setDismissedAlerts((prev) => [...prev, alertId])}
+              onDismiss={(alertId) =>
+                setDismissedAlerts((prev) => [...prev, alertId])
+              }
             />
           </div>
         )}
 
         {!result ? (
-          // Form View
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <Card>
@@ -110,7 +127,6 @@ export default function Quotation() {
               </Card>
             </div>
 
-            {/* Info Sidebar */}
             <div className="space-y-4">
               <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
                 <CardHeader>
@@ -152,12 +168,15 @@ export default function Quotation() {
             </div>
           </div>
         ) : (
-          // Results View
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-foreground">Resultados de la Cotización</h2>
-                <p className="text-muted-foreground mt-1">Cotización ID: #{result.quotationId}</p>
+                <h2 className="text-2xl font-bold text-foreground">
+                  Resultados de la Cotización
+                </h2>
+                <p className="text-muted-foreground mt-1">
+                  Cotización ID: #{result.quotationId}
+                </p>
               </div>
               <Button onClick={handleReset} variant="outline" size="lg">
                 <RotateCcw className="w-4 h-4 mr-2" />
@@ -167,17 +186,24 @@ export default function Quotation() {
 
             <QuotationResultsTable {...result} />
 
-            {/* Action Buttons */}
             <div className="flex gap-4 justify-center">
-              <Button size="lg" className="min-w-[200px]" onClick={() => setShowCreateLoadModal(true)}>
+              <Button
+                size="lg"
+                className="min-w-[200px]"
+                onClick={() => setShowCreateLoadModal(true)}
+              >
                 ✓ Crear Carga
               </Button>
-              <Button size="lg" variant="outline" className="min-w-[200px]" onClick={handleReset}>
+              <Button
+                size="lg"
+                variant="outline"
+                className="min-w-[200px]"
+                onClick={handleReset}
+              >
                 Calcular Otra
               </Button>
             </div>
 
-            {/* Create Load Modal */}
             {result && formDataForLoad && (
               <CreateLoadModal
                 isOpen={showCreateLoadModal}
