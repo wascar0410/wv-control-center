@@ -565,7 +565,14 @@ const financeRouter = router({
 // ─── Partnership Router ───────────────────────────────────────────────────────
 
 const partnershipRouter = router({
-  list: protectedProcedure.query(() => getPartners()),
+  list: publicProcedure.query(async () => {
+    try {
+      return await getPartners();
+    } catch (error) {
+      console.error("[partnership.list] error:", error);
+      return [];
+    }
+  }),
 
   create: protectedProcedure
     .input(z.object({
@@ -592,7 +599,9 @@ const partnershipRouter = router({
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
       const updateData: any = { ...data };
-      if (data.participationPercent !== undefined) updateData.participationPercent = String(data.participationPercent);
+      if (data.participationPercent !== undefined) {
+        updateData.participationPercent = String(data.participationPercent);
+      }
       await updatePartner(id, updateData);
       return { success: true };
     }),
@@ -627,29 +636,45 @@ const partnershipRouter = router({
       return { id };
     }),
 
-  distribution: protectedProcedure
+  distribution: publicProcedure
     .input(z.object({ year: z.number(), month: z.number() }))
     .query(async ({ input }) => {
-      const [partners, summary] = await Promise.all([
-        getPartners(),
-        getFinancialSummary(input.year, input.month),
-      ]);
-      const payroll = summary.byCategory.find((c) => c.category === "payroll")?.total ?? 0;
-      const netAfterPayroll = summary.netProfit - payroll;
-      return {
-        grossIncome: summary.income,
-        totalExpenses: summary.expenses,
-        payroll,
-        netProfit: summary.netProfit,
-        netAfterPayroll,
-        partners: partners.map((p) => ({
-          ...p,
-          distribution: (netAfterPayroll * parseFloat(String(p.participationPercent))) / 100,
-        })),
-      };
+      try {
+        const [partners, summary] = await Promise.all([
+          getPartners(),
+          getFinancialSummary(input.year, input.month),
+        ]);
+
+        const payroll =
+          summary?.byCategory?.find((c: any) => c.category === "payroll")?.total ?? 0;
+
+        const netAfterPayroll = (summary?.netProfit ?? 0) - payroll;
+
+        return {
+          grossIncome: summary?.income ?? 0,
+          totalExpenses: summary?.expenses ?? 0,
+          payroll,
+          netProfit: summary?.netProfit ?? 0,
+          netAfterPayroll,
+          partners: (partners ?? []).map((p: any) => ({
+            ...p,
+            distribution:
+              (netAfterPayroll * parseFloat(String(p.participationPercent))) / 100,
+          })),
+        };
+      } catch (error) {
+        console.error("[partnership.distribution] error:", error);
+        return {
+          grossIncome: 0,
+          totalExpenses: 0,
+          payroll: 0,
+          netProfit: 0,
+          netAfterPayroll: 0,
+          partners: [],
+        };
+      }
     }),
 });
-
 // ─── Driver Router ────────────────────────────────────────────────────────────
 
 const driverRouter = router({
