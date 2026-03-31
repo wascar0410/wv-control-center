@@ -978,8 +978,29 @@ const driverRouter = router({
 // ─── Dashboard Router ─────────────────────────────────────────────────────────
 
 const dashboardRouter = router({
-  kpis: publicProcedure.query(() => getDashboardKPIs()),
-  recentLoads: publicProcedure.query(() => getLoads()),
+  kpis: publicProcedure.query(async () => {
+    try {
+      return await getDashboardKPIs();
+    } catch (error) {
+      console.error("[dashboard.kpis] error:", error);
+      return {
+        activeLoads: 0,
+        monthIncome: 0,
+        monthExpenses: 0,
+        monthProfit: 0,
+      };
+    }
+  }),
+
+  recentLoads: publicProcedure.query(async () => {
+    try {
+      return await getLoads();
+    } catch (error) {
+      console.error("[dashboard.recentLoads] error:", error);
+      return [];
+    }
+  }),
+
   monthlyProjections: publicProcedure.query(() => null),
   historicalComparison: publicProcedure.query(() => null),
   quarterlyComparison: publicProcedure.query(() => null),
