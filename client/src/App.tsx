@@ -1,15 +1,12 @@
 import { Route, Switch } from "wouter";
-import DashboardLayout from "./components/DashboardLayout";
 import About from "./pages/About";
 
 function DashboardTemp() {
   return (
-    <DashboardLayout>
-      <div style={{ padding: 24 }}>
-        <h1>DASHBOARD TEMPORAL 1000</h1>
-        <p>Si ves esto sin rebote, el layout ya está estable en producción.</p>
-      </div>
-    </DashboardLayout>
+    <div style={{ padding: 24, fontFamily: "sans-serif" }}>
+      <h1>DASHBOARD TEMPORAL 1001</h1>
+      <p>Si ves esto, el panel básico ya funciona sin tRPC.</p>
+    </div>
   );
 }
 
