@@ -11,6 +11,9 @@ RUN pnpm install --no-frozen-lockfile
 
 COPY . .
 
+# fuerza rebuild visible
+RUN echo "BUILD_FORCE_2026_03_31"
+
 # limpiar builds viejos antes de compilar
 RUN rm -rf dist node_modules/.vite
 
