@@ -5,6 +5,7 @@ import Dashboard from "./pages/Dashboard";
 import Loads from "./pages/Loads";
 import Finance from "./pages/Finance";
 import Transactions from "./pages/Transactions";
+import Partnership from "./pages/Partnership";
 
 function DashboardPage() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/loads" component={Loads} />
       <Route path="/finance" component={Finance} />
       <Route path="/transactions" component={Transactions} />
+      <Route path="/partnership" component={Partnership} />
     </Switch>
   );
 }
