@@ -1,19 +1,33 @@
 import { useState, useMemo } from "react";
-import { es } from "date-fns/locale";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  AreaChart, Area
+import {
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
 } from "recharts";
-import { 
-  TrendingUp, TrendingDown, DollarSign, Truck, Target, AlertCircle,
-  Calendar, ArrowUpRight, ArrowDownRight, X
+import {
+  TrendingUp,
+  DollarSign,
+  Truck,
+  Target,
+  AlertCircle,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { format, subDays } from "date-fns";
 import { es as esLocale } from "date-fns/locale";
 
 type DateRangeType = {
@@ -22,21 +36,45 @@ type DateRangeType = {
   label: string;
 };
 
+type SafeLoad = {
+  id?: number;
+  status?: string;
+  updatedAt?: string | Date | null;
+  totalPrice?: number;
+  estimatedOperatingCost?: number;
+};
+
 export default function ExecutiveDashboard() {
   const today = new Date();
+
   const [dateRange, setDateRange] = useState<DateRangeType>({
     startDate: new Date(today.getFullYear(), today.getMonth(), 1),
     endDate: today,
     label: "Este mes",
   });
+
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [customStart, setCustomStart] = useState(dateRange.startDate.toISOString().split('T')[0]);
-  const [customEnd, setCustomEnd] = useState(dateRange.endDate.toISOString().split('T')[0]);
+  const [customStart, setCustomStart] = useState(
+    dateRange.startDate.toISOString().split("T")[0]
+  );
+  const [customEnd, setCustomEnd] = useState(
+    dateRange.endDate.toISOString().split("T")[0]
+  );
 
-  // Fetch all loads for analysis
-  const { data: loads = [] } = trpc.loads.list.useQuery({});
+  const {
+    data: loads,
+    isLoading,
+    error,
+  } = trpc.loads.list.useQuery(
+    {},
+    {
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
+  );
 
-  // Preset date ranges
+  const safeLoads: SafeLoad[] = Array.isArray(loads) ? loads : [];
+
   const datePresets = [
     {
       label: "Hoy",
@@ -75,61 +113,97 @@ export default function ExecutiveDashboard() {
     },
   ];
 
-  // Calculate KPIs
   const kpis = useMemo(() => {
     const startDate = dateRange.startDate;
     const endDate = dateRange.endDate;
 
-    // Filter loads in date range and completed
-    const completedLoads = loads.filter(
-      (load: any) =>
-        load.status === "paid" &&
-        new Date(load.updatedAt) >= startDate &&
-        new Date(load.updatedAt) <= endDate
+    const completedLoads = safeLoads.filter((load: SafeLoad) => {
+      if (load.status !== "paid" || !load.updatedAt) return false;
+      const updatedAt = new Date(load.updatedAt);
+      return updatedAt >= startDate && updatedAt <= endDate;
+    });
+
+    const totalIncome = completedLoads.reduce(
+      (sum: number, load: SafeLoad) => sum + Number(load.totalPrice ?? 0),
+      0
     );
 
-    // Calculate metrics
-    const totalIncome = completedLoads.reduce((sum: number, load: any) => sum + (load.totalPrice || 0), 0);
-    const totalCost = completedLoads.reduce((sum: number, load: any) => sum + (load.estimatedOperatingCost || 0), 0);
+    const totalCost = completedLoads.reduce(
+      (sum: number, load: SafeLoad) => sum + Number(load.estimatedOperatingCost ?? 0),
+      0
+    );
+
     const totalProfit = totalIncome - totalCost;
-    const averageMargin = completedLoads.length > 0 
-      ? (totalProfit / totalIncome) * 100 
-      : 0;
+    const averageMargin =
+      totalIncome > 0 ? (totalProfit / totalIncome) * 100 : 0;
 
-    const daysInRange = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const loadsPerDay = completedLoads.length / Math.max(daysInRange, 1);
-    const incomePerDay = totalIncome / Math.max(daysInRange, 1);
+    const daysInRange =
+      Math.ceil(
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      ) + 1;
 
-    // Group by day for trends
-    const dailyData: { [key: string]: any } = {};
-    completedLoads.forEach((load: any) => {
-      const day = format(new Date(load.updatedAt), "MMM dd");
+    const safeDays = Math.max(daysInRange, 1);
+    const loadsPerDay = completedLoads.length / safeDays;
+    const incomePerDay = totalIncome / safeDays;
+
+    const dailyData: Record<
+      string,
+      { date: string; income: number; profit: number; loads: number; margin: number }
+    > = {};
+
+    completedLoads.forEach((load: SafeLoad) => {
+      if (!load.updatedAt) return;
+      const day = format(new Date(load.updatedAt), "MMM dd", { locale: esLocale });
+
       if (!dailyData[day]) {
-        dailyData[day] = { date: day, income: 0, profit: 0, loads: 0, margin: 0 };
+        dailyData[day] = {
+          date: day,
+          income: 0,
+          profit: 0,
+          loads: 0,
+          margin: 0,
+        };
       }
-      dailyData[day].income += load.totalPrice || 0;
-      dailyData[day].profit += (load.totalPrice || 0) - (load.estimatedOperatingCost || 0);
+
+      const income = Number(load.totalPrice ?? 0);
+      const cost = Number(load.estimatedOperatingCost ?? 0);
+
+      dailyData[day].income += income;
+      dailyData[day].profit += income - cost;
       dailyData[day].loads += 1;
     });
 
-    const trendData = Object.values(dailyData).sort((a: any, b: any) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateA.getTime() - dateB.getTime();
-    });
+    const trendData = Object.values(dailyData).map((day) => ({
+      ...day,
+      margin: day.income > 0 ? (day.profit / day.income) * 100 : 0,
+    }));
 
-    // Calculate margin for each day
-    trendData.forEach((day: any) => {
-      day.margin = day.income > 0 ? (day.profit / day.income) * 100 : 0;
-    });
-
-    // Status breakdown
     const statusBreakdown = [
-      { name: "Disponible", value: loads.filter((l: any) => l.status === "available").length, color: "#3b82f6" },
-      { name: "En Tránsito", value: loads.filter((l: any) => l.status === "in_transit").length, color: "#f59e0b" },
-      { name: "Entregada", value: loads.filter((l: any) => l.status === "delivered").length, color: "#10b981" },
-      { name: "Facturada", value: loads.filter((l: any) => l.status === "invoiced").length, color: "#8b5cf6" },
-      { name: "Pagada", value: loads.filter((l: any) => l.status === "paid").length, color: "#06b6d4" },
+      {
+        name: "Disponible",
+        value: safeLoads.filter((l: SafeLoad) => l.status === "available").length,
+        color: "#3b82f6",
+      },
+      {
+        name: "En Tránsito",
+        value: safeLoads.filter((l: SafeLoad) => l.status === "in_transit").length,
+        color: "#f59e0b",
+      },
+      {
+        name: "Entregada",
+        value: safeLoads.filter((l: SafeLoad) => l.status === "delivered").length,
+        color: "#10b981",
+      },
+      {
+        name: "Facturada",
+        value: safeLoads.filter((l: SafeLoad) => l.status === "invoiced").length,
+        color: "#8b5cf6",
+      },
+      {
+        name: "Pagada",
+        value: safeLoads.filter((l: SafeLoad) => l.status === "paid").length,
+        color: "#06b6d4",
+      },
     ];
 
     return {
@@ -141,56 +215,85 @@ export default function ExecutiveDashboard() {
       incomePerDay: Math.round(incomePerDay * 100) / 100,
       trendData,
       statusBreakdown,
-      totalLoads: loads.length,
+      totalLoads: safeLoads.length,
     };
-  }, [loads, dateRange]);
+  }, [safeLoads, dateRange]);
 
-  // Calculate previous period for comparison
   const previousPeriodKpis = useMemo(() => {
-    const daysInRange = Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    const previousStart = new Date(dateRange.startDate.getTime() - daysInRange * 24 * 60 * 60 * 1000);
+    const daysInRange =
+      Math.ceil(
+        (dateRange.endDate.getTime() - dateRange.startDate.getTime()) /
+          (1000 * 60 * 60 * 24)
+      ) + 1;
+
+    const previousStart = new Date(
+      dateRange.startDate.getTime() - daysInRange * 24 * 60 * 60 * 1000
+    );
     const previousEnd = new Date(dateRange.startDate.getTime() - 1);
 
-    const previousLoads = loads.filter(
-      (load: any) =>
-        load.status === "paid" &&
-        new Date(load.updatedAt) >= previousStart &&
-        new Date(load.updatedAt) <= previousEnd
+    const previousLoads = safeLoads.filter((load: SafeLoad) => {
+      if (load.status !== "paid" || !load.updatedAt) return false;
+      const updatedAt = new Date(load.updatedAt);
+      return updatedAt >= previousStart && updatedAt <= previousEnd;
+    });
+
+    const previousIncome = previousLoads.reduce(
+      (sum: number, load: SafeLoad) => sum + Number(load.totalPrice ?? 0),
+      0
     );
 
-    const previousIncome = previousLoads.reduce((sum: number, load: any) => sum + (load.totalPrice || 0), 0);
-    const previousProfit = previousIncome - previousLoads.reduce((sum: number, load: any) => sum + (load.estimatedOperatingCost || 0), 0);
+    const previousProfit =
+      previousIncome -
+      previousLoads.reduce(
+        (sum: number, load: SafeLoad) =>
+          sum + Number(load.estimatedOperatingCost ?? 0),
+        0
+      );
 
     return {
       income: previousIncome,
       profit: previousProfit,
       loads: previousLoads.length,
     };
-  }, [loads, dateRange]);
+  }, [safeLoads, dateRange]);
 
-  // Calculate percentage changes
-  const incomeChange = previousPeriodKpis.income > 0
-    ? ((kpis.totalIncome - previousPeriodKpis.income) / previousPeriodKpis.income) * 100
-    : 0;
-  const profitChange = previousPeriodKpis.profit > 0
-    ? ((kpis.totalProfit - previousPeriodKpis.profit) / previousPeriodKpis.profit) * 100
-    : 0;
-  const loadsChange = previousPeriodKpis.loads > 0
-    ? ((kpis.completedLoads - previousPeriodKpis.loads) / previousPeriodKpis.loads) * 100
-    : 0;
+  const incomeChange =
+    previousPeriodKpis.income > 0
+      ? ((kpis.totalIncome - previousPeriodKpis.income) / previousPeriodKpis.income) *
+        100
+      : 0;
+
+  const profitChange =
+    previousPeriodKpis.profit > 0
+      ? ((kpis.totalProfit - previousPeriodKpis.profit) / previousPeriodKpis.profit) *
+        100
+      : 0;
+
+  const loadsChange =
+    previousPeriodKpis.loads > 0
+      ? ((kpis.completedLoads - previousPeriodKpis.loads) / previousPeriodKpis.loads) *
+        100
+      : 0;
+
+  const efficiency =
+    kpis.totalLoads > 0 ? (kpis.completedLoads / kpis.totalLoads) * 100 : 0;
+
+  if (error) {
+    console.error("ExecutiveDashboard error:", error);
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">Dashboard Ejecutivo</h1>
+          <h1 className="text-4xl font-bold text-foreground mb-2">
+            Dashboard Ejecutivo
+          </h1>
           <p className="text-muted-foreground">
             Métricas en tiempo real de la empresa
           </p>
         </div>
 
-        {/* Date Range Selector */}
         <div className="mb-8 space-y-4">
           <div className="flex flex-wrap gap-2">
             {datePresets.map((preset) => (
@@ -212,7 +315,6 @@ export default function ExecutiveDashboard() {
             </Button>
           </div>
 
-          {/* Custom Date Range Picker */}
           {showDatePicker && (
             <div className="p-4 bg-card border border-border rounded-lg space-y-3">
               <div className="grid grid-cols-2 gap-4">
@@ -260,15 +362,31 @@ export default function ExecutiveDashboard() {
             </div>
           )}
 
-          {/* Date Range Display */}
           <div className="text-sm text-muted-foreground">
-            Período: {format(dateRange.startDate, "dd MMM yyyy", { locale: esLocale })} - {format(dateRange.endDate, "dd MMM yyyy", { locale: esLocale })}
+            Período: {format(dateRange.startDate, "dd MMM yyyy", { locale: esLocale })} -{" "}
+            {format(dateRange.endDate, "dd MMM yyyy", { locale: esLocale })}
           </div>
+
+          {isLoading && (
+            <div className="text-sm text-muted-foreground">
+              Cargando datos...
+            </div>
+          )}
+
+          {!isLoading && safeLoads.length === 0 && (
+            <div className="text-sm text-yellow-500">
+              Datos no disponibles o sin cargas para analizar.
+            </div>
+          )}
+
+          {error && (
+            <div className="text-sm text-red-400">
+              No se pudieron cargar datos completos. Modo seguro activo.
+            </div>
+          )}
         </div>
 
-        {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {/* Total Income */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
@@ -279,18 +397,24 @@ export default function ExecutiveDashboard() {
               <p className="text-xs text-muted-foreground">
                 ${kpis.incomePerDay.toFixed(2)} por día
               </p>
-              <div className={`flex items-center mt-2 ${incomeChange >= 0 ? "text-green-600" : "text-red-600"}`}>
+              <div
+                className={`flex items-center mt-2 ${
+                  incomeChange >= 0 ? "text-green-600" : "text-red-600"
+                }`}
+              >
                 {incomeChange >= 0 ? (
                   <ArrowUpRight className="w-4 h-4 mr-1" />
                 ) : (
                   <ArrowDownRight className="w-4 h-4 mr-1" />
                 )}
-                <span className="text-xs">{incomeChange >= 0 ? "+" : ""}{incomeChange.toFixed(1)}% vs período anterior</span>
+                <span className="text-xs">
+                  {incomeChange >= 0 ? "+" : ""}
+                  {incomeChange.toFixed(1)}% vs período anterior
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Total Profit */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Ganancia Total</CardTitle>
@@ -301,18 +425,24 @@ export default function ExecutiveDashboard() {
               <p className="text-xs text-muted-foreground">
                 Margen: {kpis.averageMargin.toFixed(1)}%
               </p>
-              <div className={`flex items-center mt-2 ${profitChange >= 0 ? "text-blue-600" : "text-orange-600"}`}>
+              <div
+                className={`flex items-center mt-2 ${
+                  profitChange >= 0 ? "text-blue-600" : "text-orange-600"
+                }`}
+              >
                 {profitChange >= 0 ? (
                   <ArrowUpRight className="w-4 h-4 mr-1" />
                 ) : (
                   <ArrowDownRight className="w-4 h-4 mr-1" />
                 )}
-                <span className="text-xs">{profitChange >= 0 ? "+" : ""}{profitChange.toFixed(1)}% vs período anterior</span>
+                <span className="text-xs">
+                  {profitChange >= 0 ? "+" : ""}
+                  {profitChange.toFixed(1)}% vs período anterior
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Completed Loads */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Cargas Completadas</CardTitle>
@@ -323,18 +453,24 @@ export default function ExecutiveDashboard() {
               <p className="text-xs text-muted-foreground">
                 {kpis.loadsPerDay.toFixed(1)} cargas/día promedio
               </p>
-              <div className={`flex items-center mt-2 ${loadsChange >= 0 ? "text-purple-600" : "text-red-600"}`}>
+              <div
+                className={`flex items-center mt-2 ${
+                  loadsChange >= 0 ? "text-purple-600" : "text-red-600"
+                }`}
+              >
                 {loadsChange >= 0 ? (
                   <ArrowUpRight className="w-4 h-4 mr-1" />
                 ) : (
                   <ArrowDownRight className="w-4 h-4 mr-1" />
                 )}
-                <span className="text-xs">{loadsChange >= 0 ? "+" : ""}{loadsChange.toFixed(1)}% vs período anterior</span>
+                <span className="text-xs">
+                  {loadsChange >= 0 ? "+" : ""}
+                  {loadsChange.toFixed(1)}% vs período anterior
+                </span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Average Margin */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Margen Promedio</CardTitle>
@@ -342,9 +478,7 @@ export default function ExecutiveDashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{kpis.averageMargin.toFixed(1)}%</div>
-              <p className="text-xs text-muted-foreground">
-                Meta: 50%
-              </p>
+              <p className="text-xs text-muted-foreground">Meta: 50%</p>
               {kpis.averageMargin >= 50 ? (
                 <div className="flex items-center mt-2 text-green-600">
                   <ArrowUpRight className="w-4 h-4 mr-1" />
@@ -360,13 +494,13 @@ export default function ExecutiveDashboard() {
           </Card>
         </div>
 
-        {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Income Trend */}
           <Card>
             <CardHeader>
               <CardTitle>Tendencia de Ingresos</CardTitle>
-              <CardDescription>Ingresos diarios en el período seleccionado</CardDescription>
+              <CardDescription>
+                Ingresos diarios en el período seleccionado
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -380,8 +514,10 @@ export default function ExecutiveDashboard() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip 
-                    formatter={(value: any) => `$${typeof value === 'number' ? value.toFixed(2) : value}`}
+                  <Tooltip
+                    formatter={(value: any) =>
+                      `$${typeof value === "number" ? value.toFixed(2) : value}`
+                    }
                   />
                   <Area
                     type="monotone"
@@ -395,11 +531,12 @@ export default function ExecutiveDashboard() {
             </CardContent>
           </Card>
 
-          {/* Margin Trend */}
           <Card>
             <CardHeader>
               <CardTitle>Tendencia de Margen</CardTitle>
-              <CardDescription>Margen de ganancia diario en el período seleccionado</CardDescription>
+              <CardDescription>
+                Margen de ganancia diario en el período seleccionado
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
@@ -407,8 +544,10 @@ export default function ExecutiveDashboard() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <Tooltip 
-                    formatter={(value: any) => `${typeof value === 'number' ? value.toFixed(1) : value}%`}
+                  <Tooltip
+                    formatter={(value: any) =>
+                      `${typeof value === "number" ? value.toFixed(1) : value}%`
+                    }
                   />
                   <Legend />
                   <Line
@@ -425,9 +564,7 @@ export default function ExecutiveDashboard() {
           </Card>
         </div>
 
-        {/* Status Breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Pie Chart */}
           <Card>
             <CardHeader>
               <CardTitle>Cargas por Estado</CardTitle>
@@ -443,7 +580,6 @@ export default function ExecutiveDashboard() {
                     labelLine={false}
                     label={({ name, value }) => `${name}: ${value}`}
                     outerRadius={80}
-                    fill="#8884d8"
                     dataKey="value"
                   >
                     {kpis.statusBreakdown.map((entry: any, index: number) => (
@@ -456,7 +592,6 @@ export default function ExecutiveDashboard() {
             </CardContent>
           </Card>
 
-          {/* Summary Stats */}
           <Card>
             <CardHeader>
               <CardTitle>Resumen de Operaciones</CardTitle>
@@ -485,12 +620,18 @@ export default function ExecutiveDashboard() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Período Analizado</span>
-                  <span className="font-semibold">{Math.ceil((dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1} días</span>
+                  <span className="font-semibold">
+                    {Math.ceil(
+                      (dateRange.endDate.getTime() - dateRange.startDate.getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    ) + 1}{" "}
+                    días
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Eficiencia</span>
                   <span className="font-semibold text-green-600">
-                    {((kpis.completedLoads / kpis.totalLoads) * 100).toFixed(1)}%
+                    {efficiency.toFixed(1)}%
                   </span>
                 </div>
               </div>
@@ -498,7 +639,6 @@ export default function ExecutiveDashboard() {
           </Card>
         </div>
 
-        {/* Alerts */}
         <Card className="border-yellow-200 dark:border-yellow-800">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -513,27 +653,32 @@ export default function ExecutiveDashboard() {
                   ⚠ Margen por debajo de meta
                 </p>
                 <p className="text-xs text-yellow-800 dark:text-yellow-200 mt-1">
-                  El margen promedio es {kpis.averageMargin.toFixed(1)}%, por debajo de la meta del 50%. Considera negociar tarifas más altas o reducir costos operativos.
+                  El margen promedio es {kpis.averageMargin.toFixed(1)}%, por debajo de la meta del 50%.
+                  Considera negociar tarifas más altas o reducir costos operativos.
                 </p>
               </div>
             )}
+
             {kpis.loadsPerDay < 1 && (
               <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
                   📊 Volumen bajo
                 </p>
                 <p className="text-xs text-blue-800 dark:text-blue-200 mt-1">
-                  Promedio de {kpis.loadsPerDay.toFixed(1)} cargas/día. Aumenta el volumen para mejorar ingresos.
+                  Promedio de {kpis.loadsPerDay.toFixed(1)} cargas/día.
+                  Aumenta el volumen para mejorar ingresos.
                 </p>
               </div>
             )}
+
             {kpis.averageMargin >= 50 && kpis.loadsPerDay >= 1 && (
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
                 <p className="text-sm font-medium text-green-900 dark:text-green-100">
                   ✓ Operaciones saludables
                 </p>
                 <p className="text-xs text-green-800 dark:text-green-200 mt-1">
-                  La empresa está operando con márgenes saludables y volumen consistente. Continúa con la estrategia actual.
+                  La empresa está operando con márgenes saludables y volumen consistente.
+                  Continúa con la estrategia actual.
                 </p>
               </div>
             )}
