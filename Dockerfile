@@ -30,28 +30,3 @@ COPY --from=builder /app/client/public ./client/public
 ENV NODE_ENV=production
 
 CMD ["pnpm", "start"]
-Qué cambié
-
-Cambié esta línea:
-
-RUN pnpm install --prod --no-frozen-lockfile
-
-por esta:
-
-RUN pnpm install --no-frozen-lockfile
-Qué haces ahora
-abre Dockerfile en GitHub
-reemplázalo completo por el bloque de arriba
-guarda con commit
-vuelve a Railway
-haz redeploy
-Después
-
-Si arranca, el siguiente paso será revisar:
-
-PORT
-base de datos
-dominio
-variables de entorno
-
-Si vuelve a fallar, pégame el nuevo error exacto.
