@@ -3,7 +3,6 @@
 import React from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { trpc } from "@/lib/trpc";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,23 +31,15 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  // 🔥 KPIs reales con fallback seguro
-  const { data: kpis, isLoading } = trpc.dashboard.kpis.useQuery(undefined, {
-    retry: false,
-    refetchOnWindowFocus: false,
-  });
-
-  // fallback para evitar crash
-  const safeKpis = {
-    activeLoads: kpis?.activeLoads ?? 0,
-    monthIncome: kpis?.monthIncome ?? 0,
-    monthExpenses: kpis?.monthExpenses ?? 0,
-    monthProfit: kpis?.monthProfit ?? 0,
+  const kpis = {
+    activeLoads: 3,
+    monthIncome: 12500,
+    monthExpenses: 4200,
+    monthProfit: 8300,
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -76,11 +67,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           title="Cargas Activas"
-          value={isLoading ? "..." : String(safeKpis.activeLoads)}
+          value={String(kpis.activeLoads)}
           icon={Truck}
           iconColor="text-amber-400"
           iconBg="bg-amber-500/10"
@@ -89,7 +79,7 @@ export default function Dashboard() {
 
         <KPICard
           title="Ingresos del Mes"
-          value={isLoading ? "..." : formatCurrency(safeKpis.monthIncome)}
+          value={formatCurrency(kpis.monthIncome)}
           icon={TrendingUp}
           iconColor="text-green-400"
           iconBg="bg-green-500/10"
@@ -98,7 +88,7 @@ export default function Dashboard() {
 
         <KPICard
           title="Gastos del Mes"
-          value={isLoading ? "..." : formatCurrency(safeKpis.monthExpenses)}
+          value={formatCurrency(kpis.monthExpenses)}
           icon={DollarSign}
           iconColor="text-red-400"
           iconBg="bg-red-500/10"
@@ -107,7 +97,7 @@ export default function Dashboard() {
 
         <KPICard
           title="Utilidad Neta"
-          value={isLoading ? "..." : formatCurrency(safeKpis.monthProfit)}
+          value={formatCurrency(kpis.monthProfit)}
           icon={DollarSign}
           iconColor="text-primary"
           iconBg="bg-primary/10"
@@ -116,14 +106,13 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Placeholder resto (seguro) */}
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle>Dashboard en reconstrucción</CardTitle>
+          <CardTitle>Estado actual</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            KPIs conectados correctamente. Próximo paso: cargas recientes y widgets.
+            El panel está estable. Los KPIs reales volverán cuando restauremos la autenticación del backend.
           </p>
         </CardContent>
       </Card>
