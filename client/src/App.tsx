@@ -9,6 +9,7 @@ import Partnership from "./pages/Partnership";
 import UserProfile from "./pages/UserProfile";
 import DriverViewProduction from "./pages/DriverViewProduction";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
+import Quotation from "./pages/Quotation";
 
 function DashboardPage() {
   return (
@@ -79,6 +80,7 @@ export default function App() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/driver" component={DriverViewProduction} />
       <Route path="/executive-dashboard" component={ExecutiveDashboardPage} />
+      <Route path="/quotation" component={Quotation} />
     </Switch>
   );
 }
