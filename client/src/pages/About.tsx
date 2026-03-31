@@ -28,10 +28,9 @@ export default function About() {
         </div>
 
         <div className="mt-12 rounded-xl border border-border p-6">
-         <h2 className="text-2xl font-semibold mb-3">Prueba estable 999</h2>
+          <h2 className="text-2xl font-semibold mb-3">Prueba estable 999</h2>
           <p className="text-muted-foreground">
-            Si esta página no rebota y el botón entra al dashboard temporal,wascar
-            el problema estaba en el layout/auth/páginas originales.
+            Si ves BUILD 999 y Prueba estable 999, Railway ya está mostrando el código nuevo.
           </p>
         </div>
       </div>
