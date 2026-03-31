@@ -34,13 +34,16 @@ import {
   Calculator,
   Zap,
   BarChart3,
+  Settings,
+  FileText,
+  Download,
+  MessageSquare,
   User as UserIcon,
   Info,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
-import { Button } from "./ui/button";
 import { AddDriverModal } from "./AddDriverModal";
 import { UserPlus } from "lucide-react";
 
@@ -104,10 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}>
-      <DashboardLayoutContent
-        setSidebarWidth={setSidebarWidth}
-        user={user ?? FALLBACK_USER}
-      >
+      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} user={user ?? FALLBACK_USER}>
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
