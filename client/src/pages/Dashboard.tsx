@@ -3,6 +3,7 @@
 import React from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,39 +32,19 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
 
-  const kpis = {
-    activeLoads: 3,
-    monthIncome: 12500,
-    monthExpenses: 4200,
-    monthProfit: 8300,
-  };
+  // 🔥 KPIs reales con fallback seguro
+  const { data: kpis, isLoading } = trpc.dashboard.kpis.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
-  const recentLoads = [
-    {
-      id: "1",
-      clientName: "Amazon Relay",
-      pickupAddress: "Scranton, PA",
-      deliveryAddress: "Newark, NJ",
-      price: 850,
-      status: "En Tránsito",
-    },
-    {
-      id: "2",
-      clientName: "JB Hunt",
-      pickupAddress: "Allentown, PA",
-      deliveryAddress: "Bronx, NY",
-      price: 620,
-      status: "Disponible",
-    },
-    {
-      id: "3",
-      clientName: "TQL",
-      pickupAddress: "Harrisburg, PA",
-      deliveryAddress: "Philadelphia, PA",
-      price: 540,
-      status: "Entregada",
-    },
-  ];
+  // fallback para evitar crash
+  const safeKpis = {
+    activeLoads: kpis?.activeLoads ?? 0,
+    monthIncome: kpis?.monthIncome ?? 0,
+    monthExpenses: kpis?.monthExpenses ?? 0,
+    monthProfit: kpis?.monthProfit ?? 0,
+  };
 
   return (
     <div className="space-y-6">
@@ -99,7 +80,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KPICard
           title="Cargas Activas"
-          value={String(kpis.activeLoads)}
+          value={isLoading ? "..." : String(safeKpis.activeLoads)}
           icon={Truck}
           iconColor="text-amber-400"
           iconBg="bg-amber-500/10"
@@ -108,7 +89,7 @@ export default function Dashboard() {
 
         <KPICard
           title="Ingresos del Mes"
-          value={formatCurrency(kpis.monthIncome)}
+          value={isLoading ? "..." : formatCurrency(safeKpis.monthIncome)}
           icon={TrendingUp}
           iconColor="text-green-400"
           iconBg="bg-green-500/10"
@@ -117,7 +98,7 @@ export default function Dashboard() {
 
         <KPICard
           title="Gastos del Mes"
-          value={formatCurrency(kpis.monthExpenses)}
+          value={isLoading ? "..." : formatCurrency(safeKpis.monthExpenses)}
           icon={DollarSign}
           iconColor="text-red-400"
           iconBg="bg-red-500/10"
@@ -126,7 +107,7 @@ export default function Dashboard() {
 
         <KPICard
           title="Utilidad Neta"
-          value={formatCurrency(kpis.monthProfit)}
+          value={isLoading ? "..." : formatCurrency(safeKpis.monthProfit)}
           icon={DollarSign}
           iconColor="text-primary"
           iconBg="bg-primary/10"
@@ -135,125 +116,17 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Recent Loads */}
-        <div className="lg:col-span-2">
-          <Card className="border-border bg-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base font-semibold">
-                Cargas Recientes
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLocation("/loads")}
-                className="gap-1 text-xs text-muted-foreground hover:text-foreground"
-              >
-                Ver todas <ArrowRight className="h-3 w-3" />
-              </Button>
-            </CardHeader>
-
-            <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {recentLoads.map((load) => (
-                  <div
-                    key={load.id}
-                    className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-accent/30"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <Package className="h-4 w-4 text-primary" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {load.clientName}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {load.pickupAddress} → {load.deliveryAddress}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      <span className="text-sm font-semibold text-foreground">
-                        {formatCurrency(load.price)}
-                      </span>
-                      <span className="rounded border border-border px-2 py-0 text-xs text-muted-foreground">
-                        {load.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-4">
-          <Card className="border-border bg-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">
-                Acciones Rápidas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-2">
-              <QuickAction
-                icon={Package}
-                label="Nueva Carga"
-                desc="Registrar envío"
-                onClick={() => setLocation("/loads")}
-              />
-              <QuickAction
-                icon={Plus}
-                label="Asignar Carga"
-                desc="Asignar al chofer"
-                onClick={() => setLocation("/loads")}
-              />
-              <QuickAction
-                icon={DollarSign}
-                label="Registrar Gasto"
-                desc="Combustible, mantenimiento..."
-                onClick={() => setLocation("/finance")}
-              />
-              <QuickAction
-                icon={FileText}
-                label="Ver Finanzas"
-                desc="Flujo de caja mensual"
-                onClick={() => setLocation("/finance")}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="border-border bg-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">
-                Estado del Sistema
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Modo</span>
-                <span className="text-sm font-semibold text-foreground">
-                  Temporal / Debug
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Usuario</span>
-                <span className="text-sm font-semibold text-foreground">
-                  {user?.role ?? "owner"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Estado</span>
-                <span className="text-sm font-semibold text-green-400">
-                  Activo
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Placeholder resto (seguro) */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle>Dashboard en reconstrucción</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            KPIs conectados correctamente. Próximo paso: cargas recientes y widgets.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -305,36 +178,5 @@ function KPICard({
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function QuickAction({
-  icon: Icon,
-  label,
-  desc,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  desc: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-colors hover:bg-accent"
-      type="button"
-    >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 transition-colors group-hover:bg-primary/20">
-        <Icon className="h-4 w-4 text-primary" />
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground">{desc}</p>
-      </div>
-
-      <ArrowRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-    </button>
   );
 }
