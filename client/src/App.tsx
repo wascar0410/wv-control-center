@@ -5,6 +5,7 @@ import NotFound from "./pages/NotFound";
 function App() {
   return (
     <Switch>
+      <Route path="/dashboard" component={Dashboard} />
       <Route path="/" component={About} />
       <Route path="/about" component={About} />
       <Route component={NotFound} />
