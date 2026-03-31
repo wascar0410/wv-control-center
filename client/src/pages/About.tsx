@@ -28,9 +28,9 @@ export default function About() {
         </div>
 
         <div className="mt-12 rounded-xl border border-border p-6">
-          <h2 className="text-2xl font-semibold mb-3">Prueba estable</h2>
+          <h2 className="text-2xl font-semibold mb-3">Prueba estable 3</h2>
           <p className="text-muted-foreground">
-            Si esta página no rebota y el botón entra al dashboard temporal,
+            Si esta página no rebota y el botón entra al dashboard temporal,wascar
             el problema estaba en el layout/auth/páginas originales.
           </p>
         </div>
