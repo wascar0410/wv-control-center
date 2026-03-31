@@ -35,11 +35,13 @@ import {
   Zap,
   BarChart3,
   Settings,
-  FileText,
   Download,
   MessageSquare,
   User as UserIcon,
   Info,
+  UserPlus,
+} from "lucide-react";
+} from "lucide-react";
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
