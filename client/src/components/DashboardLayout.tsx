@@ -41,13 +41,10 @@ import {
   Info,
   UserPlus,
 } from "lucide-react";
-} from "lucide-react";
-} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { AddDriverModal } from "./AddDriverModal";
-import { UserPlus } from "lucide-react";
 
 const adminMenuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
