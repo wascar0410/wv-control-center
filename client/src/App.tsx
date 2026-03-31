@@ -1,13 +1,12 @@
 import { Route, Switch } from "wouter";
-import DashboardLayout from "./components/DashboardLayout";
 import About from "./pages/About";
-import Dashboard from "./pages/Dashboard";
 
-function DashboardPage() {
+function DashboardTemp() {
   return (
-    <DashboardLayout>
-      <Dashboard />
-    </DashboardLayout>
+    <div style={{ padding: 40, fontFamily: "sans-serif" }}>
+      <h1>DASHBOARD TEMPORAL 999</h1>
+      <p>Si ves esto, la navegación ya funciona.</p>
+    </div>
   );
 }
 
@@ -16,7 +15,7 @@ function App() {
     <Switch>
       <Route path="/" component={About} />
       <Route path="/about" component={About} />
-      <Route path="/dashboard" component={DashboardPage} />
+      <Route path="/dashboard" component={DashboardTemp} />
     </Switch>
   );
 }
