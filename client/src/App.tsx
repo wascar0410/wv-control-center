@@ -39,7 +39,8 @@ import { getLoginUrl } from "./const";
 import { Loader2 } from "lucide-react";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { loading, isAuthenticated } = useAuth();
+  return <>{children}</>;
+}
 
   if (loading) {
     return (
