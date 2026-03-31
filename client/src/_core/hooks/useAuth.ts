@@ -7,7 +7,7 @@ type UseAuthOptions = {
 
 const DEMO_USER = {
   id: "demo-owner",
-  name: "WV Admin",
+  name: "WV Admin 2",
   email: "info@wvtransports.com",
   role: "owner",
 };
@@ -15,7 +15,7 @@ const DEMO_USER = {
 export function useAuth(_options?: UseAuthOptions) {
   const logout = useCallback(async () => {
     if (typeof window !== "undefined") {
-      window.location.href = "/";
+      console.log("logout disabled in demo mode");
     }
   }, []);
 
