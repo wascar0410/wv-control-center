@@ -30,8 +30,8 @@ export default function About() {
         <div className="mt-12 rounded-xl border border-border p-6">
           <h2 className="text-2xl font-semibold mb-3">Prueba estable</h2>
           <p className="text-muted-foreground">
-            Si esta página ya no rebota, el problema estaba dentro del About original
-            y no en Railway.
+            Si esta página no rebota y el botón entra al dashboard temporal,
+            el problema estaba en el layout/auth/páginas originales.
           </p>
         </div>
       </div>
