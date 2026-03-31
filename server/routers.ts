@@ -497,14 +497,32 @@ const financeRouter = router({
       return { id };
     }),
 
-  summary: protectedProcedure
-    .input(z.object({ year: z.number(), month: z.number() }))
-    .query(({ input }) => getFinancialSummary(input.year, input.month)),
+summary: publicProcedure
+  .input(z.object({ year: z.number(), month: z.number() }))
+  .query(async ({ input }) => {
+    try {
+      return await getFinancialSummary(input.year, input.month);
+    } catch (error) {
+      console.error("[finance.summary] error:", error);
+      return {
+        income: 0,
+        expenses: 0,
+        netProfit: 0,
+        byCategory: [],
+      };
+    }
+  }),
 
-  cashFlow: protectedProcedure
-    .input(z.object({ year: z.number() }))
-    .query(({ input }) => getMonthlyCashFlow(input.year)),
-});
+cashFlow: publicProcedure
+  .input(z.object({ year: z.number() }))
+  .query(async ({ input }) => {
+    try {
+      return await getMonthlyCashFlow(input.year);
+    } catch (error) {
+      console.error("[finance.cashFlow] error:", error);
+      return [];
+    }
+  }),
 
 // ─── Partnership Router ───────────────────────────────────────────────────────
 
