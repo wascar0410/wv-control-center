@@ -383,7 +383,7 @@ const loadsRouter = router({
       return { success: true };
     }),
 
-  uploadBOL: protectedProcedure
+ uploadBOL: protectedProcedure
     .input(z.object({
       loadId: z.number(),
       fileBase64: z.string(),
@@ -406,48 +406,51 @@ const loadsRouter = router({
       if (load.assignedDriverId !== ctx.user.id) {
         throw new Error("No tienes permiso para aceptar esta carga");
       }
-      
+
       await updateLoad(input.loadId, {
         driverAcceptedAt: new Date(),
         status: "in_transit",
       });
-      
+
       await notifyOwner({
         title: "✅ Chofer Aceptó Carga",
         content: `${ctx.user.email} aceptó la carga #${input.loadId} de ${load.clientName}. Estado: En Tránsito`,
       });
-      
+
       return { success: true };
     }),
 
   rejectLoad: protectedProcedure
-    .input(z.object({ 
-      loadId: z.number(),
-      reason: z.string().min(1).max(500),
-    }))
+    .input(
+      z.object({
+        loadId: z.number(),
+        reason: z.string().min(1).max(500),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const load = await getLoadById(input.loadId);
       if (!load) throw new Error("Carga no encontrada");
       if (load.assignedDriverId !== ctx.user.id) {
         throw new Error("No tienes permiso para rechazar esta carga");
       }
-      
+
       await updateLoad(input.loadId, {
         driverRejectedAt: new Date(),
         driverRejectionReason: input.reason,
         status: "available",
         assignedDriverId: null,
       });
-      
+
       await notifyOwner({
         title: "❌ Chofer Rechazó Carga",
         content: `${ctx.user.email} rechazó la carga #${input.loadId} de ${load.clientName}. Razón: ${input.reason}`,
       });
-      
+
       return { success: true };
     }),
+});
 
-// ─── Finance Router ───────────────────────────────────────────────────────────
+// ─── Finance Router ───────────────────────────────────────────────────────────────────
 
 const financeRouter = router({
   transactions: publicProcedure
