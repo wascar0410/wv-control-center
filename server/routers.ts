@@ -446,7 +446,6 @@ const loadsRouter = router({
       
       return { success: true };
     }),
-});
 
 // ─── Finance Router ───────────────────────────────────────────────────────────
 
