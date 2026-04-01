@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { protectedProcedure, router } from "./trpc";
+import { protectedProcedure, publicProcedure, router } from "./trpc";
 import {
   createPaymentBatch,
   getPaymentBatchById,
@@ -33,9 +33,9 @@ export const batchPaymentRouter = router({
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
-      let pendingPayments;
+      let pendingPayments: any[] = [];
+
       if (input.paymentIds && input.paymentIds.length > 0) {
-        pendingPayments = [];
         for (const paymentId of input.paymentIds) {
           const payment = await getDriverPaymentById(paymentId);
           if (payment && payment.status === "pending") {
@@ -43,7 +43,7 @@ export const batchPaymentRouter = router({
           }
         }
       } else {
-        pendingPayments = await getPendingPaymentsForBatch(1000);
+        pendingPayments = (await getPendingPaymentsForBatch(1000)) || [];
       }
 
       if (pendingPayments.length === 0) {
@@ -54,7 +54,8 @@ export const batchPaymentRouter = router({
       }
 
       const totalAmount = pendingPayments.reduce(
-        (sum, p) => sum + (typeof p.amount === "number" ? p.amount : parseFloat(String(p.amount))),
+        (sum, p) =>
+          sum + (typeof p.amount === "number" ? p.amount : parseFloat(String(p.amount || 0))),
         0
       );
 
@@ -73,14 +74,15 @@ export const batchPaymentRouter = router({
       });
 
       let batchId = 0;
-      if (typeof batchResult === "object" && "insertId" in batchResult) {
+
+      if (typeof batchResult === "object" && batchResult && "insertId" in batchResult) {
         batchId = (batchResult as any).insertId;
       } else if (Array.isArray(batchResult) && batchResult.length > 0) {
         batchId = (batchResult[0] as any).id || 0;
-      } else if (typeof batchResult === "object" && "id" in batchResult) {
+      } else if (typeof batchResult === "object" && batchResult && "id" in batchResult) {
         batchId = (batchResult as any).id;
       }
-      
+
       if (batchId === 0) {
         throw new Error("Failed to create payment batch");
       }
@@ -110,55 +112,70 @@ export const batchPaymentRouter = router({
   /**
    * Get batch details
    */
-  getBatch: protectedProcedure
+  getBatch: publicProcedure
     .input(z.object({ batchId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user || ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+    .query(async ({ input }) => {
+      try {
+        const batch = await getPaymentBatchById(input.batchId);
+        if (!batch) return null;
+
+        const stats = await getPaymentBatchStats(input.batchId);
+
+        return {
+          ...batch,
+          totalAmount:
+            typeof batch.totalAmount === "number"
+              ? batch.totalAmount
+              : parseFloat(String(batch.totalAmount || 0)),
+          stats: stats || null,
+        };
+      } catch (error) {
+        console.error("[batchPayment.getBatch] error:", error);
+        return null;
       }
-
-      const batch = await getPaymentBatchById(input.batchId);
-      if (!batch) throw new TRPCError({ code: "NOT_FOUND" });
-
-      const stats = await getPaymentBatchStats(input.batchId);
-
-      return {
-        ...batch,
-        totalAmount: typeof batch.totalAmount === "number" 
-          ? batch.totalAmount 
-          : parseFloat(String(batch.totalAmount)),
-        stats,
-      };
     }),
 
   /**
    * List payment batches
    */
-  listBatches: protectedProcedure
+  listBatches: publicProcedure
     .input(
       z.object({
-        status: z.enum(["draft", "pending_review", "approved", "processing", "completed", "failed", "cancelled"]).optional(),
+        status: z
+          .enum([
+            "draft",
+            "pending_review",
+            "approved",
+            "processing",
+            "completed",
+            "failed",
+            "cancelled",
+          ])
+          .optional(),
         period: z.string().optional(),
         limit: z.number().default(20),
         offset: z.number().default(0),
       })
     )
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user || ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+    .query(async ({ input }) => {
+      try {
+        const batches =
+          (await getPaymentBatches({
+            status: input.status,
+            period: input.period,
+          })) || [];
+
+        return batches.slice(input.offset, input.offset + input.limit).map((b: any) => ({
+          ...b,
+          totalAmount:
+            typeof b.totalAmount === "number"
+              ? b.totalAmount
+              : parseFloat(String(b.totalAmount || 0)),
+        }));
+      } catch (error) {
+        console.error("[batchPayment.listBatches] error:", error);
+        return [];
       }
-
-      const batches = await getPaymentBatches({
-        status: input.status,
-        period: input.period,
-      });
-
-      return batches.slice(input.offset, input.offset + input.limit).map((b) => ({
-        ...b,
-        totalAmount: typeof b.totalAmount === "number" 
-          ? b.totalAmount 
-          : parseFloat(String(b.totalAmount)),
-      }));
     }),
 
   /**
@@ -264,16 +281,15 @@ export const batchPaymentRouter = router({
         });
       }
 
-      const auditLogs = await getPaymentAuditByBatchId(input.batchId);
-      const uniquePaymentIds = new Set(auditLogs.map((log) => log.paymentId));
+      const auditLogs = (await getPaymentAuditByBatchId(input.batchId)) || [];
+      const uniquePaymentIds = new Set(auditLogs.map((log: any) => log.paymentId));
       const paymentIds: number[] = [];
-      uniquePaymentIds.forEach((id) => paymentIds.push(id));
+      uniquePaymentIds.forEach((id) => paymentIds.push(id as number));
 
       let successfulPayments = 0;
       let failedPayments = 0;
 
-      for (let i = 0; i < paymentIds.length; i++) {
-        const paymentId = paymentIds[i];
+      for (const paymentId of paymentIds) {
         try {
           const payment = await getDriverPaymentById(paymentId);
           if (!payment) continue;
@@ -320,23 +336,24 @@ export const batchPaymentRouter = router({
   /**
    * Get batch audit trail
    */
-  getBatchAuditTrail: protectedProcedure
+  getBatchAuditTrail: publicProcedure
     .input(z.object({ batchId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user || ctx.user.role !== "admin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+    .query(async ({ input }) => {
+      try {
+        const auditLogs = (await getPaymentAuditByBatchId(input.batchId)) || [];
+        return auditLogs.map((log: any) => ({
+          id: log.id,
+          paymentId: log.paymentId,
+          action: log.action,
+          previousStatus: log.previousStatus,
+          newStatus: log.newStatus,
+          reason: log.reason,
+          createdAt: log.createdAt,
+        }));
+      } catch (error) {
+        console.error("[batchPayment.getBatchAuditTrail] error:", error);
+        return [];
       }
-
-      const auditLogs = await getPaymentAuditByBatchId(input.batchId);
-      return (auditLogs || []).map((log) => ({
-        id: log.id,
-        paymentId: log.paymentId,
-        action: log.action,
-        previousStatus: log.previousStatus,
-        newStatus: log.newStatus,
-        reason: log.reason,
-        createdAt: log.createdAt,
-      }));
     }),
 
   /**
