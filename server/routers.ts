@@ -559,19 +559,6 @@ cashFlow: publicProcedure
       }
     }),
 
-  cashFlow: publicProcedure
-    .input(z.object({ year: z.number() }))
-    .query(async ({ input }) => {
-      try {
-        const result = await getMonthlyCashFlow(input.year);
-        return result ?? [];
-      } catch (error) {
-        console.error("[finance.cashFlow] error:", error);
-        return [];
-      }
-    }),
-});
-
 // ─── Partnership Router ───────────────────────────────────────────────────────
 
 const partnershipRouter = router({
