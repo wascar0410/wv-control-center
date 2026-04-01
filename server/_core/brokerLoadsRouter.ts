@@ -1,5 +1,5 @@
-import { protectedProcedure, router } from "./trpc";
 import { z } from "zod";
+import { protectedProcedure, publicProcedure, router } from "./trpc";
 import {
   createBrokerLoad,
   getBrokerLoadsByUserId,
@@ -12,7 +12,6 @@ import {
   deleteBrokerLoad,
 } from "../db-broker-loads";
 import { geocodeAddresses, calculateDistanceFromCoordinates } from "../geocoding";
-import { protectedProcedure, publicProcedure, router } from "./trpc";
 
 export const brokerLoadsRouter = router({
   // Import a single broker load manually
@@ -38,25 +37,25 @@ export const brokerLoadsRouter = router({
     .mutation(async ({ ctx, input }) => {
       if (!ctx.user) throw new Error("Not authenticated");
 
-      // Generate broker ID if not provided
       const brokerId = input.brokerId || `${input.brokerName}-${Date.now()}`;
 
-      // Check for duplicates
       const isDuplicate = await checkDuplicateBrokerLoad(ctx.user.id, brokerId);
       if (isDuplicate) {
         throw new Error("This load already exists in the system");
       }
 
-      // Calculate distance using coordinates or geocoding
       let calculatedDistance: number | undefined;
       let finalPickupLat = input.pickupLat;
       let finalPickupLng = input.pickupLng;
       let finalDeliveryLat = input.deliveryLat;
       let finalDeliveryLng = input.deliveryLng;
 
-      // If coordinates not provided, geocode the addresses
       if (!finalPickupLat || !finalPickupLng || !finalDeliveryLat || !finalDeliveryLng) {
-        const geocodeResult = await geocodeAddresses(input.pickupAddress, input.deliveryAddress);
+        const geocodeResult = await geocodeAddresses(
+          input.pickupAddress,
+          input.deliveryAddress
+        );
+
         if (geocodeResult) {
           finalPickupLat = geocodeResult.originLat;
           finalPickupLng = geocodeResult.originLng;
@@ -65,7 +64,6 @@ export const brokerLoadsRouter = router({
           calculatedDistance = geocodeResult.distance;
         }
       } else {
-        // Calculate distance from provided coordinates
         calculatedDistance = calculateDistanceFromCoordinates(
           finalPickupLat || 0,
           finalPickupLng || 0,
@@ -74,8 +72,6 @@ export const brokerLoadsRouter = router({
         );
       }
 
-
-      // Create broker load
       const result = await createBrokerLoad({
         userId: ctx.user.id,
         brokerId,
@@ -93,10 +89,9 @@ export const brokerLoadsRouter = router({
         calculatedDistance,
         pickupDate: input.pickupDate,
         deliveryDate: input.deliveryDate,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // Expires in 24 hours
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
 
-      // Log the import
       await createSyncLog({
         userId: ctx.user.id,
         brokerName: input.brokerName,
@@ -142,18 +137,22 @@ export const brokerLoadsRouter = router({
 
       for (const load of input.loads) {
         try {
-          const brokerId = load.brokerId || `${input.brokerName}-${Date.now()}-${Math.random()}`;
+          const brokerId =
+            load.brokerId || `${input.brokerName}-${Date.now()}-${Math.random()}`;
 
-          // Check for duplicates
           const isDuplicate = await checkDuplicateBrokerLoad(ctx.user.id, brokerId);
           if (isDuplicate) {
             skipped++;
             continue;
           }
 
-          // Calculate distance if coordinates provided
           let calculatedDistance: number | undefined;
-          if (load.pickupLat && load.pickupLng && load.deliveryLat && load.deliveryLng) {
+          if (
+            load.pickupLat &&
+            load.pickupLng &&
+            load.deliveryLat &&
+            load.deliveryLng
+          ) {
             calculatedDistance = calculateDistanceFromCoordinates(
               load.pickupLat,
               load.pickupLng,
@@ -189,7 +188,6 @@ export const brokerLoadsRouter = router({
         }
       }
 
-      // Log the batch import
       await createSyncLog({
         userId: ctx.user.id,
         brokerName: input.brokerName,
@@ -239,7 +237,9 @@ export const brokerLoadsRouter = router({
     .input(
       z.object({
         id: z.number(),
-        status: z.enum(["new", "reviewed", "accepted", "rejected", "expired", "converted"]).optional(),
+        status: z
+          .enum(["new", "reviewed", "accepted", "rejected", "expired", "converted"])
+          .optional(),
         verdict: z.enum(["ACEPTAR", "NEGOCIAR", "RECHAZAR"]).optional(),
         convertedQuotationId: z.number().optional(),
       })
@@ -278,10 +278,11 @@ export const brokerLoadsRouter = router({
 
   // Get sync logs
   getSyncLogs: publicProcedure.query(async () => {
-  try {
-    return [];
-  } catch (error) {
-    console.error("[brokerLoads.getSyncLogs] error:", error);
-    return [];
-  }
-}),
+    try {
+      return [];
+    } catch (error) {
+      console.error("[brokerLoads.getSyncLogs] error:", error);
+      return [];
+    }
+  }),
+});
