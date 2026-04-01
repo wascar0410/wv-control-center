@@ -110,15 +110,10 @@ function AccountingFinancePage() {
 
 function BusinessSettingsPage() {
   return (
-    <DashboardLayout>
-      <div className="space-y-6 p-4">
-        <h1 className="text-3xl font-bold">Business Settings TEST</h1>
-
-        <div className="rounded-lg border p-4">
-          Si ves esta pantalla, la ruta funciona y el problema está en el archivo BusinessSettings.tsx
-        </div>
-      </div>
-    </DashboardLayout>
+    <div style={{ padding: 24 }}>
+      <h1>BUSINESS SETTINGS INLINE TEST 777</h1>
+      <p>Si ves esto, la ruta funciona.</p>
+    </div>
   );
 }
 
