@@ -7,10 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, CheckCircle2, Clock, DollarSign, Plus, Trash2, Eye, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, DollarSign, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-type BatchStatus = "draft" | "pending_review" | "approved" | "processing" | "completed" | "failed" | "cancelled";
+type BatchStatus =
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "processing"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export function BatchPayments() {
   const [statusFilter, setStatusFilter] = useState<BatchStatus | "">("");
@@ -27,35 +34,59 @@ export function BatchPayments() {
     notes: "",
   });
 
-  // Queries
-  const { data: batches, isLoading, refetch } = trpc.batchPayment.listBatches.useQuery({
-    status: statusFilter || undefined,
-    limit: 100,
-  });
+  const {
+    data: batches,
+    isLoading,
+    error,
+    refetch,
+  } = trpc.batchPayment.listBatches.useQuery(
+    {
+      status: statusFilter || undefined,
+      limit: 100,
+    },
+    {
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
+  );
 
   const { data: batchDetail } = trpc.batchPayment.getBatch.useQuery(
     { batchId: selectedBatch! },
-    { enabled: !!selectedBatch }
+    {
+      enabled: !!selectedBatch,
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
   );
 
   const { data: auditTrail } = trpc.batchPayment.getBatchAuditTrail.useQuery(
     { batchId: selectedBatch! },
-    { enabled: !!selectedBatch }
+    {
+      enabled: !!selectedBatch,
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
   );
 
-  // Mutations
+  const safeBatches = Array.isArray(batches) ? batches : [];
+  const safeAuditTrail = Array.isArray(auditTrail) ? auditTrail : [];
+
   const createBatchMutation = trpc.batchPayment.createBatch.useMutation({
     onSuccess: () => {
       toast.success("Lote creado", {
         description: "El lote de pagos ha sido creado exitosamente",
       });
       setShowCreateDialog(false);
-      setCreateForm({ period: new Date().toISOString().split("T")[0], paymentMethod: "bank_transfer", notes: "" });
+      setCreateForm({
+        period: new Date().toISOString().split("T")[0],
+        paymentMethod: "bank_transfer",
+        notes: "",
+      });
       refetch();
     },
-    onError: (error) => {
+    onError: (err) => {
       toast.error("Error", {
-        description: error.message || "No se pudo crear el lote",
+        description: err.message || "No se pudo crear el lote",
       });
     },
   });
@@ -68,9 +99,9 @@ export function BatchPayments() {
       refetch();
       setSelectedBatch(null);
     },
-    onError: (error) => {
+    onError: (err) => {
       toast.error("Error", {
-        description: error.message || "No se pudo crear el lote",
+        description: err.message || "No se pudo enviar el lote",
       });
     },
   });
@@ -84,9 +115,9 @@ export function BatchPayments() {
       setShowApprovalDialog(null);
       setApprovalNotes("");
     },
-    onError: (error) => {
+    onError: (err) => {
       toast.error("Error", {
-        description: error.message,
+        description: err.message || "No se pudo aprobar el lote",
       });
     },
   });
@@ -100,9 +131,9 @@ export function BatchPayments() {
       setShowRejectionDialog(null);
       setRejectionReason("");
     },
-    onError: (error) => {
+    onError: (err) => {
       toast.error("Error", {
-        description: error.message,
+        description: err.message || "No se pudo rechazar el lote",
       });
     },
   });
@@ -115,9 +146,9 @@ export function BatchPayments() {
       refetch();
       setSelectedBatch(null);
     },
-    onError: (error) => {
+    onError: (err) => {
       toast.error("Error", {
-        description: error.message,
+        description: err.message || "No se pudo procesar el lote",
       });
     },
   });
@@ -130,9 +161,9 @@ export function BatchPayments() {
       refetch();
       setSelectedBatch(null);
     },
-    onError: (error) => {
+    onError: (err) => {
       toast.error("Error", {
-        description: error.message,
+        description: err.message || "No se pudo cancelar el lote",
       });
     },
   });
@@ -155,7 +186,8 @@ export function BatchPayments() {
       failed: { label: "Fallido", variant: "destructive" as const },
       cancelled: { label: "Cancelado", variant: "secondary" as const },
     };
-    return statusConfig[status];
+
+    return statusConfig[status] || { label: status, variant: "outline" as const };
   };
 
   const getStatusIcon = (status: BatchStatus) => {
@@ -171,15 +203,22 @@ export function BatchPayments() {
     }
   };
 
+  if (error) {
+    console.error("BatchPayments error:", error);
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Procesamiento de Pagos</h1>
           <p className="text-muted-foreground mt-1">Gestiona lotes de pagos a conductores</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} size="lg" disabled={createBatchMutation.isPending}>
+        <Button
+          onClick={() => setShowCreateDialog(true)}
+          size="lg"
+          disabled={createBatchMutation.isPending}
+        >
           {createBatchMutation.isPending ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
@@ -189,11 +228,21 @@ export function BatchPayments() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {error && (
+        <div className="text-sm text-yellow-600 dark:text-yellow-400">
+          Modo seguro activo. Algunos datos pueden no estar disponibles.
+        </div>
+      )}
+
       <Card>
         <CardContent className="pt-6">
           <div className="flex gap-4">
-            <Select value={statusFilter || "all"} onValueChange={(value) => setStatusFilter(value === "all" ? "" : (value as BatchStatus))}>
+            <Select
+              value={statusFilter || "all"}
+              onValueChange={(value) =>
+                setStatusFilter(value === "all" ? "" : (value as BatchStatus))
+              }
+            >
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
@@ -212,7 +261,6 @@ export function BatchPayments() {
         </CardContent>
       </Card>
 
-      {/* Batches List */}
       <div className="grid gap-4">
         {isLoading ? (
           <Card>
@@ -220,9 +268,13 @@ export function BatchPayments() {
               <p className="text-muted-foreground">Cargando lotes...</p>
             </CardContent>
           </Card>
-        ) : batches && batches.length > 0 ? (
-          batches.map((batch) => (
-            <Card key={batch.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedBatch(batch.id)}>
+        ) : safeBatches.length > 0 ? (
+          safeBatches.map((batch: any) => (
+            <Card
+              key={batch.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setSelectedBatch(batch.id)}
+            >
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -238,7 +290,9 @@ export function BatchPayments() {
                     </CardDescription>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold">${batch.totalAmount.toFixed(2)}</div>
+                    <div className="text-2xl font-bold">
+                      ${Number(batch.totalAmount || 0).toFixed(2)}
+                    </div>
                     <p className="text-sm text-muted-foreground">Total</p>
                   </div>
                 </div>
@@ -255,7 +309,9 @@ export function BatchPayments() {
                   </div>
                   <div>
                     <p className="text-muted-foreground">Fecha Creación</p>
-                    <p className="font-medium">{new Date(batch.createdAt).toLocaleDateString()}</p>
+                    <p className="font-medium">
+                      {batch.createdAt ? new Date(batch.createdAt).toLocaleDateString() : "N/A"}
+                    </p>
                   </div>
                 </div>
               </CardContent>
@@ -270,26 +326,29 @@ export function BatchPayments() {
         )}
       </div>
 
-      {/* Batch Detail Modal */}
       {selectedBatch && batchDetail && (
         <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{batchDetail.batchNumber}</DialogTitle>
               <DialogDescription>
-                <Badge variant={getStatusBadge(batchDetail.status as BatchStatus).variant} className="mt-2">
+                <Badge
+                  variant={getStatusBadge(batchDetail.status as BatchStatus).variant}
+                  className="mt-2"
+                >
                   {getStatusBadge(batchDetail.status as BatchStatus).label}
                 </Badge>
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
-              {/* Stats */}
               <div className="grid grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="pt-4">
                     <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">${batchDetail.totalAmount.toFixed(2)}</p>
+                    <p className="text-2xl font-bold">
+                      ${Number(batchDetail.totalAmount || 0).toFixed(2)}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -300,19 +359,20 @@ export function BatchPayments() {
                 </Card>
               </div>
 
-              {/* Audit Trail */}
-              {auditTrail && auditTrail.length > 0 && (
+              {safeAuditTrail.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Historial de Auditoría</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {auditTrail.map((log) => (
+                      {safeAuditTrail.map((log: any) => (
                         <div key={log.id} className="text-sm border-l-2 border-muted pl-3 py-1">
                           <p className="font-medium capitalize">{log.action}</p>
                           <p className="text-xs text-muted-foreground">{log.reason}</p>
-                          <p className="text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {log.createdAt ? new Date(log.createdAt).toLocaleString() : "N/A"}
+                          </p>
                         </div>
                       ))}
                     </div>
@@ -320,14 +380,16 @@ export function BatchPayments() {
                 </Card>
               )}
 
-              {/* Actions */}
               <div className="flex gap-2 justify-end">
                 {batchDetail.status === "draft" && (
                   <>
                     <Button
                       variant="outline"
                       onClick={() => {
-                        cancelBatchMutation.mutate({ batchId: selectedBatch, reason: "Cancelado por usuario" });
+                        cancelBatchMutation.mutate({
+                          batchId: selectedBatch,
+                          reason: "Cancelado por usuario",
+                        });
                       }}
                       disabled={cancelBatchMutation.isPending}
                     >
@@ -352,14 +414,18 @@ export function BatchPayments() {
                       onClick={() => setShowRejectionDialog(selectedBatch)}
                       disabled={rejectBatchMutation.isPending}
                     >
-                      {rejectBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {rejectBatchMutation.isPending && (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      )}
                       {rejectBatchMutation.isPending ? "Rechazando..." : "Rechazar"}
                     </Button>
                     <Button
                       onClick={() => setShowApprovalDialog(selectedBatch)}
                       disabled={approveBatchMutation.isPending}
                     >
-                      {approveBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {approveBatchMutation.isPending && (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      )}
                       {approveBatchMutation.isPending ? "Aprobando..." : "Aprobar"}
                     </Button>
                   </>
@@ -372,7 +438,9 @@ export function BatchPayments() {
                     }}
                     disabled={processBatchMutation.isPending}
                   >
-                    {processBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {processBatchMutation.isPending && (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    )}
                     {processBatchMutation.isPending ? "Procesando..." : "Procesar Lote"}
                   </Button>
                 )}
@@ -382,7 +450,6 @@ export function BatchPayments() {
         </Dialog>
       )}
 
-      {/* Create Batch Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
@@ -406,7 +473,9 @@ export function BatchPayments() {
               <label className="text-sm font-medium">Método de Pago</label>
               <Select
                 value={createForm.paymentMethod}
-                onValueChange={(value) => setCreateForm({ ...createForm, paymentMethod: value as any })}
+                onValueChange={(value) =>
+                  setCreateForm({ ...createForm, paymentMethod: value as any })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -436,7 +505,9 @@ export function BatchPayments() {
                 onClick={handleCreateBatch}
                 disabled={createBatchMutation.isPending}
               >
-                {createBatchMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {createBatchMutation.isPending && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
                 {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
               </Button>
             </div>
@@ -444,7 +515,6 @@ export function BatchPayments() {
         </DialogContent>
       </Dialog>
 
-      {/* Approval Dialog */}
       {showApprovalDialog && (
         <Dialog open={!!showApprovalDialog} onOpenChange={() => setShowApprovalDialog(null)}>
           <DialogContent>
@@ -483,7 +553,6 @@ export function BatchPayments() {
         </Dialog>
       )}
 
-      {/* Rejection Dialog */}
       {showRejectionDialog && (
         <Dialog open={!!showRejectionDialog} onOpenChange={() => setShowRejectionDialog(null)}>
           <DialogContent>
