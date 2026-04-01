@@ -1,5 +1,12 @@
 import { eq } from "drizzle-orm";
-import { businessConfig, distanceSurcharge, weightSurcharge, InsertBusinessConfig, InsertDistanceSurcharge, InsertWeightSurcharge } from "../drizzle/schema";
+import {
+  businessConfig,
+  distanceSurcharge,
+  weightSurcharge,
+  InsertBusinessConfig,
+  InsertDistanceSurcharge,
+  InsertWeightSurcharge,
+} from "../drizzle/schema";
 import { getDb } from "./db";
 
 // ─── Business Config ───────────────────────────────────────────────────────────
@@ -17,7 +24,10 @@ export async function getBusinessConfig(userId: number) {
   return result.length > 0 ? result[0] : null;
 }
 
-export async function createOrUpdateBusinessConfig(userId: number, data: Partial<InsertBusinessConfig>) {
+export async function updateBusinessConfig(
+  userId: number,
+  data: Partial<InsertBusinessConfig>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -28,13 +38,20 @@ export async function createOrUpdateBusinessConfig(userId: number, data: Partial
       .update(businessConfig)
       .set(data)
       .where(eq(businessConfig.userId, userId));
-    return getBusinessConfig(userId);
   } else {
-    const result = await db
+    await db
       .insert(businessConfig)
       .values({ userId, ...data } as InsertBusinessConfig);
-    return getBusinessConfig(userId);
   }
+
+  return getBusinessConfig(userId);
+}
+
+export async function createOrUpdateBusinessConfig(
+  userId: number,
+  data: Partial<InsertBusinessConfig>
+) {
+  return updateBusinessConfig(userId, data);
 }
 
 // ─── Distance Surcharge ────────────────────────────────────────────────────────
@@ -50,15 +67,24 @@ export async function getDistanceSurcharges(userId: number) {
     .orderBy(distanceSurcharge.fromMiles);
 }
 
-export async function createDistanceSurcharge(userId: number, data: Omit<InsertDistanceSurcharge, 'userId'>) {
+export async function createDistanceSurcharge(
+  userId: number,
+  data: Omit<InsertDistanceSurcharge, "userId">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.insert(distanceSurcharge).values({ userId, ...data } as InsertDistanceSurcharge);
+  await db
+    .insert(distanceSurcharge)
+    .values({ userId, ...data } as InsertDistanceSurcharge);
+
   return getDistanceSurcharges(userId);
 }
 
-export async function updateDistanceSurcharge(id: number, data: Partial<InsertDistanceSurcharge>) {
+export async function updateDistanceSurcharge(
+  id: number,
+  data: Partial<InsertDistanceSurcharge>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -88,15 +114,24 @@ export async function getWeightSurcharges(userId: number) {
     .orderBy(weightSurcharge.fromLbs);
 }
 
-export async function createWeightSurcharge(userId: number, data: Omit<InsertWeightSurcharge, 'userId'>) {
+export async function createWeightSurcharge(
+  userId: number,
+  data: Omit<InsertWeightSurcharge, "userId">
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db.insert(weightSurcharge).values({ userId, ...data } as InsertWeightSurcharge);
+  await db
+    .insert(weightSurcharge)
+    .values({ userId, ...data } as InsertWeightSurcharge);
+
   return getWeightSurcharges(userId);
 }
 
-export async function updateWeightSurcharge(id: number, data: Partial<InsertWeightSurcharge>) {
+export async function updateWeightSurcharge(
+  id: number,
+  data: Partial<InsertWeightSurcharge>
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -115,30 +150,34 @@ export async function deleteWeightSurcharge(id: number) {
 
 // ─── Helper: Calculate applicable surcharge ───────────────────────────────────
 
-export async function getApplicableDistanceSurcharge(userId: number, loadedMiles: number) {
+export async function getApplicableDistanceSurcharge(
+  userId: number,
+  loadedMiles: number
+) {
   const surcharges = await getDistanceSurcharges(userId);
-  
-  // Find the applicable surcharge (highest fromMiles that doesn't exceed loadedMiles)
+
   let applicable = surcharges[0];
   for (const surcharge of surcharges) {
     if (surcharge.fromMiles <= loadedMiles) {
       applicable = surcharge;
     }
   }
-  
+
   return applicable?.surchargePerMile || 0;
 }
 
-export async function getApplicableWeightSurcharge(userId: number, weight: number) {
+export async function getApplicableWeightSurcharge(
+  userId: number,
+  weight: number
+) {
   const surcharges = await getWeightSurcharges(userId);
-  
-  // Find the applicable surcharge (highest fromLbs that doesn't exceed weight)
+
   let applicable = surcharges[0];
   for (const surcharge of surcharges) {
     if (surcharge.fromLbs <= weight) {
       applicable = surcharge;
     }
   }
-  
+
   return applicable?.surchargePerMile || 0;
 }
