@@ -16,6 +16,7 @@ import BrokerLoadsManagement from "./pages/BrokerLoadsManagement";
 import AccountingFinance from "./pages/AccountingFinance";
 import BusinessSettings from "./pages/BusinessSettings";
 import { Chat } from "./pages/Chat";
+import BatchPayments from "./pages/BatchPayments";
 
 function withLayout(Component: any) {
   return () => (
@@ -43,6 +44,7 @@ export default function App() {
       <Route path="/accounting-finance" component={withLayout(AccountingFinance)} />
       <Route path="/business-settings" component={withLayout(BusinessSettings)} />
       <Route path="/chat" component={withLayout(Chat)} />
+      <Route path="/batch-payments" component={withLayout(BatchPayments)} />
 
       {/* fallback */}
       <Route path="/" component={withLayout(Dashboard)} />
