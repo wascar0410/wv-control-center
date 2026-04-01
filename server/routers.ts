@@ -526,7 +526,7 @@ const financeRouter = router({
       return { id };
     }),
 
-   summary: publicProcedure
+  summary: publicProcedure
     .input(z.object({ year: z.number(), month: z.number() }))
     .query(async ({ input }) => {
       try {
@@ -558,82 +558,7 @@ const financeRouter = router({
         return [];
       }
     }),
-
-const partnershipRouter = router({
-  addExpense: protectedProcedure
-    .input(
-      z.object({
-        category: z.enum([
-          "fuel",
-          "maintenance",
-          "insurance",
-          "subscriptions",
-          "phone",
-          "payroll",
-          "tolls",
-          "other",
-        ]),
-        amount: z.number().positive(),
-        description: z.string().optional(),
-        receiptBase64: z.string().optional(),
-        receiptFileName: z.string().optional(),
-        transactionDate: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      let receiptUrl: string | undefined;
-
-      if (input.receiptBase64 && input.receiptFileName) {
-        const buffer = Buffer.from(input.receiptBase64, "base64");
-        const key = `receipts/${Date.now()}-${input.receiptFileName}`;
-        const { url } = await storagePut(key, buffer, "image/jpeg");
-        receiptUrl = url;
-      }
-
-      const id = await createTransaction({
-        type: "expense",
-        category: input.category,
-        amount: String(input.amount) as any,
-        description: input.description,
-        receiptUrl,
-        transactionDate: input.transactionDate
-          ? new Date(input.transactionDate)
-          : new Date(),
-        createdBy: ctx.user.id,
-      });
-
-      if (input.amount >= 500) {
-        await notifyOwner({
-          title: "⚠️ Gasto Importante Registrado",
-          content: `Se registró un gasto de $${input.amount} en la categoría "${input.category}". ${input.description ?? ""}`,
-        });
-      }
-
-      return { id };
-    }),
-
-  summary: publicProcedure
-    .input(z.object({ year: z.number(), month: z.number() }))
-    .query(async ({ input }) => {
-      try {
-        const result = await getFinancialSummary(input.year, input.month);
-
-        return {
-          income: result?.income ?? 0,
-          expenses: result?.expenses ?? 0,
-          netProfit: result?.netProfit ?? 0,
-          byCategory: result?.byCategory ?? [],
-        };
-      } catch (error) {
-        console.error("[finance.summary] error:", error);
-        return {
-          income: 0,
-          expenses: 0,
-          netProfit: 0,
-          byCategory: [],
-        };
-      }
-    }),
+});
 
 // ─── Partnership Router ───────────────────────────────────────────────────────
 
