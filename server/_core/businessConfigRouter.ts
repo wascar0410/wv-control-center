@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "./trpc";
+import { protectedProcedure, publicProcedure, router } from "./trpc";
 import {
   getBusinessConfig,
-  createOrUpdateBusinessConfig,
+  updateBusinessConfig,
   getDistanceSurcharges,
   createDistanceSurcharge,
   updateDistanceSurcharge,
@@ -14,123 +14,160 @@ import {
 } from "../db-business-config";
 
 export const businessConfigRouter = router({
-  // Get business configuration
-  getConfig: protectedProcedure.query(async ({ ctx }) => {
-    const config = await getBusinessConfig(ctx.user.id);
-    return config || {
-      fuelPricePerGallon: 3.60,
-      vanMpg: 18.0,
-      maintenancePerMile: 0.12,
-      tiresPerMile: 0.03,
-      insuranceMonthly: 450.00,
-      phoneInternetMonthly: 70.00,
-      loadBoardAppsMonthly: 45.00,
-      accountingSoftwareMonthly: 30.00,
-      otherFixedMonthly: 80.00,
-      targetMilesPerMonth: 4000,
-      minimumProfitPerMile: 1.50,
-    };
+  getConfig: publicProcedure.query(async ({ ctx }) => {
+    try {
+      if (!ctx.user) {
+        return {
+          fuelPricePerGallon: 3.6,
+          vanMpg: 18,
+          maintenancePerMile: 0.12,
+          tiresPerMile: 0.03,
+          insuranceMonthly: 450,
+          phoneInternetMonthly: 70,
+          loadBoardAppsMonthly: 45,
+          accountingSoftwareMonthly: 30,
+          otherFixedMonthly: 80,
+          targetMilesPerMonth: 4000,
+          minimumProfitPerMile: 1.5,
+        };
+      }
+
+      const config = await getBusinessConfig(ctx.user.id);
+      return (
+        config || {
+          fuelPricePerGallon: 3.6,
+          vanMpg: 18,
+          maintenancePerMile: 0.12,
+          tiresPerMile: 0.03,
+          insuranceMonthly: 450,
+          phoneInternetMonthly: 70,
+          loadBoardAppsMonthly: 45,
+          accountingSoftwareMonthly: 30,
+          otherFixedMonthly: 80,
+          targetMilesPerMonth: 4000,
+          minimumProfitPerMile: 1.5,
+        }
+      );
+    } catch (error) {
+      console.error("[businessConfig.getConfig] error:", error);
+      return {
+        fuelPricePerGallon: 3.6,
+        vanMpg: 18,
+        maintenancePerMile: 0.12,
+        tiresPerMile: 0.03,
+        insuranceMonthly: 450,
+        phoneInternetMonthly: 70,
+        loadBoardAppsMonthly: 45,
+        accountingSoftwareMonthly: 30,
+        otherFixedMonthly: 80,
+        targetMilesPerMonth: 4000,
+        minimumProfitPerMile: 1.5,
+      };
+    }
   }),
 
-  // Update business configuration
+  getDistanceSurcharges: publicProcedure.query(async ({ ctx }) => {
+    try {
+      if (!ctx.user) return [];
+      return await getDistanceSurcharges(ctx.user.id);
+    } catch (error) {
+      console.error("[businessConfig.getDistanceSurcharges] error:", error);
+      return [];
+    }
+  }),
+
+  getWeightSurcharges: publicProcedure.query(async ({ ctx }) => {
+    try {
+      if (!ctx.user) return [];
+      return await getWeightSurcharges(ctx.user.id);
+    } catch (error) {
+      console.error("[businessConfig.getWeightSurcharges] error:", error);
+      return [];
+    }
+  }),
+
   updateConfig: protectedProcedure
-    .input(
-      z.object({
-        fuelPricePerGallon: z.number().optional(),
-        vanMpg: z.number().optional(),
-        maintenancePerMile: z.number().optional(),
-        tiresPerMile: z.number().optional(),
-        insuranceMonthly: z.number().optional(),
-        phoneInternetMonthly: z.number().optional(),
-        loadBoardAppsMonthly: z.number().optional(),
-        accountingSoftwareMonthly: z.number().optional(),
-        otherFixedMonthly: z.number().optional(),
-        targetMilesPerMonth: z.number().optional(),
-        minimumProfitPerMile: z.number().optional(),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const updated = await createOrUpdateBusinessConfig(ctx.user.id, input as any);
-      return updated;
+    .input(z.any())
+    .mutation(async ({ ctx, input }) => {
+      await updateBusinessConfig(ctx.user.id, input);
+      return { success: true };
     }),
 
-  // Get distance surcharges
-  getDistanceSurcharges: protectedProcedure.query(async ({ ctx }) => {
-    return getDistanceSurcharges(ctx.user.id);
-  }),
-
-  // Create distance surcharge
   createDistanceSurcharge: protectedProcedure
     .input(
       z.object({
-        fromMiles: z.number().int().min(0),
-        surchargePerMile: z.number().min(0),
+        fromMiles: z.number(),
+        surchargePerMile: z.number(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      return createDistanceSurcharge(ctx.user.id, input as any);
+    .mutation(async ({ ctx, input }) => {
+      await createDistanceSurcharge({
+        userId: ctx.user.id,
+        fromMiles: input.fromMiles,
+        surchargePerMile: input.surchargePerMile,
+      });
+      return { success: true };
     }),
 
-  // Update distance surcharge
   updateDistanceSurcharge: protectedProcedure
     .input(
       z.object({
         id: z.number(),
-        fromMiles: z.number().int().min(0).optional(),
-        surchargePerMile: z.number().min(0).optional(),
+        fromMiles: z.number(),
+        surchargePerMile: z.number(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const { id, ...data } = input;
-      await updateDistanceSurcharge(id, data as any);
-      return getDistanceSurcharges(ctx.user.id);
+    .mutation(async ({ input }) => {
+      await updateDistanceSurcharge(input.id, {
+        fromMiles: input.fromMiles,
+        surchargePerMile: input.surchargePerMile,
+      });
+      return { success: true };
     }),
 
-  // Delete distance surcharge
   deleteDistanceSurcharge: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       await deleteDistanceSurcharge(input.id);
-      return getDistanceSurcharges(ctx.user.id);
+      return { success: true };
     }),
 
-  // Get weight surcharges
-  getWeightSurcharges: protectedProcedure.query(async ({ ctx }) => {
-    return getWeightSurcharges(ctx.user.id);
-  }),
-
-  // Create weight surcharge
   createWeightSurcharge: protectedProcedure
     .input(
       z.object({
-        fromLbs: z.number().int().min(0),
-        surchargePerMile: z.number().min(0),
+        fromLbs: z.number(),
+        surchargePerMile: z.number(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      return createWeightSurcharge(ctx.user.id, input as any);
+    .mutation(async ({ ctx, input }) => {
+      await createWeightSurcharge({
+        userId: ctx.user.id,
+        fromLbs: input.fromLbs,
+        surchargePerMile: input.surchargePerMile,
+      });
+      return { success: true };
     }),
 
-  // Update weight surcharge
   updateWeightSurcharge: protectedProcedure
     .input(
       z.object({
         id: z.number(),
-        fromLbs: z.number().int().min(0).optional(),
-        surchargePerMile: z.number().min(0).optional(),
+        fromLbs: z.number(),
+        surchargePerMile: z.number(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const { id, ...data } = input;
-      await updateWeightSurcharge(id, data as any);
-      return getWeightSurcharges(ctx.user.id);
+    .mutation(async ({ input }) => {
+      await updateWeightSurcharge(input.id, {
+        fromLbs: input.fromLbs,
+        surchargePerMile: input.surchargePerMile,
+      });
+      return { success: true };
     }),
 
-  // Delete weight surcharge
   deleteWeightSurcharge: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       await deleteWeightSurcharge(input.id);
-      return getWeightSurcharges(ctx.user.id);
+      return { success: true };
     }),
 });
