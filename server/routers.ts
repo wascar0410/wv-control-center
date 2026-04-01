@@ -484,6 +484,9 @@ cashFlow: publicProcedure
       return [];
     }
   }),
+});
+
+const partnershipRouter = router({
   addExpense: protectedProcedure
     .input(
       z.object({
