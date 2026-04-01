@@ -13,6 +13,7 @@ import Quotation from "./pages/Quotation";
 import QuotationHistory from "./pages/QuotationHistory";
 import ImportBrokerLoads from "./pages/ImportBrokerLoads";
 import BrokerLoadsManagement from "./pages/BrokerLoadsManagement";
+import AccountingFinance from "./pages/AccountingFinance";
 
 function DashboardPage() {
   return (
@@ -82,6 +83,30 @@ function QuotationHistoryPage() {
   );
 }
 
+function ImportBrokerLoadsPage() {
+  return (
+    <DashboardLayout>
+      <ImportBrokerLoads />
+    </DashboardLayout>
+  );
+}
+
+function BrokerLoadsManagementPage() {
+  return (
+    <DashboardLayout>
+      <BrokerLoadsManagement />
+    </DashboardLayout>
+  );
+}
+
+function AccountingFinancePage() {
+  return (
+    <DashboardLayout>
+      <AccountingFinance />
+    </DashboardLayout>
+  );
+}
+
 export default function App() {
   return (
     <Switch>
@@ -97,8 +122,9 @@ export default function App() {
       <Route path="/executive-dashboard" component={ExecutiveDashboardPage} />
       <Route path="/quotation" component={QuotationPage} />
       <Route path="/quotation-history" component={QuotationHistoryPage} />
-      <Route path="/import-broker-loads" component={ImportBrokerLoads} />
-      <Route path="/broker-loads-management" component={BrokerLoadsManagement} />
+      <Route path="/import-broker-loads" component={ImportBrokerLoadsPage} />
+      <Route path="/broker-loads-management" component={BrokerLoadsManagementPage} />
+      <Route path="/accounting-finance" component={AccountingFinancePage} />
     </Switch>
   );
 }
