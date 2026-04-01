@@ -8,7 +8,7 @@ export default function BusinessSettings() {
       <div>
         <h1 className="text-3xl font-bold">Configuración del Negocio</h1>
         <p className="text-muted-foreground">
-          Vista segura de configuración mientras se restaura el backend completo
+          Vista segura de configuración
         </p>
       </div>
 
@@ -24,30 +24,7 @@ export default function BusinessSettings() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Costos Fijos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <p>Seguro: $450/mes</p>
-          <p>Teléfono/Internet: $70/mes</p>
-          <p>Apps: $45/mes</p>
-          <p>Software contable: $30/mes</p>
-          <p>Otros: $80/mes</p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Objetivos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <p>Meta de millas: 4000/mes</p>
-          <p>Ganancia mínima: $1.50/mi</p>
-        </CardContent>
-      </Card>
-
-      <Button onClick={() => toast.success("Configuración guardada (modo demo)")}>
+      <Button onClick={() => toast.success("Configuración guardada (demo)")}>
         Guardar Cambios
       </Button>
     </div>
