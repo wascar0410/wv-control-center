@@ -15,15 +15,18 @@ import ImportBrokerLoads from "./pages/ImportBrokerLoads";
 import BrokerLoadsManagement from "./pages/BrokerLoadsManagement";
 import AccountingFinance from "./pages/AccountingFinance";
 import BusinessSettings from "./pages/BusinessSettings";
-import { Chat } from "./pages/Chat";
 import BatchPayments from "./pages/BatchPayments";
+import DriverPerformance from "./pages/DriverPerformance";
+import { Chat } from "./pages/Chat";
 
 function withLayout(Component: any) {
-  return () => (
-    <DashboardLayout>
-      <Component />
-    </DashboardLayout>
-  );
+  return function WrappedPage() {
+    return (
+      <DashboardLayout>
+        <Component />
+      </DashboardLayout>
+    );
+  };
 }
 
 export default function App() {
@@ -43,10 +46,10 @@ export default function App() {
       <Route path="/broker-loads-management" component={withLayout(BrokerLoadsManagement)} />
       <Route path="/accounting-finance" component={withLayout(AccountingFinance)} />
       <Route path="/business-settings" component={withLayout(BusinessSettings)} />
-      <Route path="/chat" component={withLayout(Chat)} />
       <Route path="/batch-payments" component={withLayout(BatchPayments)} />
+      <Route path="/driver-performance" component={withLayout(DriverPerformance)} />
+      <Route path="/chat" component={withLayout(Chat)} />
 
-      {/* fallback */}
       <Route path="/" component={withLayout(Dashboard)} />
     </Switch>
   );
