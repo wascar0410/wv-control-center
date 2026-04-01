@@ -558,7 +558,6 @@ const financeRouter = router({
         return [];
       }
     }),
-});
 
 const partnershipRouter = router({
   addExpense: protectedProcedure
