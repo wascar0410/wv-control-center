@@ -7,7 +7,6 @@ import {
   updateBrokerLoad,
   getBrokerLoadsByStatus,
   createSyncLog,
-  getSyncLogsByUserId,
   checkDuplicateBrokerLoad,
   deleteBrokerLoad,
 } from "../db-broker-loads";
@@ -207,29 +206,44 @@ export const brokerLoadsRouter = router({
     }),
 
   // Get all broker loads for user
-  getLoads: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) throw new Error("Not authenticated");
-    return await getBrokerLoadsByUserId(ctx.user.id);
+  getLoads: publicProcedure.query(async ({ ctx }) => {
+    try {
+      if (!ctx.user) return [];
+      return await getBrokerLoadsByUserId(ctx.user.id);
+    } catch (error) {
+      console.error("[brokerLoads.getLoads] error:", error);
+      return [];
+    }
   }),
 
   // Get broker loads by status
-  getLoadsByStatus: protectedProcedure
+  getLoadsByStatus: publicProcedure
     .input(z.object({ status: z.string() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Not authenticated");
-      return await getBrokerLoadsByStatus(ctx.user.id, input.status);
+      try {
+        if (!ctx.user) return [];
+        return await getBrokerLoadsByStatus(ctx.user.id, input.status);
+      } catch (error) {
+        console.error("[brokerLoads.getLoadsByStatus] error:", error);
+        return [];
+      }
     }),
 
   // Get single broker load
-  getLoad: protectedProcedure
+  getLoad: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user) throw new Error("Not authenticated");
-      const load = await getBrokerLoadById(input.id);
-      if (!load || load.userId !== ctx.user.id) {
-        throw new Error("Load not found");
+      try {
+        if (!ctx.user) return null;
+        const load = await getBrokerLoadById(input.id);
+        if (!load || load.userId !== ctx.user.id) {
+          return null;
+        }
+        return load;
+      } catch (error) {
+        console.error("[brokerLoads.getLoad] error:", error);
+        return null;
       }
-      return load;
     }),
 
   // Update broker load status and verdict
