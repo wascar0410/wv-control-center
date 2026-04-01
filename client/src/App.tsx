@@ -1,4 +1,6 @@
 import { Route, Switch } from "wouter";
+import DashboardLayout from "./components/DashboardLayout";
+import BusinessSettings from "./pages/BusinessSettings";
 
 function HomePage() {
   return (
@@ -11,10 +13,9 @@ function HomePage() {
 
 function BusinessSettingsPage() {
   return (
-    <div style={{ padding: 24 }}>
-      <h1>BUSINESS SETTINGS INLINE TEST 999</h1>
-      <p>Si ves esto, la ruta funciona.</p>
-    </div>
+    <DashboardLayout>
+      <BusinessSettings />
+    </DashboardLayout>
   );
 }
 
