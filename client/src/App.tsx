@@ -107,6 +107,7 @@ function AccountingFinancePage() {
     </DashboardLayout>
   );
 }
+
 function BusinessSettingsPage() {
   return (
     <DashboardLayout>
@@ -133,14 +134,7 @@ export default function App() {
       <Route path="/import-broker-loads" component={ImportBrokerLoadsPage} />
       <Route path="/broker-loads-management" component={BrokerLoadsManagementPage} />
       <Route path="/accounting-finance" component={AccountingFinancePage} />
-      <Route
-  path="/business-settings"
-  component={() => (
-    <DashboardLayout>
-      <BusinessSettings />
-    </DashboardLayout>
-  )}
-/>
+      <Route path="/business-settings" component={BusinessSettingsPage} />
     </Switch>
   );
 }
