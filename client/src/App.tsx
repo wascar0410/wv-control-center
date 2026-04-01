@@ -14,7 +14,7 @@ import QuotationHistory from "./pages/QuotationHistory";
 import ImportBrokerLoads from "./pages/ImportBrokerLoads";
 import BrokerLoadsManagement from "./pages/BrokerLoadsManagement";
 import AccountingFinance from "./pages/AccountingFinance";
-import BusinessSettings from "./pages/BusinessSettings";
+
 
 function DashboardPage() {
   return (
@@ -111,7 +111,13 @@ function AccountingFinancePage() {
 function BusinessSettingsPage() {
   return (
     <DashboardLayout>
-      <BusinessSettings />
+      <div className="space-y-6 p-4">
+        <h1 className="text-3xl font-bold">Business Settings TEST</h1>
+
+        <div className="rounded-lg border p-4">
+          Si ves esta pantalla, la ruta funciona y el problema está en el archivo BusinessSettings.tsx
+        </div>
+      </div>
     </DashboardLayout>
   );
 }
