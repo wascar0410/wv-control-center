@@ -1,20 +1,25 @@
 import { Route, Switch } from "wouter";
 import DashboardLayout from "./components/DashboardLayout";
+
+import Dashboard from "./pages/Dashboard";
+import Loads from "./pages/Loads";
+import Finance from "./pages/Finance";
+import Transactions from "./pages/Transactions";
+import Partnership from "./pages/Partnership";
+import UserProfile from "./pages/UserProfile";
+import DriverViewProduction from "./pages/DriverViewProduction";
+import ExecutiveDashboard from "./pages/ExecutiveDashboard";
+import Quotation from "./pages/Quotation";
+import QuotationHistory from "./pages/QuotationHistory";
+import ImportBrokerLoads from "./pages/ImportBrokerLoads";
+import BrokerLoadsManagement from "./pages/BrokerLoadsManagement";
+import AccountingFinance from "./pages/AccountingFinance";
 import BusinessSettings from "./pages/BusinessSettings";
 
-function HomePage() {
-  return (
-    <div style={{ padding: 24 }}>
-      <h1>HOME TEST 999</h1>
-      <p>Si ves esto, App.tsx nuevo sí está cargando.</p>
-    </div>
-  );
-}
-
-function BusinessSettingsPage() {
-  return (
+function withLayout(Component: any) {
+  return () => (
     <DashboardLayout>
-      <BusinessSettings />
+      <Component />
     </DashboardLayout>
   );
 }
@@ -22,8 +27,23 @@ function BusinessSettingsPage() {
 export default function App() {
   return (
     <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/business-settings" component={BusinessSettingsPage} />
+      <Route path="/dashboard" component={withLayout(Dashboard)} />
+      <Route path="/loads" component={withLayout(Loads)} />
+      <Route path="/finance" component={withLayout(Finance)} />
+      <Route path="/transactions" component={withLayout(Transactions)} />
+      <Route path="/partnership" component={withLayout(Partnership)} />
+      <Route path="/profile" component={withLayout(UserProfile)} />
+      <Route path="/driver" component={DriverViewProduction} />
+      <Route path="/executive-dashboard" component={withLayout(ExecutiveDashboard)} />
+      <Route path="/quotation" component={Quotation} />
+      <Route path="/quotation-history" component={withLayout(QuotationHistory)} />
+      <Route path="/import-broker-loads" component={withLayout(ImportBrokerLoads)} />
+      <Route path="/broker-loads-management" component={withLayout(BrokerLoadsManagement)} />
+      <Route path="/accounting-finance" component={withLayout(AccountingFinance)} />
+      <Route path="/business-settings" component={withLayout(BusinessSettings)} />
+
+      {/* fallback */}
+      <Route path="/" component={withLayout(Dashboard)} />
     </Switch>
   );
 }
