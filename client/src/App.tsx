@@ -18,6 +18,7 @@ import BusinessSettings from "./pages/BusinessSettings";
 import BatchPayments from "./pages/BatchPayments";
 import DriverPerformance from "./pages/DriverPerformance";
 import { Chat } from "./pages/Chat";
+import About from "./pages/About";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -51,6 +52,7 @@ export default function App() {
       <Route path="/chat" component={withLayout(Chat)} />
 
       <Route path="/" component={withLayout(Dashboard)} />
+      <Route path="/about" component={withLayout(About)} />
     </Switch>
   );
 }
