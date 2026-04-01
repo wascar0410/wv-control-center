@@ -526,7 +526,7 @@ const financeRouter = router({
       return { id };
     }),
 
-  summary: publicProcedure
+   summary: publicProcedure
     .input(z.object({ year: z.number(), month: z.number() }))
     .query(async ({ input }) => {
       try {
@@ -552,8 +552,7 @@ const financeRouter = router({
     .input(z.object({ year: z.number() }))
     .query(async ({ input }) => {
       try {
-        const result = await getMonthlyCashFlow(input.year);
-        return result ?? [];
+        return await getMonthlyCashFlow(input.year);
       } catch (error) {
         console.error("[finance.cashFlow] error:", error);
         return [];
