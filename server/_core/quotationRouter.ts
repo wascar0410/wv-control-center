@@ -287,37 +287,30 @@ export const quotationRouter = router({
       return { success: true };
     }),
 
-  getQuotationsByStatus: protectedProcedure
-    .input(z.object({ status: z.string() }))
-    .query(async ({ input, ctx }) => {
-      return getQuotationsByStatus(ctx.user.id, input.status);
-    }),
-
-  getQuotationHistory: protectedProcedure
-    .input(
-      z.object({
-        status: z.enum(["draft", "quoted", "accepted", "rejected", "expired"]).optional(),
-        search: z.string().optional(),
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      })
-    )
-    .query(async ({ input, ctx }) => {
-      const allQuotations = await getLoadQuotationsByUserId(ctx.user.id);
-      let filtered = allQuotations;
-      if (input.status) {
-        filtered = filtered.filter((q) => q.status === input.status);
-      }
-      if (input.search) {
-        const searchLower = input.search.toLowerCase();
-        filtered = filtered.filter((q) =>
-          q.pickupAddress.toLowerCase().includes(searchLower) ||
-          q.deliveryAddress.toLowerCase().includes(searchLower)
-        );
-      }
-      filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      const total = filtered.length;
-      const paginated = filtered.slice(input.offset, input.offset + input.limit);
-      return { quotations: paginated, total, limit: input.limit, offset: input.offset };
-    }),
-});
+  getQuotationHistory: publicProcedure
+  .input(
+    z.object({
+      status: z.enum(["draft", "quoted", "accepted", "rejected", "expired"]).optional(),
+      search: z.string().optional(),
+      limit: z.number().default(50),
+      offset: z.number().default(0),
+    })
+  )
+  .query(async ({ input }) => {
+    try {
+      return {
+        quotations: [],
+        total: 0,
+        limit: input.limit,
+        offset: input.offset,
+      };
+    } catch (error) {
+      console.error("[quotation.getQuotationHistory] error:", error);
+      return {
+        quotations: [],
+        total: 0,
+        limit: input.limit,
+        offset: input.offset,
+      };
+    }
+  }),
