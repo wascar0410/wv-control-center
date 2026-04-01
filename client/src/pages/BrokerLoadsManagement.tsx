@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,29 +62,41 @@ export default function BrokerLoadsManagement() {
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const { data: loads, isLoading: loadsLoading, refetch } = trpc.brokerLoads.getLoads.useQuery();
+  const {
+    data: loads,
+    isLoading: loadsLoading,
+    error: loadsError,
+    refetch,
+  } = trpc.brokerLoads.getLoads.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
   const updateLoadMutation = trpc.brokerLoads.updateLoad.useMutation();
   const deleteLoadMutation = trpc.brokerLoads.deleteLoad.useMutation();
   const createQuotationMutation = trpc.quotation.calculateQuotation.useMutation();
 
-  // Filter loads
-  const filteredLoads = (loads || []).filter((load: any) => {
-    const matchesStatus = !status || load.status === status;
-    const matchesSearch =
-      !search ||
-      load.pickupAddress.toLowerCase().includes(search.toLowerCase()) ||
-      load.deliveryAddress.toLowerCase().includes(search.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  const safeLoads = Array.isArray(loads) ? loads : [];
 
-  // Handle convert to quotation
+  const filteredLoads = useMemo(() => {
+    return safeLoads.filter((load: any) => {
+      const matchesStatus = !status || load.status === status;
+      const matchesSearch =
+        !search ||
+        String(load.pickupAddress || "").toLowerCase().includes(search.toLowerCase()) ||
+        String(load.deliveryAddress || "").toLowerCase().includes(search.toLowerCase()) ||
+        String(load.brokerName || "").toLowerCase().includes(search.toLowerCase());
+
+      return matchesStatus && matchesSearch;
+    });
+  }, [safeLoads, search, status]);
+
   const handleConvertToQuotation = async () => {
     if (!selectedLoad) return;
 
     setIsLoading(true);
     try {
-      // Create quotation from broker load
-      const result = await createQuotationMutation.mutateAsync({
+      await createQuotationMutation.mutateAsync({
         vanAddress: "Current Location",
         vanLat: 0,
         vanLng: 0,
@@ -94,43 +106,45 @@ export default function BrokerLoadsManagement() {
         pickupLng: selectedLoad.pickupLng || 0,
         deliveryLat: selectedLoad.deliveryLat || 0,
         deliveryLng: selectedLoad.deliveryLng || 0,
-        weight: selectedLoad.weight,
-        ratePerMile: selectedLoad.offeredRate / (selectedLoad.calculatedDistance || 1),
-        offeredPrice: selectedLoad.offeredRate,
+        weight: Number(selectedLoad.weight || 0),
+        weightUnit: "lbs",
+        cargoDescription: selectedLoad.commodity || undefined,
+        ratePerMile:
+          Number(selectedLoad.offeredRate || 0) /
+          Math.max(Number(selectedLoad.calculatedDistance || 1), 1),
+        offeredPrice: Number(selectedLoad.offeredRate || 0),
+        fuelSurcharge: 0,
+        includeReturnEmpty: false,
       });
 
-      // Update broker load status to converted
       await updateLoadMutation.mutateAsync({
         id: selectedLoad.id,
         status: "converted",
-        convertedQuotationId: 0,
       });
 
       toast.success("Carga convertida a cotización exitosamente");
       setIsConvertDialogOpen(false);
       setSelectedLoad(null);
-      refetch();
+      await refetch();
     } catch (error: any) {
-      toast.error(error.message || "Error al convertir a cotización");
+      toast.error(error?.message || "Error al convertir a cotización");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle delete
   const handleDelete = async (id: number) => {
     if (!confirm("¿Estás seguro de que deseas eliminar esta carga?")) return;
 
     try {
       await deleteLoadMutation.mutateAsync({ id });
       toast.success("Carga eliminada");
-      refetch();
+      await refetch();
     } catch (error: any) {
-      toast.error(error.message || "Error al eliminar");
+      toast.error(error?.message || "Error al eliminar");
     }
   };
 
-  // Handle update status
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
       await updateLoadMutation.mutateAsync({
@@ -138,23 +152,31 @@ export default function BrokerLoadsManagement() {
         status: newStatus as any,
       });
       toast.success("Estado actualizado");
-      refetch();
+      await refetch();
     } catch (error: any) {
-      toast.error(error.message || "Error al actualizar");
+      toast.error(error?.message || "Error al actualizar");
     }
   };
 
+  if (loadsError) {
+    console.error("BrokerLoadsManagement loads error:", loadsError);
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Gestión de Cargas Importadas</h1>
         <p className="text-muted-foreground mt-2">
-          Revisa, filtra y convierte cargas importadas a cotizaciones
+          Revisa, filtra y convierte cargas importadas a cotizaciones.
         </p>
       </div>
 
-      {/* Stats */}
+      {loadsError && (
+        <div className="text-sm text-yellow-600 dark:text-yellow-400">
+          Algunas funciones están en modo seguro. Si ves datos vacíos, es por auth o backend pendiente.
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -163,7 +185,7 @@ export default function BrokerLoadsManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{loads?.length || 0}</p>
+            <p className="text-2xl font-bold">{safeLoads.length}</p>
           </CardContent>
         </Card>
 
@@ -175,7 +197,7 @@ export default function BrokerLoadsManagement() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-blue-600">
-              {loads?.filter((l: any) => l.status === "new").length || 0}
+              {safeLoads.filter((l: any) => l.status === "new").length}
             </p>
           </CardContent>
         </Card>
@@ -188,7 +210,7 @@ export default function BrokerLoadsManagement() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-green-600">
-              {loads?.filter((l: any) => l.status === "accepted").length || 0}
+              {safeLoads.filter((l: any) => l.status === "accepted").length}
             </p>
           </CardContent>
         </Card>
@@ -201,13 +223,12 @@ export default function BrokerLoadsManagement() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-purple-600">
-              {loads?.filter((l: any) => l.status === "converted").length || 0}
+              {safeLoads.filter((l: any) => l.status === "converted").length}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -217,19 +238,17 @@ export default function BrokerLoadsManagement() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por dirección..."
+                placeholder="Buscar por dirección o broker..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-10"
               />
             </div>
 
-            {/* Status Filter */}
-            <Select value={status} onValueChange={(val) => setStatus(val === "all" ? "" : val)}>
+            <Select value={status || "all"} onValueChange={(val) => setStatus(val === "all" ? "" : val)}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar por estado" />
               </SelectTrigger>
@@ -244,17 +263,15 @@ export default function BrokerLoadsManagement() {
               </SelectContent>
             </Select>
 
-            {/* Results count */}
             <div className="flex items-center justify-end">
               <p className="text-sm text-muted-foreground">
-                {filteredLoads.length} de {loads?.length || 0} cargas
+                {filteredLoads.length} de {safeLoads.length} cargas
               </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle>Cargas Importadas</CardTitle>
@@ -269,7 +286,9 @@ export default function BrokerLoadsManagement() {
             </div>
           ) : filteredLoads.length === 0 ? (
             <Alert>
-              <AlertDescription>No hay cargas importadas. Comienza importando desde la página de Importar Cargas.</AlertDescription>
+              <AlertDescription>
+                No hay cargas importadas. Comienza importando desde la página de Importar Cargas.
+              </AlertDescription>
             </Alert>
           ) : (
             <div className="overflow-x-auto">
@@ -289,25 +308,32 @@ export default function BrokerLoadsManagement() {
                 <TableBody>
                   {filteredLoads.map((load: any) => (
                     <TableRow key={load.id}>
-                      <TableCell className="font-medium capitalize">{load.brokerName}</TableCell>
-                      <TableCell className="max-w-xs truncate">{load.pickupAddress}</TableCell>
-                      <TableCell className="max-w-xs truncate">{load.deliveryAddress}</TableCell>
-                      <TableCell className="text-right">{load.weight.toLocaleString()}</TableCell>
+                      <TableCell className="font-medium capitalize">
+                        {load.brokerName}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {load.pickupAddress}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {load.deliveryAddress}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {Number(load.weight || 0).toLocaleString()}
+                      </TableCell>
                       <TableCell className="text-right font-semibold">
-                        ${Number(load.offeredRate).toFixed(2)}
+                        ${Number(load.offeredRate || 0).toFixed(2)}
                       </TableCell>
                       <TableCell>
-                        <Badge className={`${VERDICT_COLORS[load.verdict] || "bg-gray-100"}`}>
-                          {load.verdict}
+                        <Badge className={VERDICT_COLORS[load.verdict] || "bg-gray-100 text-gray-800"}>
+                          {load.verdict || "N/A"}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge className={STATUS_COLORS[load.status]}>
-                          {STATUS_LABELS[load.status]}
+                        <Badge className={STATUS_COLORS[load.status] || "bg-gray-100 text-gray-800"}>
+                          {STATUS_LABELS[load.status] || load.status || "N/A"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                        {/* View Details */}
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button
@@ -318,10 +344,12 @@ export default function BrokerLoadsManagement() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
+
                           <DialogContent className="max-w-2xl">
                             <DialogHeader>
                               <DialogTitle>Detalles de Carga</DialogTitle>
                             </DialogHeader>
+
                             <div className="grid grid-cols-2 gap-4 py-4">
                               <div>
                                 <p className="text-sm text-muted-foreground">Broker</p>
@@ -329,7 +357,7 @@ export default function BrokerLoadsManagement() {
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">ID Broker</p>
-                                <p className="font-semibold">{load.brokerId}</p>
+                                <p className="font-semibold">{load.brokerId || "N/A"}</p>
                               </div>
                               <div className="col-span-2">
                                 <p className="text-sm text-muted-foreground">Recogida</p>
@@ -341,7 +369,9 @@ export default function BrokerLoadsManagement() {
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">Peso</p>
-                                <p className="font-semibold">{load.weight.toLocaleString()} lbs</p>
+                                <p className="font-semibold">
+                                  {Number(load.weight || 0).toLocaleString()} lbs
+                                </p>
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">Mercancía</p>
@@ -349,24 +379,28 @@ export default function BrokerLoadsManagement() {
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">Tarifa Ofrecida</p>
-                                <p className="font-semibold">${Number(load.offeredRate).toFixed(2)}</p>
+                                <p className="font-semibold">
+                                  ${Number(load.offeredRate || 0).toFixed(2)}
+                                </p>
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">Distancia</p>
                                 <p className="font-semibold">
-                                  {load.calculatedDistance ? `${load.calculatedDistance.toFixed(1)} mi` : "N/A"}
+                                  {load.calculatedDistance
+                                    ? `${Number(load.calculatedDistance).toFixed(1)} mi`
+                                    : "N/A"}
                                 </p>
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">Veredicto</p>
-                                <Badge className={VERDICT_COLORS[load.verdict]}>
-                                  {load.verdict}
+                                <Badge className={VERDICT_COLORS[load.verdict] || "bg-gray-100 text-gray-800"}>
+                                  {load.verdict || "N/A"}
                                 </Badge>
                               </div>
                               <div>
                                 <p className="text-sm text-muted-foreground">Estado</p>
-                                <Badge className={STATUS_COLORS[load.status]}>
-                                  {STATUS_LABELS[load.status]}
+                                <Badge className={STATUS_COLORS[load.status] || "bg-gray-100 text-gray-800"}>
+                                  {STATUS_LABELS[load.status] || load.status || "N/A"}
                                 </Badge>
                               </div>
                               {load.pickupDate && (
@@ -389,44 +423,61 @@ export default function BrokerLoadsManagement() {
                           </DialogContent>
                         </Dialog>
 
-                        {/* Convert to Quotation */}
                         {load.status !== "converted" && (
-                          <Dialog open={isConvertDialogOpen && selectedLoad?.id === load.id} onOpenChange={setIsConvertDialogOpen}>
+                          <Dialog
+                            open={isConvertDialogOpen && selectedLoad?.id === load.id}
+                            onOpenChange={setIsConvertDialogOpen}
+                          >
                             <DialogTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => setSelectedLoad(load)}
+                                onClick={() => {
+                                  setSelectedLoad(load);
+                                  setIsConvertDialogOpen(true);
+                                }}
                                 title="Convertir a cotización"
                               >
                                 <ArrowRight className="h-4 w-4" />
                               </Button>
                             </DialogTrigger>
+
                             <DialogContent>
                               <DialogHeader>
                                 <DialogTitle>Convertir a Cotización</DialogTitle>
                                 <DialogDescription>
-                                  Esta carga se convertirá en una cotización oficial en el sistema
+                                  Esta carga se convertirá en una cotización oficial en el sistema.
                                 </DialogDescription>
                               </DialogHeader>
+
                               <div className="space-y-4 py-4">
                                 <div>
                                   <p className="text-sm font-medium">Recogida</p>
-                                  <p className="text-sm text-muted-foreground">{load.pickupAddress}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {load.pickupAddress}
+                                  </p>
                                 </div>
                                 <div>
                                   <p className="text-sm font-medium">Entrega</p>
-                                  <p className="text-sm text-muted-foreground">{load.deliveryAddress}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {load.deliveryAddress}
+                                  </p>
                                 </div>
                                 <div>
                                   <p className="text-sm font-medium">Tarifa Propuesta</p>
-                                  <p className="text-lg font-semibold">${Number(load.offeredRate).toFixed(2)}</p>
+                                  <p className="text-lg font-semibold">
+                                    ${Number(load.offeredRate || 0).toFixed(2)}
+                                  </p>
                                 </div>
                               </div>
+
                               <div className="flex gap-2 justify-end">
                                 <Button
                                   variant="outline"
-                                  onClick={() => setIsConvertDialogOpen(false)}
+                                  onClick={() => {
+                                    setIsConvertDialogOpen(false);
+                                    setSelectedLoad(null);
+                                  }}
                                 >
                                   Cancelar
                                 </Button>
@@ -434,7 +485,9 @@ export default function BrokerLoadsManagement() {
                                   onClick={handleConvertToQuotation}
                                   disabled={isLoading}
                                 >
-                                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                  {isLoading && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  )}
                                   Convertir
                                 </Button>
                               </div>
@@ -442,7 +495,6 @@ export default function BrokerLoadsManagement() {
                           </Dialog>
                         )}
 
-                        {/* Delete */}
                         <Button
                           variant="ghost"
                           size="sm"
