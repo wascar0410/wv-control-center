@@ -452,38 +452,113 @@ const loadsRouter = router({
 
 const financeRouter = router({
   transactions: publicProcedure
-  .input(
-    z
-      .object({
-        type: z.enum(["income", "expense"]).optional(),
-        startDate: z.string().optional(),
-        endDate: z.string().optional(),
-      })
-      .optional()
-  )
-  .query(async ({ input }) => {
-    try {
-      return await getTransactions({
-        type: input?.type,
-        startDate: input?.startDate ? new Date(input.startDate) : undefined,
-        endDate: input?.endDate ? new Date(input.endDate) : undefined,
-      });
-    } catch (error) {
-      console.error("[finance.transactions] error:", error);
-      return [];
-    }
-  }),
+    .input(
+      z
+        .object({
+          type: z.enum(["income", "expense"]).optional(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ input }) => {
+      try {
+        return await getTransactions({
+          type: input?.type,
+          startDate: input?.startDate ? new Date(input.startDate) : undefined,
+          endDate: input?.endDate ? new Date(input.endDate) : undefined,
+        });
+      } catch (error) {
+        console.error("[finance.transactions] error:", error);
+        return [];
+      }
+    }),
 
-cashFlow: publicProcedure
-  .input(z.object({ year: z.number() }))
-  .query(async ({ input }) => {
-    try {
-      return await getMonthlyCashFlow(input.year);
-    } catch (error) {
-      console.error("[finance.cashFlow] error:", error);
-      return [];
-    }
-  }),
+  addExpense: protectedProcedure
+    .input(
+      z.object({
+        category: z.enum([
+          "fuel",
+          "maintenance",
+          "insurance",
+          "subscriptions",
+          "phone",
+          "payroll",
+          "tolls",
+          "other",
+        ]),
+        amount: z.number().positive(),
+        description: z.string().optional(),
+        receiptBase64: z.string().optional(),
+        receiptFileName: z.string().optional(),
+        transactionDate: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      let receiptUrl: string | undefined;
+
+      if (input.receiptBase64 && input.receiptFileName) {
+        const buffer = Buffer.from(input.receiptBase64, "base64");
+        const key = `receipts/${Date.now()}-${input.receiptFileName}`;
+        const { url } = await storagePut(key, buffer, "image/jpeg");
+        receiptUrl = url;
+      }
+
+      const id = await createTransaction({
+        type: "expense",
+        category: input.category,
+        amount: String(input.amount) as any,
+        description: input.description,
+        receiptUrl,
+        transactionDate: input.transactionDate
+          ? new Date(input.transactionDate)
+          : new Date(),
+        createdBy: ctx.user.id,
+      });
+
+      if (input.amount >= 500) {
+        await notifyOwner({
+          title: "⚠️ Gasto Importante Registrado",
+          content: `Se registró un gasto de $${input.amount} en la categoría "${input.category}". ${input.description ?? ""}`,
+        });
+      }
+
+      return { id };
+    }),
+
+  summary: publicProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .query(async ({ input }) => {
+      try {
+        const result = await getFinancialSummary(input.year, input.month);
+        return {
+          income: result?.income ?? 0,
+          expenses: result?.expenses ?? 0,
+          netProfit: result?.netProfit ?? 0,
+          byCategory: result?.byCategory ?? [],
+        };
+      } catch (error) {
+        console.error("[finance.summary] error:", error);
+        return {
+          income: 0,
+          expenses: 0,
+          netProfit: 0,
+          byCategory: [],
+        };
+      }
+    }),
+
+  cashFlow: publicProcedure
+    .input(z.object({ year: z.number() }))
+    .query(async ({ input }) => {
+      try {
+        const result = await getMonthlyCashFlow(input.year);
+        return result ?? [];
+      } catch (error) {
+        console.error("[finance.cashFlow] error:", error);
+        return [];
+      }
+    }),
 });
 
 const partnershipRouter = router({
