@@ -14,6 +14,7 @@ import QuotationHistory from "./pages/QuotationHistory";
 import ImportBrokerLoads from "./pages/ImportBrokerLoads";
 import BrokerLoadsManagement from "./pages/BrokerLoadsManagement";
 import AccountingFinance from "./pages/AccountingFinance";
+import BusinessSettings from "./pages/BusinessSettings";
 
 function DashboardPage() {
   return (
@@ -125,6 +126,14 @@ export default function App() {
       <Route path="/import-broker-loads" component={ImportBrokerLoadsPage} />
       <Route path="/broker-loads-management" component={BrokerLoadsManagementPage} />
       <Route path="/accounting-finance" component={AccountingFinancePage} />
+      <Route
+  path="/settings"
+  component={() => (
+    <DashboardLayout>
+      <BusinessSettings />
+    </DashboardLayout>
+  )}
+/>
     </Switch>
   );
 }
