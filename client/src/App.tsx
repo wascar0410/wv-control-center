@@ -107,6 +107,13 @@ function AccountingFinancePage() {
     </DashboardLayout>
   );
 }
+function BusinessSettingsPage() {
+  return (
+    <DashboardLayout>
+      <BusinessSettings />
+    </DashboardLayout>
+  );
+}
 
 export default function App() {
   return (
