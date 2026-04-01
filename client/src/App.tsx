@@ -127,7 +127,7 @@ export default function App() {
       <Route path="/broker-loads-management" component={BrokerLoadsManagementPage} />
       <Route path="/accounting-finance" component={AccountingFinancePage} />
       <Route
-  path="/settings"
+  path="/business-settings"
   component={() => (
     <DashboardLayout>
       <BusinessSettings />
