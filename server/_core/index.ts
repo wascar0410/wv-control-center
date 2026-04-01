@@ -162,10 +162,15 @@ async function startServer() {
   // development mode uses Vite, production mode uses static files
   // Serve static files BEFORE rate limiting to ensure they're not affected
   if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+  await setupVite(app, server);
+} else {
+  serveStatic(app);
+
+  // 🔥 SPA fallback FIX
+  app.get("*", (_req, res) => {
+    res.sendFile("index.html", { root: "dist/public" });
+  });
+}
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
