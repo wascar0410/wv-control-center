@@ -11,6 +11,7 @@ import DriverViewProduction from "./pages/DriverViewProduction";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import Quotation from "./pages/Quotation";
 import QuotationHistory from "./pages/QuotationHistory";
+import ImportBrokerLoads from "./pages/ImportBrokerLoads";
 
 function DashboardPage() {
   return (
@@ -95,6 +96,7 @@ export default function App() {
       <Route path="/executive-dashboard" component={ExecutiveDashboardPage} />
       <Route path="/quotation" component={QuotationPage} />
       <Route path="/quotation-history" component={QuotationHistoryPage} />
+      <Route path="/import-broker-loads" component={ImportBrokerLoads} />
     </Switch>
   );
 }
