@@ -19,7 +19,7 @@ type BatchStatus =
   | "failed"
   | "cancelled";
 
-export function BatchPayments() {
+export default function BatchPayments() {
   const [statusFilter, setStatusFilter] = useState<BatchStatus | "">("");
   const [selectedBatch, setSelectedBatch] = useState<number | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -73,9 +73,7 @@ export function BatchPayments() {
 
   const createBatchMutation = trpc.batchPayment.createBatch.useMutation({
     onSuccess: () => {
-      toast.success("Lote creado", {
-        description: "El lote de pagos ha sido creado exitosamente",
-      });
+      toast.success("Lote creado");
       setShowCreateDialog(false);
       setCreateForm({
         period: new Date().toISOString().split("T")[0],
@@ -85,86 +83,66 @@ export function BatchPayments() {
       refetch();
     },
     onError: (err) => {
-      toast.error("Error", {
-        description: err.message || "No se pudo crear el lote",
-      });
+      toast.error(err.message || "No se pudo crear el lote");
     },
   });
 
   const submitForReviewMutation = trpc.batchPayment.submitForReview.useMutation({
     onSuccess: () => {
-      toast.success("Lote enviado", {
-        description: "El lote ha sido enviado para revisión",
-      });
+      toast.success("Lote enviado para revisión");
       refetch();
       setSelectedBatch(null);
     },
     onError: (err) => {
-      toast.error("Error", {
-        description: err.message || "No se pudo enviar el lote",
-      });
+      toast.error(err.message || "No se pudo enviar el lote");
     },
   });
 
   const approveBatchMutation = trpc.batchPayment.approveBatch.useMutation({
     onSuccess: () => {
-      toast.success("Lote aprobado", {
-        description: "El lote ha sido aprobado para procesamiento",
-      });
+      toast.success("Lote aprobado");
       refetch();
       setShowApprovalDialog(null);
       setApprovalNotes("");
     },
     onError: (err) => {
-      toast.error("Error", {
-        description: err.message || "No se pudo aprobar el lote",
-      });
+      toast.error(err.message || "No se pudo aprobar el lote");
     },
   });
 
   const rejectBatchMutation = trpc.batchPayment.rejectBatch.useMutation({
     onSuccess: () => {
-      toast.success("Lote rechazado", {
-        description: "El lote ha sido rechazado",
-      });
+      toast.success("Lote rechazado");
       refetch();
       setShowRejectionDialog(null);
       setRejectionReason("");
     },
     onError: (err) => {
-      toast.error("Error", {
-        description: err.message || "No se pudo rechazar el lote",
-      });
+      toast.error(err.message || "No se pudo rechazar el lote");
     },
   });
 
   const processBatchMutation = trpc.batchPayment.processBatch.useMutation({
     onSuccess: (result) => {
-      toast.success("Lote procesado", {
-        description: `${result.successfulPayments} pagos completados, ${result.failedPayments} fallaron`,
-      });
+      toast.success(
+        `${result.successfulPayments} pagos completados, ${result.failedPayments} fallaron`
+      );
       refetch();
       setSelectedBatch(null);
     },
     onError: (err) => {
-      toast.error("Error", {
-        description: err.message || "No se pudo procesar el lote",
-      });
+      toast.error(err.message || "No se pudo procesar el lote");
     },
   });
 
   const cancelBatchMutation = trpc.batchPayment.cancelBatch.useMutation({
     onSuccess: () => {
-      toast.success("Lote cancelado", {
-        description: "El lote ha sido cancelado",
-      });
+      toast.success("Lote cancelado");
       refetch();
       setSelectedBatch(null);
     },
     onError: (err) => {
-      toast.error("Error", {
-        description: err.message || "No se pudo cancelar el lote",
-      });
+      toast.error(err.message || "No se pudo cancelar el lote");
     },
   });
 
@@ -297,24 +275,6 @@ export function BatchPayments() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pb-3">
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Creado por</p>
-                    <p className="font-medium">{batch.createdBy}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Método de Pago</p>
-                    <p className="font-medium capitalize">{batch.paymentMethod}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Fecha Creación</p>
-                    <p className="font-medium">
-                      {batch.createdAt ? new Date(batch.createdAt).toLocaleDateString() : "N/A"}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
             </Card>
           ))
         ) : (
@@ -385,22 +345,20 @@ export function BatchPayments() {
                   <>
                     <Button
                       variant="outline"
-                      onClick={() => {
+                      onClick={() =>
                         cancelBatchMutation.mutate({
                           batchId: selectedBatch,
                           reason: "Cancelado por usuario",
-                        });
-                      }}
-                      disabled={cancelBatchMutation.isPending}
+                        })
+                      }
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>
                     <Button
-                      onClick={() => {
-                        submitForReviewMutation.mutate({ batchId: selectedBatch });
-                      }}
-                      disabled={submitForReviewMutation.isPending}
+                      onClick={() =>
+                        submitForReviewMutation.mutate({ batchId: selectedBatch })
+                      }
                     >
                       Enviar para Revisión
                     </Button>
@@ -412,36 +370,22 @@ export function BatchPayments() {
                     <Button
                       variant="destructive"
                       onClick={() => setShowRejectionDialog(selectedBatch)}
-                      disabled={rejectBatchMutation.isPending}
                     >
-                      {rejectBatchMutation.isPending && (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      )}
-                      {rejectBatchMutation.isPending ? "Rechazando..." : "Rechazar"}
+                      Rechazar
                     </Button>
-                    <Button
-                      onClick={() => setShowApprovalDialog(selectedBatch)}
-                      disabled={approveBatchMutation.isPending}
-                    >
-                      {approveBatchMutation.isPending && (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      )}
-                      {approveBatchMutation.isPending ? "Aprobando..." : "Aprobar"}
+                    <Button onClick={() => setShowApprovalDialog(selectedBatch)}>
+                      Aprobar
                     </Button>
                   </>
                 )}
 
                 {batchDetail.status === "approved" && (
                   <Button
-                    onClick={() => {
-                      processBatchMutation.mutate({ batchId: selectedBatch });
-                    }}
-                    disabled={processBatchMutation.isPending}
+                    onClick={() =>
+                      processBatchMutation.mutate({ batchId: selectedBatch })
+                    }
                   >
-                    {processBatchMutation.isPending && (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    )}
-                    {processBatchMutation.isPending ? "Procesando..." : "Procesar Lote"}
+                    Procesar Lote
                   </Button>
                 )}
               </div>
@@ -501,13 +445,7 @@ export function BatchPayments() {
               <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                 Cancelar
               </Button>
-              <Button
-                onClick={handleCreateBatch}
-                disabled={createBatchMutation.isPending}
-              >
-                {createBatchMutation.isPending && (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                )}
+              <Button onClick={handleCreateBatch}>
                 {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
               </Button>
             </div>
@@ -537,13 +475,12 @@ export function BatchPayments() {
                   Cancelar
                 </Button>
                 <Button
-                  onClick={() => {
+                  onClick={() =>
                     approveBatchMutation.mutate({
                       batchId: showApprovalDialog,
                       notes: approvalNotes,
-                    });
-                  }}
-                  disabled={approveBatchMutation.isPending}
+                    })
+                  }
                 >
                   Confirmar Aprobación
                 </Button>
@@ -567,7 +504,6 @@ export function BatchPayments() {
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   placeholder="Explica por qué se rechaza este lote"
-                  required
                 />
               </div>
 
@@ -577,15 +513,13 @@ export function BatchPayments() {
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => {
-                    if (rejectionReason.trim()) {
-                      rejectBatchMutation.mutate({
-                        batchId: showRejectionDialog,
-                        reason: rejectionReason,
-                      });
-                    }
-                  }}
-                  disabled={rejectBatchMutation.isPending || !rejectionReason.trim()}
+                  disabled={!rejectionReason.trim()}
+                  onClick={() =>
+                    rejectBatchMutation.mutate({
+                      batchId: showRejectionDialog,
+                      reason: rejectionReason,
+                    })
+                  }
                 >
                   Confirmar Rechazo
                 </Button>
