@@ -451,29 +451,39 @@ const loadsRouter = router({
 // ─── Finance Router ───────────────────────────────────────────────────────────
 
 const financeRouter = router({
-  transactions: protectedProcedure
-    .input(
-      z
-        .object({
-          type: z.enum(["income", "expense"]).optional(),
-          startDate: z.string().optional(),
-          endDate: z.string().optional(),
-        })
-        .optional()
-    )
-    .query(async ({ input }) => {
-      try {
-        return await getTransactions({
-          type: input?.type,
-          startDate: input?.startDate ? new Date(input.startDate) : undefined,
-          endDate: input?.endDate ? new Date(input.endDate) : undefined,
-        });
-      } catch (error) {
-        console.error("[finance.transactions] error:", error);
-        return [];
-      }
-    }),
+  transactions: publicProcedure
+  .input(
+    z
+      .object({
+        type: z.enum(["income", "expense"]).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      })
+      .optional()
+  )
+  .query(async ({ input }) => {
+    try {
+      return await getTransactions({
+        type: input?.type,
+        startDate: input?.startDate ? new Date(input.startDate) : undefined,
+        endDate: input?.endDate ? new Date(input.endDate) : undefined,
+      });
+    } catch (error) {
+      console.error("[finance.transactions] error:", error);
+      return [];
+    }
+  }),
 
+cashFlow: publicProcedure
+  .input(z.object({ year: z.number() }))
+  .query(async ({ input }) => {
+    try {
+      return await getMonthlyCashFlow(input.year);
+    } catch (error) {
+      console.error("[finance.cashFlow] error:", error);
+      return [];
+    }
+  }),
   addExpense: protectedProcedure
     .input(
       z.object({
