@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Upload, AlertCircle, CheckCircle2, FileUp } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, FileUp } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ImportBrokerLoads() {
@@ -18,7 +18,6 @@ export default function ImportBrokerLoads() {
   const [csvPreview, setCsvPreview] = useState<any[]>([]);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
 
-  // Manual form state
   const [manualForm, setManualForm] = useState({
     brokerId: "",
     pickupAddress: "",
@@ -36,15 +35,24 @@ export default function ImportBrokerLoads() {
 
   const importLoadMutation = trpc.brokerLoads.importLoad.useMutation();
   const importCSVMutation = trpc.brokerLoads.importLoadsFromCSV.useMutation();
-  const getSyncLogs = trpc.brokerLoads.getSyncLogs.useQuery();
 
-  // Handle manual form submission
+  const {
+    data: syncLogs,
+    error: syncLogsError,
+    refetch: refetchSyncLogs,
+  } = trpc.brokerLoads.getSyncLogs.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const safeSyncLogs = Array.isArray(syncLogs) ? syncLogs : [];
+
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const result = await importLoadMutation.mutateAsync({
+      await importLoadMutation.mutateAsync({
         brokerName,
         brokerId: manualForm.brokerId || undefined,
         pickupAddress: manualForm.pickupAddress,
@@ -75,21 +83,27 @@ export default function ImportBrokerLoads() {
         pickupDate: "",
         deliveryDate: "",
       });
-      getSyncLogs.refetch();
+      refetchSyncLogs();
     } catch (error: any) {
-      toast.error(error.message || "Error al importar carga");
+      toast.error(error?.message || "Error al importar carga");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Parse CSV file
   const parseCSV = (file: File) => {
     const reader = new FileReader();
+
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
         const lines = text.split("\n").filter((line) => line.trim());
+        if (lines.length === 0) {
+          setCsvPreview([]);
+          setCsvErrors(["El archivo CSV está vacío"]);
+          return;
+        }
+
         const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
 
         const errors: string[] = [];
@@ -97,8 +111,9 @@ export default function ImportBrokerLoads() {
 
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(",").map((v) => v.trim());
-          if (values.length < 6) {
-            errors.push(`Fila ${i + 1}: Faltan columnas requeridas`);
+
+          if (values.length < 4) {
+            errors.push(`Fila ${i + 1}: faltan columnas requeridas`);
             continue;
           }
 
@@ -107,9 +122,18 @@ export default function ImportBrokerLoads() {
             row[header] = values[idx];
           });
 
-          // Validate required fields
           if (!row.pickupaddress || !row.deliveryaddress || !row.weight || !row.offeredrate) {
-            errors.push(`Fila ${i + 1}: Faltan campos requeridos (pickup, delivery, weight, rate)`);
+            errors.push(
+              `Fila ${i + 1}: faltan campos requeridos (pickupAddress, deliveryAddress, weight, offeredRate)`
+            );
+            continue;
+          }
+
+          const parsedWeight = parseFloat(row.weight);
+          const parsedRate = parseFloat(row.offeredrate);
+
+          if (Number.isNaN(parsedWeight) || Number.isNaN(parsedRate)) {
+            errors.push(`Fila ${i + 1}: weight o offeredRate inválidos`);
             continue;
           }
 
@@ -121,10 +145,10 @@ export default function ImportBrokerLoads() {
             pickupLng: row.pickuplng ? parseFloat(row.pickuplng) : undefined,
             deliveryLat: row.deliverylat ? parseFloat(row.deliverylat) : undefined,
             deliveryLng: row.deliverylng ? parseFloat(row.deliverylng) : undefined,
-            weight: parseFloat(row.weight),
+            weight: parsedWeight,
             weightUnit: row.weightunit || "lbs",
             commodity: row.commodity || undefined,
-            offeredRate: parseFloat(row.offeredrate),
+            offeredRate: parsedRate,
             pickupDate: row.pickupdate ? new Date(row.pickupdate) : undefined,
             deliveryDate: row.deliverydate ? new Date(row.deliverydate) : undefined,
           });
@@ -139,23 +163,27 @@ export default function ImportBrokerLoads() {
           toast.warning(`${errors.length} errores encontrados en el CSV`);
         }
       } catch (error: any) {
-        toast.error("Error al procesar CSV: " + error.message);
-        setCsvErrors([error.message]);
+        toast.error("Error al procesar CSV");
+        setCsvErrors([error?.message || "Error desconocido al procesar CSV"]);
+        setCsvPreview([]);
       }
     };
+
     reader.readAsText(file);
   };
 
   const handleCSVChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (!file.name.endsWith(".csv")) {
-        toast.error("Por favor selecciona un archivo CSV");
-        return;
-      }
-      setCsvFile(file);
-      parseCSV(file);
+
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      toast.error("Por favor selecciona un archivo CSV");
+      return;
     }
+
+    setCsvFile(file);
+    parseCSV(file);
   };
 
   const handleCSVSubmit = async () => {
@@ -172,32 +200,41 @@ export default function ImportBrokerLoads() {
       });
 
       toast.success(`${result.imported} cargas importadas exitosamente`);
+
       if (result.skipped > 0) {
-        toast.info(`${result.skipped} cargas omitidas (duplicadas)`);
+        toast.info(`${result.skipped} cargas omitidas`);
       }
 
       setCsvFile(null);
       setCsvPreview([]);
       setCsvErrors([]);
-      getSyncLogs.refetch();
+      refetchSyncLogs();
     } catch (error: any) {
-      toast.error(error.message || "Error al importar CSV");
+      toast.error(error?.message || "Error al importar CSV");
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (syncLogsError) {
+    console.error("ImportBrokerLoads sync logs error:", syncLogsError);
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Importar Cargas</h1>
         <p className="text-muted-foreground mt-2">
-          Importa cargas manualmente o desde un archivo CSV. Las cargas se analizarán automáticamente para calcular rentabilidad.
+          Importa cargas manualmente o desde un archivo CSV.
         </p>
       </div>
 
-      {/* Broker Selection */}
+      {syncLogsError && (
+        <div className="text-sm text-yellow-600 dark:text-yellow-400">
+          Historial no disponible temporalmente.
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Seleccionar Broker</CardTitle>
@@ -218,14 +255,12 @@ export default function ImportBrokerLoads() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="manual">Importación Manual</TabsTrigger>
           <TabsTrigger value="csv">Importar CSV</TabsTrigger>
         </TabsList>
 
-        {/* Manual Import Tab */}
         <TabsContent value="manual" className="space-y-4">
           <Card>
             <CardHeader>
@@ -234,7 +269,6 @@ export default function ImportBrokerLoads() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleManualSubmit} className="space-y-6">
-                {/* Broker ID */}
                 <div>
                   <Label htmlFor="brokerId">ID del Broker (Opcional)</Label>
                   <Input
@@ -245,7 +279,6 @@ export default function ImportBrokerLoads() {
                   />
                 </div>
 
-                {/* Route Information */}
                 <div className="space-y-4">
                   <h3 className="font-semibold">Información de Ruta</h3>
 
@@ -272,7 +305,6 @@ export default function ImportBrokerLoads() {
                     </div>
                   </div>
 
-                  {/* Coordinates */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
                       <Label htmlFor="pickupLat">Latitud Recogida</Label>
@@ -321,7 +353,6 @@ export default function ImportBrokerLoads() {
                   </div>
                 </div>
 
-                {/* Cargo Information */}
                 <div className="space-y-4">
                   <h3 className="font-semibold">Información de Carga</h3>
 
@@ -349,7 +380,6 @@ export default function ImportBrokerLoads() {
                   </div>
                 </div>
 
-                {/* Pricing */}
                 <div className="space-y-4">
                   <h3 className="font-semibold">Tarificación</h3>
 
@@ -367,7 +397,6 @@ export default function ImportBrokerLoads() {
                   </div>
                 </div>
 
-                {/* Dates */}
                 <div className="space-y-4">
                   <h3 className="font-semibold">Fechas</h3>
 
@@ -402,17 +431,16 @@ export default function ImportBrokerLoads() {
           </Card>
         </TabsContent>
 
-        {/* CSV Import Tab */}
         <TabsContent value="csv" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Importar desde CSV</CardTitle>
               <CardDescription>
-                Carga un archivo CSV con múltiples cargas. Columnas requeridas: pickupAddress, deliveryAddress, weight, offeredRate
+                Carga un archivo CSV con múltiples cargas. Columnas requeridas:
+                pickupAddress, deliveryAddress, weight, offeredRate
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* CSV Upload */}
               <div className="border-2 border-dashed rounded-lg p-8 text-center cursor-pointer hover:bg-accent/50 transition">
                 <input
                   type="file"
@@ -428,7 +456,6 @@ export default function ImportBrokerLoads() {
                 </label>
               </div>
 
-              {/* CSV Errors */}
               {csvErrors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
@@ -438,13 +465,14 @@ export default function ImportBrokerLoads() {
                       {csvErrors.slice(0, 5).map((error, idx) => (
                         <li key={idx}>• {error}</li>
                       ))}
-                      {csvErrors.length > 5 && <li>• ... y {csvErrors.length - 5} más</li>}
+                      {csvErrors.length > 5 && (
+                        <li>• ... y {csvErrors.length - 5} más</li>
+                      )}
                     </ul>
                   </AlertDescription>
                 </Alert>
               )}
 
-              {/* CSV Preview */}
               {csvPreview.length > 0 && (
                 <div className="space-y-4">
                   <Alert className="bg-green-50 border-green-200">
@@ -469,8 +497,12 @@ export default function ImportBrokerLoads() {
                           <tr key={idx} className="border-t">
                             <td className="px-4 py-2 truncate">{load.pickupAddress}</td>
                             <td className="px-4 py-2 truncate">{load.deliveryAddress}</td>
-                            <td className="px-4 py-2 text-right">{load.weight.toLocaleString()}</td>
-                            <td className="px-4 py-2 text-right">${load.offeredRate.toFixed(2)}</td>
+                            <td className="px-4 py-2 text-right">
+                              {Number(load.weight).toLocaleString()}
+                            </td>
+                            <td className="px-4 py-2 text-right">
+                              ${Number(load.offeredRate).toFixed(2)}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -478,7 +510,9 @@ export default function ImportBrokerLoads() {
                   </div>
 
                   {csvPreview.length > 5 && (
-                    <p className="text-sm text-muted-foreground">... y {csvPreview.length - 5} cargas más</p>
+                    <p className="text-sm text-muted-foreground">
+                      ... y {csvPreview.length - 5} cargas más
+                    </p>
                   )}
 
                   <Button
@@ -497,8 +531,7 @@ export default function ImportBrokerLoads() {
         </TabsContent>
       </Tabs>
 
-      {/* Sync Logs */}
-      {getSyncLogs.data && getSyncLogs.data.length > 0 && (
+      {safeSyncLogs.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Historial de Sincronizaciones</CardTitle>
@@ -506,8 +539,11 @@ export default function ImportBrokerLoads() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {getSyncLogs.data.slice(0, 5).map((log, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 border rounded-lg">
+              {safeSyncLogs.slice(0, 5).map((log: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div>
                     <p className="font-semibold capitalize">{log.brokerName}</p>
                     <p className="text-sm text-muted-foreground">
@@ -515,7 +551,13 @@ export default function ImportBrokerLoads() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-semibold ${log.status === "success" ? "text-green-600" : "text-amber-600"}`}>
+                    <p
+                      className={`text-sm font-semibold ${
+                        log.status === "success"
+                          ? "text-green-600"
+                          : "text-amber-600"
+                      }`}
+                    >
                       {log.status === "success" ? "✓ Exitosa" : "⚠ Parcial"}
                     </p>
                     <p className="text-xs text-muted-foreground">
