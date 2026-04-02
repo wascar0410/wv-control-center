@@ -9,6 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from "@/components/ui/textarea";
 import { AlertCircle, CheckCircle2, Clock, DollarSign, Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { AppCard, AppCardHeader, AppCardContent } from "@/components/ui/AppCard";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
+
 
 type BatchStatus =
   | "draft"
@@ -192,18 +195,19 @@ export default function BatchPayments() {
           <h1 className="text-3xl font-bold">Procesamiento de Pagos</h1>
           <p className="text-muted-foreground mt-1">Gestiona lotes de pagos a conductores</p>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          size="lg"
-          disabled={createBatchMutation.isPending}
-        >
+        <PrimaryButton
+  onClick={() => setShowCreateDialog(true)}
+  disabled={createBatchMutation.isPending}
+  loading={createBatchMutation.isPending}
+  className="px-6 py-3"
+>
           {createBatchMutation.isPending ? (
             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
           ) : (
             <Plus className="w-4 h-4 mr-2" />
           )}
           {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
-        </Button>
+        </PrimaryButton>
       </div>
 
       {error && (
@@ -212,8 +216,8 @@ export default function BatchPayments() {
         </div>
       )}
 
-      <Card>
-        <CardContent className="pt-6">
+      <AppCard>
+  <AppCardContent className="pt-0">
           <div className="flex gap-4">
             <Select
               value={statusFilter || "all"}
@@ -236,16 +240,16 @@ export default function BatchPayments() {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+        </AppCardContent>
+</AppCard>
 
       <div className="grid gap-4">
         {isLoading ? (
-          <Card>
-            <CardContent className="pt-6">
+          <AppCard>
+  <AppCardContent className="pt-0">
               <p className="text-muted-foreground">Cargando lotes...</p>
-            </CardContent>
-          </Card>
+            </AppCardContent>
+</AppCard>
         ) : safeBatches.length > 0 ? (
           safeBatches.map((batch: any) => (
             <Card
@@ -274,15 +278,15 @@ export default function BatchPayments() {
                     <p className="text-sm text-muted-foreground">Total</p>
                   </div>
                 </div>
-              </CardHeader>
-            </Card>
+              </AppCardContent>
+</AppCard>
           ))
         ) : (
-          <Card>
-            <CardContent className="pt-6">
+          <AppCard>
+  <AppCardContent className="pt-0">
               <p className="text-muted-foreground text-center">No hay lotes de pago</p>
-            </CardContent>
-          </Card>
+             </AppCardContent>
+</AppCard>
         )}
       </div>
 
@@ -445,9 +449,12 @@ export default function BatchPayments() {
               <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateBatch}>
-                {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
-              </Button>
+              <PrimaryButton
+  onClick={handleCreateBatch}
+  loading={createBatchMutation.isPending}
+>
+  {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
+</PrimaryButton>
             </div>
           </div>
         </DialogContent>
