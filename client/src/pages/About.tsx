@@ -12,6 +12,7 @@ import {
   Truck,
   Waypoints,
 } from "lucide-react";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
 const brand = {
   company: "WV Transport & Logistics, LLC",
@@ -50,11 +51,9 @@ export default function About() {
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <Button
-                size="lg"
-                className="rounded-full bg-[#1D4ED8] px-6 py-6 text-white hover:bg-[#123D7A]"
-                onClick={() => (window.location.href = "/dashboard")}
-              >
+              <PrimaryButton onClick={() => (window.location.href = "/dashboard")}>
+  Enter Control Center
+</PrimaryButton>
                 Enter Control Center
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
