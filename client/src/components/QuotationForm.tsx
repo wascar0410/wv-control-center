@@ -75,10 +75,11 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
       return;
     }
 
-    if (formData.offeredPrice <= 0) {
-      toast.error("El precio ofrecido debe ser mayor a 0");
-      return;
-    }
+    // opcional: solo valida si el usuario escribió algo
+if (formData.offeredPrice && formData.offeredPrice < 0) {
+  toast.error("El precio no puede ser negativo");
+  return;
+}
 
     onSubmit(formData);
   };
@@ -227,7 +228,7 @@ export default function QuotationForm({ onSubmit, isLoading = false }: Quotation
               type="number"
               step="0.01"
               placeholder="425.00"
-              value={formData.offeredPrice || ""}
+              value={formData.offeredPrice ?? ""}
               onChange={(e) => handleInputChange("offeredPrice", parseFloat(e.target.value))}
               className="mt-1"
             />
