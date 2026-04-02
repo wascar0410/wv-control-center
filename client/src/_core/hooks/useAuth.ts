@@ -5,26 +5,19 @@ type UseAuthOptions = {
   redirectPath?: string;
 };
 
-const DEMO_USER = {
-  id: "demo-owner",
-  name: "WV Admin 2",
-  email: "info@wvtransports.com",
-  role: "owner",
-};
-
 export function useAuth(_options?: UseAuthOptions) {
   const logout = useCallback(async () => {
     if (typeof window !== "undefined") {
-      console.log("logout disabled in demo mode");
+      console.log("logout not available");
     }
   }, []);
 
   return {
-    user: DEMO_USER,
+    user: null,
     loading: false,
     error: null,
-    isAuthenticated: true,
-    refresh: async () => ({ data: DEMO_USER }),
+    isAuthenticated: false,
+    refresh: async () => ({ data: null }),
     logout,
   };
 }
