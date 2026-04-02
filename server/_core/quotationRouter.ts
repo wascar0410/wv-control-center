@@ -273,6 +273,7 @@ calculateQuotation: protectedProcedure
     .query(async ({ input, ctx }) => {
       return getLoadQuotationsByUserId(ctx.user.id, input.limit);
     }),
+  });
 
   updateQuotation: protectedProcedure
     .input(
