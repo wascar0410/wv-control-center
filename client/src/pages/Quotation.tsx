@@ -70,15 +70,25 @@ export default function Quotation() {
 const [aiResult, setAiResult] = useState<any>(null);
   
   const handleSubmit = async (formData: QuotationFormData) => {
-    setIsLoading(true);
-    try {
-      await calculateQuotation.mutateAsync(formData);
-      setFormDataForLoad(formData);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
+  setIsLoading(true);
+  console.log("[Quotation] submit formData:", formData);
+
+  try {
+    const response = await calculateQuotation.mutateAsync(formData);
+    console.log("[Quotation] success response:", response);
+    setResult(response);
+    setFormDataForLoad(formData);
+  } catch (error: any) {
+    console.error("[Quotation] mutation error:", error);
+    toast.error(
+      error?.message ||
+        error?.shape?.message ||
+        "Error al calcular la cotización"
+    );
+  } finally {
+    setIsLoading(false);
+  }
+};
   const handleAiPricing = async () => {
   if (!result) return;
 
