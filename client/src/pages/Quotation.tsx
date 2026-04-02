@@ -207,6 +207,25 @@ const [aiResult, setAiResult] = useState<any>(null);
 
             <QuotationResultsTable {...result} />
 
+            {aiResult && (
+  <Card className="border-blue-300 bg-blue-50 dark:bg-blue-950">
+    <CardHeader>
+      <CardTitle>🤖 AI Pricing Recommendation</CardTitle>
+      <CardDescription>
+        Suggested pricing based on logistics intelligence
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-2 text-sm">
+      <p><strong>Minimum:</strong> ${aiResult.minimumRate}</p>
+      <p><strong>Recommended:</strong> ${aiResult.recommendedRate}</p>
+      <p><strong>Stretch:</strong> ${aiResult.stretchRate}</p>
+      <p className="text-muted-foreground mt-2">
+        {aiResult.explanation}
+      </p>
+    </CardContent>
+  </Card>
+)}
+
             <div className="flex gap-4 justify-center">
               <Button
                 size="lg"
