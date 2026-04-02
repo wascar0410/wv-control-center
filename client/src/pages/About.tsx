@@ -12,19 +12,19 @@ import {
   Truck,
   Waypoints,
 } from "lucide-react";
-import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
 const brand = {
   company: "WV Transport & Logistics, LLC",
   product: "WV Control Center",
-  taglineEn: "Professional logistics support with real-time visibility and operational control.",
-  taglineEs: "Soporte logístico profesional con visibilidad en tiempo real y control operativo.",
+  taglineEn:
+    "Professional logistics support with real-time visibility and operational control.",
+  taglineEs:
+    "Soporte logístico profesional con visibilidad en tiempo real y control operativo.",
 };
 
 export default function About() {
   return (
     <div className="min-h-screen bg-[#F8FBFF] text-[#0F172A]">
-      {/* HERO */}
       <section className="relative overflow-hidden bg-[#0B1F3A] text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(29,78,216,0.28),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(18,61,122,0.35),transparent_30%)]" />
         <div className="relative container mx-auto px-6 py-20 lg:py-28">
@@ -51,9 +51,11 @@ export default function About() {
             </p>
 
             <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-              <PrimaryButton onClick={() => (window.location.href = "/dashboard")}>
-  Enter Control Center
-</PrimaryButton>
+              <Button
+                size="lg"
+                className="rounded-full bg-[#1D4ED8] px-6 py-6 text-white hover:bg-[#123D7A]"
+                onClick={() => (window.location.href = "/dashboard")}
+              >
                 Enter Control Center
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -74,7 +76,6 @@ export default function About() {
               </Button>
             </div>
 
-            {/* Hero stats */}
             <div className="mt-12 grid grid-cols-2 gap-6 md:grid-cols-4">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
                 <h3 className="text-2xl font-bold">24/7</h3>
@@ -97,7 +98,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* BRAND POSITIONING */}
       <section className="bg-white">
         <div className="container mx-auto px-6 py-16">
           <div className="mx-auto max-w-4xl text-center">
@@ -116,7 +116,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* CORE PLATFORM */}
       <section className="bg-[#EEF5FF]">
         <div className="container mx-auto px-6 py-16">
           <div className="max-w-2xl">
@@ -167,7 +166,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* SERVICES */}
       <section className="bg-white">
         <div className="container mx-auto px-6 py-16">
           <div className="max-w-2xl">
@@ -178,8 +176,8 @@ export default function About() {
               Transportation support with structure and visibility
             </h2>
             <p className="mt-4 text-[#64748B]">
-              Our focus is professional logistics support backed by operational discipline,
-              coordination, and real-time control.
+              Our focus is professional logistics support backed by operational
+              discipline, coordination, and real-time control.
             </p>
           </div>
 
@@ -200,8 +198,7 @@ export default function About() {
         </div>
       </section>
 
-      {/* WHY WV */}
-      <section className="bg-[#F8FBFF] border-y border-[#E5E7EB]">
+      <section className="border-y border-[#E5E7EB] bg-[#F8FBFF]">
         <div className="container mx-auto px-6 py-16">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
@@ -237,7 +234,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="bg-white">
         <div className="container mx-auto px-6 py-16">
           <div className="rounded-[24px] border border-[#E5E7EB] bg-[#0B1F3A] p-8 text-white shadow-sm lg:p-12">
@@ -250,8 +246,8 @@ export default function About() {
               </h2>
               <p className="mt-4 text-white/75">
                 WV Transport & Logistics, LLC is building a more professional
-                logistics environment with real-time visibility, internal coordination,
-                and structured operational control.
+                logistics environment with real-time visibility, internal
+                coordination, and structured operational control.
               </p>
 
               <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
