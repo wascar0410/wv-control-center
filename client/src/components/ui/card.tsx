@@ -6,10 +6,11 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col gap-6 rounded-2xl border py-6 shadow-sm bg-white text-[#0F172A] border-[#E5E7EB]",
+        "flex flex-col gap-6 rounded-2xl border py-6 bg-white text-[#0F172A]",
         className
       )}
       style={{
+        borderColor: "#E5E7EB",
         boxShadow: "0 6px 24px rgba(11, 31, 58, 0.06)",
       }}
       {...props}
@@ -92,4 +93,3 @@ export {
   CardDescription,
   CardContent,
 };
-Qué cambia
