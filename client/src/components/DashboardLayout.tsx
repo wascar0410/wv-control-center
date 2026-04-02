@@ -21,6 +21,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
+import { brand, colors } from "@/lib/brand";
 import {
   LayoutDashboard,
   LogOut,
@@ -81,11 +82,11 @@ const getMenuItems = (role?: string) => {
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
-const MIN_WIDTH = 200;
+const MIN_WIDTH = 220;
 const MAX_WIDTH = 400;
 
 const FALLBACK_USER = {
-  name: "WV Admin 2",
+  name: "WV Admin",
   email: "info@wvtransports.com",
   role: "owner",
 };
@@ -122,10 +123,10 @@ function DashboardLayoutContent({
   setSidebarWidth: (width: number) => void;
   user: { name?: string; email?: string; role?: string };
 }) {
-  const auth = useAuth();
   const logout = () => {
-  console.log("logout disabled");
-};
+    console.log("logout disabled");
+  };
+
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -133,7 +134,9 @@ function DashboardLayoutContent({
   const [showAddDriver, setShowAddDriver] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
-  const activeMenuItem = getMenuItems(user?.role).find((item) => item.path === location);
+
+  const menuItems = getMenuItems(user?.role);
+  const activeMenuItem = menuItems.find((item) => item.path === location);
 
   const roleLabel =
     user?.role === "admin"
@@ -146,12 +149,12 @@ function DashboardLayoutContent({
 
   const roleColor =
     user?.role === "admin"
-      ? "text-primary"
+      ? colors.accent
       : user?.role === "driver"
-      ? "text-amber-400"
+      ? colors.warning
       : user?.role === "owner"
-      ? "text-green-400"
-      : "text-muted-foreground";
+      ? colors.success
+      : colors.textMuted;
 
   useEffect(() => {
     if (isCollapsed) setIsResizing(false);
@@ -185,27 +188,50 @@ function DashboardLayoutContent({
   return (
     <>
       <div className="relative" ref={sidebarRef}>
-        <Sidebar collapsible="icon" className="border-r border-sidebar-border" disableTransition={isResizing}>
-          <SidebarHeader className="h-16 justify-center border-b border-sidebar-border">
-            <div className="flex items-center gap-3 px-2 w-full">
+        <Sidebar
+          collapsible="icon"
+          disableTransition={isResizing}
+          className="border-r"
+          style={{
+            backgroundColor: colors.primary,
+            borderColor: colors.secondary,
+            color: "white",
+          }}
+        >
+          <SidebarHeader
+            className="h-16 justify-center border-b"
+            style={{ borderColor: colors.secondary }}
+          >
+            <div className="flex w-full items-center gap-3 px-3">
               <button
                 onClick={toggleSidebar}
-                className="h-9 w-9 flex items-center justify-center hover:bg-sidebar-accent rounded-lg transition-colors focus:outline-none shrink-0"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors focus:outline-none"
+                style={{ color: "rgba(255,255,255,0.75)" }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
                 aria-label="Toggle navigation"
               >
-                <PanelLeft className="h-4 w-4 text-sidebar-foreground/60" />
+                <PanelLeft className="h-4 w-4" />
               </button>
 
               {!isCollapsed && (
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
                   <img
                     src="https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/mSbbvEPZCkmEtZbYVdHD74/LogodeWVTransportControl(1)_686a838d.png"
                     alt="WV Control Logo"
-                    className="w-7 h-7 shrink-0 object-contain"
+                    className="h-8 w-8 shrink-0 object-contain"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-sidebar-foreground truncate leading-none">WV Control</p>
-                    <p className="text-xs text-sidebar-foreground/50 truncate mt-0.5">Transport, LLC</p>
+                    <p className="truncate text-sm font-bold leading-none text-white">
+                      {brand.product}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-white/60">
+                      {brand.company}
+                    </p>
                   </div>
                 </div>
               )}
@@ -213,22 +239,32 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0 py-3">
-            <SidebarMenu className="px-2 gap-1">
-              {getMenuItems(user?.role).map((item) => {
+            <SidebarMenu className="gap-1 px-2">
+              {menuItems.map((item) => {
                 const isActive = location === item.path;
+
                 return (
                   <SidebarMenuItem key={item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all rounded-lg ${
-                        isActive
-                          ? "bg-primary/15 text-primary font-medium"
-                          : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                      }`}
+                      className="h-10 rounded-lg transition-all"
+                      style={{
+                        backgroundColor: isActive ? colors.accent : "transparent",
+                        color: isActive ? "white" : "#E2E8F0",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) e.currentTarget.style.backgroundColor = colors.secondary;
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) e.currentTarget.style.backgroundColor = "transparent";
+                      }}
                     >
-                      <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : ""}`} />
+                      <item.icon
+                        className="h-4 w-4 shrink-0"
+                        style={{ color: isActive ? "white" : "#E2E8F0" }}
+                      />
                       <span className="text-sm">{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -237,28 +273,50 @@ function DashboardLayoutContent({
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-3 border-t border-sidebar-border">
+          <SidebarFooter
+            className="border-t p-3"
+            style={{ borderColor: colors.secondary }}
+          >
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-sidebar-accent transition-colors w-full text-left focus:outline-none">
-                  <Avatar className="h-8 w-8 border border-sidebar-border shrink-0">
-                    <AvatarFallback className="text-xs font-semibold bg-primary/20 text-primary">
+                <button
+                  className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors focus:outline-none"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = "rgba(255,255,255,0.08)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = "transparent";
+                  }}
+                >
+                  <Avatar className="h-8 w-8 shrink-0 border" style={{ borderColor: colors.secondary }}>
+                    <AvatarFallback
+                      className="text-xs font-semibold"
+                      style={{
+                        backgroundColor: "rgba(29,78,216,0.2)",
+                        color: "#BFDBFE",
+                      }}
+                    >
                       {user?.name?.charAt(0).toUpperCase() ?? "U"}
                     </AvatarFallback>
                   </Avatar>
 
                   {!isCollapsed && (
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-sidebar-foreground truncate leading-none">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium leading-none text-white">
                         {user?.name ?? "Usuario"}
                       </p>
-                      <p className={`text-xs truncate mt-1 ${roleColor}`}>{roleLabel}</p>
+                      <p
+                        className="mt-1 truncate text-xs"
+                        style={{ color: roleColor }}
+                      >
+                        {roleLabel}
+                      </p>
                     </div>
                   )}
                 </button>
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-56">
                 <div className="px-3 py-2">
                   <p className="text-sm font-medium">{user?.name ?? "Usuario"}</p>
                   <p className="text-xs text-muted-foreground">{user?.email ?? ""}</p>
@@ -302,30 +360,56 @@ function DashboardLayoutContent({
         </Sidebar>
 
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/30 transition-colors ${isCollapsed ? "hidden" : ""}`}
+          className={`${isCollapsed ? "hidden" : ""} absolute top-0 right-0 h-full w-1 cursor-col-resize transition-colors`}
           onMouseDown={() => {
             if (!isCollapsed) setIsResizing(true);
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(29,78,216,0.35)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
           }}
           style={{ zIndex: 50 }}
         />
       </div>
 
-      <SidebarInset className="bg-background">
+      <SidebarInset style={{ backgroundColor: colors.light }}>
         {isMobile && (
-          <div className="flex border-b border-border h-14 items-center justify-between bg-background/95 px-4 backdrop-blur sticky top-0 z-40">
+          <div
+            className="sticky top-0 z-40 flex h-14 items-center justify-between border-b px-4 backdrop-blur"
+            style={{
+              backgroundColor: colors.light,
+              borderColor: colors.border,
+            }}
+          >
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-9 w-9 rounded-lg" />
-              <span className="font-medium text-sm">{activeMenuItem?.label ?? "WV Control"}</span>
+              <span className="text-sm font-medium" style={{ color: colors.primary }}>
+                {activeMenuItem?.label ?? brand.product}
+              </span>
             </div>
+
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-                <Truck className="w-4 h-4 text-primary" />
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{ backgroundColor: colors.soft }}
+              >
+                <Truck className="h-4 w-4" style={{ color: colors.accent }} />
               </div>
             </div>
           </div>
         )}
 
-        <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
+        <main
+          className="flex-1 overflow-auto p-4 md:p-6"
+          style={{
+            backgroundColor: colors.light,
+            color: colors.text,
+          }}
+        >
+          {children}
+        </main>
       </SidebarInset>
 
       <AddDriverModal open={showAddDriver} onOpenChange={setShowAddDriver} />
