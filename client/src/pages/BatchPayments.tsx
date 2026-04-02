@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { AppCard, AppCardHeader, AppCardContent } from "@/components/ui/AppCard";
 import { PrimaryButton } from "@/components/ui/PrimaryButton";
 
-
 type BatchStatus =
   | "draft"
   | "pending_review"
@@ -190,34 +189,31 @@ export default function BatchPayments() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Procesamiento de Pagos</h1>
-          <p className="text-muted-foreground mt-1">Gestiona lotes de pagos a conductores</p>
+          <h1 className="text-3xl font-bold text-[#0B1F3A]">Procesamiento de Pagos</h1>
+          <p className="mt-1 text-[#64748B]">Gestiona lotes de pagos a conductores</p>
         </div>
+
         <PrimaryButton
-  onClick={() => setShowCreateDialog(true)}
-  disabled={createBatchMutation.isPending}
-  loading={createBatchMutation.isPending}
-  className="px-6 py-3"
->
-          {createBatchMutation.isPending ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <Plus className="w-4 h-4 mr-2" />
-          )}
+          onClick={() => setShowCreateDialog(true)}
+          disabled={createBatchMutation.isPending}
+          loading={createBatchMutation.isPending}
+          className="px-6 py-3"
+        >
+          {!createBatchMutation.isPending && <Plus className="w-4 h-4" />}
           {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
         </PrimaryButton>
       </div>
 
       {error && (
-        <div className="text-sm text-yellow-600 dark:text-yellow-400">
+        <div className="text-sm text-yellow-600">
           Modo seguro activo. Algunos datos pueden no estar disponibles.
         </div>
       )}
 
       <AppCard>
-  <AppCardContent className="pt-0">
+        <AppCardContent className="pt-0">
           <div className="flex gap-4">
             <Select
               value={statusFilter || "all"}
@@ -241,9 +237,76 @@ export default function BatchPayments() {
             </Select>
           </div>
         </AppCardContent>
-</AppCard>
+      </AppCard>
 
-{/* Batches List */}
+      <div className="grid gap-4">
+        {isLoading ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-[#64748B]">Cargando lotes...</p>
+            </CardContent>
+          </Card>
+        ) : safeBatches.length > 0 ? (
+          safeBatches.map((batch: any) => (
+            <AppCard
+              key={batch.id}
+              className="cursor-pointer hover:shadow-md transition-shadow"
+            >
+              <div onClick={() => setSelectedBatch(batch.id)}>
+                <AppCardHeader
+                  title={
+                    <div className="flex items-center gap-2 text-[#0B1F3A]">
+                      {getStatusIcon(batch.status as BatchStatus)}
+                      <span>{batch.batchNumber}</span>
+                      <Badge variant={getStatusBadge(batch.status as BatchStatus).variant}>
+                        {getStatusBadge(batch.status as BatchStatus).label}
+                      </Badge>
+                    </div>
+                  }
+                  subtitle={`Período: ${batch.period} • ${batch.totalPayments} pagos`}
+                  action={
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-[#0B1F3A]">
+                        ${Number(batch.totalAmount || 0).toFixed(2)}
+                      </div>
+                      <p className="text-sm text-[#64748B]">Total</p>
+                    </div>
+                  }
+                />
+
+                <AppCardContent className="text-[#0F172A]">
+                  <div className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
+                    <div>
+                      <p className="text-[#64748B]">Creado por</p>
+                      <p className="font-medium text-[#0F172A]">{batch.createdBy}</p>
+                    </div>
+                    <div>
+                      <p className="text-[#64748B]">Método de Pago</p>
+                      <p className="font-medium capitalize text-[#0F172A]">
+                        {batch.paymentMethod}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#64748B]">Fecha Creación</p>
+                      <p className="font-medium text-[#0F172A]">
+                        {batch.createdAt
+                          ? new Date(batch.createdAt).toLocaleDateString()
+                          : "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                </AppCardContent>
+              </div>
+            </AppCard>
+          ))
+        ) : (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-center text-[#64748B]">No hay lotes de pago</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {selectedBatch && batchDetail && (
         <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
@@ -264,16 +327,18 @@ export default function BatchPayments() {
               <div className="grid grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Total</p>
-                    <p className="text-2xl font-bold">
+                    <p className="text-sm text-[#64748B]">Total</p>
+                    <p className="text-2xl font-bold text-[#0B1F3A]">
                       ${Number(batchDetail.totalAmount || 0).toFixed(2)}
                     </p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="pt-4">
-                    <p className="text-sm text-muted-foreground">Pagos</p>
-                    <p className="text-2xl font-bold">{batchDetail.totalPayments}</p>
+                    <p className="text-sm text-[#64748B]">Pagos</p>
+                    <p className="text-2xl font-bold text-[#0B1F3A]">
+                      {batchDetail.totalPayments}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -284,12 +349,12 @@ export default function BatchPayments() {
                     <CardTitle className="text-base">Historial de Auditoría</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                    <div className="max-h-48 space-y-2 overflow-y-auto">
                       {safeAuditTrail.map((log: any) => (
-                        <div key={log.id} className="text-sm border-l-2 border-muted pl-3 py-1">
-                          <p className="font-medium capitalize">{log.action}</p>
-                          <p className="text-xs text-muted-foreground">{log.reason}</p>
-                          <p className="text-xs text-muted-foreground">
+                        <div key={log.id} className="border-l-2 border-muted pl-3 py-1 text-sm">
+                          <p className="font-medium capitalize text-[#0F172A]">{log.action}</p>
+                          <p className="text-xs text-[#64748B]">{log.reason}</p>
+                          <p className="text-xs text-[#64748B]">
                             {log.createdAt ? new Date(log.createdAt).toLocaleString() : "N/A"}
                           </p>
                         </div>
@@ -299,7 +364,7 @@ export default function BatchPayments() {
                 </Card>
               )}
 
-              <div className="flex gap-2 justify-end">
+              <div className="flex justify-end gap-2">
                 {batchDetail.status === "draft" && (
                   <>
                     <Button
@@ -311,7 +376,7 @@ export default function BatchPayments() {
                         })
                       }
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Cancelar
                     </Button>
                     <Button
@@ -400,16 +465,16 @@ export default function BatchPayments() {
               />
             </div>
 
-            <div className="flex gap-2 justify-end">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
                 Cancelar
               </Button>
               <PrimaryButton
-  onClick={handleCreateBatch}
-  loading={createBatchMutation.isPending}
->
-  {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
-</PrimaryButton>
+                onClick={handleCreateBatch}
+                loading={createBatchMutation.isPending}
+              >
+                {createBatchMutation.isPending ? "Creando..." : "Crear Lote"}
+              </PrimaryButton>
             </div>
           </div>
         </DialogContent>
@@ -432,7 +497,7 @@ export default function BatchPayments() {
                 />
               </div>
 
-              <div className="flex gap-2 justify-end">
+              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowApprovalDialog(null)}>
                   Cancelar
                 </Button>
@@ -469,7 +534,7 @@ export default function BatchPayments() {
                 />
               </div>
 
-              <div className="flex gap-2 justify-end">
+              <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setShowRejectionDialog(null)}>
                   Cancelar
                 </Button>
