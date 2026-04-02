@@ -1,0 +1,30 @@
+import { colors } from "@/lib/brand";
+
+export function PrimaryButton({
+  children,
+  onClick,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-5 py-3 rounded-full font-semibold transition ${className}`}
+      style={{
+        backgroundColor: colors.accent,
+        color: "white",
+      }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.backgroundColor = colors.secondary)
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.backgroundColor = colors.accent)
+      }
+    >
+      {children}
+    </button>
+  );
+}
