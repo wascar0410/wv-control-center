@@ -1,6 +1,11 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "./trpc";
-import { geocodeAddress, reverseGeocodeCoordinates, validateCoordinates } from "./geocoding";
+import {
+  geocodeAddress,
+  reverseGeocodeCoordinates,
+  validateCoordinates,
+} from "./geocoding";
 
 export const geocodingRouter = router({
   geocodeAddress: publicProcedure
@@ -11,9 +16,13 @@ export const geocodingRouter = router({
     )
     .query(async ({ input }) => {
       const result = await geocodeAddress(input.address);
-      
+
       if (!result) {
-        throw new Error("No se encontraron coordenadas para esta dirección. Intenta con una dirección más específica.");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message:
+            "No se encontraron coordenadas para esta dirección. Verifica la dirección o la configuración de Google Maps.",
+        });
       }
 
       return result;
@@ -28,13 +37,22 @@ export const geocodingRouter = router({
     )
     .query(async ({ input }) => {
       if (!validateCoordinates(input.latitude, input.longitude)) {
-        throw new Error("Coordenadas inválidas");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Coordenadas inválidas",
+        });
       }
 
-      const address = await reverseGeocodeCoordinates(input.latitude, input.longitude);
-      
+      const address = await reverseGeocodeCoordinates(
+        input.latitude,
+        input.longitude
+      );
+
       if (!address) {
-        throw new Error("No se encontró dirección para estas coordenadas");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No se encontró dirección para estas coordenadas",
+        });
       }
 
       return { address };
@@ -48,7 +66,8 @@ export const geocodingRouter = router({
       })
     )
     .query(({ input }) => {
-      const isValid = validateCoordinates(input.latitude, input.longitude);
-      return { isValid };
+      return {
+        isValid: validateCoordinates(input.latitude, input.longitude),
+      };
     }),
 });
