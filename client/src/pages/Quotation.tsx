@@ -66,6 +66,9 @@ export default function Quotation() {
     },
   });
 
+  const aiPricing = trpc.ai.suggestPricing.useMutation();
+const [aiResult, setAiResult] = useState<any>(null);
+  
   const handleSubmit = async (formData: QuotationFormData) => {
     setIsLoading(true);
     try {
@@ -75,6 +78,24 @@ export default function Quotation() {
       setIsLoading(false);
     }
   };
+  
+  const handleAiPricing = async () => {
+  if (!result) return;
+
+  try {
+    const res = await aiPricing.mutateAsync({
+      miles: result.totalMiles,
+      fuelCostPerMile: 0.6, // puedes ajustar luego
+      targetProfitPerMile: 1.5,
+      weight: result.weight ?? 0,
+    });
+
+    setAiResult(res);
+    toast.success("AI pricing generado");
+  } catch (err) {
+    toast.error("Error con AI pricing");
+  }
+};
 
   const handleReset = () => {
     setResult(null);
@@ -203,6 +224,14 @@ export default function Quotation() {
                 Calcular Otra
               </Button>
             </div>
+            <Button
+  size="lg"
+  variant="secondary"
+  className="min-w-[200px]"
+  onClick={handleAiPricing}
+>
+  🤖 AI Pricing
+</Button>
 
             {result && formDataForLoad && (
               <CreateLoadModal
