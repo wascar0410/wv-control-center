@@ -13,6 +13,7 @@ export function AppCard({
       style={{
         backgroundColor: "white",
         borderColor: colors.border,
+        color: colors.text,
       }}
     >
       {children}
@@ -47,7 +48,7 @@ export function AppCardHeader({
           </p>
         ) : null}
       </div>
-      {action ? <div>{action}</div> : null}
+      {action ? <div style={{ color: colors.text }}>{action}</div> : null}
     </div>
   );
 }
@@ -59,5 +60,12 @@ export function AppCardContent({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={className}>{children}</div>;
+  return (
+    <div
+      className={className}
+      style={{ color: colors.text }}
+    >
+      {children}
+    </div>
+  );
 }
