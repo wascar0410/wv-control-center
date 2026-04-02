@@ -153,7 +153,14 @@ function vitePluginManusDebugCollector(): Plugin {
 
 
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector()];
+// Disable React Fast Refresh in production to prevent HMR issues
+const plugins = [
+  react(),
+  tailwindcss(),
+  jsxLocPlugin(),
+  vitePluginManusRuntime(),
+  vitePluginManusDebugCollector(),
+];
 
 export default defineConfig({
   plugins,
@@ -165,12 +172,21 @@ export default defineConfig({
     },
   },
   envDir: path.resolve(import.meta.dirname),
+  define: {
+    "process.env.VITE_HMR_DISABLED": "true",
+  },
 
   root: path.resolve(import.meta.dirname, "client"),
   publicDir: path.resolve(import.meta.dirname, "client", "public"),
+  // Disable optimizeDeps in production
+  optimizeDeps: {
+    disabled: process.env.NODE_ENV === "production",
+  },
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    sourcemap: false,
+    minify: "esbuild",
   },
   server: {
     middlewareMode: false,
@@ -184,7 +200,7 @@ export default defineConfig({
       "localhost",
       "127.0.0.1",
     ],
-    // Disable HMR to avoid WebSocket connection errors
+    // Completely disable HMR to avoid WebSocket connection errors
     hmr: false,
     fs: {
       strict: false,
