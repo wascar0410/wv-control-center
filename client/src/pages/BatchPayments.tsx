@@ -249,36 +249,51 @@ export default function BatchPayments() {
   <AppCardContent className="pt-0">
               <p className="text-muted-foreground">Cargando lotes...</p>
             </AppCardContent>
-</AppCard>
-        ) : safeBatches.length > 0 ? (
-          safeBatches.map((batch: any) => (
-            <Card
-              key={batch.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => setSelectedBatch(batch.id)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(batch.status as BatchStatus)}
-                      <CardTitle className="text-lg">{batch.batchNumber}</CardTitle>
-                      <Badge variant={getStatusBadge(batch.status as BatchStatus).variant}>
-                        {getStatusBadge(batch.status as BatchStatus).label}
-                      </Badge>
-                    </div>
-                    <CardDescription className="mt-1">
-                      Período: {batch.period} • {batch.totalPayments} pagos
-                    </CardDescription>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold">
-                      ${Number(batch.totalAmount || 0).toFixed(2)}
-                    </div>
-                    <p className="text-sm text-muted-foreground">Total</p>
-                  </div>
-                </div>
-              </AppCardContent>
+<AppCard
+  key={batch.id}
+  className="cursor-pointer hover:shadow-md transition-shadow"
+>
+  <div onClick={() => setSelectedBatch(batch.id)}>
+    <AppCardHeader
+      title={
+        <div className="flex items-center gap-2">
+          {getStatusIcon(batch.status as BatchStatus)}
+          <span>{batch.batchNumber}</span>
+          <Badge variant={getStatusBadge(batch.status as BatchStatus).variant}>
+            {getStatusBadge(batch.status as BatchStatus).label}
+          </Badge>
+        </div>
+      }
+      subtitle={`Período: ${batch.period} • ${batch.totalPayments} pagos`}
+      action={
+        <div className="text-right">
+          <div className="text-2xl font-bold">
+            ${Number(batch.totalAmount || 0).toFixed(2)}
+          </div>
+          <p className="text-sm text-muted-foreground">Total</p>
+        </div>
+      }
+    />
+
+    <AppCardContent>
+      <div className="grid grid-cols-3 gap-4 text-sm">
+        <div>
+          <p className="text-muted-foreground">Creado por</p>
+          <p className="font-medium">{batch.createdBy}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Método de Pago</p>
+          <p className="font-medium capitalize">{batch.paymentMethod}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Fecha Creación</p>
+          <p className="font-medium">
+            {batch.createdAt ? new Date(batch.createdAt).toLocaleDateString() : "N/A"}
+          </p>
+        </div>
+      </div>
+    </AppCardContent>
+  </div>
 </AppCard>
           ))
         ) : (
