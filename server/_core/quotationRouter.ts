@@ -139,6 +139,9 @@ export const quotationRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
+  throw new Error("No tienes permiso para calcular cotizaciones");
+}
       const routesData = await calculateMultipleRoutes(
         input.vanLat,
         input.vanLng,
