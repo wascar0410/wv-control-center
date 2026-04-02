@@ -11,4 +11,5 @@ export const ENV = {
   PLAID_SECRET: process.env.PLAID_SECRET ?? "",
   PLAID_ENV: (process.env.PLAID_ENV ?? "sandbox") as "sandbox" | "production",
   GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY ?? "",
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "",
 };
