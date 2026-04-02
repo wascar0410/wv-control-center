@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { PrimaryButton } from "@/components/ui/PrimaryButton";
 import {
   ArrowRight,
   BadgeCheck,
@@ -251,13 +252,12 @@ export default function About() {
               </p>
 
               <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
-                <Button
-                  size="lg"
-                  className="rounded-full bg-[#1D4ED8] px-6 py-6 text-white hover:bg-[#123D7A]"
-                  onClick={() => (window.location.href = "/dashboard")}
-                >
-                  Open WV Control Center
-                </Button>
+                <PrimaryButton
+  onClick={() => (window.location.href = "/dashboard")}
+  className="px-6 py-4"
+>
+  Open WV Control Center
+</PrimaryButton>
 
                 <Button
                   size="lg"
