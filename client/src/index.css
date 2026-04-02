@@ -1,6 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -9,30 +9,41 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -44,56 +55,127 @@
 }
 
 :root {
-  --radius: 0.75rem;
-  /* WV Transport brand colors - Dark high-tech theme */
-  /* Navy Blue: #001F3F, Sky Blue: #0074D9, White: #FFFFFF */
-  --background: oklch(0.08 0.015 240);
-  --foreground: oklch(0.95 0.005 240);
-  --card: oklch(0.12 0.016 240);
-  --card-foreground: oklch(0.95 0.005 240);
-  --popover: oklch(0.12 0.016 240);
-  --popover-foreground: oklch(0.95 0.005 240);
-  --primary: oklch(0.52 0.25 240);
-  --primary-foreground: oklch(0.98 0.005 240);
-  --secondary: oklch(0.15 0.018 240);
-  --secondary-foreground: oklch(0.88 0.008 240);
-  --muted: oklch(0.20 0.012 240);
-  --muted-foreground: oklch(0.58 0.020 240);
-  --accent: oklch(0.52 0.25 240);
-  --accent-foreground: oklch(0.98 0.005 240);
-  --destructive: oklch(0.55 0.22 25);
-  --destructive-foreground: oklch(0.98 0.005 240);
-  --border: oklch(0.20 0.016 240);
-  --input: oklch(0.15 0.018 240);
-  --ring: oklch(0.52 0.25 240);
-  --chart-1: oklch(0.52 0.25 240);
-  --chart-2: oklch(0.65 0.18 145);
-  --chart-3: oklch(0.72 0.18 75);
-  --chart-4: oklch(0.55 0.22 25);
-  --chart-5: oklch(0.60 0.18 290);
-  --sidebar: oklch(0.06 0.014 240);
-  --sidebar-foreground: oklch(0.88 0.008 240);
-  --sidebar-primary: oklch(0.52 0.25 240);
-  --sidebar-primary-foreground: oklch(0.98 0.005 240);
-  --sidebar-accent: oklch(0.52 0.25 240);
-  --sidebar-accent-foreground: oklch(0.98 0.005 240);
-  --sidebar-border: oklch(0.18 0.015 240);
-  --sidebar-ring: oklch(0.52 0.25 240);
+  --radius: 1rem;
+
+  /* WV official palette */
+  --background: #F8FBFF;
+  --foreground: #0F172A;
+
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+
+  --primary: #0B1F3A;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #123D7A;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #EEF5FF;
+  --muted-foreground: #64748B;
+
+  --accent: #1D4ED8;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E5E7EB;
+  --input: #FFFFFF;
+  --ring: #1D4ED8;
+
+  --chart-1: #1D4ED8;
+  --chart-2: #123D7A;
+  --chart-3: #16A34A;
+  --chart-4: #F59E0B;
+  --chart-5: #DC2626;
+
+  --sidebar: #0B1F3A;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #1D4ED8;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #123D7A;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #123D7A;
+  --sidebar-ring: #1D4ED8;
 }
 
-/* Dark theme same as root since we default to dark */
+.dark {
+  --background: #0F172A;
+  --foreground: #F8FBFF;
+
+  --card: #111827;
+  --card-foreground: #F8FBFF;
+
+  --popover: #111827;
+  --popover-foreground: #F8FBFF;
+
+  --primary: #1D4ED8;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #123D7A;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+
+  --accent: #1D4ED8;
+  --accent-foreground: #FFFFFF;
+
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #334155;
+  --input: #111827;
+  --ring: #60A5FA;
+
+  --chart-1: #60A5FA;
+  --chart-2: #1D4ED8;
+  --chart-3: #16A34A;
+  --chart-4: #F59E0B;
+  --chart-5: #DC2626;
+
+  --sidebar: #0B1F3A;
+  --sidebar-foreground: #E2E8F0;
+  --sidebar-primary: #1D4ED8;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #123D7A;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #123D7A;
+  --sidebar-ring: #60A5FA;
+}
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    box-sizing: border-box;
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   }
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-semibold tracking-tight;
+    color: var(--primary);
   }
+
+  p {
+    color: var(--foreground);
+  }
+
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -105,28 +187,56 @@
   input[type="radio"]:not(:disabled) {
     @apply cursor-pointer;
   }
+
+  input,
+  textarea,
+  select {
+    background-color: var(--input);
+    color: var(--foreground);
+  }
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
+    padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .app-surface {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow: 0 4px 20px rgba(11, 31, 58, 0.06);
+  }
+
+  .app-section-soft {
+    background-color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+  }
+
+  .app-title {
+    color: var(--primary);
+  }
+
+  .app-text-muted {
+    color: var(--muted-foreground);
+  }
+
+  .app-button-primary {
+    background-color: var(--accent);
+    color: white;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .app-button-primary:hover {
+    background-color: var(--secondary);
   }
 
   .flex {
@@ -136,16 +246,16 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
   }
 }
