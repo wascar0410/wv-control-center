@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { calculateRouteMiles } from "@/lib/route-utils";
 import {
   LineChart,
   Line,
@@ -65,13 +66,15 @@ function toNumber(value: unknown) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function getLoadMiles(load: SafeLoad) {
-  return Math.max(
-    toNumber(load.loadedMiles),
-    toNumber(load.miles),
-    toNumber(load.distance),
-    toNumber(load.estimatedMiles),
-    toNumber(load.tripMiles),
+function getLoadMiles(load: any) {
+  if (load.stops && load.stops.length > 1) {
+    return calculateRouteMiles(load.stops);
+  }
+
+  return (
+    Number(load.loadedMiles) ||
+    Number(load.miles) ||
+    Number(load.distance) ||
     0
   );
 }
