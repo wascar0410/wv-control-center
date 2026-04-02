@@ -131,10 +131,10 @@ export const quotationRouter = router({
         weight: z.number().positive(),
         weightUnit: z.string().default("lbs"),
         cargoDescription: z.string().optional(),
-        ratePerMile: z.number().positive(),
+        ratePerMile: z.number().optional(),
         ratePerPound: z.number().optional(),
         fuelSurcharge: z.number().default(0),
-        offeredPrice: z.number().positive(),
+        offeredPrice: z.number().optional(),
         includeReturnEmpty: z.boolean().default(false),
       })
     )
@@ -164,7 +164,15 @@ export const quotationRouter = router({
       const totalMiles = routesData.totalDistanceMiles;
       const totalDurationHours = routesData.totalDurationHours;
 
-      const totalPrice = input.offeredPrice;
+      const minimumProfitPerMile = Number(config?.minimumProfitPerMile || 1.5);
+
+const baseRate =
+  input.ratePerMile ??
+  minimumProfitPerMile + fuelCostPerMile;
+
+const totalPrice =
+  input.offeredPrice ??
+  Math.round((loadedMiles * baseRate) * 100) / 100;
 
       const profitability = await calculateProfitability(
         ctx.user.id,
