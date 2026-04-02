@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppCard, AppCardHeader, AppCardContent } from "@/components/ui/AppCard";
 import { Badge } from "@/components/ui/badge";
 import {
   LineChart,
@@ -138,11 +139,9 @@ export default function DriverPerformance() {
       </div>
 
       {/* Deliveries */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Entregas Recientes</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <AppCard>
+  <AppCardHeader title="Entregas Recientes" />
+  <AppCardContent>
           {safeDeliveries.length > 0 ? (
             safeDeliveries.map((d: any) => (
               <div key={d.id} className="flex justify-between p-3 border rounded mb-2">
@@ -165,8 +164,8 @@ export default function DriverPerformance() {
               Sin entregas
             </p>
           )}
-        </CardContent>
-      </Card>
+        </AppCardContent>
+</AppCard>
     </div>
   );
 }
