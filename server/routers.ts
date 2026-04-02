@@ -29,6 +29,7 @@ import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
 import { notifyOwner } from "./_core/notification";
 import { storagePut } from "./storage";
+import { aiRouter } from "./_core/aiRouter";
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -1646,6 +1647,7 @@ const contactRouter = router({
 
 export const appRouter = router({
   system: systemRouter,
+  ai: aiRouter,
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
