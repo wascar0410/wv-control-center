@@ -179,26 +179,30 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  // Run pending Drizzle migrations on startup (safe — only applies new SQL files)
+  // Ensure business_plan_events table exists (CREATE TABLE IF NOT EXISTS — safe to run every startup)
   if (process.env.DATABASE_URL) {
     try {
-      const { drizzle: drizzleOrm } = await import("drizzle-orm/mysql2");
-      const { migrate } = await import("drizzle-orm/mysql2/migrator");
       const mysql2 = await import("mysql2/promise");
-      const { fileURLToPath: ftu } = await import("url");
-      const { dirname: dn, resolve: rs } = await import("path");
-      const __d = dn(ftu(import.meta.url));
-      const migrationsFolder = rs(__d, "../drizzle");
       const conn = await mysql2.default.createConnection({
         uri: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: true },
       });
-      const db2 = drizzleOrm(conn);
-      await migrate(db2, { migrationsFolder });
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS business_plan_events (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          event_type VARCHAR(50) NOT NULL,
+          section_id VARCHAR(100) DEFAULT NULL,
+          session_id VARCHAR(64) DEFAULT NULL,
+          referrer VARCHAR(500) DEFAULT NULL,
+          user_agent VARCHAR(500) DEFAULT NULL,
+          ip_address VARCHAR(64) DEFAULT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
       await conn.end();
-      console.log("[Startup] Database migrations applied successfully");
+      console.log("[Startup] business_plan_events table ready");
     } catch (err) {
-      console.warn("[Startup] Migration warning (non-fatal):", (err as Error).message);
+      console.warn("[Startup] Table creation warning (non-fatal):", (err as Error).message);
     }
   }
 
