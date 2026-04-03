@@ -77,6 +77,7 @@ import {
   createBankAccount, getBankAccountsByUserId, getBankAccountById, updateBankAccount, deactivateBankAccount,
   createTransactionImport, getTransactionImportsByBankAccount, getUnmatchedTransactionImports, matchTransactionImport, deleteTransactionImport, getTransactionImportById,
   createLoadEvidence, getLoadEvidenceByLoadId, getLoadEvidenceByDriver,
+  getFleetStats, getFleetRecentDeliveries,
 } from "./db";
 import {
   getDriverLoads,
@@ -241,6 +242,25 @@ const driverStatsRouter = router({
         throw new Error("No tienes permiso para ver estas entregas");
       }
       return getDriverRecentDeliveries(input.driverId, input.limit);
+    }),
+
+  getFleetStats: protectedProcedure
+    .query(async ({ ctx }) => {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (!isPrivileged) {
+        throw new Error("No tienes permiso para ver las estadísticas de la flota");
+      }
+      return getFleetStats();
+    }),
+
+  getFleetRecentDeliveries: protectedProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).default(10) }).optional())
+    .query(async ({ input, ctx }) => {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (!isPrivileged) {
+        throw new Error("No tienes permiso para ver las entregas de la flota");
+      }
+      return getFleetRecentDeliveries(input?.limit ?? 10);
     }),
 });
 

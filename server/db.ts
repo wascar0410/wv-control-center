@@ -1751,3 +1751,93 @@ export async function getLoadEvidenceByDriver(driverId: number, loadId?: number)
     .where(and(...conditions))
     .orderBy(desc(loadEvidence.uploadedAt));
 }
+
+// ─── Fleet Stats (Owner View) ─────────────────────────────────────────────────
+export async function getFleetStats() {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const deliveredLoads = await db
+      .select()
+      .from(loads)
+      .where(inArray(loads.status, ["delivered", "invoiced", "paid"]));
+
+    const paidLoads = await db
+      .select()
+      .from(loads)
+      .where(eq(loads.status, "paid"));
+
+    const monthPaidLoads = await db
+      .select()
+      .from(loads)
+      .where(
+        and(
+          eq(loads.status, "paid"),
+          gte(loads.updatedAt, startOfMonth)
+        )
+      );
+
+    const activeLoads = await db
+      .select()
+      .from(loads)
+      .where(inArray(loads.status, ["available", "in_transit"]));
+
+    const inTransitLoads = await db
+      .select()
+      .from(loads)
+      .where(eq(loads.status, "in_transit"));
+
+    const fuelExpenses = await db.select().from(fuelLogs);
+    const totalFuelExpense = fuelExpenses.reduce((sum, log) => sum + (Number(log.amount) || 0), 0);
+
+    const totalIncome = paidLoads.reduce((sum, l) => sum + (Number(l.price) || 0), 0);
+    const monthIncome = monthPaidLoads.reduce((sum, l) => sum + (Number(l.price) || 0), 0);
+
+    const totalNetMargin = paidLoads.reduce((sum, l) => {
+      const fuel = Number(l.estimatedFuel) || 0;
+      const tolls = Number(l.estimatedTolls) || 0;
+      return sum + ((Number(l.price) || 0) - fuel - tolls);
+    }, 0);
+
+    const avgMarginPerDelivery = deliveredLoads.length > 0
+      ? totalNetMargin / deliveredLoads.length
+      : 0;
+
+    const drivers = await getAllDrivers();
+
+    return {
+      totalDeliveries: deliveredLoads.length,
+      totalIncome,
+      monthIncome,
+      totalFuelExpense,
+      totalNetMargin,
+      activeLoads: activeLoads.length,
+      inTransitLoads: inTransitLoads.length,
+      avgMarginPerDelivery: Math.round(avgMarginPerDelivery * 100) / 100,
+      efficiency: totalIncome > 0 ? Math.round((totalNetMargin / totalIncome) * 100) : 0,
+      totalDrivers: drivers.length,
+    };
+  } catch (error) {
+    console.error("[Database] Error getting fleet stats:", error);
+    return null;
+  }
+}
+
+export async function getFleetRecentDeliveries(limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return db
+      .select()
+      .from(loads)
+      .where(inArray(loads.status, ["delivered", "invoiced", "paid"]))
+      .orderBy(desc(loads.deliveryDate))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Database] Error getting fleet recent deliveries:", error);
+    return [];
+  }
+}
