@@ -99,20 +99,22 @@ export default function QuotationForm({
       return;
     }
 
-    if (formData.weight <= 0) {
-      toast.error("El peso debe ser mayor a 0");
+    if (!formData.weight || formData.weight <= 0) {
+      toast.error("⚠️ El peso de la carga es requerido. Ingresa un valor mayor a 0 en el campo Peso.");
+      setTimeout(() => document.getElementById('weight')?.focus(), 100);
       return;
     }
 
-    if (
-      !formData.vanLat ||
-      !formData.vanLng ||
-      !formData.pickupLat ||
-      !formData.pickupLng ||
-      !formData.deliveryLat ||
-      !formData.deliveryLng
-    ) {
-      toast.error("Faltan coordenadas. Verifica las tres direcciones.");
+    const hasVanCoords = Number.isFinite(formData.vanLat) && formData.vanLat !== 0 && Number.isFinite(formData.vanLng) && formData.vanLng !== 0;
+    const hasPickupCoords = Number.isFinite(formData.pickupLat) && formData.pickupLat !== 0 && Number.isFinite(formData.pickupLng) && formData.pickupLng !== 0;
+    const hasDeliveryCoords = Number.isFinite(formData.deliveryLat) && formData.deliveryLat !== 0 && Number.isFinite(formData.deliveryLng) && formData.deliveryLng !== 0;
+
+    if (!hasVanCoords || !hasPickupCoords || !hasDeliveryCoords) {
+      const missing = [];
+      if (!hasVanCoords) missing.push('Van');
+      if (!hasPickupCoords) missing.push('Recogida');
+      if (!hasDeliveryCoords) missing.push('Entrega');
+      toast.error(`⚠️ Faltan coordenadas para: ${missing.join(', ')}. Escribe la dirección y presiona Enter.`);
       return;
     }
 
@@ -238,7 +240,7 @@ export default function QuotationForm({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="weight">Peso</Label>
+              <Label htmlFor="weight">Peso <span className="text-red-500 text-xs">*requerido</span></Label>
               <Input
                 id="weight"
                 type="number"
@@ -248,7 +250,7 @@ export default function QuotationForm({
                 onChange={(e) =>
                   handleInputChange("weight", parseRequiredNumber(e.target.value))
                 }
-                className="mt-1"
+                className={`mt-1 ${!formData.weight ? 'border-amber-400' : 'border-green-400'}`}
               />
             </div>
 
