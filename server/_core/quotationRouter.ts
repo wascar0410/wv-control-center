@@ -217,7 +217,7 @@ export const quotationRouter = router({
   estimatedProfit: String(profitability.estimatedProfit),
   profitMarginPercent: String(profitability.profitMarginPercent),
 
-  status: "calculated",
+  status: "quoted",
 } as any);
 
       const quotationId = Number(
