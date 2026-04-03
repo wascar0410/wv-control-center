@@ -1,0 +1,20 @@
+CREATE TABLE `load_evidence` (
+`id` int AUTO_INCREMENT NOT NULL,
+`loadId` int NOT NULL,
+`driverId` int NOT NULL,
+`evidenceType` enum('pickup_photo','delivery_photo','bol_scan','damage_report','signature','receipt','other') NOT NULL,
+`fileUrl` text NOT NULL,
+`fileKey` varchar(512) NOT NULL,
+`fileName` varchar(255) NOT NULL,
+`fileSize` int,
+`mimeType` varchar(50),
+`caption` varchar(500),
+`latitude` decimal(10,7),
+`longitude` decimal(10,7),
+`capturedAt` timestamp,
+`uploadedAt` timestamp NOT NULL DEFAULT (now()),
+`createdAt` timestamp NOT NULL DEFAULT (now()),
+CONSTRAINT `load_evidence_id` PRIMARY KEY(`id`),
+CONSTRAINT `load_evidence_loadId_loads_id_fk` FOREIGN KEY (`loadId`) REFERENCES `loads`(`id`) ON DELETE CASCADE,
+CONSTRAINT `load_evidence_driverId_users_id_fk` FOREIGN KEY (`driverId`) REFERENCES `users`(`id`)
+);

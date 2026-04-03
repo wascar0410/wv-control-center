@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import LoadActionConfirmModal from "@/components/LoadActionConfirmModal";
 
 import {
   Truck, MapPin, Package, Fuel, Camera, CheckCircle2, Navigation,
-  Upload, Loader2, ArrowRight, Clock, Weight, FileCheck
+  Upload, Loader2, ArrowRight, Clock, Weight, FileCheck, TrendingUp, ExternalLink
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -38,7 +39,7 @@ function formatTime(date: Date | string | null | undefined): string {
   return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
-function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTransit, onUploadBOL, onLogFuel, readonly = false, onAcceptLoad, onRejectLoad }: any) {
+function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTransit, onUploadBOL, onLogFuel, readonly = false, onAcceptLoad, onRejectLoad, onViewDetails }: any) {
   return (
     <Card
       className={`cursor-pointer transition-all ${
@@ -76,6 +77,7 @@ function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTrans
 
         {!readonly && isSelected && (
           <div className="mt-4 flex gap-2 flex-wrap">
+            {onViewDetails && <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={(e) => { e.stopPropagation(); onViewDetails(); }}><ExternalLink className="w-3 h-3" />Ver Detalles</Button>}
             {onAcceptLoad && <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={(e) => { e.stopPropagation(); onAcceptLoad(); }}>Aceptar</Button>}
             {onRejectLoad && <Button size="sm" variant="destructive" className="flex-1" onClick={(e) => { e.stopPropagation(); onRejectLoad(); }}>Rechazar</Button>}
             {onStartTransit && load.status === "available" && <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onStartTransit(); }}>Iniciar</Button>}
@@ -203,6 +205,8 @@ export default function DriverView() {
     }
   };
 
+  const [, setLocation] = useLocation();
+
   if (!loads) return null;
 
   const activeAssignedLoads = loads.filter((l: any) => l.assignmentId && ["available", "in_transit"].includes(l.status));
@@ -212,9 +216,15 @@ export default function DriverView() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto py-8 px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Mi Vista de Chofer</h1>
-          <p className="text-muted-foreground">Gestiona tus cargas y registra gastos</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Mis Cargas</h1>
+            <p className="text-muted-foreground">Gestiona tus cargas y registra gastos</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setLocation("/driver-dashboard")} className="gap-2 flex-shrink-0">
+            <TrendingUp className="w-4 h-4" />
+            Mi Dashboard
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -268,6 +278,7 @@ export default function DriverView() {
                       load={load}
                       isSelected={selectedLoad?.id === load?.id}
                       onSelect={() => setSelectedLoad(load)}
+                      onViewDetails={() => setLocation(`/driver/loads/${load?.id}`)}
                       onAccept={assignment ? () => acceptMutation.mutate({ assignmentId: assignment.id }) : undefined}
                       onReject={assignment ? () => rejectMutation.mutate({ assignmentId: assignment.id }) : undefined}
                       onStartTransit={() => statusMutation.mutate({ id: load?.id, status: "in_transit" })}

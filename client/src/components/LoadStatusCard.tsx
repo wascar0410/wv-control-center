@@ -1,11 +1,12 @@
 "use client";
 import React, { useState } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { MapPin, Navigation, Clock, CheckCircle2, AlertCircle, Loader2, Camera } from "lucide-react";
+import { MapPin, Navigation, Clock, CheckCircle2, AlertCircle, Loader2, Camera, ExternalLink } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -36,6 +37,7 @@ const statusConfig = {
 };
 
 export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardProps) {
+  const [, setLocation] = useLocation();
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [newStatus, setNewStatus] = useState<"in_transit" | "delivered">("in_transit");
   const [deliveryNotes, setDeliveryNotes] = useState("");
@@ -177,7 +179,16 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 text-xs"
+              onClick={() => setLocation(`/driver/loads/${load.id}`)}
+            >
+              <ExternalLink className="w-3 h-3" />
+              Ver Detalles
+            </Button>
             {load.status === "available" && (
               <>
                 <Button onClick={handleStartRoute} variant="outline" size="sm" className="flex-1">

@@ -24,6 +24,8 @@ import BusinessPlanAnalytics from "./pages/BusinessPlanAnalytics";
 import CarrierPacket from "./pages/CarrierPacket";
 import LoadDetail from "./pages/LoadDetail";
 import NewLoad from "./pages/NewLoad";
+import DriverDashboard from "./pages/DriverDashboard";
+import DriverLoadDetail from "./pages/DriverLoadDetail";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -46,6 +48,9 @@ export default function App() {
       <Route path="/transactions" component={withLayout(Transactions)} />
       <Route path="/partnership" component={withLayout(Partnership)} />
       <Route path="/profile" component={withLayout(UserProfile)} />
+      {/* Driver-specific routes */}
+      <Route path="/driver/loads/:id" component={withLayout(DriverLoadDetail)} />
+      <Route path="/driver-dashboard" component={withLayout(DriverDashboard)} />
       <Route path="/driver" component={withLayout(DriverView)} />
       <Route path="/executive-dashboard" component={withLayout(ExecutiveDashboard)} />
       <Route path="/quotation" component={Quotation} />

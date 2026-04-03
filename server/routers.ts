@@ -76,6 +76,7 @@ import {
   getDriverStats, getDriverMonthlyTrends, getDriverRecentDeliveries,
   createBankAccount, getBankAccountsByUserId, getBankAccountById, updateBankAccount, deactivateBankAccount,
   createTransactionImport, getTransactionImportsByBankAccount, getUnmatchedTransactionImports, matchTransactionImport, deleteTransactionImport, getTransactionImportById,
+  createLoadEvidence, getLoadEvidenceByLoadId, getLoadEvidenceByDriver,
 } from "./db";
 import {
   getDriverLoads,
@@ -294,26 +295,35 @@ const loadsRouter = router({
       rateConfirmationNumber: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
-      // Embed rateConfirmationNumber in notes until DB column is migrated
-      const notesWithRC = input.rateConfirmationNumber
-        ? `RC#${input.rateConfirmationNumber}${input.notes ? ` | ${input.notes}` : ""}`
-        : input.notes;
-      const { rateConfirmationNumber, ...restInput } = input;
-      const id = await createLoad({
-        ...restInput,
-        notes: notesWithRC,
-        price: String(input.price) as any,
-        weight: String(input.weight) as any,
-        estimatedFuel: String(input.estimatedFuel) as any,
-        estimatedTolls: String(input.estimatedTolls) as any,
-        pickupLat: input.pickupLat ? String(input.pickupLat) as any : undefined,
-        pickupLng: input.pickupLng ? String(input.pickupLng) as any : undefined,
-        deliveryLat: input.deliveryLat ? String(input.deliveryLat) as any : undefined,
-        deliveryLng: input.deliveryLng ? String(input.deliveryLng) as any : undefined,
-        pickupDate: input.pickupDate ? new Date(input.pickupDate) : undefined,
-        deliveryDate: input.deliveryDate ? new Date(input.deliveryDate) : undefined,
-        createdBy: ctx.user.id,
-      });
+      console.log("[loads.create] Starting load creation for:", input.clientName);
+      let id: number;
+      try {
+        id = await createLoad({
+          clientName: input.clientName,
+          pickupAddress: input.pickupAddress,
+          deliveryAddress: input.deliveryAddress,
+          weight: String(input.weight) as any,
+          weightUnit: input.weightUnit,
+          merchandiseType: input.merchandiseType,
+          price: String(input.price) as any,
+          estimatedFuel: String(input.estimatedFuel) as any,
+          estimatedTolls: String(input.estimatedTolls) as any,
+          assignedDriverId: input.assignedDriverId,
+          notes: input.notes,
+          rateConfirmationNumber: input.rateConfirmationNumber,
+          pickupLat: input.pickupLat ? String(input.pickupLat) as any : undefined,
+          pickupLng: input.pickupLng ? String(input.pickupLng) as any : undefined,
+          deliveryLat: input.deliveryLat ? String(input.deliveryLat) as any : undefined,
+          deliveryLng: input.deliveryLng ? String(input.deliveryLng) as any : undefined,
+          pickupDate: input.pickupDate ? new Date(input.pickupDate) : undefined,
+          deliveryDate: input.deliveryDate ? new Date(input.deliveryDate) : undefined,
+          createdBy: ctx.user.id,
+        });
+        console.log("[loads.create] Load created with id:", id);
+      } catch (dbError: any) {
+        console.error("[loads.create] DB error:", dbError?.message, dbError?.code, dbError?.sqlMessage);
+        throw new Error(`Failed to create load: ${dbError?.sqlMessage || dbError?.message || String(dbError)}`);
+      }
 
       // Notify driver via WebSocket if assigned at creation
       if (input.assignedDriverId) {
@@ -1111,7 +1121,6 @@ const driverRouter = router({
       if (!load && ctx.user.role !== "admin") {
         throw new Error("No tienes permiso para ver esta ubicación");
       }
-
       try {
         const { getLatestLocationForLoad } = await import("./db-location-tracking");
         return await getLatestLocationForLoad(input.loadId);
@@ -1119,6 +1128,82 @@ const driverRouter = router({
         console.error("[Get Load Location] Error:", error);
         return null;
       }
+    }),
+
+  // ─── Evidence Collection ─────────────────────────────────────────────────
+  uploadEvidence: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      evidenceType: z.enum(["pickup_photo", "delivery_photo", "bol_scan", "damage_report", "signature", "receipt", "other"]),
+      fileBase64: z.string(),
+      fileName: z.string().max(255),
+      mimeType: z.string(),
+      fileSize: z.number(),
+      caption: z.string().max(500).optional(),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      // Validate file size (max 10MB)
+      if (input.fileSize > 10 * 1024 * 1024) {
+        throw new Error("Archivo demasiado grande (máx 10MB)");
+      }
+      const allowedMimes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+      if (!allowedMimes.includes(input.mimeType)) {
+        throw new Error(`Tipo no permitido. Usa: ${allowedMimes.join(", ")}`);
+      }
+      const buffer = Buffer.from(input.fileBase64, "base64");
+      const key = `evidence/${input.loadId}/${ctx.user.id}/${input.evidenceType}/${Date.now()}-${input.fileName}`;
+      let fileUrl: string;
+      try {
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        fileUrl = url;
+      } catch (error) {
+        console.error("[Evidence Upload] Storage error:", error);
+        throw new Error("No se pudo subir el archivo. Intenta de nuevo.");
+      }
+      const id = await createLoadEvidence({
+        loadId: input.loadId,
+        driverId: ctx.user.id,
+        evidenceType: input.evidenceType,
+        fileUrl,
+        fileKey: key,
+        fileName: input.fileName,
+        fileSize: input.fileSize,
+        mimeType: input.mimeType,
+        caption: input.caption,
+        latitude: input.latitude ? String(input.latitude) as any : undefined,
+        longitude: input.longitude ? String(input.longitude) as any : undefined,
+        capturedAt: new Date(),
+      });
+      // Notify owner for key evidence types
+      if (input.evidenceType === "pickup_photo" || input.evidenceType === "delivery_photo") {
+        const typeLabel = input.evidenceType === "pickup_photo" ? "Pickup" : "Entrega";
+        await notifyOwner({
+          title: `📸 Evidencia de ${typeLabel}`,
+          content: `${ctx.user.name} subió foto de ${typeLabel.toLowerCase()} para carga #${input.loadId}.`,
+        });
+      }
+      return { id, fileUrl };
+    }),
+
+  getEvidence: protectedProcedure
+    .input(z.object({ loadId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      // Drivers can only see evidence for their own loads
+      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+        const load = await getLoadById(input.loadId);
+        if (load?.assignedDriverId !== ctx.user.id) {
+          throw new Error("No tienes permiso para ver esta evidencia");
+        }
+      }
+      return getLoadEvidenceByLoadId(input.loadId);
+    }),
+
+  getMyEvidence: protectedProcedure
+    .input(z.object({ loadId: z.number().optional() }))
+    .query(({ ctx, input }) => {
+      return getLoadEvidenceByDriver(ctx.user.id, input?.loadId);
     }),
 });
 

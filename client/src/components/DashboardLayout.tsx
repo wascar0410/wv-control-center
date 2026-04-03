@@ -73,9 +73,9 @@ const adminMenuItems = [
 ];
 
 const driverMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
+  { icon: LayoutDashboard, label: "Mi Dashboard", path: "/driver-dashboard", description: "Mis estadísticas personales" },
   { icon: Truck, label: "Mis Cargas", path: "/driver", description: "Operaciones en campo" },
-  { icon: TrendingUp, label: "Mi Desempeño", path: "/driver-performance", description: "Mis estadísticas" },
+  { icon: TrendingUp, label: "Mi Desempeño", path: "/driver-performance", description: "Historial y tendencias" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
 ];
@@ -246,7 +246,8 @@ function DashboardLayoutContent({
           <SidebarContent className="gap-0 py-3">
             <SidebarMenu className="gap-1 px-2">
               {menuItems.map((item) => {
-                const isActive = location === item.path;
+                const isActive = location === item.path ||
+                  (item.path === "/driver" && location.startsWith("/driver/"));
 
                 return (
                   <SidebarMenuItem key={item.path}>

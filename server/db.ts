@@ -27,7 +27,9 @@ import {
   InsertTransactionImport,
   InsertUser,
   InsertUserPreferences,
+  InsertLoadEvidence,
   loadAssignments,
+  loadEvidence,
   loadQuotations,
   loads,
   ownerDraws,
@@ -1717,4 +1719,35 @@ export async function getAverageResponseTime() {
 
   // Return average in hours
   return Math.round((totalTime / respondedContacts.length / (1000 * 60 * 60)) * 10) / 10;
+}
+
+// ─── Load Evidence ────────────────────────────────────────────────────────────
+
+export async function createLoadEvidence(data: InsertLoadEvidence) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(loadEvidence).values(data).execute() as any;
+  return result.insertId as number;
+}
+
+export async function getLoadEvidenceByLoadId(loadId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(loadEvidence)
+    .where(eq(loadEvidence.loadId, loadId))
+    .orderBy(loadEvidence.uploadedAt);
+}
+
+export async function getLoadEvidenceByDriver(driverId: number, loadId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(loadEvidence.driverId, driverId)];
+  if (loadId) conditions.push(eq(loadEvidence.loadId, loadId));
+  return db
+    .select()
+    .from(loadEvidence)
+    .where(and(...conditions))
+    .orderBy(desc(loadEvidence.uploadedAt));
 }

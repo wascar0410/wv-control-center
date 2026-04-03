@@ -130,6 +130,8 @@ export const loads = mysqlTable("loads", {
   driverAcceptedAt: timestamp("driverAcceptedAt"),
   driverRejectedAt: timestamp("driverRejectedAt"),
   driverRejectionReason: varchar("driverRejectionReason", { length: 500 }),
+  // Rate Confirmation
+  rateConfirmationNumber: varchar("rateConfirmationNumber", { length: 100 }),
   // Notes
   notes: text("notes"),
   bolImageUrl: text("bolImageUrl"),
@@ -1127,3 +1129,41 @@ export const businessPlanEvents = mysqlTable("business_plan_events", {
 });
 export type BusinessPlanEvent = typeof businessPlanEvents.$inferSelect;
 export type InsertBusinessPlanEvent = typeof businessPlanEvents.$inferInsert;
+
+export type InsertBusinessPlanEvent = typeof businessPlanEvents.$inferInsert;
+
+/**
+ * Load Evidence - Driver photo/document evidence collection for dispute protection
+ * Covers: pickup confirmation, delivery confirmation, BOL scans, damage reports, etc.
+ */
+export const loadEvidence = mysqlTable("load_evidence", {
+  id: int("id").autoincrement().primaryKey(),
+  loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+  driverId: int("driverId").notNull().references(() => users.id),
+  // Evidence classification
+  evidenceType: mysqlEnum("evidenceType", [
+    "pickup_photo",       // Photo at pickup location
+    "delivery_photo",     // Photo at delivery location
+    "bol_scan",           // Bill of Lading scan
+    "damage_report",      // Cargo damage documentation
+    "signature",          // Recipient signature
+    "receipt",            // Fuel/toll receipt
+    "other",              // Miscellaneous
+  ]).notNull(),
+  // File info
+  fileUrl: text("fileUrl").notNull(),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  fileSize: int("fileSize"),
+  mimeType: varchar("mimeType", { length: 50 }),
+  // Metadata
+  caption: varchar("caption", { length: 500 }),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  capturedAt: timestamp("capturedAt"),
+  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LoadEvidence = typeof loadEvidence.$inferSelect;
+export type InsertLoadEvidence = typeof loadEvidence.$inferInsert;
