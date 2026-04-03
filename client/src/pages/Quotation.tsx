@@ -58,6 +58,7 @@ export default function Quotation() {
 
   const calculateQuotation = trpc.quotation.calculateQuotation.useMutation({
     onSuccess: (data) => {
+      console.log("✅ RESULT FROM BACKEND:", data);
       setResult(data);
       toast.success("Cotización calculada exitosamente");
     },
@@ -69,12 +70,21 @@ export default function Quotation() {
   const aiPricing = trpc.ai.suggestPricing.useMutation();
 const [aiResult, setAiResult] = useState<any>(null);
   
-  const handleSubmit = async (formData: QuotationFormData) => {
-  setIsLoading(true);
-  console.log("[Quotation] submit formData:", formData);
+  const cleanPayload = {
+  vanLat: formData.vanLat,
+  vanLng: formData.vanLng,
+  pickupLat: formData.pickupLat,
+  pickupLng: formData.pickupLng,
+  deliveryLat: formData.deliveryLat,
+  deliveryLng: formData.deliveryLng,
+  weight: formData.weight,
+  offeredPrice: formData.offeredPrice ?? undefined,
+  includeReturnEmpty: formData.includeReturnEmpty ?? false,
+};
 
-  try {
-    const response = await calculateQuotation.mutateAsync(formData);
+console.log("📦 CLEAN PAYLOAD:", cleanPayload);
+
+const response = await calculateQuotation.mutateAsync(cleanPayload);
     console.log("[Quotation] success response:", response);
     setResult(response);
     setFormDataForLoad(formData);
