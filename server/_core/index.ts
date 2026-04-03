@@ -187,16 +187,18 @@ async function startServer() {
         uri: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: true },
       });
+      // Drop old snake_case table if it exists (wrong column names), then create correct one
+      await conn.execute(`DROP TABLE IF EXISTS business_plan_events`);
       await conn.execute(`
         CREATE TABLE IF NOT EXISTS business_plan_events (
           id INT AUTO_INCREMENT PRIMARY KEY,
-          event_type VARCHAR(50) NOT NULL,
-          section_id VARCHAR(100) DEFAULT NULL,
-          session_id VARCHAR(64) DEFAULT NULL,
+          eventType ENUM('page_view','pdf_download','contact_click','section_view','form_submit') NOT NULL,
+          sectionId VARCHAR(100) DEFAULT NULL,
+          sessionId VARCHAR(64) DEFAULT NULL,
           referrer VARCHAR(500) DEFAULT NULL,
-          user_agent VARCHAR(500) DEFAULT NULL,
-          ip_address VARCHAR(64) DEFAULT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          userAgent VARCHAR(500) DEFAULT NULL,
+          ipAddress VARCHAR(64) DEFAULT NULL,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
       await conn.end();
