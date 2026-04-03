@@ -293,6 +293,11 @@ class SDKServer {
     }
 
     // FALLBACK TEMPORAL DE DESARROLLO
+    // In production, throw immediately so context.ts can try the email/password
+    // session (wv_session cookie or Authorization: Bearer header)
+    if (process.env.NODE_ENV === "production") {
+      throw ForbiddenError("No OAuth session. Falling through to email/password auth.");
+    }
     console.warn("[Auth] DEV MODE - bypass auth");
 
     const fallbackByOwnerOpenId = ENV.ownerOpenId
