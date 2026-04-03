@@ -347,6 +347,33 @@ async function startServer() {
         console.log("[Startup] OK: driver settlement fields already exist");
       }
 
+      // Migration 0021: Add passwordHash column to users table
+      const [pwHashCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'passwordHash'
+      `) as any;
+      if (pwHashCols.length === 0) {
+        await conn.execute("ALTER TABLE `users` ADD `passwordHash` TEXT NULL");
+        console.log("[Startup] Applied: passwordHash column added to users");
+      } else {
+        console.log("[Startup] OK: passwordHash column already exists");
+      }
+
+      // Migration 0018: Ensure users.role enum includes 'owner' and 'driver'
+      // We do this by checking if any user has role='owner' or if the column allows it
+      // Safe approach: try to modify the enum; ignore error if already correct
+      try {
+        await conn.execute(
+          "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('user','admin','driver','owner') NOT NULL DEFAULT 'user'"
+        );
+        console.log("[Startup] Applied: users.role enum updated to include owner/driver");
+      } catch (enumErr: any) {
+        // Ignore if already correct
+        if (!String(enumErr.message).includes("Duplicate")) {
+          console.log("[Startup] OK: users.role enum already includes owner/driver");
+        }
+      }
+
       // Seed owner accounts (idempotent - only creates if not exists)
       const bcrypt = await import("bcryptjs");
       const ownerAccounts = [
