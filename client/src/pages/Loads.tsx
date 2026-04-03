@@ -84,7 +84,7 @@ export default function Loads() {
             {safeLoads.length} cargas en total · Selecciona una para ver el detalle
           </p>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setLocation("/loads/new")}>
+        <Button size="sm" className="gap-1.5" onClick={() => setLocation("/quotation")}>
           <Plus className="h-4 w-4" /> Nueva Carga
         </Button>
       </div>

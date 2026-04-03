@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -10,9 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, Truck, Package, DollarSign } from "lucide-react";
+import { MapPin, Truck, Package, DollarSign, User, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import AddressInput from "./AddressInput";
+import { trpc } from "@/lib/trpc";
 
 interface QuotationFormProps {
   onSubmit: (data: QuotationFormData) => void;
@@ -20,6 +22,7 @@ interface QuotationFormProps {
 }
 
 export interface QuotationFormData {
+  // Routing & calculation fields
   vanLat: number;
   vanLng: number;
   vanAddress: string;
@@ -37,6 +40,13 @@ export interface QuotationFormData {
   fuelSurcharge: number;
   offeredPrice?: number;
   includeReturnEmpty: boolean;
+  // Load creation fields
+  clientName: string;
+  merchandiseType: string;
+  pickupDate?: string;
+  deliveryDate?: string;
+  assignedDriverId?: number;
+  notes?: string;
 }
 
 export default function QuotationForm({
@@ -61,7 +71,15 @@ export default function QuotationForm({
     fuelSurcharge: 0,
     offeredPrice: undefined,
     includeReturnEmpty: false,
+    clientName: "",
+    merchandiseType: "",
+    pickupDate: "",
+    deliveryDate: "",
+    assignedDriverId: undefined,
+    notes: "",
   });
+
+  const { data: drivers } = trpc.assignment.drivers.useQuery();
 
   const handleInputChange = (
     field: keyof QuotationFormData,
@@ -88,7 +106,15 @@ export default function QuotationForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("[QuotationForm] submit start", formData);
+    if (!formData.clientName.trim()) {
+      toast.error("El nombre del cliente es requerido");
+      return;
+    }
+
+    if (!formData.merchandiseType.trim()) {
+      toast.error("El tipo de mercancía es requerido");
+      return;
+    }
 
     if (
       !formData.vanAddress ||
@@ -100,7 +126,7 @@ export default function QuotationForm({
     }
 
     if (!formData.weight || formData.weight <= 0) {
-      toast.error("⚠️ El peso de la carga es requerido. Ingresa un valor mayor a 0 en el campo Peso.");
+      toast.error("⚠️ El peso de la carga es requerido. Ingresa un valor mayor a 0.");
       setTimeout(() => document.getElementById('weight')?.focus(), 100);
       return;
     }
@@ -123,34 +149,127 @@ export default function QuotationForm({
       return;
     }
 
-    if (formData.ratePerMile !== undefined && formData.ratePerMile < 0) {
-      toast.error("La tarifa por milla no puede ser negativa");
-      return;
-    }
-
-    if (formData.ratePerPound !== undefined && formData.ratePerPound < 0) {
-      toast.error("La tarifa por libra no puede ser negativa");
-      return;
-    }
-
-    if (formData.fuelSurcharge < 0) {
-      toast.error("El recargo de combustible no puede ser negativo");
-      return;
-    }
-
     const payload: QuotationFormData = {
       ...formData,
       offeredPrice: formData.offeredPrice || undefined,
       ratePerMile: formData.ratePerMile || undefined,
       ratePerPound: formData.ratePerPound || undefined,
+      pickupDate: formData.pickupDate || undefined,
+      deliveryDate: formData.deliveryDate || undefined,
+      notes: formData.notes || undefined,
     };
 
-    console.log("[QuotationForm] payload final", payload);
     onSubmit(payload);
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
+      {/* ── Información del Cliente ─────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            Información del Cliente
+          </CardTitle>
+          <CardDescription>
+            Datos del cliente y tipo de mercancía
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="clientName">
+                Nombre del Cliente <span className="text-red-500 text-xs">*requerido</span>
+              </Label>
+              <Input
+                id="clientName"
+                placeholder="Ej: ABC Logistics"
+                value={formData.clientName}
+                onChange={(e) => handleInputChange("clientName", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="merchandiseType">
+                Tipo de Mercancía <span className="text-red-500 text-xs">*requerido</span>
+              </Label>
+              <Input
+                id="merchandiseType"
+                placeholder="Ej: Electrónica, Alimentos"
+                value={formData.merchandiseType}
+                onChange={(e) => handleInputChange("merchandiseType", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="assignedDriverId">Asignar Conductor (opcional)</Label>
+              <select
+                id="assignedDriverId"
+                value={formData.assignedDriverId ?? ""}
+                onChange={(e) =>
+                  handleInputChange(
+                    "assignedDriverId",
+                    e.target.value ? parseInt(e.target.value) : undefined
+                  )
+                }
+                className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Sin asignar</option>
+                {Array.isArray(drivers) && drivers.map((d: any) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name || d.username || `Driver #${d.id}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="pickupDate" className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Fecha de Recogida
+              </Label>
+              <Input
+                id="pickupDate"
+                type="date"
+                value={formData.pickupDate ?? ""}
+                onChange={(e) => handleInputChange("pickupDate", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="deliveryDate" className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Fecha de Entrega
+              </Label>
+              <Input
+                id="deliveryDate"
+                type="date"
+                value={formData.deliveryDate ?? ""}
+                onChange={(e) => handleInputChange("deliveryDate", e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="notes">Notas / Instrucciones Especiales</Label>
+            <Textarea
+              id="notes"
+              placeholder="Ej: Requiere liftgate, entrega con cita, temperatura controlada..."
+              value={formData.notes ?? ""}
+              onChange={(e) => handleInputChange("notes", e.target.value)}
+              rows={2}
+              className="mt-1"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Ubicación de la Van ─────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -177,10 +296,11 @@ export default function QuotationForm({
         </CardContent>
       </Card>
 
+      {/* ── Punto de Recogida ───────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
+            <MapPin className="w-5 h-5 text-green-500" />
             Punto de Recogida
           </CardTitle>
           <CardDescription>Dónde se recoge la carga</CardDescription>
@@ -201,10 +321,11 @@ export default function QuotationForm({
         </CardContent>
       </Card>
 
+      {/* ── Punto de Entrega ────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MapPin className="w-5 h-5" />
+            <MapPin className="w-5 h-5 text-red-500" />
             Punto de Entrega
           </CardTitle>
           <CardDescription>Dónde se entrega la carga</CardDescription>
@@ -227,6 +348,7 @@ export default function QuotationForm({
         </CardContent>
       </Card>
 
+      {/* ── Detalles de la Carga ────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -234,7 +356,7 @@ export default function QuotationForm({
             Detalles de la Carga
           </CardTitle>
           <CardDescription>
-            Información sobre la carga a transportar
+            Información sobre el peso y descripción de la mercancía
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -284,6 +406,7 @@ export default function QuotationForm({
         </CardContent>
       </Card>
 
+      {/* ── Tarificación ────────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -334,9 +457,6 @@ export default function QuotationForm({
                 }
                 className="mt-1"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Opcional. Referencia para el cálculo.
-              </p>
             </div>
 
             <div>
@@ -391,8 +511,8 @@ export default function QuotationForm({
         </CardContent>
       </Card>
 
-      <Button type="submit" disabled={isLoading} className="w-full">
-        {isLoading ? "Calculando..." : "Calcular Cotización"}
+      <Button type="submit" disabled={isLoading} className="w-full" size="lg">
+        {isLoading ? "Calculando..." : "Calcular Rentabilidad →"}
       </Button>
     </form>
   );

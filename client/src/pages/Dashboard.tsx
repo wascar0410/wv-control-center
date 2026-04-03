@@ -93,7 +93,7 @@ export default function Dashboard() {
         </div>
 
         <div className="flex gap-2 self-start sm:self-auto">
-          <Button onClick={() => setLocation("/loads")} className="gap-2">
+          <Button onClick={() => setLocation("/quotation")} className="gap-2">
             <Package className="h-4 w-4" />
             Nueva Carga
           </Button>
@@ -236,8 +236,8 @@ export default function Dashboard() {
               <QuickAction
                 icon={Package}
                 label="Nueva Carga"
-                desc="Registrar envío"
-                onClick={() => setLocation("/loads")}
+                desc="Cotizar y crear carga"
+                onClick={() => setLocation("/quotation")}
               />
               <QuickAction
                 icon={Plus}
