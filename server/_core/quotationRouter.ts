@@ -248,25 +248,30 @@ calculateQuotation: protectedProcedure
       verdict: profitability.verdict,
     });
 
-    return {
-      ...profitability,
-      totalPrice,
-      totalMiles,
-      loadedMiles,
-      emptyMiles,
-      quotationId,
-    };
-  }),
+          return {
+        ...profitability,
+        totalPrice,
+        totalMiles,
+        loadedMiles,
+        emptyMiles,
+        returnEmptyMiles,
+        quotationId,
+        pickupAddress: input.pickupAddress,
+        deliveryAddress: input.deliveryAddress,
+        weight: input.weight,
+      };
+    }),
 
   getQuotation: protectedProcedure
-    .input(z.object({ quotationId: z.number() }))
-    .query(async ({ input, ctx }) => {
-      const quotation = await getLoadQuotationById(input.quotationId);
-      if (!quotation || quotation.userId !== ctx.user.id) {
-        throw new Error("Cotización no encontrada");
-      }
-      return quotation;
+    .input(
+      z.object({
+        quotationId: z.number(),
+      })
+    )
+    .query(async ({ input }) => {
+      return await getLoadQuotationById(input.quotationId);
     }),
+});
 
   getMyQuotations: protectedProcedure
     .input(z.object({ limit: z.number().default(50) }))
