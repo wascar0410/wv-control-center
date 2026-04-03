@@ -7,7 +7,7 @@ import Finance from "./pages/Finance";
 import Transactions from "./pages/Transactions";
 import Partnership from "./pages/Partnership";
 import UserProfile from "./pages/UserProfile";
-import DriverViewProduction from "./pages/DriverViewProduction";
+import DriverView from "./pages/DriverView";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import Quotation from "./pages/Quotation";
 import QuotationHistory from "./pages/QuotationHistory";
@@ -46,7 +46,7 @@ export default function App() {
       <Route path="/transactions" component={withLayout(Transactions)} />
       <Route path="/partnership" component={withLayout(Partnership)} />
       <Route path="/profile" component={withLayout(UserProfile)} />
-      <Route path="/driver" component={DriverViewProduction} />
+      <Route path="/driver" component={withLayout(DriverView)} />
       <Route path="/executive-dashboard" component={withLayout(ExecutiveDashboard)} />
       <Route path="/quotation" component={Quotation} />
       <Route path="/quotation-history" component={withLayout(QuotationHistory)} />
