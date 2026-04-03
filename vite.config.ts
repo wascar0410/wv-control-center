@@ -174,6 +174,7 @@ export default defineConfig({
   envDir: path.resolve(import.meta.dirname),
   define: {
     "process.env.VITE_HMR_DISABLED": "true",
+    "import.meta.env.VITE_GOOGLE_MAPS_API_KEY": JSON.stringify(process.env.VITE_GOOGLE_MAPS_API_KEY || ""),
   },
 
   root: path.resolve(import.meta.dirname, "client"),
