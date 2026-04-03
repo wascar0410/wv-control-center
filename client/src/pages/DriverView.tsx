@@ -104,6 +104,7 @@ export default function DriverView() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
   const { data: loads, isLoading } = trpc.driver.myLoads.useQuery();
 
   const fuelMutation = trpc.driver.logFuel.useMutation({
@@ -129,9 +130,13 @@ export default function DriverView() {
   });
 
   const statusMutation = trpc.driver.updateLoadStatus.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
       await utils.driver.myLoads.refetch();
       toast.success("Estado actualizado");
+      // Navigate to driver dashboard when load is started
+      if ((variables as any).status === "in_transit") {
+        setLocation("/driver-dashboard");
+      }
     },
     onError: (e) => toast.error(e.message),
   });
@@ -203,10 +208,7 @@ export default function DriverView() {
     } else if (actionType === "reject" && reason) {
       await rejectLoadMutation.mutateAsync({ loadId: selectedLoad.id, reason });
     }
-  };
-
-  const [, setLocation] = useLocation();
-
+   };
   if (!loads) return null;
 
   const activeAssignedLoads = loads.filter((l: any) => l.assignmentId && ["available", "in_transit"].includes(l.status));

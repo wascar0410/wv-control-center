@@ -107,7 +107,7 @@ async function calculateRouteWithGoogle(request: RouteRequest): Promise<RouteRes
       extraComputations: ["TOLLS"],
       routeModifiers: {
         vehicleInfo: { emissionType: "GASOLINE" },
-        tollPasses: ["US_NJ_EZPASS", "US_PA_EZPASS", "US_NY_EZPASS", "US_MA_EZPASS", "US_CT_EZPASS", "US_DE_EZPASS"],
+        tollPasses: ["US_NJ_EZPASS_PLUS", "US_PA_EZPASS", "US_NY_EZPASS", "US_MA_EZPASS_PLUS", "US_CT_FASTLANE", "US_DE_EZPASS"],
       },
     };
 
