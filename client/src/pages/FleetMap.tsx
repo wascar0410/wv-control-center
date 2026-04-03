@@ -4,6 +4,7 @@
  * Fleet type color coding: blue=internal, purple=leased, orange=external.
  * Real-time driver markers with load info popups.
  * NOTE: Uses VITE_GOOGLE_MAPS_API_KEY directly (not Manus proxy) for Railway deployment.
+ * Build: v2 - forces Vite bundle rebuild with env var embedded.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
