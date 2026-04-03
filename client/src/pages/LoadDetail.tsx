@@ -1,13 +1,17 @@
 /**
  * LoadDetail.tsx — WV Control Center
- * Página de detalle de carga. Muestra información completa según el estatus de la carga.
- * Accesible desde: Dashboard (cargas recientes), Loads (lista), BrokerLoadsManagement.
+ * Página de detalle de carga con:
+ * - Cambio de estatus desde el detalle
+ * - Subida de POD (Proof of Delivery) para cargas in_transit
+ * - Información completa según el estatus
  * Ruta: /loads/:id
  */
+import { useRef, useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Package,
@@ -18,15 +22,17 @@ import {
   User,
   FileText,
   CheckCircle2,
-  Clock,
   AlertCircle,
   Receipt,
   CreditCard,
   Weight,
   Hash,
-  Phone,
-  ChevronRight,
   ExternalLink,
+  Upload,
+  ChevronRight,
+  RefreshCw,
+  Image as ImageIcon,
+  X,
 } from "lucide-react";
 
 // ─── Status configuration ────────────────────────────────────────────────────
@@ -46,7 +52,7 @@ const STATUS_CONFIG: Record<string, {
     border: "border-blue-500/30",
     icon: Package,
     description: "Esta carga está disponible y esperando asignación de conductor.",
-    nextStep: "Asignar conductor para iniciar el transporte.",
+    nextStep: "Iniciar el transporte marcando como 'En Tránsito'.",
   },
   in_transit: {
     label: "En Tránsito",
@@ -55,7 +61,7 @@ const STATUS_CONFIG: Record<string, {
     border: "border-amber-500/30",
     icon: Truck,
     description: "La carga está siendo transportada actualmente.",
-    nextStep: "Subir prueba de entrega (POD) al llegar al destino.",
+    nextStep: "Subir POD y marcar como 'Entregada' al llegar al destino.",
   },
   delivered: {
     label: "Entregada",
@@ -73,7 +79,7 @@ const STATUS_CONFIG: Record<string, {
     border: "border-purple-500/30",
     icon: Receipt,
     description: "La factura fue enviada al cliente y está pendiente de pago.",
-    nextStep: "Esperar confirmación de pago del cliente.",
+    nextStep: "Marcar como 'Pagada' cuando recibas el pago.",
   },
   paid: {
     label: "Pagada",
@@ -82,8 +88,25 @@ const STATUS_CONFIG: Record<string, {
     border: "border-emerald-500/30",
     icon: CreditCard,
     description: "El pago fue recibido. Carga completada.",
-    nextStep: "Registrar el ingreso en el módulo de finanzas.",
+    nextStep: "Carga cerrada. El ingreso fue registrado automáticamente.",
   },
+};
+
+// Status transitions — what status can follow the current one
+const STATUS_TRANSITIONS: Record<string, { label: string; value: string; icon: React.ElementType; color: string }[]> = {
+  available: [
+    { label: "Iniciar Transporte", value: "in_transit", icon: Truck, color: "text-amber-400" },
+  ],
+  in_transit: [
+    { label: "Marcar como Entregada", value: "delivered", icon: CheckCircle2, color: "text-green-400" },
+  ],
+  delivered: [
+    { label: "Marcar como Facturada", value: "invoiced", icon: Receipt, color: "text-purple-400" },
+  ],
+  invoiced: [
+    { label: "Registrar Pago Recibido", value: "paid", icon: CreditCard, color: "text-emerald-400" },
+  ],
+  paid: [],
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -106,6 +129,15 @@ function formatDateTime(date: string | Date | null | undefined) {
   return new Date(date).toLocaleString("en-US", {
     month: "short", day: "numeric", year: "numeric",
     hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
   });
 }
 
@@ -201,16 +233,145 @@ function StatusTimeline({ currentStatus }: { currentStatus: string }) {
   );
 }
 
+// ─── POD Upload Component ─────────────────────────────────────────────────────
+function PODUpload({ loadId, onSuccess }: { loadId: number; onSuccess: () => void }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const uploadBOLMutation = trpc.loads.uploadBOL.useMutation();
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("El archivo es demasiado grande (máx. 10MB)");
+      return;
+    }
+    setSelectedFile(file);
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    try {
+      const base64 = await fileToBase64(selectedFile);
+      await uploadBOLMutation.mutateAsync({
+        loadId,
+        fileBase64: base64,
+        fileName: selectedFile.name,
+        mimeType: selectedFile.type,
+      });
+      toast.success("POD subido exitosamente");
+      setPreview(null);
+      setSelectedFile(null);
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al subir el POD");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleClear = () => {
+    setPreview(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <div className="space-y-3">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
+      {!preview ? (
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all p-6 cursor-pointer"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted/50">
+            <Upload className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-medium text-foreground">Seleccionar archivo POD</p>
+            <p className="text-xs text-muted-foreground mt-0.5">JPG, PNG, WebP o PDF · Máx. 10MB</p>
+          </div>
+        </button>
+      ) : (
+        <div className="rounded-xl border border-border overflow-hidden">
+          {selectedFile?.type.startsWith("image/") ? (
+            <img src={preview} alt="POD preview" className="w-full max-h-48 object-cover" />
+          ) : (
+            <div className="flex items-center gap-3 p-4 bg-muted/30">
+              <FileText className="h-8 w-8 text-primary" />
+              <div>
+                <p className="text-sm font-medium text-foreground">{selectedFile?.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedFile ? (selectedFile.size / 1024).toFixed(0) + " KB" : ""}
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="flex gap-2 p-3 bg-card border-t border-border">
+            <Button
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={handleUpload}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <><RefreshCw className="h-3.5 w-3.5 animate-spin" /> Subiendo...</>
+              ) : (
+                <><Upload className="h-3.5 w-3.5" /> Subir POD</>
+              )}
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleClear} disabled={uploading}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function LoadDetail() {
   const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
+  const [changingStatus, setChangingStatus] = useState(false);
   const loadId = Number(params.id);
 
-  const { data: load, isLoading, error } = trpc.loads.byId.useQuery(
+  const { data: load, isLoading, error, refetch } = trpc.loads.byId.useQuery(
     { id: loadId },
     { enabled: !isNaN(loadId), retry: false }
   );
+
+  const updateStatusMutation = trpc.loads.updateStatus.useMutation();
+
+  const handleStatusChange = async (newStatus: string) => {
+    setChangingStatus(true);
+    try {
+      await updateStatusMutation.mutateAsync({
+        id: loadId,
+        status: newStatus as any,
+      });
+      toast.success(`Estado actualizado a "${STATUS_CONFIG[newStatus]?.label}"`);
+      await refetch();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al cambiar el estatus");
+    } finally {
+      setChangingStatus(false);
+    }
+  };
 
   // ── Loading state ──────────────────────────────────────────────────────────
   if (isLoading) {
@@ -254,6 +415,7 @@ export default function LoadDetail() {
 
   const statusCfg = STATUS_CONFIG[load.status] ?? STATUS_CONFIG.available;
   const StatusIcon = statusCfg.icon;
+  const transitions = STATUS_TRANSITIONS[load.status] ?? [];
 
   const price = Number(load.price ?? 0);
   const fuel = Number(load.estimatedFuel ?? 0);
@@ -265,7 +427,7 @@ export default function LoadDetail() {
     <div className="space-y-5 max-w-4xl mx-auto">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/loads")} className="shrink-0">
             <ArrowLeft className="h-4 w-4 mr-1" /> Volver
@@ -283,6 +445,29 @@ export default function LoadDetail() {
             </p>
           </div>
         </div>
+
+        {/* ── Status Change Buttons ── */}
+        {transitions.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {transitions.map((t) => (
+              <Button
+                key={t.value}
+                size="sm"
+                variant="outline"
+                disabled={changingStatus}
+                onClick={() => handleStatusChange(t.value)}
+                className={`gap-1.5 border ${STATUS_CONFIG[t.value]?.border} ${STATUS_CONFIG[t.value]?.color} hover:${STATUS_CONFIG[t.value]?.bg}`}
+              >
+                {changingStatus ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <t.icon className="h-3.5 w-3.5" />
+                )}
+                {t.label}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Status Timeline ── */}
@@ -299,6 +484,44 @@ export default function LoadDetail() {
           </div>
         </div>
       </Card>
+
+      {/* ── POD Upload (only for in_transit) ── */}
+      {load.status === "in_transit" && (
+        <Card className="p-5 bg-amber-500/5 border-amber-500/20">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/15">
+              <ImageIcon className="h-4 w-4 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Proof of Delivery (POD)</h3>
+              <p className="text-xs text-muted-foreground">Sube la foto o PDF del recibo de entrega</p>
+            </div>
+          </div>
+
+          {load.bolImageUrl ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
+                <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-green-400">POD subido</p>
+                  <a
+                    href={load.bolImageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
+                  >
+                    <ExternalLink className="h-3 w-3" /> Ver documento
+                  </a>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Puedes reemplazar el POD subiendo uno nuevo:</p>
+              <PODUpload loadId={loadId} onSuccess={() => refetch()} />
+            </div>
+          ) : (
+            <PODUpload loadId={loadId} onSuccess={() => refetch()} />
+          )}
+        </Card>
+      )}
 
       {/* ── Main Grid ── */}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -379,7 +602,7 @@ export default function LoadDetail() {
           <InfoRow icon={Package} label="Tipo de mercancía" value={load.merchandiseType} />
           <InfoRow icon={Weight} label="Peso" value={`${Number(load.weight ?? 0).toLocaleString()} ${load.weightUnit ?? "lbs"}`} />
           <InfoRow icon={Hash} label="ID de carga" value={`#${load.id}`} mono />
-          {load.bolImageUrl && (
+          {load.bolImageUrl && load.status !== "in_transit" && (
             <div className="pt-2">
               <a
                 href={load.bolImageUrl}
@@ -388,7 +611,7 @@ export default function LoadDetail() {
                 className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
               >
                 <FileText className="h-3 w-3" />
-                Ver Bill of Lading (BOL)
+                Ver documento (BOL/POD)
               </a>
             </div>
           )}
@@ -402,7 +625,7 @@ export default function LoadDetail() {
             value={load.assignedDriverId ? `Driver ID #${load.assignedDriverId}` : "Sin asignar"}
           />
           <InfoRow
-            icon={Clock}
+            icon={Calendar}
             label="Fecha de pickup"
             value={formatDate(load.pickupDate)}
           />
@@ -442,12 +665,18 @@ export default function LoadDetail() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-green-400 mb-1">Carga Entregada — Acción Requerida</p>
               <p className="text-xs text-muted-foreground mb-3">
-                La carga fue entregada. El siguiente paso es generar y enviar la factura al cliente.
+                La carga fue entregada. El siguiente paso es generar y enviar la factura al cliente, luego marcarla como "Facturada".
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" className="text-xs gap-1.5 border-green-500/30 text-green-400 hover:bg-green-500/10"
                   onClick={() => setLocation("/accounting-finance")}>
                   <Receipt className="h-3.5 w-3.5" /> Ir a Facturación
+                </Button>
+                <Button size="sm" variant="outline" className="text-xs gap-1.5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
+                  disabled={changingStatus}
+                  onClick={() => handleStatusChange("invoiced")}>
+                  {changingStatus ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Receipt className="h-3.5 w-3.5" />}
+                  Marcar como Facturada
                 </Button>
               </div>
             </div>
@@ -462,12 +691,18 @@ export default function LoadDetail() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-purple-400 mb-1">Factura Enviada — Pendiente de Pago</p>
               <p className="text-xs text-muted-foreground mb-3">
-                La factura fue enviada al cliente. Cuando recibas el pago, registra el ingreso en finanzas.
+                La factura fue enviada al cliente. Cuando recibas el pago, regístralo y marca la carga como pagada.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" className="text-xs gap-1.5 border-purple-500/30 text-purple-400 hover:bg-purple-500/10"
                   onClick={() => setLocation("/transactions")}>
                   <DollarSign className="h-3.5 w-3.5" /> Registrar Pago
+                </Button>
+                <Button size="sm" variant="outline" className="text-xs gap-1.5 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                  disabled={changingStatus}
+                  onClick={() => handleStatusChange("paid")}>
+                  {changingStatus ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <CreditCard className="h-3.5 w-3.5" />}
+                  Marcar como Pagada
                 </Button>
               </div>
             </div>
@@ -482,40 +717,8 @@ export default function LoadDetail() {
             <div className="flex-1">
               <p className="text-sm font-semibold text-emerald-400 mb-1">Carga Completada y Pagada</p>
               <p className="text-xs text-muted-foreground">
-                Esta carga está completamente cerrada. El ingreso de {formatCurrency(price)} fue recibido.
+                Esta carga está completamente cerrada. El ingreso de {formatCurrency(price)} fue registrado automáticamente en finanzas.
               </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {load.status === "in_transit" && (
-        <Card className="p-5 bg-amber-500/5 border-amber-500/20">
-          <div className="flex items-start gap-3">
-            <Truck className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-amber-400 mb-1">Carga en Tránsito</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                El conductor está en camino. Al llegar al destino, sube la prueba de entrega (POD).
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {load.status === "available" && (
-        <Card className="p-5 bg-blue-500/5 border-blue-500/20">
-          <div className="flex items-start gap-3">
-            <Package className="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-blue-400 mb-1">Carga Disponible — Sin Asignar</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                Esta carga está lista para ser asignada a un conductor.
-              </p>
-              <Button size="sm" variant="outline" className="text-xs gap-1.5 border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
-                onClick={() => setLocation("/loads")}>
-                <User className="h-3.5 w-3.5" /> Asignar Conductor
-              </Button>
             </div>
           </div>
         </Card>
