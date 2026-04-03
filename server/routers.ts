@@ -291,6 +291,7 @@ const loadsRouter = router({
       notes: z.string().optional(),
       pickupDate: z.string().optional(),
       deliveryDate: z.string().optional(),
+      rateConfirmationNumber: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const id = await createLoad({
@@ -307,6 +308,20 @@ const loadsRouter = router({
         deliveryDate: input.deliveryDate ? new Date(input.deliveryDate) : undefined,
         createdBy: ctx.user.id,
       });
+
+      // Notify driver via WebSocket if assigned at creation
+      if (input.assignedDriverId) {
+        wsManager.sendToUser(input.assignedDriverId, {
+          type: "load_assigned",
+          loadId: id,
+          message: `Nueva carga asignada: ${input.clientName} — ${input.pickupAddress} → ${input.deliveryAddress}`,
+        });
+        await notifyOwner({
+          title: "🚚 Carga Creada y Asignada",
+          content: `Carga #${id} de ${input.clientName} creada y asignada al conductor ID ${input.assignedDriverId}.`,
+        });
+      }
+
       return { id };
     }),
   update: protectedProcedure

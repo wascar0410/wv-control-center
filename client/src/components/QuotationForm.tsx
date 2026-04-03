@@ -47,6 +47,7 @@ export interface QuotationFormData {
   deliveryDate?: string;
   assignedDriverId?: number;
   notes?: string;
+  rateConfirmationNumber?: string;
 }
 
 export default function QuotationForm({
@@ -77,6 +78,7 @@ export default function QuotationForm({
     deliveryDate: "",
     assignedDriverId: undefined,
     notes: "",
+    rateConfirmationNumber: "",
   });
 
   const { data: drivers } = trpc.assignment.drivers.useQuery();
@@ -157,6 +159,7 @@ export default function QuotationForm({
       pickupDate: formData.pickupDate || undefined,
       deliveryDate: formData.deliveryDate || undefined,
       notes: formData.notes || undefined,
+      rateConfirmationNumber: formData.rateConfirmationNumber || undefined,
     };
 
     onSubmit(payload);
@@ -205,6 +208,16 @@ export default function QuotationForm({
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="rateConfirmationNumber">Rate Confirmation # (opcional)</Label>
+              <Input
+                id="rateConfirmationNumber"
+                placeholder="Ej: RC-2024-00123"
+                value={formData.rateConfirmationNumber ?? ""}
+                onChange={(e) => handleInputChange("rateConfirmationNumber", e.target.value)}
+                className="mt-1"
+              />
+            </div>
             <div>
               <Label htmlFor="assignedDriverId">Asignar Conductor (opcional)</Label>
               <select

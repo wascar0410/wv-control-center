@@ -133,6 +133,7 @@ export const loads = mysqlTable("loads", {
   // Notes
   notes: text("notes"),
   bolImageUrl: text("bolImageUrl"),
+  rateConfirmationNumber: varchar("rateConfirmationNumber", { length: 100 }),
   // Timestamps
   pickupDate: timestamp("pickupDate"),
   deliveryDate: timestamp("deliveryDate"),

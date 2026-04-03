@@ -781,6 +781,21 @@ export default function LoadDetail() {
         </SectionCard>
       </div>
 
+      {/* Rate Confirmation Number */}
+      {(load as any).rateConfirmationNumber && (
+        <Card className="p-5 bg-card border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+              <FileText className="h-4 w-4 text-blue-400" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">Rate Confirmation #</h3>
+          </div>
+          <p className="text-sm font-mono font-semibold text-blue-400 bg-blue-500/5 border border-blue-500/20 rounded-lg px-4 py-2 inline-block">
+            {(load as any).rateConfirmationNumber}
+          </p>
+        </Card>
+      )}
+
       {/* Notes */}
       {load.notes && (
         <Card className="p-5 bg-card border-border">

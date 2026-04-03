@@ -183,6 +183,7 @@ export default function Quotation() {
         notes: formDataForLoad.notes || undefined,
         pickupDate: formDataForLoad.pickupDate || undefined,
         deliveryDate: formDataForLoad.deliveryDate || undefined,
+        rateConfirmationNumber: formDataForLoad.rateConfirmationNumber || undefined,
       });
     } catch {
       // error handled in mutation
