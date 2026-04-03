@@ -29,6 +29,7 @@ import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
 import { notifyOwner } from "./_core/notification";
+import { wsManager } from "./_core/websocket";
 import { storagePut } from "./storage";
 import { aiRouter } from "./_core/aiRouter";
 import {
@@ -818,9 +819,31 @@ const driverRouter = router({
         if (load) {
           await notifyOwner({
             title: "✅ Carga Entregada",
-            content: `La carga #${load.id} de ${load.clientName} ha sido entregada. Dirección: ${load.deliveryAddress}`,
+            content: `La carga #${load.id} de ${load.clientName} (${load.pickupAddress} → ${load.deliveryAddress}) ha sido entregada exitosamente.`,
           });
         }
+      }
+      // Notify assigned driver via WebSocket when status changes
+      const updatedLoad = await getLoadById(input.id);
+      if (updatedLoad?.assignedDriverId) {
+        const statusLabels: Record<string, string> = {
+          available: "Disponible",
+          in_transit: "En Tránsito",
+          delivered: "Entregada",
+          invoiced: "Facturada",
+          paid: "Pagada",
+        };
+        wsManager.notifyUser(updatedLoad.assignedDriverId, {
+          type: "loadUpdated",
+          data: {
+            loadId: updatedLoad.id,
+            clientName: updatedLoad.clientName,
+            status: input.status,
+            statusLabel: statusLabels[input.status] ?? input.status,
+            pickupAddress: updatedLoad.pickupAddress,
+            deliveryAddress: updatedLoad.deliveryAddress,
+          },
+        });
       }
       return { success: true };
     }),

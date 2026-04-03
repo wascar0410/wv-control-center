@@ -33,6 +33,8 @@ import {
   RefreshCw,
   Image as ImageIcon,
   X,
+  Clock,
+  Activity,
 } from "lucide-react";
 
 // ─── Status configuration ────────────────────────────────────────────────────
@@ -340,6 +342,143 @@ function PODUpload({ loadId, onSuccess }: { loadId: number; onSuccess: () => voi
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Status History Timeline ─────────────────────────────────────────────────
+function buildStatusHistory(load: any): { status: string; label: string; timestamp: Date | null; actor: string; note: string }[] {
+  const history: { status: string; label: string; timestamp: Date | null; actor: string; note: string }[] = [];
+
+  // Created / Available
+  history.push({
+    status: "available",
+    label: "Carga Creada",
+    timestamp: load.createdAt ? new Date(load.createdAt) : null,
+    actor: "Sistema",
+    note: "Carga registrada en el sistema y disponible para asignación.",
+  });
+
+  // Driver accepted → in_transit
+  if (load.driverAcceptedAt) {
+    history.push({
+      status: "in_transit",
+      label: "En Tránsito",
+      timestamp: new Date(load.driverAcceptedAt),
+      actor: load.assignedDriverId ? `Conductor #${load.assignedDriverId}` : "Conductor",
+      note: "Conductor aceptó la carga e inició el transporte.",
+    });
+  }
+
+  // Driver rejected
+  if (load.driverRejectedAt) {
+    history.push({
+      status: "rejected",
+      label: "Rechazada por Conductor",
+      timestamp: new Date(load.driverRejectedAt),
+      actor: load.assignedDriverId ? `Conductor #${load.assignedDriverId}` : "Conductor",
+      note: load.driverRejectionReason ? `Razón: ${load.driverRejectionReason}` : "El conductor rechazó la carga.",
+    });
+  }
+
+  // Current status if advanced beyond available/in_transit
+  const STATUS_ORDER = ["available", "in_transit", "delivered", "invoiced", "paid"];
+  const currentIdx = STATUS_ORDER.indexOf(load.status);
+  if (currentIdx >= 2) {
+    // delivered, invoiced, paid — use updatedAt as best timestamp
+    const statusLabels: Record<string, string> = {
+      delivered: "Entregada",
+      invoiced: "Facturada",
+      paid: "Pagada",
+    };
+    const statusNotes: Record<string, string> = {
+      delivered: "La carga fue entregada exitosamente en el destino.",
+      invoiced: "Factura enviada al cliente, pendiente de pago.",
+      paid: "Pago recibido. Carga completada y cerrada.",
+    };
+    // Add intermediate statuses if we're past them
+    for (let i = 2; i <= currentIdx; i++) {
+      const s = STATUS_ORDER[i];
+      history.push({
+        status: s,
+        label: statusLabels[s] ?? s,
+        timestamp: i === currentIdx ? (load.updatedAt ? new Date(load.updatedAt) : null) : null,
+        actor: "Operaciones",
+        note: statusNotes[s] ?? "",
+      });
+    }
+  }
+
+  return history;
+}
+
+function StatusHistoryCard({ load }: { load: any }) {
+  const history = buildStatusHistory(load);
+  return (
+    <Card className="p-5 bg-card border-border">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+          <Activity className="h-4 w-4 text-primary" />
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">Historial de Estatus</h3>
+      </div>
+      <div className="relative">
+        {/* Vertical line */}
+        <div className="absolute left-3.5 top-0 bottom-0 w-px bg-border" />
+        <div className="space-y-4">
+          {history.map((event, idx) => {
+            const cfg = STATUS_CONFIG[event.status];
+            const isLast = idx === history.length - 1;
+            const isCurrent = event.status === load.status && isLast;
+            return (
+              <div key={idx} className="flex gap-3 relative">
+                {/* Dot */}
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 z-10 ${
+                  isCurrent
+                    ? `${cfg?.bg ?? "bg-primary/10"} ${cfg?.border ?? "border-primary"}`
+                    : event.status === "rejected"
+                    ? "bg-red-500/10 border-red-500/30"
+                    : "bg-muted/50 border-border"
+                }`}>
+                  {event.status === "rejected"
+                    ? <X className="h-3 w-3 text-red-400" />
+                    : isCurrent
+                    ? <cfg.icon className={`h-3 w-3 ${cfg.color}`} />
+                    : <CheckCircle2 className="h-3 w-3 text-muted-foreground" />
+                  }
+                </div>
+                {/* Content */}
+                <div className="flex-1 pb-1">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
+                    <div>
+                      <p className={`text-xs font-semibold ${
+                        isCurrent ? (cfg?.color ?? "text-foreground") : event.status === "rejected" ? "text-red-400" : "text-foreground"
+                      }`}>{event.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{event.note}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {event.timestamp ? (
+                        <>
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
+                            <Clock className="h-2.5 w-2.5" />
+                            {event.timestamp.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {event.timestamp.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-[10px] text-muted-foreground italic">Fecha no registrada</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground/60 mt-0.5">{event.actor}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -723,6 +862,9 @@ export default function LoadDetail() {
           </div>
         </Card>
       )}
+
+      {/* ── Status History ── */}
+      <StatusHistoryCard load={load} />
 
     </div>
   );
