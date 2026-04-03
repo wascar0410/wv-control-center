@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, inArray, and, desc, sql } from "drizzle-orm";
 import * as bcrypt from "bcryptjs";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -27,7 +27,7 @@ import { chatRouter } from "./_core/chatRouter";
 import { analyticsRouter } from "./_core/analyticsRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { users as usersTable } from "../drizzle/schema";
+import { users as usersTable, loads as loadsTable } from "../drizzle/schema";
 import { notifyOwner } from "./_core/notification";
 import { wsManager } from "./_core/websocket";
 import { storagePut } from "./storage";
@@ -1436,6 +1436,167 @@ const adminRouter = router({
         },
         message: `Chofer ${input.name} creado exitosamente`,
       };
+    }),
+
+  // Update driver fleet classification and commission
+  updateDriverFleet: protectedProcedure
+    .input(z.object({
+      driverId: z.number(),
+      fleetType: z.enum(["internal", "leased", "external"]).optional(),
+      commissionPercent: z.number().min(0).max(100).optional(),
+      dotNumber: z.string().optional(),
+      vehicleInfo: z.string().optional(),
+      locationSharingEnabled: z.boolean().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para actualizar choferes");
+      }
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      const { driverId, ...updateData } = input;
+      const updatePayload: Record<string, any> = {};
+      if (updateData.fleetType !== undefined) updatePayload.fleetType = updateData.fleetType;
+      if (updateData.commissionPercent !== undefined) updatePayload.commissionPercent = String(updateData.commissionPercent);
+      if (updateData.dotNumber !== undefined) updatePayload.dotNumber = updateData.dotNumber;
+      if (updateData.vehicleInfo !== undefined) updatePayload.vehicleInfo = updateData.vehicleInfo;
+      if (updateData.locationSharingEnabled !== undefined) updatePayload.locationSharingEnabled = updateData.locationSharingEnabled;
+      await db.update(usersTable).set(updatePayload).where(eq(usersTable.id, driverId));
+      return { success: true };
+    }),
+
+  // Get all drivers with fleet info
+  getDrivers: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+        throw new Error("No tienes permiso para ver los choferes");
+      }
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      const drivers = await db.select().from(usersTable)
+        .where(inArray(usersTable.role, ["driver", "owner"]))
+        .orderBy(usersTable.name);
+      return drivers;
+    }),
+
+  // Get driver wallet/settlement data
+  getDriverWallet: protectedProcedure
+    .input(z.object({
+      driverId: z.number().optional(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+      const targetDriverId = input.driverId ?? ctx.user.id;
+      if (!isPrivileged && targetDriverId !== ctx.user.id) {
+        throw new Error("No tienes permiso para ver esta billetera");
+      }
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      const driver = await db.select().from(usersTable).where(eq(usersTable.id, targetDriverId)).limit(1).then(r => r[0]);
+      if (!driver) throw new Error("Chofer no encontrado");
+      const deliveredLoads = await db.select().from(loadsTable)
+        .where(and(
+          eq(loadsTable.assignedDriverId, targetDriverId),
+          inArray(loadsTable.status, ["delivered", "invoiced", "paid"])
+        ))
+        .orderBy(desc(loadsTable.updatedAt))
+        .limit(50);
+      const commissionRate = Number(driver.commissionPercent ?? 0) / 100;
+      const settlements = deliveredLoads.map(load => {
+        const gross = Number(load.price);
+        const tolls = Number(load.estimatedTolls ?? 0);
+        const fuel = Number(load.estimatedFuel ?? 0);
+        const commission = gross * commissionRate;
+        const net = gross - commission - tolls - fuel;
+        const bolUploaded = !!load.bolImageUrl;
+        return {
+          loadId: load.id,
+          clientName: load.clientName,
+          pickupAddress: load.pickupAddress,
+          deliveryAddress: load.deliveryAddress,
+          status: load.status,
+          deliveryDate: load.deliveryDate ?? load.updatedAt,
+          grossAmount: gross,
+          commissionAmount: commission,
+          commissionPercent: Number(driver.commissionPercent ?? 0),
+          tollDeduction: tolls,
+          fuelDeduction: fuel,
+          netPayable: net,
+          bolUploaded,
+          paymentBlocked: !bolUploaded,
+          blockReason: !bolUploaded ? "BOL no subido — pago bloqueado" : null,
+        };
+      });
+      const totalGross = settlements.reduce((s, l) => s + l.grossAmount, 0);
+      const totalCommission = settlements.reduce((s, l) => s + l.commissionAmount, 0);
+      const totalTolls = settlements.reduce((s, l) => s + l.tollDeduction, 0);
+      const totalFuel = settlements.reduce((s, l) => s + l.fuelDeduction, 0);
+      const totalNet = settlements.reduce((s, l) => s + l.netPayable, 0);
+      const blockedCount = settlements.filter(l => l.paymentBlocked).length;
+      const readyCount = settlements.filter(l => !l.paymentBlocked).length;
+      return {
+        driver: {
+          id: driver.id,
+          name: driver.name,
+          fleetType: (driver as any).fleetType ?? "internal",
+          commissionPercent: Number((driver as any).commissionPercent ?? 0),
+        },
+        settlements,
+        summary: {
+          totalGross,
+          totalCommission,
+          totalTolls,
+          totalFuel,
+          totalNet,
+          blockedCount,
+          readyCount,
+          totalLoads: settlements.length,
+        },
+      };
+    }),
+
+  // Get all active driver locations for GPS multi-track map
+  getFleetLocations: protectedProcedure
+    .query(async ({ ctx }) => {
+      const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+      if (!isPrivileged) throw new Error("No tienes permiso para ver el mapa de flota");
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      try {
+        const locations = await db.execute(sql`
+          SELECT dl.driverId, dl.latitude, dl.longitude, dl.speed, dl.heading, dl.timestamp,
+                 u.name as driverName, u.fleetType, u.profileImageUrl,
+                 l.clientName as loadClientName, l.deliveryAddress as loadDestination, l.status as loadStatus
+          FROM driver_locations dl
+          INNER JOIN (
+            SELECT driverId, MAX(timestamp) as maxTs
+            FROM driver_locations
+            WHERE timestamp > DATE_SUB(NOW(), INTERVAL 2 HOUR)
+            GROUP BY driverId
+          ) latest ON dl.driverId = latest.driverId AND dl.timestamp = latest.maxTs
+          LEFT JOIN users u ON dl.driverId = u.id
+          LEFT JOIN loads l ON dl.loadId = l.id
+          ORDER BY dl.timestamp DESC
+        `);
+        return (locations[0] as any[]).map((row: any) => ({
+          driverId: row.driverId,
+          driverName: row.driverName,
+          fleetType: row.fleetType ?? "internal",
+          profileImageUrl: row.profileImageUrl,
+          latitude: Number(row.latitude),
+          longitude: Number(row.longitude),
+          speed: row.speed ? Number(row.speed) : null,
+          heading: row.heading ? Number(row.heading) : null,
+          timestamp: row.timestamp,
+          activeLoad: row.loadClientName ? {
+            clientName: row.loadClientName,
+            destination: row.loadDestination,
+            status: row.loadStatus,
+          } : null,
+        }));
+      } catch {
+        return [];
+      }
     }),
 });
 

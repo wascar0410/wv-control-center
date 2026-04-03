@@ -26,6 +26,9 @@ import LoadDetail from "./pages/LoadDetail";
 import NewLoad from "./pages/NewLoad";
 import DriverDashboard from "./pages/DriverDashboard";
 import DriverLoadDetail from "./pages/DriverLoadDetail";
+import DriverWallet from "./pages/DriverWallet";
+import FleetMap from "./pages/FleetMap";
+import FleetManagement from "./pages/FleetManagement";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -51,6 +54,9 @@ export default function App() {
       {/* Driver-specific routes */}
       <Route path="/driver/loads/:id" component={withLayout(DriverLoadDetail)} />
       <Route path="/driver-dashboard" component={withLayout(DriverDashboard)} />
+      <Route path="/driver-wallet" component={withLayout(DriverWallet)} />
+      <Route path="/fleet-map" component={withLayout(FleetMap)} />
+      <Route path="/fleet-management" component={withLayout(FleetManagement)} />
       <Route path="/driver" component={withLayout(DriverView)} />
       <Route path="/executive-dashboard" component={withLayout(ExecutiveDashboard)} />
       <Route path="/quotation" component={Quotation} />

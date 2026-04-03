@@ -218,6 +218,13 @@
       "when": 1775280000000,
       "tag": "0030_load_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1743724800000,
+      "tag": "0031_driver_fleet_fields",
+      "breakpoints": true
     }
   ]
 }

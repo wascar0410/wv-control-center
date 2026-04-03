@@ -43,6 +43,9 @@ import {
   UserPlus,
   Activity,
   FileText,
+  Wallet,
+  Navigation,
+  Shield,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -66,6 +69,9 @@ const adminMenuItems = [
   { icon: LayoutDashboard, label: "Mi Dashboard (Chofer)", path: "/driver-dashboard", description: "Dashboard personal de conductor" },
   { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },
+  { icon: Wallet, label: "Billetera Conductores", path: "/driver-wallet", description: "Liquidación y pagos" },
+  { icon: Navigation, label: "GPS Multi-Track", path: "/fleet-map", description: "Mapa en tiempo real de la flota" },
+  { icon: Shield, label: "Gestión de Flota", path: "/fleet-management", description: "Clasificación y comisiones" },
   { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
   { icon: BarChart3, label: "Business Plan", path: "/business-plan", description: "Plan de negocios ejecutivo" },
@@ -77,6 +83,7 @@ const driverMenuItems = [
   { icon: LayoutDashboard, label: "Mi Dashboard", path: "/driver-dashboard", description: "Mis estadísticas personales" },
   { icon: Truck, label: "Mis Cargas", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Mi Desempeño", path: "/driver-performance", description: "Historial y tendencias" },
+  { icon: Wallet, label: "Mi Billetera", path: "/driver-wallet", description: "Mis pagos y liquidaciones" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
 ];

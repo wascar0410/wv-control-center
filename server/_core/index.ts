@@ -280,6 +280,47 @@ async function startServer() {
       `);
       console.log("[Startup] Applied: load_evidence table ready");
 
+      // Migration 0031: Driver fleet classification fields on users
+      const [fleetTypeCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'fleetType'
+      `) as any;
+      if (fleetTypeCols.length === 0) {
+        await conn.execute("ALTER TABLE `users` ADD `fleetType` ENUM('internal','leased','external') DEFAULT 'internal'");
+        await conn.execute("ALTER TABLE `users` ADD `commissionPercent` DECIMAL(5,2) DEFAULT 0.00");
+        await conn.execute("ALTER TABLE `users` ADD `dotNumber` VARCHAR(20) NULL");
+        await conn.execute("ALTER TABLE `users` ADD `vehicleInfo` TEXT NULL");
+        await conn.execute("ALTER TABLE `users` ADD `licenseUrl` TEXT NULL");
+        await conn.execute("ALTER TABLE `users` ADD `insuranceUrl` TEXT NULL");
+        await conn.execute("ALTER TABLE `users` ADD `leaseContractUrl` TEXT NULL");
+        await conn.execute("ALTER TABLE `users` ADD `locationSharingEnabled` TINYINT(1) DEFAULT 0");
+        console.log("[Startup] Applied: driver fleet classification fields added to users");
+      } else {
+        console.log("[Startup] OK: driver fleet fields already exist");
+      }
+
+      // Migration 0032: Driver settlement fields on driver_payments
+      const [settlementCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'driver_payments' AND COLUMN_NAME = 'settlementWeek'
+      `) as any;
+      if (settlementCols.length === 0) {
+        await conn.execute("ALTER TABLE `driver_payments` ADD `settlementWeek` VARCHAR(10) NULL");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `grossAmount` DECIMAL(12,2) NULL");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `commissionAmount` DECIMAL(12,2) NULL");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `tollDeduction` DECIMAL(12,2) DEFAULT 0.00");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `fuelDeduction` DECIMAL(12,2) DEFAULT 0.00");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `advanceDeduction` DECIMAL(12,2) DEFAULT 0.00");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `netPayable` DECIMAL(12,2) NULL");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `bolVerified` TINYINT(1) DEFAULT 0");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `podVerified` TINYINT(1) DEFAULT 0");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `paymentBlocked` TINYINT(1) DEFAULT 0");
+        await conn.execute("ALTER TABLE `driver_payments` ADD `blockReason` TEXT NULL");
+        console.log("[Startup] Applied: driver settlement fields added to driver_payments");
+      } else {
+        console.log("[Startup] OK: driver settlement fields already exist");
+      }
+
       await conn.end();
     } catch (err) {
       console.warn("[Startup] Safe migration warning (non-fatal):", (err as Error).message);

@@ -31,6 +31,15 @@ export const users = mysqlTable("users", {
   // Profile info
   profileImageUrl: text("profileImageUrl"),
   bio: text("bio"),
+  // Fleet classification (for drivers)
+  fleetType: mysqlEnum("fleetType", ["internal", "leased", "external"]).default("internal"),
+  commissionPercent: decimal("commissionPercent", { precision: 5, scale: 2 }).default("0.00"),
+  dotNumber: varchar("dotNumber", { length: 20 }),
+  vehicleInfo: text("vehicleInfo"),
+  licenseUrl: text("licenseUrl"),
+  insuranceUrl: text("insuranceUrl"),
+  leaseContractUrl: text("leaseContractUrl"),
+  locationSharingEnabled: boolean("locationSharingEnabled").default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
