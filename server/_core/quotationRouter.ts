@@ -39,12 +39,15 @@ export function calculateDistance(
   return R * c;
 }
 
+function roundTo2(v: number) { return Math.round(v * 100) / 100; }
+
 async function calculateProfitability(
   userId: number,
   totalPrice: number,
   totalMiles: number,
   loadedMiles: number,
-  weight: number
+  weight: number,
+  estimatedTollCost: number = 0
 ) {
   const config = await getBusinessConfig(userId);
 
@@ -75,7 +78,8 @@ async function calculateProfitability(
   const estimatedFuelCost = totalMiles * fuelCostPerMile;
   const estimatedOperatingCost =
     totalMiles * (operatingCostPerMile + fixedCostPerMile);
-  const totalOperatingCost = estimatedFuelCost + estimatedOperatingCost;
+  // Include real toll cost in total operating cost
+  const totalOperatingCost = estimatedFuelCost + estimatedOperatingCost + estimatedTollCost;
 
   const estimatedProfit = totalPrice - totalOperatingCost;
   const profitMarginPercent =
@@ -105,6 +109,7 @@ async function calculateProfitability(
     minimumRatePerMile,
     differenceVsMinimum: Math.round(differenceVsMinimum * 100) / 100,
     verdict,
+    estimatedTollCost: Math.round(estimatedTollCost * 100) / 100,
     distanceSurcharge: Math.round(Number(distanceSurcharge) * 100) / 100,
     weightSurcharge: Math.round(Number(weightSurcharge) * 100) / 100,
   };
@@ -158,6 +163,10 @@ export const quotationRouter = router({
       const loadedMiles = Number(routesData.loadedMiles ?? 0);
       const emptyMiles = Number(routesData.emptyMiles ?? 0);
       const returnEmptyMiles = Number(routesData.returnEmptyMiles ?? 0);
+      // Real toll cost from Google Routes API v2 TOLLS extraComputation
+      const estimatedTollCost = roundTo2(routesData.estimatedTollCost ?? 0);
+      const tollDataSource = routesData.tollDataSource ?? "none";
+      console.log(`[quotation] Toll cost: $${estimatedTollCost} (source: ${tollDataSource})`);
 
       const config = await getBusinessConfig(ctx.user.id);
       const fuelCostPerMile =
@@ -181,7 +190,8 @@ export const quotationRouter = router({
         totalPrice,
         totalMiles,
         loadedMiles,
-        input.weight
+        input.weight,
+        estimatedTollCost
       );
 
      const quotationInsert: any = await createLoadQuotation({
@@ -217,6 +227,7 @@ export const quotationRouter = router({
   estimatedOperatingCost: String(profitability.estimatedOperatingCost),
   estimatedProfit: String(profitability.estimatedProfit),
   profitMarginPercent: String(profitability.profitMarginPercent),
+  estimatedTolls: String(estimatedTollCost),
 
   status: "quoted",
 } as any);
@@ -269,6 +280,8 @@ export const quotationRouter = router({
         pickupAddress: input.pickupAddress,
         deliveryAddress: input.deliveryAddress,
         weight: input.weight,
+        estimatedTollCost,
+        tollDataSource,
       };
     }),
 

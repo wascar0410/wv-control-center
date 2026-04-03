@@ -22,6 +22,8 @@ interface QuotationResultsTableProps {
   differenceVsMinimum?: number;
   loadedMiles?: number;
   totalMiles?: number;
+  estimatedTollCost?: number;
+  tollDataSource?: "google" | "estimated" | "none";
 }
 
 export default function QuotationResultsTable({
@@ -36,6 +38,8 @@ export default function QuotationResultsTable({
   differenceVsMinimum = 0,
   loadedMiles = 0,
   totalMiles = 0,
+  estimatedTollCost = 0,
+  tollDataSource = "none" as "google" | "estimated" | "none",
 }: QuotationResultsTableProps) {
   const [manualVerdict, setManualVerdict] = useState<string | null>(null);
   const [verdictNotes, setVerdictNotes] = useState("");
@@ -115,6 +119,20 @@ export default function QuotationResultsTable({
                   <td className="text-right py-3 px-4 font-bold text-lg text-red-600">${estimatedOperatingCost.toFixed(2)}</td>
                   <td className="py-3 px-4 text-muted-foreground">Combustible + mantenimiento</td>
                 </tr>
+                {tollDataSource === "google" && (
+                  <tr className="border-b border-border hover:bg-muted/50">
+                    <td className="py-3 px-4 font-medium">
+                      Peajes / Tolls
+                      <span className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">Google Maps ✓</span>
+                    </td>
+                    <td className="text-right py-3 px-4 font-bold text-lg text-orange-600">
+                      {estimatedTollCost > 0 ? `$${estimatedTollCost.toFixed(2)}` : "$0.00"}
+                    </td>
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {estimatedTollCost > 0 ? "E-ZPass estimado (NJ/PA/NY)" : "Ruta sin peajes"}
+                    </td>
+                  </tr>
+                )}
                 <tr className="border-b border-border hover:bg-muted/50 bg-blue-50 dark:bg-blue-950">
                   <td className="py-3 px-4 font-bold">Ganancia Estimada</td>
                   <td className="text-right py-3 px-4 font-bold text-lg text-blue-600">

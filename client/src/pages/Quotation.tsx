@@ -34,6 +34,9 @@ interface QuotationResult {
   pickupAddress?: string;
   deliveryAddress?: string;
   weight?: number;
+  estimatedTollCost?: number;
+  tollDataSource?: "google" | "estimated" | "none";
+  totalOperatingCost?: number;
 }
 
 function VerdictBanner({ verdict, profit, margin }: { verdict: string; profit: number; margin: number }) {
@@ -178,7 +181,7 @@ export default function Quotation() {
         merchandiseType: formDataForLoad.merchandiseType,
         price: result.totalPrice,
         estimatedFuel: result.estimatedFuelCost,
-        estimatedTolls: 0,
+        estimatedTolls: (result as any).estimatedTollCost ?? 0,
         assignedDriverId: formDataForLoad.assignedDriverId || undefined,
         notes: formDataForLoad.notes || undefined,
         pickupDate: formDataForLoad.pickupDate || undefined,
@@ -333,7 +336,11 @@ export default function Quotation() {
             />
 
             {/* Results Table */}
-            <QuotationResultsTable {...result} />
+            <QuotationResultsTable
+              {...result}
+              estimatedTollCost={result.estimatedTollCost ?? 0}
+              tollDataSource={result.tollDataSource ?? "none"}
+            />
 
             {/* AI Pricing */}
             {aiResult && (

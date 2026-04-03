@@ -20,6 +20,8 @@ interface QuotationResultsProps {
   differenceVsMinimum?: number;
   verdict?: string;
   totalDurationHours?: number;
+  estimatedTollCost?: number;
+  tollDataSource?: "google" | "estimated" | "none";
 }
 
 export default function QuotationResults({
@@ -39,6 +41,8 @@ export default function QuotationResults({
   differenceVsMinimum,
   verdict = "ACEPTAR",
   totalDurationHours = 0,
+  estimatedTollCost = 0,
+  tollDataSource = "none" as "google" | "estimated" | "none",
 }: QuotationResultsProps) {
   const isRentable = profitMarginPercent >= 15;
   
@@ -63,9 +67,10 @@ export default function QuotationResults({
   const costBreakdown = [
     { name: "Combustible", value: estimatedFuelCost },
     { name: "Operativo", value: estimatedOperatingCost },
+    ...(estimatedTollCost > 0 ? [{ name: "Peajes", value: estimatedTollCost }] : []),
   ];
 
-  const COLORS = ["#ef4444", "#f97316"];
+  const COLORS = ["#ef4444", "#f97316", "#8b5cf6"];
 
   return (
     <div className="space-y-6">
@@ -127,6 +132,20 @@ export default function QuotationResults({
                   <td className="px-4 py-3 text-muted-foreground pl-8">Mantenimiento ($0.65/mi)</td>
                   <td className="px-4 py-3 text-right">-${estimatedOperatingCost.toFixed(2)}</td>
                 </tr>
+                {/* Peajes - shown when Google provides toll data */}
+                {tollDataSource === "google" && (
+                  <tr>
+                    <td className="px-4 py-3 text-muted-foreground pl-8">
+                      Peajes / Tolls
+                      <span className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">
+                        Google Maps ✓
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {estimatedTollCost > 0 ? `-$${estimatedTollCost.toFixed(2)}` : "$0.00 (sin peajes)"}
+                    </td>
+                  </tr>
+                )}
 
                 {/* Ganancia */}
                 <tr className="bg-green-50 dark:bg-green-950">
