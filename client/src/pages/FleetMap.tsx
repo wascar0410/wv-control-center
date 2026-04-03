@@ -3,12 +3,12 @@
  * Design: Dark operational map dashboard — full-screen Google Maps with overlay panels.
  * Fleet type color coding: blue=internal, purple=leased, orange=external.
  * Real-time driver markers with load info popups.
- * NOTE: Uses VITE_GOOGLE_MAPS_API_KEY directly (not Manus proxy) for Railway deployment.
- * Build: v3 - forces Vite bundle rebuild with VITE_GOOGLE_MAPS_API_KEY embedded.
+ * NOTE: Fetches Google Maps API key from /api/config endpoint at runtime to avoid
+ *       Railway build-time cache issues with VITE_ env variables.
+ * Build: v4 - runtime config fetch approach.
  */
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Truck,
@@ -43,28 +43,45 @@ function getTimeSince(ts: string | Date): string {
   return `Hace ${hrs}h`;
 }
 
-// Load Google Maps directly using VITE_GOOGLE_MAPS_API_KEY
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+// Fetch Google Maps API key from server config endpoint (avoids Vite build-time caching issues)
+async function fetchGoogleMapsKey(): Promise<string> {
+  // First try the server config endpoint
+  try {
+    const res = await fetch("/api/config");
+    if (res.ok) {
+      const data = await res.json();
+      if (data.googleMapsApiKey) return data.googleMapsApiKey;
+    }
+  } catch {
+    // fallback below
+  }
+  // Fallback to Vite env (works in local dev)
+  return import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+}
 
-function loadGoogleMapsScript(): Promise<void> {
-  return new Promise((resolve, reject) => {
+let googleMapsLoadPromise: Promise<void> | null = null;
+
+function loadGoogleMapsScript(apiKey: string): Promise<void> {
+  if (googleMapsLoadPromise) return googleMapsLoadPromise;
+  googleMapsLoadPromise = new Promise((resolve, reject) => {
     if ((window as any).google?.maps) { resolve(); return; }
     const existing = document.querySelector(`script[src*="maps.googleapis.com/maps/api/js"]`);
     if (existing) {
       existing.addEventListener("load", () => resolve(), { once: true });
       return;
     }
-    if (!GOOGLE_MAPS_KEY) {
-      reject(new Error("VITE_GOOGLE_MAPS_API_KEY not configured in Railway environment variables"));
+    if (!apiKey) {
+      reject(new Error("Google Maps API key not configured. Add GOOGLE_MAPS_API_KEY to Railway environment variables."));
       return;
     }
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&v=weekly&libraries=marker,places,geometry`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&v=weekly&libraries=marker,places,geometry`;
     script.async = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    script.onerror = () => reject(new Error("Failed to load Google Maps script. Check that the API key is valid and has Maps JavaScript API enabled."));
     document.head.appendChild(script);
   });
+  return googleMapsLoadPromise;
 }
 
 export default function FleetMap() {
@@ -89,11 +106,14 @@ export default function FleetMap() {
     return () => clearInterval(interval);
   }, [refetch]);
 
-  // Initialize map
+  // Initialize map — fetch API key at runtime then load Google Maps
   useEffect(() => {
     let cancelled = false;
-    loadGoogleMapsScript()
-      .then(() => {
+
+    (async () => {
+      try {
+        const apiKey = await fetchGoogleMapsKey();
+        await loadGoogleMapsScript(apiKey);
         if (cancelled || !mapContainerRef.current) return;
         const google = (window as any).google;
         const map = new google.maps.Map(mapContainerRef.current, {
@@ -114,10 +134,11 @@ export default function FleetMap() {
         infoWindowRef.current = new google.maps.InfoWindow();
         setMapInstance(map);
         setMapReady(true);
-      })
-      .catch((err) => {
+      } catch (err: any) {
         if (!cancelled) setMapError(err.message);
-      });
+      }
+    })();
+
     return () => { cancelled = true; };
   }, []);
 
@@ -277,7 +298,7 @@ export default function FleetMap() {
                       }
                     }}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-start gap-3">
                       <div className={`w-9 h-9 rounded-full ${colors.bg} flex items-center justify-center flex-shrink-0`}>
                         <span className={`text-sm font-bold ${colors.text}`}>
                           {(loc.driverName ?? "?").charAt(0).toUpperCase()}
@@ -347,6 +368,7 @@ export default function FleetMap() {
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-3" />
                 <p className="text-slate-400 text-sm">Cargando mapa...</p>
+                <p className="text-slate-600 text-xs mt-1">Obteniendo configuración del servidor...</p>
               </div>
             </div>
           )}
@@ -360,7 +382,7 @@ export default function FleetMap() {
                 <div className="bg-slate-800 rounded-lg p-4 text-left">
                   <p className="text-xs text-slate-500 mb-2 font-medium">Para activar el mapa GPS:</p>
                   <p className="text-xs text-slate-400">
-                    Agrega <code className="bg-slate-700 px-1 rounded">VITE_GOOGLE_MAPS_API_KEY</code> en las variables de entorno de Railway con tu clave de Google Maps API.
+                    Agrega <code className="bg-slate-700 px-1 rounded">GOOGLE_MAPS_API_KEY</code> en las variables de entorno de Railway con tu clave de Google Maps API.
                   </p>
                 </div>
               </div>

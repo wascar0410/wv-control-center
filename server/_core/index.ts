@@ -145,6 +145,13 @@ async function startServer() {
   registerOAuthRoutes(app);
   // WebSocket token endpoint
   app.use(wsTokenRouter);
+
+  // Public config endpoint - serves non-sensitive frontend config from server env
+  app.get("/api/config", (_req, res) => {
+    res.json({
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    });
+  });
   
   // Apply adaptive rate limiting ONLY to API routes in production
   if (process.env.NODE_ENV === "production") {
