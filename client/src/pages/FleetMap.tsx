@@ -3,12 +3,12 @@
  * Design: Dark operational map dashboard — full-screen Google Maps with overlay panels.
  * Fleet type color coding: blue=internal, purple=leased, orange=external.
  * Real-time driver markers with load info popups.
+ * NOTE: Uses VITE_GOOGLE_MAPS_API_KEY directly (not Manus proxy) for Railway deployment.
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapView } from "@/components/Map";
 import {
   Truck,
   Navigation,
@@ -18,6 +18,7 @@ import {
   Clock,
   Wifi,
   WifiOff,
+  MapPin,
 } from "lucide-react";
 
 const FLEET_COLORS: Record<string, { bg: string; text: string; marker: string }> = {
@@ -41,18 +42,43 @@ function getTimeSince(ts: string | Date): string {
   return `Hace ${hrs}h`;
 }
 
+// Load Google Maps directly using VITE_GOOGLE_MAPS_API_KEY
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+
+function loadGoogleMapsScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).google?.maps) { resolve(); return; }
+    const existing = document.querySelector(`script[src*="maps.googleapis.com/maps/api/js"]`);
+    if (existing) {
+      existing.addEventListener("load", () => resolve(), { once: true });
+      return;
+    }
+    if (!GOOGLE_MAPS_KEY) {
+      reject(new Error("VITE_GOOGLE_MAPS_API_KEY not configured in Railway environment variables"));
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&v=weekly&libraries=marker,places,geometry`;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    document.head.appendChild(script);
+  });
+}
+
 export default function FleetMap() {
   const [mapReady, setMapReady] = useState(false);
-  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapInstance, setMapInstance] = useState<any>(null);
   const [selectedDriver, setSelectedDriver] = useState<number | null>(null);
-  const markersRef = useRef<Map<number, google.maps.Marker>>(new Map());
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const markersRef = useRef<Map<number, any>>(new Map());
+  const infoWindowRef = useRef<any>(null);
 
   const { data: locations, refetch, isLoading } = trpc.admin.getFleetLocations.useQuery(undefined, {
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
-  // Auto-refresh indicator
   const [lastRefresh, setLastRefresh] = useState(new Date());
   useEffect(() => {
     const interval = setInterval(() => {
@@ -62,19 +88,44 @@ export default function FleetMap() {
     return () => clearInterval(interval);
   }, [refetch]);
 
-  const handleMapReady = useCallback((map: google.maps.Map) => {
-    setMapInstance(map);
-    setMapReady(true);
-    infoWindowRef.current = new google.maps.InfoWindow();
+  // Initialize map
+  useEffect(() => {
+    let cancelled = false;
+    loadGoogleMapsScript()
+      .then(() => {
+        if (cancelled || !mapContainerRef.current) return;
+        const google = (window as any).google;
+        const map = new google.maps.Map(mapContainerRef.current, {
+          zoom: 7,
+          center: { lat: 40.7128, lng: -74.0060 }, // New York/NJ area
+          mapTypeControl: true,
+          fullscreenControl: true,
+          zoomControl: true,
+          streetViewControl: false,
+          styles: [
+            { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
+            { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
+            { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
+            { featureType: "road", elementType: "geometry", stylers: [{ color: "#304a7d" }] },
+            { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e1626" }] },
+          ],
+        });
+        infoWindowRef.current = new google.maps.InfoWindow();
+        setMapInstance(map);
+        setMapReady(true);
+      })
+      .catch((err) => {
+        if (!cancelled) setMapError(err.message);
+      });
+    return () => { cancelled = true; };
   }, []);
 
   // Update markers when locations change
   useEffect(() => {
     if (!mapInstance || !locations) return;
+    const google = (window as any).google;
+    const currentIds = new Set(locations.map((l: any) => l.driverId));
 
-    const currentIds = new Set(locations.map((l) => l.driverId));
-
-    // Remove stale markers
     markersRef.current.forEach((marker, id) => {
       if (!currentIds.has(id)) {
         marker.setMap(null);
@@ -82,11 +133,9 @@ export default function FleetMap() {
       }
     });
 
-    // Add/update markers
-    locations.forEach((loc) => {
+    locations.forEach((loc: any) => {
       const color = FLEET_COLORS[loc.fleetType]?.marker ?? "#3b82f6";
       const existing = markersRef.current.get(loc.driverId);
-
       const position = { lat: loc.latitude, lng: loc.longitude };
 
       if (existing) {
@@ -133,10 +182,9 @@ export default function FleetMap() {
       }
     });
 
-    // Fit bounds if we have locations
     if (locations.length > 0 && markersRef.current.size > 0) {
       const bounds = new google.maps.LatLngBounds();
-      locations.forEach((loc) => bounds.extend({ lat: loc.latitude, lng: loc.longitude }));
+      locations.forEach((loc: any) => bounds.extend({ lat: loc.latitude, lng: loc.longitude }));
       if (locations.length === 1) {
         mapInstance.setCenter({ lat: locations[0].latitude, lng: locations[0].longitude });
         mapInstance.setZoom(12);
@@ -147,7 +195,7 @@ export default function FleetMap() {
   }, [mapInstance, locations]);
 
   const activeCount = locations?.length ?? 0;
-  const withLoadCount = locations?.filter((l) => l.activeLoad).length ?? 0;
+  const withLoadCount = locations?.filter((l: any) => l.activeLoad).length ?? 0;
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-slate-100">
@@ -164,7 +212,6 @@ export default function FleetMap() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Stats */}
           <div className="hidden md:flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-sm">
               <Users className="w-4 h-4 text-blue-400" />
@@ -212,7 +259,7 @@ export default function FleetMap() {
             </div>
           ) : (
             <div className="divide-y divide-slate-800">
-              {locations?.map((loc) => {
+              {locations?.map((loc: any) => {
                 const colors = FLEET_COLORS[loc.fleetType] ?? FLEET_COLORS.internal;
                 const isSelected = selectedDriver === loc.driverId;
                 return (
@@ -292,11 +339,9 @@ export default function FleetMap() {
 
         {/* Map */}
         <div className="flex-1 relative">
-          <MapView
-            onMapReady={handleMapReady}
-            className="w-full h-full"
-          />
-          {!mapReady && (
+          <div ref={mapContainerRef} className="w-full h-full" />
+
+          {!mapReady && !mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-3" />
@@ -304,6 +349,23 @@ export default function FleetMap() {
               </div>
             </div>
           )}
+
+          {mapError && (
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+              <div className="text-center max-w-sm px-6">
+                <MapPin className="w-12 h-12 mx-auto mb-4 text-slate-600" />
+                <h3 className="text-white font-semibold mb-2">Mapa no disponible</h3>
+                <p className="text-slate-400 text-sm mb-4">{mapError}</p>
+                <div className="bg-slate-800 rounded-lg p-4 text-left">
+                  <p className="text-xs text-slate-500 mb-2 font-medium">Para activar el mapa GPS:</p>
+                  <p className="text-xs text-slate-400">
+                    Agrega <code className="bg-slate-700 px-1 rounded">VITE_GOOGLE_MAPS_API_KEY</code> en las variables de entorno de Railway con tu clave de Google Maps API.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {mapReady && activeCount === 0 && (
             <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-xl px-6 py-3 text-center">
               <p className="text-slate-300 text-sm font-medium">Sin conductores activos en este momento</p>
