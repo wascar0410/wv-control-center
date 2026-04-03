@@ -145,6 +145,11 @@ export default function BusinessPlan() {
   const [activeSection, setActiveSection] = useState("executive-summary");
   const [navVisible, setNavVisible] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showLoiEmail, setShowLoiEmail] = useState(false);
+  const [loiBrokerName, setLoiBrokerName] = useState("");
+  const [loiBrokerCompany, setLoiBrokerCompany] = useState("");
+  const [loiBrokerEmail, setLoiBrokerEmail] = useState("");
+  const [loiEmailSent, setLoiEmailSent] = useState(false);
   const [, setLocation] = useLocation();
   const sessionId = useRef(getSessionId());
   const trackEvent = trpc.analytics.trackEvent.useMutation();
@@ -174,6 +179,54 @@ export default function BusinessPlan() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleLoiEmail = useCallback(() => {
+    const today = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const subject = encodeURIComponent(`Carrier Packet & Letter of Intent — WV Transport & Logistics, LLC`);
+    const body = encodeURIComponent(
+`Dear ${loiBrokerName || "Freight Broker"},
+
+My name is Walter Vasquez from WV Transport & Logistics, LLC — a Pennsylvania-based cargo van carrier.
+
+I am reaching out to express our interest in establishing a carrier relationship with ${loiBrokerCompany || "your brokerage"} for freight lanes in the Pennsylvania, New Jersey, and New York corridor.
+
+CARRIER OVERVIEW:
+• Company: WV Transport & Logistics, LLC
+• MC Number: MC-XXXXXXX (Pending)
+• DOT Number: DOT-XXXXXXX (Pending)
+• Equipment: Cargo Van (Ford Transit / Ram ProMaster), Sprinter Van
+• Max Capacity: 3,500 lbs
+• Service Area: Pennsylvania, New Jersey, New York, Delaware, Maryland, Ohio
+• Preferred Lanes: PA to NJ, PA to NY, PA to OH, Mid-Atlantic regional lanes
+
+INSURANCE:
+• General Liability: $1,000,000
+• Cargo Insurance: $100,000
+
+DISPATCH CONTACT:
+• Name: Walter Vasquez
+• Phone: (267) 390-3204
+• Email: info@wvtransports.com
+• Hours: Monday to Friday: 7:00 AM - 7:00 PM EST
+
+PAYMENT TERMS: Quick Pay available. Standard Net-30. Factoring accepted.
+
+We formally express our intent to provide cargo van carrier services upon completion of our MC/DOT operating authority registration. We would love to schedule a brief call to discuss onboarding.
+
+Best regards,
+Walter Vasquez
+WV Transport & Logistics, LLC
+(267) 390-3204 | info@wvtransports.com
+wvtransports.com
+
+Date: ${today}`
+    );
+    window.open(`mailto:${loiBrokerEmail || ""}?subject=${subject}&body=${body}`, "_blank");
+    setLoiEmailSent(true);
+    setShowLoiEmail(false);
+    setTimeout(() => setLoiEmailSent(false), 4000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loiBrokerName, loiBrokerCompany, loiBrokerEmail]);
+
   useEffect(() => {
     const handleScroll = () => {
       setNavVisible(window.scrollY > 80);
@@ -193,6 +246,42 @@ export default function BusinessPlan() {
 
   return (
     <div className="min-h-screen bg-[oklch(0.99_0.005_240)]">
+
+      {/* ── LOI EMAIL MODAL ── */}
+      {showLoiEmail && (
+        <div className="fixed inset-0 z-[500] bg-black/50 flex items-center justify-center p-4 no-print">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display font-bold text-[oklch(0.17_0.05_248)] text-base">Enviar LOI al Broker</h3>
+              <button onClick={() => setShowLoiEmail(false)} className="text-gray-400 hover:text-gray-600">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Se abrirá tu cliente de correo con el Carrier Packet y LOI pre-redactados. Revisa y envía.</p>
+            <div className="space-y-3 mb-5">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-gray-500 block mb-1">Nombre del Broker</label>
+                <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.45_0.18_258)]/20" placeholder="John Smith" value={loiBrokerName} onChange={(e) => setLoiBrokerName(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-gray-500 block mb-1">Empresa del Broker</label>
+                <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.45_0.18_258)]/20" placeholder="Coyote Logistics" value={loiBrokerCompany} onChange={(e) => setLoiBrokerCompany(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wide text-gray-500 block mb-1">Email del Broker *</label>
+                <input className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[oklch(0.45_0.18_258)]/20" placeholder="broker@company.com" type="email" value={loiBrokerEmail} onChange={(e) => setLoiBrokerEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowLoiEmail(false)} className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
+              <button onClick={handleLoiEmail} className="flex-1 bg-[oklch(0.45_0.18_258)] hover:bg-[oklch(0.40_0.18_258)] text-white rounded-xl py-2.5 text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Abrir en Correo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── STICKY NAV ── */}
       <nav
@@ -1780,6 +1869,24 @@ export default function BusinessPlan() {
                 <p className="text-[oklch(0.28_0.09_250)] text-sm font-semibold">
                   Formal Letters of Intent will be executed with each broker partner upon MC/DOT authority approval. This section will be updated with signed documents as they are completed.
                 </p>
+              </div>
+              {/* LOI Action Buttons */}
+              <div className="mt-4 flex flex-wrap gap-3">
+                {loiEmailSent && <span className="text-green-600 text-xs font-bold self-center">✓ Email abierto en tu cliente de correo</span>}
+                <button
+                  onClick={() => setShowLoiEmail(true)}
+                  className="inline-flex items-center gap-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-semibold text-sm px-4 py-2.5 rounded-xl transition-all"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  Enviar LOI al Broker
+                </button>
+                <a
+                  href="/carrier-packet"
+                  className="inline-flex items-center gap-2 bg-[oklch(0.94_0.03_248)] hover:bg-[oklch(0.90_0.04_248)] border border-[oklch(0.85_0.05_248)] text-[oklch(0.28_0.09_250)] font-semibold text-sm px-4 py-2.5 rounded-xl transition-all"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Abrir Carrier Packet Completo
+                </a>
               </div>
             </div>
           </div>

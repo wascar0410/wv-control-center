@@ -86,12 +86,14 @@ const SECTION_LABELS: Record<string, string> = {
   "competitive-advantage": "Competitive Advantage",
   operations: "Operations Plan",
   technology: "Technology",
+  "product-roadmap": "Product Roadmap",
   marketing: "Marketing",
   "revenue-model": "Revenue Model",
   "financial-plan": "Financial Plan",
   "growth-plan": "12-Month Plan",
   funding: "Funding",
   "why-win": "Why We Win",
+  "broker-references": "Broker References & LOI",
   contact: "Contact",
 };
 
