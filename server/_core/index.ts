@@ -208,6 +208,54 @@ async function startServer() {
     }
   }
 
+  // Safe column migrations — idempotent, run every startup to ensure DB is in sync
+  if (process.env.DATABASE_URL) {
+    try {
+      const mysql2 = await import("mysql2/promise");
+      const conn = await mysql2.default.createConnection({
+        uri: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: true },
+      });
+
+      // Migration 0029: Add rateConfirmationNumber to loads table
+      const [rateConfCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'rateConfirmationNumber'
+      `) as any;
+      if (rateConfCols.length === 0) {
+        await conn.execute("ALTER TABLE `loads` ADD `rateConfirmationNumber` varchar(100)");
+        console.log("[Startup] Applied: rateConfirmationNumber column added to loads");
+      }
+
+      // Migration 0030: Create load_evidence table
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS \`load_evidence\` (
+          \`id\` int AUTO_INCREMENT NOT NULL,
+          \`loadId\` int NOT NULL,
+          \`driverId\` int NOT NULL,
+          \`evidenceType\` enum('pickup_photo','delivery_photo','bol_scan','damage_report','signature','receipt','other') NOT NULL,
+          \`fileUrl\` text NOT NULL,
+          \`fileKey\` varchar(512) NOT NULL,
+          \`fileName\` varchar(255) NOT NULL,
+          \`fileSize\` int DEFAULT NULL,
+          \`mimeType\` varchar(50) DEFAULT NULL,
+          \`caption\` varchar(500) DEFAULT NULL,
+          \`latitude\` decimal(10,7) DEFAULT NULL,
+          \`longitude\` decimal(10,7) DEFAULT NULL,
+          \`capturedAt\` timestamp NULL DEFAULT NULL,
+          \`uploadedAt\` timestamp NOT NULL DEFAULT (now()),
+          \`createdAt\` timestamp NOT NULL DEFAULT (now()),
+          CONSTRAINT \`load_evidence_id\` PRIMARY KEY(\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log("[Startup] Applied: load_evidence table ready");
+
+      await conn.end();
+    } catch (err) {
+      console.warn("[Startup] Safe migration warning (non-fatal):", (err as Error).message);
+    }
+  }
+
   // Initialize WebSocket server
   wsManager.initialize(server);
 
