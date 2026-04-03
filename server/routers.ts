@@ -24,6 +24,7 @@ import { ocrStorageRouter } from "./_core/ocrStorageRouter";
 import { irsComplianceRouter } from "./_core/irsComplianceRouter";
 import { advancedSearchRouter } from "./_core/advancedSearchRouter";
 import { chatRouter } from "./_core/chatRouter";
+import { analyticsRouter } from "./_core/analyticsRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users as usersTable } from "../drizzle/schema";
@@ -1735,6 +1736,7 @@ export const appRouter = router({
   irsCompliance: irsComplianceRouter,
   advancedSearch: advancedSearchRouter,
   chat: chatRouter,
+  analytics: analyticsRouter,
   admin: adminRouter,
   profile: profileRouter,
   securityMonitoring: securityMonitoringRouter,

@@ -1105,3 +1105,25 @@ export const contactSubmissions = mysqlTable("contact_submissions", {
 export type ContactSubmission = typeof contactSubmissions.$inferSelect;
 export type InsertContactSubmission = typeof contactSubmissions.$inferInsert;
 
+
+/**
+ * Business Plan Analytics - Track views and interactions on the /business-plan page
+ */
+export const businessPlanEvents = mysqlTable("business_plan_events", {
+  id: int("id").autoincrement().primaryKey(),
+  eventType: mysqlEnum("eventType", [
+    "page_view",
+    "pdf_download",
+    "contact_click",
+    "section_view",
+    "form_submit",
+  ]).notNull(),
+  sectionId: varchar("sectionId", { length: 100 }),
+  referrer: varchar("referrer", { length: 500 }),
+  userAgent: varchar("userAgent", { length: 500 }),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  sessionId: varchar("sessionId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type BusinessPlanEvent = typeof businessPlanEvents.$inferSelect;
+export type InsertBusinessPlanEvent = typeof businessPlanEvents.$inferInsert;

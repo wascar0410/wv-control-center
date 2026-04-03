@@ -5,8 +5,23 @@
  * Style: Space Grotesk display + Inter body, Navy/Blue palette, white cards with soft shadows
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
+
+// Generate or retrieve a session ID for this browser session
+function getSessionId(): string {
+  try {
+    let sid = sessionStorage.getItem("bp_sid");
+    if (!sid) {
+      sid = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem("bp_sid", sid);
+    }
+    return sid;
+  } catch {
+    return Math.random().toString(36).slice(2);
+  }
+}
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/hero-bg-eKRvuVqEkdGLoRWYm2FJ27.webp";
 const CONTROL_CENTER_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/control-center-preview-33B6EbuVF3tebRDPX8uHKV.webp";
@@ -127,6 +142,33 @@ export default function BusinessPlan() {
   const [navVisible, setNavVisible] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [, setLocation] = useLocation();
+  const sessionId = useRef(getSessionId());
+  const trackEvent = trpc.analytics.trackEvent.useMutation();
+  const trackedSections = useRef<Set<string>>(new Set());
+
+  // Track page view on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { trackEvent.mutate({ eventType: "page_view", sessionId: sessionId.current }); }, []);
+
+  // Track section views when they become active
+  useEffect(() => {
+    if (activeSection && !trackedSections.current.has(activeSection)) {
+      trackedSections.current.add(activeSection);
+      trackEvent.mutate({ eventType: "section_view", sectionId: activeSection, sessionId: sessionId.current });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]);
+
+  const handlePdfDownload = useCallback(() => {
+    trackEvent.mutate({ eventType: "pdf_download", sessionId: sessionId.current });
+    window.print();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleContactClick = useCallback(() => {
+    trackEvent.mutate({ eventType: "contact_click", sessionId: sessionId.current });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -255,7 +297,7 @@ export default function BusinessPlan() {
 
               <div className="flex flex-wrap gap-3 mb-10 no-print">
                 <button
-                  onClick={() => window.print()}
+                  onClick={handlePdfDownload}
                   className="inline-flex items-center gap-2 bg-[oklch(0.45_0.18_258)] hover:bg-[oklch(0.50_0.20_258)] text-white font-bold px-6 py-3.5 rounded-full transition-all shadow-[0_8px_24px_rgba(29,78,216,0.35)] hover:shadow-[0_12px_32px_rgba(29,78,216,0.45)] hover:scale-105"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -267,6 +309,7 @@ export default function BusinessPlan() {
                 </button>
                 <a
                   href="#contact"
+                  onClick={handleContactClick}
                   className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold px-6 py-3.5 rounded-full transition-all backdrop-blur-sm hover:scale-105"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
