@@ -41,6 +41,7 @@ import {
   User as UserIcon,
   Info,
   UserPlus,
+  Activity,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -66,6 +67,7 @@ const adminMenuItems = [
   { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
   { icon: BarChart3, label: "Business Plan", path: "/business-plan", description: "Plan de negocios ejecutivo" },
+  { icon: Activity, label: "BP Analytics", path: "/business-plan-analytics", description: "Engagement de inversores" },
 ];
 
 const driverMenuItems = [
