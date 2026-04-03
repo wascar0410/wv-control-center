@@ -15,6 +15,12 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
+      // Send JWT token as Authorization header on every request (from localStorage)
+      // This ensures authentication works even if cookies are blocked/not sent
+      headers() {
+        const token = localStorage.getItem("wv_token");
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      },
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),

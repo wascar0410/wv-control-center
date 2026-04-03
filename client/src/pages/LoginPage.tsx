@@ -17,18 +17,19 @@ export default function LoginPage() {
 
   const loginMutation = trpc.auth.driverLogin.useMutation({
     onSuccess: (data) => {
-      // Also store in localStorage as backup
+      // Store JWT token in localStorage — tRPC client sends it as Authorization: Bearer header
       localStorage.setItem("wv_token", data.token);
       localStorage.setItem("wv_user_role", data.role);
       localStorage.setItem("wv_user_email", data.email);
 
       toast.success(`¡Bienvenido, ${data.name}!`);
 
-      // Redirect based on role
+      // Use full page reload so the new session is sent on the first request
+      // (client-side navigate() reuses the stale tRPC cache and misses the new cookie)
       if (data.role === "owner" || data.role === "admin") {
-        navigate("/dashboard");
+        window.location.href = "/dashboard";
       } else {
-        navigate("/driver");
+        window.location.href = "/driver";
       }
     },
     onError: (err) => {
