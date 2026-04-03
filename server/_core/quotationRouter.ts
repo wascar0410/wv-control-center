@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { protectedProcedure, publicProcedure, router } from "./trpc";
+import { protectedProcedure, router } from "./trpc";
 import {
   createLoadQuotation,
   getLoadQuotationById,
@@ -23,20 +23,21 @@ export function calculateDistance(
   lat2: number,
   lng2: number
 ): number {
-  const R = 3959; // Earth's radius in miles
+  const R = 3959;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
+
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLng / 2) *
       Math.sin(dLng / 2);
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-// Calculate profitability metrics using business config
 async function calculateProfitability(
   userId: number,
   totalPrice: number,
@@ -46,17 +47,14 @@ async function calculateProfitability(
 ) {
   const config = await getBusinessConfig(userId);
 
-  // Calculate fuel cost per mile
   const fuelCostPerMile =
-    Number(config?.fuelPricePerGallon || 3.6) / Number(config?.vanMpg || 18.0);
+    Number(config?.fuelPricePerGallon || 3.6) / Number(config?.vanMpg || 18);
 
-  // Calculate operating costs per mile
   const maintenancePerMile = Number(config?.maintenancePerMile || 0.12);
   const tiresPerMile = Number(config?.tiresPerMile || 0.03);
   const operatingCostPerMile =
     fuelCostPerMile + maintenancePerMile + tiresPerMile;
 
-  // Calculate fixed costs per mile
   const totalFixedMonthly =
     Number(config?.insuranceMonthly || 450) +
     Number(config?.phoneInternetMonthly || 70) +
@@ -67,47 +65,43 @@ async function calculateProfitability(
   const fixedCostPerMile =
     totalFixedMonthly / Number(config?.targetMilesPerMonth || 4000);
 
-  // Get applicable surcharges
   const distanceSurcharge = await getApplicableDistanceSurcharge(
     userId,
     loadedMiles
   );
   const weightSurcharge = await getApplicableWeightSurcharge(userId, weight);
 
-  // Calculate costs
   const estimatedFuelCost = totalMiles * fuelCostPerMile;
   const estimatedOperatingCost =
     totalMiles * (operatingCostPerMile + fixedCostPerMile);
-  const totalCost = estimatedFuelCost + estimatedOperatingCost;
-  const estimatedProfit = totalPrice - totalCost;
+  const totalOperatingCost = estimatedFuelCost + estimatedOperatingCost;
+
+  const estimatedProfit = totalPrice - totalOperatingCost;
   const profitMarginPercent =
     totalPrice > 0 ? (estimatedProfit / totalPrice) * 100 : 0;
 
-  // Calculate rate per loaded mile
   const ratePerLoadedMile = loadedMiles > 0 ? totalPrice / loadedMiles : 0;
-  const minimumProfitPerMile = Number(config?.minimumProfitPerMile || 1.5);
-  const minimumIncome = loadedMiles * minimumProfitPerMile;
+  const minimumRatePerMile = Number(config?.minimumProfitPerMile || 1.5);
+  const minimumIncome = loadedMiles * minimumRatePerMile;
   const differenceVsMinimum = totalPrice - minimumIncome;
 
-  // Determine verdict based on minimum profit per mile
   let verdict = "ACEPTAR";
-  if (ratePerLoadedMile < minimumProfitPerMile + 0.5) {
+  if (ratePerLoadedMile < minimumRatePerMile + 0.5) {
     verdict = "NEGOCIAR";
   }
-  if (ratePerLoadedMile < minimumProfitPerMile) {
+  if (ratePerLoadedMile < minimumRatePerMile) {
     verdict = "RECHAZAR";
   }
 
   return {
     estimatedFuelCost: Math.round(estimatedFuelCost * 100) / 100,
     estimatedOperatingCost: Math.round(estimatedOperatingCost * 100) / 100,
-    totalOperatingCost:
-      Math.round((estimatedFuelCost + estimatedOperatingCost) * 100) / 100,
+    totalOperatingCost: Math.round(totalOperatingCost * 100) / 100,
     estimatedProfit: Math.round(estimatedProfit * 100) / 100,
     profitMarginPercent: Math.round(profitMarginPercent * 100) / 100,
     minimumIncome: Math.round(minimumIncome * 100) / 100,
     ratePerLoadedMile: Math.round(ratePerLoadedMile * 100) / 100,
-    minimumRatePerMile: minimumProfitPerMile,
+    minimumRatePerMile,
     differenceVsMinimum: Math.round(differenceVsMinimum * 100) / 100,
     verdict,
     distanceSurcharge: Math.round(Number(distanceSurcharge) * 100) / 100,
@@ -115,147 +109,137 @@ async function calculateProfitability(
   };
 }
 
-calculateQuotation: protectedProcedure
-  .input(
-    z.object({
-      vanLat: z.number(),
-      vanLng: z.number(),
-      vanAddress: z.string(),
+export const quotationRouter = router({
+  calculateQuotation: protectedProcedure
+    .input(
+      z.object({
+        vanLat: z.number(),
+        vanLng: z.number(),
+        vanAddress: z.string(),
 
-      pickupLat: z.number(),
-      pickupLng: z.number(),
-      pickupAddress: z.string(),
+        pickupLat: z.number(),
+        pickupLng: z.number(),
+        pickupAddress: z.string(),
 
-      deliveryLat: z.number(),
-      deliveryLng: z.number(),
-      deliveryAddress: z.string(),
+        deliveryLat: z.number(),
+        deliveryLng: z.number(),
+        deliveryAddress: z.string(),
 
-      weight: z.number().positive(),
-      weightUnit: z.string().default("lbs"),
+        weight: z.number().positive(),
+        weightUnit: z.string().default("lbs"),
+        cargoDescription: z.string().optional(),
 
-      cargoDescription: z.string().optional(),
+        ratePerMile: z.number().optional(),
+        ratePerPound: z.number().optional(),
+        fuelSurcharge: z.number().default(0),
+        offeredPrice: z.number().optional(),
+        includeReturnEmpty: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      console.log("[quotation.calculateQuotation] input:", input);
 
-      ratePerMile: z.number().optional(),
-      ratePerPound: z.number().optional(),
-      fuelSurcharge: z.number().default(0),
-      offeredPrice: z.number().optional(),
+      const routesData = await calculateMultipleRoutes({
+        vanLat: input.vanLat,
+        vanLng: input.vanLng,
+        pickupLat: input.pickupLat,
+        pickupLng: input.pickupLng,
+        deliveryLat: input.deliveryLat,
+        deliveryLng: input.deliveryLng,
+        includeReturnEmpty: input.includeReturnEmpty,
+      } as any);
 
-      includeReturnEmpty: z.boolean().default(false),
-    })
-  )
-  .mutation(async ({ ctx, input }) => {
-    console.log("[quotation] input:", input);
+      if (!routesData) {
+        throw new Error("No se pudo calcular la ruta");
+      }
 
-    // 1. CALCULAR RUTA
-    const routesData = await calculateMultipleRoutes({
-      vanLat: input.vanLat,
-      vanLng: input.vanLng,
-      pickupLat: input.pickupLat,
-      pickupLng: input.pickupLng,
-      deliveryLat: input.deliveryLat,
-      deliveryLng: input.deliveryLng,
-      includeReturnEmpty: input.includeReturnEmpty,
-    });
+      const totalMiles = Number(routesData.totalMiles ?? 0);
+      const loadedMiles = Number(routesData.loadedMiles ?? 0);
+      const emptyMiles = Number(routesData.emptyMiles ?? 0);
+      const returnEmptyMiles = Number(routesData.returnEmptyMiles ?? 0);
 
-    if (!routesData) {
-      console.error("[quotation] routesData null");
-      throw new Error("No se pudo calcular la ruta");
-    }
+      const config = await getBusinessConfig(ctx.user.id);
+      const fuelCostPerMile =
+        Number(config?.fuelPricePerGallon || 3.6) /
+        Number(config?.vanMpg || 18);
+      const minimumProfitPerMile = Number(
+        config?.minimumProfitPerMile || 1.5
+      );
 
-    const {
-      totalMiles,
-      loadedMiles,
-      emptyMiles,
-    } = routesData;
+      const baseRatePerMile =
+        input.ratePerMile ?? fuelCostPerMile + minimumProfitPerMile;
 
-    // 2. CONFIGURACIÓN DEL NEGOCIO
-    const config = await getBusinessConfig(ctx.user.id);
+      const totalPrice =
+        input.offeredPrice ??
+        Math.round(
+          (loadedMiles * baseRatePerMile + (input.fuelSurcharge || 0)) * 100
+        ) / 100;
 
-    const fuelCostPerMile =
-      Number(config?.fuelPricePerGallon || 3.6) /
-      Number(config?.vanMpg || 18);
-
-    const minimumProfitPerMile = Number(
-      config?.minimumProfitPerMile || 1.5
-    );
-
-    // 3. PRECIO AUTOMÁTICO (🔥 CLAVE)
-    const baseRatePerMile =
-      input.ratePerMile ??
-      (fuelCostPerMile + minimumProfitPerMile);
-
-    const totalPrice =
-      input.offeredPrice ??
-      Math.round(
-        (loadedMiles * baseRatePerMile +
-          (input.fuelSurcharge || 0)) *
-          100
-      ) / 100;
-
-    // 4. RENTABILIDAD
-    const profitability = await calculateProfitability(
-      ctx.user.id,
-      totalPrice,
-      totalMiles,
-      loadedMiles,
-      input.weight
-    );
-
-    // 5. CREAR QUOTATION
-    const result = await createLoadQuotation({
-      userId: ctx.user.id,
-      pickupAddress: input.pickupAddress,
-      deliveryAddress: input.deliveryAddress,
-      totalMiles,
-      loadedMiles,
-      emptyMiles,
-      totalPrice,
-      weight: input.weight,
-      status: "calculated",
-    });
-
-    const quotationId = (result as any).insertId || null;
-
-    // 6. ALERTA SI ES MALA CARGA
-    const ratePerLoadedMile = profitability.ratePerLoadedMile;
-    const minimumRatePerMile = profitability.minimumRatePerMile;
-
-    if (ratePerLoadedMile < minimumRatePerMile) {
-      const severity =
-        ratePerLoadedMile < minimumRatePerMile - 0.5
-          ? "critical"
-          : "warning";
-
-      await createPriceAlert({
-        userId: ctx.user.id,
-        quotationId: quotationId || undefined,
-        clientName: "",
-        pickupAddress: input.pickupAddress,
-        deliveryAddress: input.deliveryAddress,
-        offeredPrice: totalPrice as any,
-        ratePerLoadedMile: ratePerLoadedMile as any,
-        minimumProfitPerMile: minimumRatePerMile as any,
-        differenceFromMinimum:
-          (ratePerLoadedMile - minimumRatePerMile) as any,
-        severity: severity as any,
-      });
-    }
-
-    console.log("[quotation] result:", {
-      totalPrice,
-      loadedMiles,
-      ratePerLoadedMile,
-      verdict: profitability.verdict,
-    });
-
-          return {
-        ...profitability,
+      const profitability = await calculateProfitability(
+        ctx.user.id,
         totalPrice,
         totalMiles,
         loadedMiles,
+        input.weight
+      );
+
+      const quotationInsert: any = await createLoadQuotation({
+        userId: ctx.user.id,
+        pickupAddress: input.pickupAddress,
+        deliveryAddress: input.deliveryAddress,
+        totalMiles,
+        loadedMiles,
         emptyMiles,
-        returnEmptyMiles,
+        totalPrice,
+        weight: input.weight,
+        status: "calculated",
+      } as any);
+
+      const quotationId = Number(
+        quotationInsert?.insertId ?? quotationInsert?.[0]?.insertId ?? 0
+      );
+
+      const ratePerLoadedMile = profitability.ratePerLoadedMile;
+      const minimumRatePerMile = profitability.minimumRatePerMile;
+
+      if (ratePerLoadedMile < minimumRatePerMile) {
+        const severity =
+          ratePerLoadedMile < minimumRatePerMile - 0.5
+            ? "critical"
+            : "warning";
+
+        await createPriceAlert({
+          userId: ctx.user.id,
+          quotationId: quotationId || undefined,
+          clientName: "",
+          pickupAddress: input.pickupAddress,
+          deliveryAddress: input.deliveryAddress,
+          offeredPrice: totalPrice as any,
+          ratePerLoadedMile: ratePerLoadedMile as any,
+          minimumProfitPerMile: minimumRatePerMile as any,
+          differenceFromMinimum:
+            (ratePerLoadedMile - minimumRatePerMile) as any,
+          severity: severity as any,
+        } as any);
+      }
+
+      return {
         quotationId,
+        emptyMiles,
+        loadedMiles,
+        returnEmptyMiles,
+        totalMiles,
+        totalPrice,
+        estimatedFuelCost: profitability.estimatedFuelCost,
+        estimatedOperatingCost: profitability.estimatedOperatingCost,
+        totalOperatingCost: profitability.totalOperatingCost,
+        estimatedProfit: profitability.estimatedProfit,
+        profitMarginPercent: profitability.profitMarginPercent,
+        minimumIncome: profitability.minimumIncome,
+        ratePerLoadedMile: profitability.ratePerLoadedMile,
+        minimumRatePerMile: profitability.minimumRatePerMile,
+        differenceVsMinimum: profitability.differenceVsMinimum,
+        verdict: profitability.verdict,
         pickupAddress: input.pickupAddress,
         deliveryAddress: input.deliveryAddress,
         weight: input.weight,
@@ -271,40 +255,37 @@ calculateQuotation: protectedProcedure
     .query(async ({ input }) => {
       return await getLoadQuotationById(input.quotationId);
     }),
-});
 
   getMyQuotations: protectedProcedure
-    .input(z.object({ limit: z.number().default(50) }))
-    .query(async ({ input, ctx }) => {
-      return getLoadQuotationsByUserId(ctx.user.id, input.limit);
+    .input(
+      z
+        .object({
+          status: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      if (input?.status) {
+        return await getQuotationsByStatus(ctx.user.id, input.status);
+      }
+      return await getLoadQuotationsByUserId(ctx.user.id);
     }),
-  });
 
   updateQuotation: protectedProcedure
     .input(
       z.object({
         quotationId: z.number(),
-        status: z
-          .enum(["draft", "quoted", "accepted", "rejected", "expired"])
-          .optional(),
-        ratePerMile: z.number().optional(),
-        fuelSurcharge: z.number().optional(),
+        status: z.string().optional(),
+        manualVerdict: z.string().optional(),
+        verdictNotes: z.string().optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const quotation = await getLoadQuotationById(input.quotationId);
-      if (!quotation || quotation.userId !== ctx.user.id) {
-        throw new Error("Cotización no encontrada");
-      }
-
-      const updateData: any = {};
-      if (input.status) updateData.status = input.status;
-      if (input.ratePerMile !== undefined) updateData.ratePerMile = input.ratePerMile;
-      if (input.fuelSurcharge !== undefined) {
-        updateData.fuelSurcharge = input.fuelSurcharge;
-      }
-
-      await updateLoadQuotation(input.quotationId, updateData);
+    .mutation(async ({ input }) => {
+      await updateLoadQuotation(input.quotationId, {
+        status: input.status as any,
+        manualVerdict: input.manualVerdict as any,
+        verdictNotes: input.verdictNotes as any,
+      });
       return { success: true };
     }),
 
@@ -316,67 +297,22 @@ calculateQuotation: protectedProcedure
         verdictNotes: z.string().optional(),
       })
     )
-    .mutation(async ({ input, ctx }) => {
-      const quotation = await getLoadQuotationById(input.quotationId);
-      if (!quotation || quotation.userId !== ctx.user.id) {
-        throw new Error("Cotización no encontrada");
-      }
-
+    .mutation(async ({ input }) => {
       await updateLoadQuotation(input.quotationId, {
-        manualVerdict: input.manualVerdict,
-        verdictNotes: input.verdictNotes || null,
-        verdictOverriddenBy: ctx.user.id,
-        verdictOverriddenAt: new Date(),
+        manualVerdict: input.manualVerdict as any,
+        verdictNotes: input.verdictNotes as any,
       });
-
       return { success: true };
     }),
 
   deleteQuotation: protectedProcedure
-    .input(z.object({ quotationId: z.number() }))
-    .mutation(async ({ input, ctx }) => {
-      const quotation = await getLoadQuotationById(input.quotationId);
-      if (!quotation || quotation.userId !== ctx.user.id) {
-        throw new Error("Cotización no encontrada");
-      }
-
-      await deleteLoadQuotation(input.quotationId);
-      return { success: true };
-    }),
-
-  getQuotationsByStatus: protectedProcedure
-    .input(z.object({ status: z.string() }))
-    .query(async ({ input, ctx }) => {
-      return getQuotationsByStatus(ctx.user.id, input.status);
-    }),
-
-  getQuotationHistory: publicProcedure
     .input(
       z.object({
-        status: z
-          .enum(["draft", "quoted", "accepted", "rejected", "expired"])
-          .optional(),
-        search: z.string().optional(),
-        limit: z.number().default(50),
-        offset: z.number().default(0),
+        quotationId: z.number(),
       })
     )
-    .query(async ({ input }) => {
-      try {
-        return {
-          quotations: [],
-          total: 0,
-          limit: input.limit,
-          offset: input.offset,
-        };
-      } catch (error) {
-        console.error("[quotation.getQuotationHistory] error:", error);
-        return {
-          quotations: [],
-          total: 0,
-          limit: input.limit,
-          offset: input.offset,
-        };
-      }
+    .mutation(async ({ input }) => {
+      await deleteLoadQuotation(input.quotationId);
+      return { success: true };
     }),
 });
