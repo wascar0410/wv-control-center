@@ -65,6 +65,7 @@ const adminMenuItems = [
   { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },
   { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
+  { icon: BarChart3, label: "Business Plan", path: "/business-plan", description: "Plan de negocios ejecutivo" },
 ];
 
 const driverMenuItems = [

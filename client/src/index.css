@@ -239,6 +239,82 @@
     background-color: var(--secondary);
   }
 
+  /* ── Business Plan page styles ── */
+  .font-display {
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
+  }
+  .font-mono-data {
+    font-family: 'Space Mono', 'Courier New', monospace;
+  }
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 48px rgba(7, 22, 45, 0.12);
+  }
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .data-table th {
+    background: #eff6ff;
+    color: #0b1f3a;
+    font-weight: 700;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #bfdbfe;
+  }
+  .data-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+  }
+  .data-table tbody tr:nth-child(even) {
+    background: #f8fbff;
+  }
+  .data-table tbody tr:hover {
+    background: #eff6ff;
+  }
+  .data-table .total-row {
+    background: #eff6ff !important;
+    font-weight: 700;
+    border-top: 2px solid #bfdbfe;
+  }
+  .section-number {
+    position: absolute;
+    top: -0.5rem;
+    left: -0.5rem;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 6rem;
+    font-weight: 900;
+    color: rgba(7, 22, 45, 0.04);
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+    z-index: 0;
+  }
+  .callout-blue {
+    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 1rem;
+    padding: 1.25rem;
+  }
+  .no-print {
+    /* visible by default, hidden on print */
+  }
+  @media print {
+    .no-print { display: none !important; }
+    .card-hover:hover {
+      transform: none;
+      box-shadow: none;
+    }
+  }
+  /* ── End Business Plan styles ── */
+
   .flex {
     min-height: 0;
     min-width: 0;
