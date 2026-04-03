@@ -183,7 +183,7 @@ export const quotationRouter = router({
         input.weight
       );
 
-      const quotationInsert: any = await createLoadQuotation({
+     const quotationInsert: any = await createLoadQuotation({
   userId: ctx.user.id,
 
   vanLat: String(input.vanLat),
