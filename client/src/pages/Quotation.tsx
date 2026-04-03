@@ -4,7 +4,13 @@ import QuotationForm, { type QuotationFormData } from "@/components/QuotationFor
 import QuotationResultsTable from "@/components/QuotationResultsTable";
 import CreateLoadModal from "@/components/CreateLoadModal";
 import { AlertBanner } from "@/components/AlertBanner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 import { toast } from "sonner";
@@ -35,6 +41,7 @@ export default function Quotation() {
   const [showCreateLoadModal, setShowCreateLoadModal] = useState(false);
   const [formDataForLoad, setFormDataForLoad] = useState<QuotationFormData | null>(null);
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
+  const [aiResult, setAiResult] = useState<any>(null);
 
   const {
     data: unreadAlerts,
@@ -58,80 +65,102 @@ export default function Quotation() {
 
   const calculateQuotation = trpc.quotation.calculateQuotation.useMutation({
     onSuccess: (data) => {
-      console.log("✅ RESULT FROM BACKEND:", data);
-      setResult(data);
+      console.log("[Quotation] success response:", data);
+      setResult(data as QuotationResult);
       toast.success("Cotización calculada exitosamente");
     },
     onError: (error) => {
+      console.error("[Quotation] onError:", error);
       toast.error(error.message || "Error al calcular la cotización");
     },
   });
 
   const aiPricing = trpc.ai.suggestPricing.useMutation();
-const [aiResult, setAiResult] = useState<any>(null);
-  
-  const cleanPayload = {
-  vanLat: formData.vanLat,
-  vanLng: formData.vanLng,
-  pickupLat: formData.pickupLat,
-  pickupLng: formData.pickupLng,
-  deliveryLat: formData.deliveryLat,
-  deliveryLng: formData.deliveryLng,
-  weight: formData.weight,
-  offeredPrice: formData.offeredPrice ?? undefined,
-  includeReturnEmpty: formData.includeReturnEmpty ?? false,
-};
 
-console.log("📦 CLEAN PAYLOAD:", cleanPayload);
+  const handleSubmit = async (formData: QuotationFormData) => {
+    setIsLoading(true);
+    console.log("[Quotation] submit formData:", formData);
 
-const response = await calculateQuotation.mutateAsync(cleanPayload);
-    console.log("[Quotation] success response:", response);
-    setResult(response);
-    setFormDataForLoad(formData);
-  } catch (error: any) {
-    console.error("[Quotation] mutation error:", error);
-    toast.error(
-      error?.message ||
-        error?.shape?.message ||
-        "Error al calcular la cotización"
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      const payload = {
+        vanLat: formData.vanLat,
+        vanLng: formData.vanLng,
+        vanAddress: formData.vanAddress,
+
+        pickupLat: formData.pickupLat,
+        pickupLng: formData.pickupLng,
+        pickupAddress: formData.pickupAddress,
+
+        deliveryLat: formData.deliveryLat,
+        deliveryLng: formData.deliveryLng,
+        deliveryAddress: formData.deliveryAddress,
+
+        weight: formData.weight,
+        weightUnit: formData.weightUnit || "lbs",
+        cargoDescription: formData.cargoDescription || "",
+
+        ratePerMile: formData.ratePerMile ?? undefined,
+        ratePerPound: formData.ratePerPound ?? undefined,
+        fuelSurcharge: formData.fuelSurcharge ?? 0,
+        offeredPrice: formData.offeredPrice ?? undefined,
+        includeReturnEmpty: formData.includeReturnEmpty ?? false,
+      };
+
+      console.log("[Quotation] clean payload:", payload);
+
+      const response = await calculateQuotation.mutateAsync(payload as any);
+
+      console.log("[Quotation] mutateAsync response:", response);
+      setResult(response as QuotationResult);
+      setFormDataForLoad(formData);
+      setAiResult(null);
+    } catch (error: any) {
+      console.error("[Quotation] mutation error full:", error);
+      toast.error(
+        error?.message ||
+          error?.shape?.message ||
+          "Error al calcular la cotización"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAiPricing = async () => {
-  if (!result) return;
+    if (!result) return;
 
-  try {
-    const res = await aiPricing.mutateAsync({
-      miles: result.totalMiles,
-      fuelCostPerMile: 0.6, // puedes ajustar luego
-      targetProfitPerMile: 1.5,
-      weight: result.weight ?? 0,
-    });
+    try {
+      const res = await aiPricing.mutateAsync({
+        miles: result.totalMiles,
+        fuelCostPerMile: 0.6,
+        targetProfitPerMile: 1.5,
+        weight: result.weight ?? 0,
+      });
 
-    setAiResult(res);
-    toast.success("AI pricing generado");
-  } catch (err) {
-    toast.error("Error con AI pricing");
-  }
-};
+      setAiResult(res);
+      toast.success("AI pricing generado");
+    } catch (error: any) {
+      console.error("[Quotation] AI pricing error:", error);
+      toast.error("Error con AI pricing");
+    }
+  };
 
   const handleReset = () => {
     setResult(null);
+    setAiResult(null);
     setFormDataForLoad(null);
     setShowCreateLoadModal(false);
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+          <h1 className="mb-2 text-3xl font-bold text-foreground">
             Cotización de Cargas
           </h1>
           <p className="text-muted-foreground">
-            Calcula el precio, millas y rentabilidad de una carga antes de aceptarla
+            Calcula el precio, millas y rentabilidad de una carga antes de aceptarla.
           </p>
         </div>
 
@@ -153,13 +182,13 @@ const response = await calculateQuotation.mutateAsync(cleanPayload);
         )}
 
         {!result ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Información de la Carga</CardTitle>
                   <CardDescription>
-                    Ingresa la ubicación de la van, punto de recogida, punto de entrega y detalles de la carga
+                    Ingresa la ubicación de la van, punto de recogida, punto de entrega y detalles de la carga.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -169,84 +198,104 @@ const response = await calculateQuotation.mutateAsync(cleanPayload);
             </div>
 
             <div className="space-y-4">
-              <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+              <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
                 <CardHeader>
                   <CardTitle className="text-base">💡 Consejos</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm space-y-3 text-muted-foreground">
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
                   <div>
-                    <p className="font-semibold text-foreground mb-1">Coordenadas GPS</p>
-                    <p>Puedes obtener las coordenadas usando Google Maps o cualquier app de mapas.</p>
+                    <p className="mb-1 font-semibold text-foreground">Coordenadas GPS</p>
+                    <p>Selecciona direcciones válidas para que el sistema obtenga coordenadas exactas.</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground mb-1">Tarifa Estándar</p>
-                    <p>La tarifa promedio es $2.00-$3.00 por milla. Ajusta según el mercado.</p>
+                    <p className="mb-1 font-semibold text-foreground">Pricing automático</p>
+                    <p>Puedes dejar el precio vacío y el sistema calculará una referencia automáticamente.</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground mb-1">Margen Mínimo</p>
-                    <p>Se recomienda un margen de al menos 15% para cubrir imprevistos.</p>
+                    <p className="mb-1 font-semibold text-foreground">Margen mínimo</p>
+                    <p>El sistema compara la carga contra el ingreso mínimo recomendado y te da un veredicto.</p>
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground mb-1">Millas Vacías</p>
-                    <p>Las millas de retorno vacío reducen tu ganancia. Considera incluirlas.</p>
+                    <p className="mb-1 font-semibold text-foreground">Millas vacías</p>
+                    <p>Si incluyes retorno vacío, el análisis será más realista y profesional.</p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+              <Card className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
                 <CardHeader>
-                  <CardTitle className="text-base">📊 Cálculos Incluidos</CardTitle>
+                  <CardTitle className="text-base">📊 Cálculos incluidos</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm space-y-2 text-muted-foreground">
-                  <p>✓ Distancia van → recogida (millas vacías)</p>
-                  <p>✓ Distancia recogida → entrega (millas cargadas)</p>
-                  <p>✓ Distancia entrega → van (millas retorno)</p>
-                  <p>✓ Costo combustible ($0.35/milla)</p>
-                  <p>✓ Costo operativo ($0.65/milla)</p>
-                  <p>✓ Ganancia neta y margen %</p>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>✓ Distancia van → recogida</p>
+                  <p>✓ Distancia recogida → entrega</p>
+                  <p>✓ Distancia de retorno vacío</p>
+                  <p>✓ Costo de combustible</p>
+                  <p>✓ Costo operativo estimado</p>
+                  <p>✓ Ganancia neta y margen</p>
+                  <p>✓ Veredicto: aceptar / negociar / rechazar</p>
                 </CardContent>
               </Card>
             </div>
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
               <div>
                 <h2 className="text-2xl font-bold text-foreground">
                   Resultados de la Cotización
                 </h2>
-                <p className="text-muted-foreground mt-1">
+                <p className="mt-1 text-muted-foreground">
                   Cotización ID: #{result.quotationId}
                 </p>
               </div>
-              <Button onClick={handleReset} variant="outline" size="lg">
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Nueva Cotización
-              </Button>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  className="min-w-[200px]"
+                  onClick={handleAiPricing}
+                  disabled={aiPricing.isPending}
+                >
+                  {aiPricing.isPending ? "Generando..." : "🤖 AI Pricing"}
+                </Button>
+
+                <Button onClick={handleReset} variant="outline" size="lg">
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Nueva Cotización
+                </Button>
+              </div>
             </div>
 
             <QuotationResultsTable {...result} />
 
             {aiResult && (
-  <Card className="border-blue-300 bg-blue-50 dark:bg-blue-950">
-    <CardHeader>
-      <CardTitle>🤖 AI Pricing Recommendation</CardTitle>
-      <CardDescription>
-        Suggested pricing based on logistics intelligence
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-2 text-sm">
-      <p><strong>Minimum:</strong> ${aiResult.minimumRate}</p>
-      <p><strong>Recommended:</strong> ${aiResult.recommendedRate}</p>
-      <p><strong>Stretch:</strong> ${aiResult.stretchRate}</p>
-      <p className="text-muted-foreground mt-2">
-        {aiResult.explanation}
-      </p>
-    </CardContent>
-  </Card>
-)}
+              <Card className="border-blue-300 bg-blue-50 dark:bg-blue-950">
+                <CardHeader>
+                  <CardTitle>🤖 AI Pricing Recommendation</CardTitle>
+                  <CardDescription>
+                    Suggested pricing based on logistics intelligence
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p>
+                    <strong>Minimum:</strong> ${aiResult.minimumRate}
+                  </p>
+                  <p>
+                    <strong>Recommended:</strong> ${aiResult.recommendedRate}
+                  </p>
+                  <p>
+                    <strong>Stretch:</strong> ${aiResult.stretchRate}
+                  </p>
+                  <p className="mt-2 text-muted-foreground">
+                    {aiResult.explanation}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-            <div className="flex gap-4 justify-center">
+            <div className="flex flex-wrap justify-center gap-4">
               <Button
                 size="lg"
                 className="min-w-[200px]"
@@ -254,6 +303,7 @@ const response = await calculateQuotation.mutateAsync(cleanPayload);
               >
                 ✓ Crear Carga
               </Button>
+
               <Button
                 size="lg"
                 variant="outline"
@@ -263,14 +313,6 @@ const response = await calculateQuotation.mutateAsync(cleanPayload);
                 Calcular Otra
               </Button>
             </div>
-            <Button
-  size="lg"
-  variant="secondary"
-  className="min-w-[200px]"
-  onClick={handleAiPricing}
->
-  🤖 AI Pricing
-</Button>
 
             {result && formDataForLoad && (
               <CreateLoadModal
