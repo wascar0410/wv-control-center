@@ -25,7 +25,9 @@ function getSessionId(): string {
 
 const HERO_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/hero-bg-eKRvuVqEkdGLoRWYm2FJ27.webp";
 const CONTROL_CENTER_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/control-center-preview-33B6EbuVF3tebRDPX8uHKV.webp";
-const FLEET_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/cargo-van-fleet-dXWX4wUinH3a6cDEnUHSKa.webp";
+const FLEET_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/fleet-van-branded_b00509a7.png";
+const WV_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/wv-logo-512_13053a10.png";
+const WV_CC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/wv-control-center-logo_928f4260.png";
 
 // Intersection observer hook for scroll animations
 function useInView(threshold = 0.15) {
@@ -209,6 +211,7 @@ export default function BusinessPlan() {
               Dashboard
             </button>
             <span className="text-white/20 no-print">|</span>
+            <img src={WV_LOGO} alt="WV Transport LLC" className="w-7 h-7 object-contain drop-shadow-md" />
             <span className="font-display font-bold text-white text-sm tracking-wide whitespace-nowrap">Business Plan</span>
           </div>
           {/* Desktop nav */}
@@ -488,12 +491,15 @@ export default function BusinessPlan() {
               </table>
             </div>
             <div className="rounded-2xl overflow-hidden shadow-[0_12px_40px_rgba(7,22,45,0.12)]">
-              <img
-                src={FLEET_IMG}
-                alt="WV Transport cargo van fleet"
-                className="w-full h-64 object-cover"
-              />
-              <div className="bg-[oklch(0.17_0.05_248)] px-5 py-3">
+              <div className="relative">
+                <img
+                  src={FLEET_IMG}
+                  alt="WV Transport cargo van fleet"
+                  className="w-full h-64 object-cover"
+                />
+              </div>
+              <div className="bg-[oklch(0.17_0.05_248)] px-5 py-3 flex items-center gap-3">
+                <img src={WV_LOGO} alt="WV Transport LLC" className="w-7 h-7 object-contain flex-shrink-0" />
                 <p className="text-[oklch(0.82_0.03_240)] text-xs font-medium">
                   Professional cargo van fleet — the operational backbone of WV Transport &amp; Logistics
                 </p>
@@ -919,12 +925,19 @@ export default function BusinessPlan() {
               </div>
             </div>
             <div>
-              <div className="rounded-2xl overflow-hidden shadow-[0_16px_48px_rgba(7,22,45,0.15)] border border-[oklch(0.91_0.01_240)]">
+              <div className="rounded-2xl overflow-hidden shadow-[0_16px_48px_rgba(7,22,45,0.15)] border border-[oklch(0.91_0.01_240)] relative">
                 <img
                   src={CONTROL_CENTER_IMG}
                   alt="WV Control Center dashboard interface"
                   className="w-full object-cover"
                 />
+                <div className="absolute bottom-3 right-3 bg-[oklch(0.10_0.04_250)]/80 backdrop-blur-sm rounded-xl p-2 flex items-center gap-2 border border-white/10">
+                  <img src={WV_CC_LOGO} alt="WV Control Center" className="w-10 h-10 object-contain" />
+                  <div>
+                    <div className="text-white font-bold text-xs leading-tight">WV Control Center</div>
+                    <div className="text-[oklch(0.7_0.04_240)] text-[10px]">Internal Platform</div>
+                  </div>
+                </div>
               </div>
               <div className="mt-4 grid grid-cols-3 gap-3">
                 {[
@@ -1645,12 +1658,7 @@ export default function BusinessPlan() {
             <div className="space-y-4">
               <Card>
                 <div className="flex items-center gap-3 mb-5">
-                  <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-display font-black text-lg"
-                    style={{ background: "linear-gradient(135deg, oklch(0.13 0.04 250), oklch(0.45 0.18 258))" }}
-                  >
-                    WV
-                  </div>
+                  <img src={WV_LOGO} alt="WV Transport LLC" className="w-14 h-14 object-contain flex-shrink-0" />
                   <div>
                     <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-base">WV Transport &amp; Logistics, LLC</div>
                     <div className="text-[oklch(0.52_0.04_250)] text-xs">Pennsylvania-Based Logistics Company</div>
@@ -1754,12 +1762,7 @@ export default function BusinessPlan() {
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-display font-black text-sm"
-                  style={{ background: "oklch(0.45 0.18 258)" }}
-                >
-                  WV
-                </div>
+                <img src={WV_LOGO} alt="WV Transport LLC" className="w-12 h-12 object-contain flex-shrink-0" />
                 <div>
                   <div className="font-display font-bold text-white text-sm">WV Transport &amp; Logistics, LLC</div>
                   <div className="text-[oklch(0.7_0.04_240)] text-xs">Pennsylvania, USA</div>
