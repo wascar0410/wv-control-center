@@ -294,8 +294,14 @@ const loadsRouter = router({
       rateConfirmationNumber: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Embed rateConfirmationNumber in notes until DB column is migrated
+      const notesWithRC = input.rateConfirmationNumber
+        ? `RC#${input.rateConfirmationNumber}${input.notes ? ` | ${input.notes}` : ""}`
+        : input.notes;
+      const { rateConfirmationNumber, ...restInput } = input;
       const id = await createLoad({
-        ...input,
+        ...restInput,
+        notes: notesWithRC,
         price: String(input.price) as any,
         weight: String(input.weight) as any,
         estimatedFuel: String(input.estimatedFuel) as any,

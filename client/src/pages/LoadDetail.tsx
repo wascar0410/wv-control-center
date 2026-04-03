@@ -11,6 +11,7 @@ import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -495,6 +496,29 @@ export default function LoadDetail() {
   );
 
   const updateStatusMutation = trpc.loads.updateStatus.useMutation();
+  const assignMutation = trpc.assignment.assign.useMutation();
+  const { data: driversData } = trpc.assignment.drivers.useQuery();
+  const [selectedDriverId, setSelectedDriverId] = useState<string>("");
+  const [assigning, setAssigning] = useState(false);
+
+  const handleAssignDriver = async () => {
+    if (!selectedDriverId) return toast.error("Selecciona un conductor");
+    setAssigning(true);
+    try {
+      await assignMutation.mutateAsync({
+        loadId,
+        driverId: Number(selectedDriverId),
+        notes: "",
+      });
+      toast.success("Conductor asignado exitosamente");
+      setSelectedDriverId("");
+      await refetch();
+    } catch (err: any) {
+      toast.error(err?.message || "Error al asignar conductor");
+    } finally {
+      setAssigning(false);
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     setChangingStatus(true);
@@ -808,6 +832,46 @@ export default function LoadDetail() {
           <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap bg-muted/30 rounded-lg p-3">
             {load.notes}
           </p>
+        </Card>
+      )}
+
+      {/* ── Assign Driver Card (available + no driver) ── */}
+      {load.status === "available" && !load.assignedDriverId && (
+        <Card className="p-5 bg-blue-500/5 border-blue-500/30">
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/15">
+              <User className="h-4 w-4 text-blue-400" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-400 mb-1">Asignar Conductor</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Esta carga no tiene conductor asignado. Selecciona un conductor para enviarle la notificación de asignación.
+              </p>
+              <div className="flex flex-wrap gap-2 items-center">
+                <Select value={selectedDriverId} onValueChange={setSelectedDriverId}>
+                  <SelectTrigger className="w-56 h-8 text-xs bg-background border-border">
+                    <SelectValue placeholder="Seleccionar conductor..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(driversData ?? []).map((d: any) => (
+                      <SelectItem key={d.id} value={String(d.id)}>
+                        {d.name ?? d.email ?? `Driver #${d.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  disabled={!selectedDriverId || assigning}
+                  onClick={handleAssignDriver}
+                  className="h-8 text-xs gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {assigning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <User className="h-3.5 w-3.5" />}
+                  {assigning ? "Asignando..." : "Asignar Conductor"}
+                </Button>
+              </div>
+            </div>
+          </div>
         </Card>
       )}
 
