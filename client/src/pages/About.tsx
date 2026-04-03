@@ -14,6 +14,9 @@ import {
   Waypoints,
 } from "lucide-react";
 
+const WV_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/wv-logo-512_13053a10.png";
+const WV_CC_LOGO = "https://d2xsxph8kpxj0f.cloudfront.net/310519663480481606/5H4pkNJXcp8hDFeVp3tRuz/wv-control-center-logo_928f4260.png";
+
 const brand = {
   company: "WV Transport & Logistics, LLC",
   product: "WV Control Center",
@@ -31,13 +34,16 @@ export default function About() {
         <div className="relative container mx-auto px-6 py-20 lg:py-28">
           <div className="max-w-4xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80 backdrop-blur">
-              <BadgeCheck className="h-4 w-4 text-[#60A5FA]" />
+              <img src={WV_LOGO} alt="WV Transport LLC" className="h-5 w-5 object-contain" />
               {brand.company}
             </div>
 
-            <h1 className="mt-6 text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
-              {brand.product}
-            </h1>
+            <div className="mt-6 flex items-center gap-5">
+              <img src={WV_CC_LOGO} alt="WV Control Center" className="h-20 w-20 object-contain drop-shadow-[0_4px_16px_rgba(96,165,250,0.4)] flex-shrink-0" />
+              <h1 className="text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
+                {brand.product}
+              </h1>
+            </div>
 
             <p className="mt-5 max-w-3xl text-lg text-white/80 sm:text-xl">
               Internal logistics control system for transportation operations.
@@ -101,18 +107,30 @@ export default function About() {
 
       <section className="bg-white">
         <div className="container mx-auto px-6 py-16">
-          <div className="mx-auto max-w-4xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#1D4ED8]">
-              Brand Positioning
-            </p>
-            <h2 className="mt-3 text-3xl font-bold text-[#0B1F3A] sm:text-4xl">
-              Professional coordination for modern transportation operations
-            </h2>
-            <p className="mt-5 text-lg text-[#64748B]">
-              WV Transport & Logistics, LLC combines transportation support,
-              real-time visibility, load coordination, internal communication,
-              and operational control in one professional environment.
-            </p>
+          <div className="mx-auto max-w-4xl">
+            <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
+              <div className="flex-shrink-0 flex flex-col items-center gap-3">
+                <img src={WV_LOGO} alt="WV Transport LLC" className="h-24 w-24 object-contain drop-shadow-md" />
+                <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">WV Transport LLC</span>
+              </div>
+              <div className="h-16 w-px bg-[#E5E7EB] hidden md:block" />
+              <div className="flex-shrink-0 flex flex-col items-center gap-3">
+                <img src={WV_CC_LOGO} alt="WV Control Center" className="h-24 w-24 object-contain drop-shadow-md" />
+                <span className="text-xs font-semibold text-[#64748B] uppercase tracking-wider">WV Control Center</span>
+              </div>
+              <div className="h-16 w-px bg-[#E5E7EB] hidden md:block" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#1D4ED8] mb-2">Brand Positioning</p>
+                <h2 className="text-2xl font-bold text-[#0B1F3A] sm:text-3xl mb-3">
+                  Professional coordination for modern transportation operations
+                </h2>
+                <p className="text-base text-[#64748B]">
+                  WV Transport & Logistics, LLC combines transportation support,
+                  real-time visibility, load coordination, internal communication,
+                  and operational control in one professional environment.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

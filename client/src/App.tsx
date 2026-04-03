@@ -21,6 +21,7 @@ import { Chat } from "./pages/Chat";
 import About from "./pages/About";
 import BusinessPlan from "./pages/BusinessPlan";
 import BusinessPlanAnalytics from "./pages/BusinessPlanAnalytics";
+import CarrierPacket from "./pages/CarrierPacket";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -57,6 +58,7 @@ export default function App() {
       <Route path="/about" component={withLayout(About)} />
       <Route path="/business-plan" component={BusinessPlan} />
       <Route path="/business-plan-analytics" component={withLayout(BusinessPlanAnalytics)} />
+      <Route path="/carrier-packet" component={withLayout(CarrierPacket)} />
     </Switch>
   );
 }
