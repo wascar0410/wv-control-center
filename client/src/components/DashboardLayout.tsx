@@ -63,6 +63,7 @@ const adminMenuItems = [
   { icon: Zap, label: "Pagos Masivos", path: "/batch-payments", description: "Procesamiento de lotes de pago" },
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes con choferes" },
+  { icon: LayoutDashboard, label: "Mi Dashboard (Chofer)", path: "/driver-dashboard", description: "Dashboard personal de conductor" },
   { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },
   { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },

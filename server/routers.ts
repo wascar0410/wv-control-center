@@ -216,7 +216,8 @@ const driverStatsRouter = router({
   getStats: protectedProcedure
     .input(z.object({ driverId: z.number() }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver estas estadísticas");
       }
       return getDriverStats(input.driverId);
@@ -225,7 +226,8 @@ const driverStatsRouter = router({
   getMonthlyTrends: protectedProcedure
     .input(z.object({ driverId: z.number(), months: z.number().min(1).max(24).default(6) }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver estas estadísticas");
       }
       return getDriverMonthlyTrends(input.driverId, input.months);
@@ -234,7 +236,8 @@ const driverStatsRouter = router({
   getRecentDeliveries: protectedProcedure
     .input(z.object({ driverId: z.number(), limit: z.number().min(1).max(50).default(10) }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver estas entregas");
       }
       return getDriverRecentDeliveries(input.driverId, input.limit);
@@ -713,8 +716,8 @@ const partnershipRouter = router({
 
 const driverRouter = router({
   myLoads: protectedProcedure.query(({ ctx }) => {
-    // Admins see all loads, drivers see only their assigned loads
-    if (ctx.user.role === 'admin') {
+    // Admins and owners see all loads, drivers see only their assigned loads
+    if (ctx.user.role === 'admin' || ctx.user.role === 'owner') {
       return getLoads({ includeUnassigned: true });
     }
     return getLoads({ driverId: ctx.user.id, includeUnassigned: true });
@@ -906,7 +909,8 @@ const driverRouter = router({
   getStats: protectedProcedure
     .input(z.object({ driverId: z.number() }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver estas estadísticas");
       }
       return await getDriverStatsForView(input.driverId);
@@ -918,7 +922,8 @@ const driverRouter = router({
       status: z.enum(["available", "in_transit", "delivered"]).optional(),
     }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver estas cargas");
       }
       return await getDriverLoads(input.driverId, input.status);
@@ -927,7 +932,8 @@ const driverRouter = router({
   getLoadDetails: protectedProcedure
     .input(z.object({ loadId: z.number(), driverId: z.number() }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver este detalle");
       }
       return await getLoadDetailsForDriver(input.loadId, input.driverId);
@@ -936,7 +942,8 @@ const driverRouter = router({
   getNextPriority: protectedProcedure
     .input(z.object({ driverId: z.number() }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso");
       }
       return await getNextPriorityLoad(input.driverId);
@@ -1039,7 +1046,8 @@ const driverRouter = router({
     .query(async ({ input, ctx }) => {
       // Verify load belongs to this driver or user is admin
       const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
-      if (!load && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (!load && !isPrivileged) {
         throw new Error("No tienes permiso para ver esto");
       }
 
@@ -1053,7 +1061,8 @@ const driverRouter = router({
       endDate: z.date().optional(),
     }))
     .query(async ({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver estas ganancias");
       }
       return await getDriverEarnings(input.driverId, input.startDate, input.endDate);
@@ -1101,7 +1110,8 @@ const driverRouter = router({
     .input(z.object({ driverId: z.number().optional() }))
     .query(async ({ input, ctx }) => {
       const driverId = input.driverId || ctx.user.id;
-      if (driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver esta ubicación");
       }
 
@@ -1118,7 +1128,8 @@ const driverRouter = router({
     .input(z.object({ loadId: z.number() }))
     .query(async ({ input, ctx }) => {
       const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
-      if (!load && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (!load && !isPrivileged) {
         throw new Error("No tienes permiso para ver esta ubicación");
       }
       try {
@@ -1426,7 +1437,8 @@ const podRouter = router({
       // Validar que el chofer es el asignado a esta carga
       const load = await getLoadById(input.loadId);
       if (!load) throw new Error("Carga no encontrada");
-      if (load.assignedDriverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (load.assignedDriverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para subir POD de esta carga");
       }
 
@@ -1468,7 +1480,8 @@ const podRouter = router({
   getByDriver: protectedProcedure
     .input(z.object({ driverId: z.number() }))
     .query(({ input, ctx }) => {
-      if (input.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (input.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para ver estos PODs");
       }
       return getPODsByDriverId(input.driverId);
@@ -1479,7 +1492,8 @@ const podRouter = router({
     .mutation(async ({ input, ctx }) => {
       const pod = await getPODById(input.podId);
       if (!pod) throw new Error("POD no encontrado");
-      if (pod.driverId !== ctx.user.id && ctx.user.role !== "admin") {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (pod.driverId !== ctx.user.id && !isPrivileged) {
         throw new Error("No tienes permiso para eliminar este POD");
       }
 
