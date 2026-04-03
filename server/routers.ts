@@ -455,25 +455,25 @@ const loadsRouter = router({
       return { url };
     }),
 
-  acceptLoad: protectedProcedure
+   acceptLoad: protectedProcedure
     .input(z.object({ loadId: z.number() }))
     .mutation(async ({ input, ctx }) => {
       const load = await getLoadById(input.loadId);
       if (!load) throw new Error("Carga no encontrada");
-      if (load.assignedDriverId !== ctx.user.id) {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (!isPrivileged && load.assignedDriverId !== ctx.user.id) {
         throw new Error("No tienes permiso para aceptar esta carga");
       }
-
       await updateLoad(input.loadId, {
         driverAcceptedAt: new Date(),
         status: "in_transit",
       });
-
-      await notifyOwner({
-        title: "✅ Chofer Aceptó Carga",
-        content: `${ctx.user.email} aceptó la carga #${input.loadId} de ${load.clientName}. Estado: En Tránsito`,
-      });
-
+      if (!isPrivileged) {
+        await notifyOwner({
+          title: "✅ Chofer Aceptó Carga",
+          content: `${ctx.user.email} aceptó la carga #${input.loadId} de ${load.clientName}. Estado: En Tránsito`,
+        });
+      }
       return { success: true };
     }),
 

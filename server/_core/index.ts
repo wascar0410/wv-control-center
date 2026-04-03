@@ -217,13 +217,43 @@ async function startServer() {
         ssl: { rejectUnauthorized: true },
       });
 
+      // Migration 0025: driverAcceptedAt, driverRejectedAt, driverRejectionReason
+      const [driverAcceptedCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'driverAcceptedAt'
+      `) as any;
+      if (driverAcceptedCols.length === 0) {
+        await conn.execute("ALTER TABLE `loads` ADD `driverAcceptedAt` timestamp NULL");
+        await conn.execute("ALTER TABLE `loads` ADD `driverRejectedAt` timestamp NULL");
+        await conn.execute("ALTER TABLE `loads` ADD `driverRejectionReason` varchar(500) NULL");
+        console.log("[Startup] Applied: driver accept/reject columns added to loads");
+      }
+      // Migration 0026: notes column on pod_documents
+      const [podNotesCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pod_documents' AND COLUMN_NAME = 'notes'
+      `) as any;
+      if (podNotesCols.length === 0) {
+        await conn.execute("ALTER TABLE `pod_documents` ADD `notes` text NULL");
+        console.log("[Startup] Applied: notes column added to pod_documents");
+      }
+      // Migration 0027: signatureUrl, signatureKey on pod_documents
+      const [podSigCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pod_documents' AND COLUMN_NAME = 'signatureUrl'
+      `) as any;
+      if (podSigCols.length === 0) {
+        await conn.execute("ALTER TABLE `pod_documents` ADD `signatureUrl` text NULL");
+        await conn.execute("ALTER TABLE `pod_documents` ADD `signatureKey` varchar(512) NULL");
+        console.log("[Startup] Applied: signature columns added to pod_documents");
+      }
       // Migration 0029: Add rateConfirmationNumber to loads table
       const [rateConfCols] = await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'rateConfirmationNumber'
       `) as any;
       if (rateConfCols.length === 0) {
-        await conn.execute("ALTER TABLE `loads` ADD `rateConfirmationNumber` varchar(100)");
+        await conn.execute("ALTER TABLE `loads` ADD `rateConfirmationNumber` varchar(100) NULL");
         console.log("[Startup] Applied: rateConfirmationNumber column added to loads");
       }
 
