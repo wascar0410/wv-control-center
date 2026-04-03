@@ -1,5 +1,5 @@
-import * as bcrypt from "bcryptjs";
-import * as jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { getDb } from "../db";
 import { users as usersTable, passwordAuditLog } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
@@ -56,7 +56,7 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
     throw new Error("Email o contraseña incorrectos");
   }
 
-  // Log successful login
+  // Log successful login (non-fatal)
   try {
     await db.insert(passwordAuditLog).values({
       userId: user.id,
@@ -71,8 +71,9 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
 
   // Generate JWT token (used as session cookie value)
   const jwtSecret = process.env.JWT_SECRET || "wv-transport-secret-2026";
-  const expiresIn = 365 * 24 * 60 * 60; // 1 year
-  const token = jwt.sign(
+  const expiresIn = 365 * 24 * 60 * 60; // 1 year in seconds
+
+  const token = (jwt as any).sign(
     {
       userId: user.id,
       openId: user.openId,
@@ -100,7 +101,7 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
 export function verifyDriverToken(token: string): { userId: number; openId: string; email: string; name: string; role: string } | null {
   try {
     const jwtSecret = process.env.JWT_SECRET || "wv-transport-secret-2026";
-    return jwt.verify(token, jwtSecret) as any;
+    return (jwt as any).verify(token, jwtSecret) as any;
   } catch {
     return null;
   }
