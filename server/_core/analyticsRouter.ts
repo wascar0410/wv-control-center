@@ -50,7 +50,7 @@ export const analyticsRouter = router({
   /**
    * Get analytics summary for the business plan page (admin only)
    */
-  getSummary: protectedProcedure.query(async () => {
+  getSummary: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) return { events: [], totals: {} };
 
