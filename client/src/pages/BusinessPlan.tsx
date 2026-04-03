@@ -137,6 +137,7 @@ const NAV_SECTIONS = [
   { id: "growth-plan", label: "12-Month Plan" },
   { id: "funding", label: "Funding" },
   { id: "why-win", label: "Why We Win" },
+  { id: "broker-references", label: "References" },
   { id: "contact", label: "Contact" },
 ];
 
@@ -321,6 +322,21 @@ export default function BusinessPlan() {
                   </svg>
                   Contact Us
                 </a>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href).then(() => {
+                      const btn = document.getElementById('share-btn-label');
+                      if (btn) { btn.textContent = 'Link Copied!'; setTimeout(() => { btn.textContent = 'Share Plan'; }, 2500); }
+                    });
+                  }}
+                  className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/30 text-white font-bold px-6 py-3.5 rounded-full transition-all backdrop-blur-sm hover:scale-105"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                  </svg>
+                  <span id="share-btn-label">Share Plan</span>
+                </button>
               </div>
 
               {/* Executive positioning card */}
@@ -1374,6 +1390,50 @@ export default function BusinessPlan() {
             </div>
           </div>
 
+          {/* Technology Investment ROI */}
+          <div className="mb-8">
+            <h3 className="font-display font-bold text-[oklch(0.17_0.05_248)] text-xl mb-4">Technology Investment ROI — WV Control Center</h3>
+            <div className="bg-white border border-[oklch(0.91_0.01_240)] rounded-2xl overflow-hidden shadow-[0_8px_32px_rgba(7,22,45,0.07)] mb-4">
+              <table className="data-table w-full">
+                <thead>
+                  <tr>
+                    <th>Value Driver</th>
+                    <th className="text-right">Est. Monthly Impact</th>
+                    <th className="text-right">Annual Impact</th>
+                    <th>How It Works</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { driver: "Delivery Dispute Prevention", mo: 400, ann: 4800, how: "Timestamped GPS + photo POD eliminates unverifiable claims from brokers" },
+                    { driver: "Admin Time Saved", mo: 300, ann: 3600, how: "Automated load records, invoicing, and reporting vs. manual spreadsheets" },
+                    { driver: "Load Profitability Filtering", mo: 500, ann: 6000, how: "Quotation engine rejects unprofitable loads before acceptance" },
+                    { driver: "Broker Relationship Value", mo: 600, ann: 7200, how: "Professional platform increases repeat load assignments from quality brokers" },
+                    { driver: "Compliance & Audit Readiness", mo: 200, ann: 2400, how: "Bank-ready financial records reduce time and cost of loan applications" },
+                  ].map(row => (
+                    <tr key={row.driver}>
+                      <td className="text-sm font-semibold text-[oklch(0.17_0.05_248)]">{row.driver}</td>
+                      <td className="text-right font-mono-data text-sm font-bold text-[oklch(0.52_0.14_145)]">+${row.mo.toLocaleString()}</td>
+                      <td className="text-right font-mono-data text-sm font-bold text-[oklch(0.52_0.14_145)]">+${row.ann.toLocaleString()}</td>
+                      <td className="text-xs text-[oklch(0.52_0.04_250)] leading-snug">{row.how}</td>
+                    </tr>
+                  ))}
+                  <tr className="total-row">
+                    <td className="font-bold">Total Estimated Annual ROI</td>
+                    <td className="text-right font-mono-data font-bold text-[oklch(0.52_0.14_145)]">+$2,000</td>
+                    <td className="text-right font-mono-data font-bold text-[oklch(0.52_0.14_145)]">+$24,000</td>
+                    <td className="text-xs font-semibold text-[oklch(0.28_0.09_250)]">vs. ~$150/mo platform cost → 13x ROI</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="bg-[oklch(0.94_0.03_248)] border border-[oklch(0.85_0.05_248)] rounded-xl p-4">
+              <p className="text-[oklch(0.28_0.09_250)] text-sm font-semibold">
+                WV Control Center costs approximately $150/month in infrastructure. The estimated return from dispute prevention, time savings, and load filtering alone exceeds $2,000/month — a 13x return on technology investment that directly strengthens the bottom line and the company’s creditworthiness.
+              </p>
+            </div>
+          </div>
+
           {/* Quarterly Revenue Projection */}
           <div>
             <h3 className="font-display font-bold text-[oklch(0.17_0.05_248)] text-xl mb-4">Quarterly Revenue Projection — Year 1</h3>
@@ -1646,11 +1706,91 @@ export default function BusinessPlan() {
         </div>
       </Section>
 
-      {/* ── 16. CONTACT ── */}
-      <Section id="contact" alt>
+      {/* ── 17. BROKER REFERENCES & LETTERS OF INTENT ── */}
+      <Section id="broker-references">
         <div className="container mx-auto px-4">
           <SectionHeader
             number="17"
+            title="Broker References & Letters of Intent"
+            subtitle="Professional relationships and documented intent from freight brokers and logistics partners. Letters of Intent are pending execution as the company completes its operating authority registration."
+          />
+          <div className="grid lg:grid-cols-2 gap-8 mb-8">
+            <div>
+              <h3 className="font-display font-bold text-[oklch(0.17_0.05_248)] text-xl mb-4">Broker Relationship Pipeline</h3>
+              <div className="space-y-4">
+                {[
+                  { broker: "Coyote Logistics", type: "National Broker", lanes: "PA → NJ, PA → NY", status: "Active Outreach", tier: "Tier 1" },
+                  { broker: "Echo Global Logistics", type: "National Broker", lanes: "Mid-Atlantic Regional", status: "Active Outreach", tier: "Tier 1" },
+                  { broker: "Transfix", type: "Tech-Enabled Broker", lanes: "PA → OH, PA → DE", status: "Pending Registration", tier: "Tier 1" },
+                  { broker: "Convoy", type: "Digital Freight Broker", lanes: "Northeast Corridor", status: "Pending Registration", tier: "Tier 2" },
+                  { broker: "Regional Broker (TBD)", type: "Local Broker", lanes: "Erie, PA Metro", status: "In Discussion", tier: "Tier 2" },
+                ].map(b => (
+                  <div key={b.broker} className="bg-white border border-[oklch(0.91_0.01_240)] rounded-xl p-4 shadow-[0_4px_16px_rgba(7,22,45,0.06)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-sm">{b.broker}</div>
+                        <div className="text-[oklch(0.52_0.04_250)] text-xs mt-0.5">{b.type} · {b.lanes}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-[oklch(0.94_0.03_248)] text-[oklch(0.28_0.09_250)] px-2 py-0.5 rounded-full">{b.tier}</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          b.status === 'Active Outreach' ? 'bg-amber-50 text-amber-700' :
+                          b.status === 'In Discussion' ? 'bg-blue-50 text-blue-700' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>{b.status}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-[oklch(0.17_0.05_248)] text-xl mb-4">Letter of Intent — Template</h3>
+              <div className="bg-white border-2 border-dashed border-[oklch(0.75_0.08_248)] rounded-2xl p-6 shadow-[0_4px_16px_rgba(7,22,45,0.06)]">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Pending Execution — Awaiting MC/DOT Approval</span>
+                </div>
+                <div className="space-y-3 text-sm">
+                  <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-base">Letter of Intent to Engage Carrier Services</div>
+                  <p className="text-[oklch(0.52_0.04_250)] leading-relaxed">
+                    This Letter of Intent confirms the intent of <strong className="text-[oklch(0.17_0.05_248)]">[Broker Company Name]</strong> to engage WV Transport &amp; Logistics, LLC as a preferred cargo van carrier for freight lanes in the Pennsylvania, New Jersey, and New York corridor upon completion of operating authority registration.
+                  </p>
+                  <div className="bg-[oklch(0.94_0.03_248)] rounded-xl p-4 space-y-2">
+                    {[
+                      ["Carrier", "WV Transport & Logistics, LLC"],
+                      ["Broker", "[Broker Company Name — TBD]"],
+                      ["Scope", "Cargo Van Freight — Regional Lanes"],
+                      ["Estimated Volume", "5 – 15 loads/month per broker"],
+                      ["Effective Upon", "MC/DOT Authority Approval"],
+                      ["Status", "Pending Execution"],
+                    ].map(([k, v]) => (
+                      <div key={k as string} className="flex justify-between text-xs">
+                        <span className="font-semibold text-[oklch(0.52_0.04_250)] uppercase tracking-wide">{k}</span>
+                        <span className="font-bold text-[oklch(0.17_0.05_248)] text-right max-w-[60%]">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[oklch(0.52_0.04_250)] text-xs italic">
+                    This document serves as a planning-level letter of intent. Formal agreements will be executed upon MC/DOT authority approval and carrier onboarding completion.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 bg-[oklch(0.94_0.03_248)] border border-[oklch(0.85_0.05_248)] rounded-xl p-4">
+                <p className="text-[oklch(0.28_0.09_250)] text-sm font-semibold">
+                  Formal Letters of Intent will be executed with each broker partner upon MC/DOT authority approval. This section will be updated with signed documents as they are completed.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── 18. CONTACT ── */}
+      <Section id="contact" alt>
+        <div className="container mx-auto px-4">
+          <SectionHeader
+            number="18"
             title="Contact Information"
             subtitle="Reach out to discuss freight opportunities, broker partnerships, or business inquiries."
           />
