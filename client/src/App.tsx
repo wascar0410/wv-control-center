@@ -1,6 +1,9 @@
-import { Route, Switch } from "wouter";
+import { Route, Switch, useLocation } from "wouter";
+import { useEffect } from "react";
 import DashboardLayout from "./components/DashboardLayout";
+import { useAuth } from "./contexts/AuthContext";
 
+import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import Loads from "./pages/Loads";
 import Finance from "./pages/Finance";
@@ -40,9 +43,34 @@ function withLayout(Component: any) {
   };
 }
 
+/** Smart home redirect: owners → /dashboard, drivers → /driver */
+function HomeRedirect() {
+  const { user, loading } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      navigate("/login");
+    } else if (user.role === "owner" || user.role === "admin") {
+      navigate("/dashboard");
+    } else {
+      navigate("/driver");
+    }
+  }, [user, loading, navigate]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <Switch>
+      {/* Public routes */}
+      <Route path="/login" component={LoginPage} />
+      <Route path="/quotation" component={Quotation} />
+      <Route path="/carrier-packet" component={withLayout(CarrierPacket)} />
+
+      {/* Admin / Owner routes */}
       <Route path="/dashboard" component={withLayout(Dashboard)} />
       <Route path="/loads/new" component={withLayout(NewLoad)} />
       <Route path="/loads/:id" component={withLayout(LoadDetail)} />
@@ -51,15 +79,7 @@ export default function App() {
       <Route path="/transactions" component={withLayout(Transactions)} />
       <Route path="/partnership" component={withLayout(Partnership)} />
       <Route path="/profile" component={withLayout(UserProfile)} />
-      {/* Driver-specific routes */}
-      <Route path="/driver/loads/:id" component={withLayout(DriverLoadDetail)} />
-      <Route path="/driver-dashboard" component={withLayout(DriverDashboard)} />
-      <Route path="/driver-wallet" component={withLayout(DriverWallet)} />
-      <Route path="/fleet-map" component={withLayout(FleetMap)} />
-      <Route path="/fleet-management" component={withLayout(FleetManagement)} />
-      <Route path="/driver" component={withLayout(DriverView)} />
       <Route path="/executive-dashboard" component={withLayout(ExecutiveDashboard)} />
-      <Route path="/quotation" component={Quotation} />
       <Route path="/quotation-history" component={withLayout(QuotationHistory)} />
       <Route path="/import-broker-loads" component={withLayout(ImportBrokerLoads)} />
       <Route path="/broker-loads-management" component={withLayout(BrokerLoadsManagement)} />
@@ -67,13 +87,21 @@ export default function App() {
       <Route path="/business-settings" component={withLayout(BusinessSettings)} />
       <Route path="/batch-payments" component={withLayout(BatchPayments)} />
       <Route path="/driver-performance" component={withLayout(DriverPerformance)} />
+      <Route path="/fleet-map" component={withLayout(FleetMap)} />
+      <Route path="/fleet-management" component={withLayout(FleetManagement)} />
       <Route path="/chat" component={withLayout(Chat)} />
-
-      <Route path="/" component={withLayout(Dashboard)} />
       <Route path="/about" component={withLayout(About)} />
       <Route path="/business-plan" component={BusinessPlan} />
       <Route path="/business-plan-analytics" component={withLayout(BusinessPlanAnalytics)} />
-      <Route path="/carrier-packet" component={withLayout(CarrierPacket)} />
+
+      {/* Driver routes */}
+      <Route path="/driver/loads/:id" component={withLayout(DriverLoadDetail)} />
+      <Route path="/driver-dashboard" component={withLayout(DriverDashboard)} />
+      <Route path="/driver-wallet" component={withLayout(DriverWallet)} />
+      <Route path="/driver" component={withLayout(DriverView)} />
+
+      {/* Root → smart redirect */}
+      <Route path="/" component={HomeRedirect} />
     </Switch>
   );
 }

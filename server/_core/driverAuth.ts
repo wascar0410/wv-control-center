@@ -17,10 +17,13 @@ export interface DriverToken {
   userId: number;
   email: string;
   name: string;
+  role: string;
 }
 
 /**
- * Authenticate driver with email and password
+ * Authenticate user with email and password.
+ * Works for all roles: owner, admin, driver.
+ * Returns a JWT token AND the user role so the frontend can redirect correctly.
  */
 export async function driverLogin(payload: DriverLoginPayload): Promise<DriverToken> {
   const db = await getDb();
@@ -38,14 +41,14 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
     throw new Error("Email o contraseña incorrectos");
   }
 
-  // Check if user is a driver
+  // Allow owner, admin, and driver roles
   if (user.role !== "driver" && user.role !== "owner" && user.role !== "admin") {
-    throw new Error("Este usuario no tiene acceso de chofer");
+    throw new Error("Este usuario no tiene acceso al sistema");
   }
 
   // Verify password
   if (!user.passwordHash) {
-    throw new Error("Este usuario no tiene contraseña configurada");
+    throw new Error("Este usuario no tiene contraseña configurada. Contacta al administrador.");
   }
 
   const isPasswordValid = await bcrypt.compare(payload.password, user.passwordHash);
@@ -54,20 +57,25 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
   }
 
   // Log successful login
-  await db.insert(passwordAuditLog).values({
-    userId: user.id,
-    action: "changed",
-    ipAddress: payload.ipAddress,
-    userAgent: payload.userAgent,
-    reason: "login",
-  });
+  try {
+    await db.insert(passwordAuditLog).values({
+      userId: user.id,
+      action: "changed",
+      ipAddress: payload.ipAddress,
+      userAgent: payload.userAgent,
+      reason: "login",
+    });
+  } catch {
+    // Non-fatal - don't block login if audit log fails
+  }
 
-  // Generate JWT token
-  const jwtSecret = process.env.JWT_SECRET || "your-secret-key";
-  const expiresIn = 24 * 60 * 60; // 24 hours
+  // Generate JWT token (used as session cookie value)
+  const jwtSecret = process.env.JWT_SECRET || "wv-transport-secret-2026";
+  const expiresIn = 365 * 24 * 60 * 60; // 1 year
   const token = jwt.sign(
     {
       userId: user.id,
+      openId: user.openId,
       email: user.email,
       name: user.name,
       role: user.role,
@@ -82,18 +90,19 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
     userId: user.id,
     email: user.email || "",
     name: user.name || "",
+    role: user.role,
   };
 }
 
 /**
- * Verify JWT token
+ * Verify JWT token (used by context.ts to authenticate requests)
  */
-export function verifyDriverToken(token: string): any {
+export function verifyDriverToken(token: string): { userId: number; openId: string; email: string; name: string; role: string } | null {
   try {
-    const jwtSecret = process.env.JWT_SECRET || "your-secret-key";
-    return jwt.verify(token, jwtSecret);
-  } catch (error) {
-    throw new Error("Token inválido o expirado");
+    const jwtSecret = process.env.JWT_SECRET || "wv-transport-secret-2026";
+    return jwt.verify(token, jwtSecret) as any;
+  } catch {
+    return null;
   }
 }
 

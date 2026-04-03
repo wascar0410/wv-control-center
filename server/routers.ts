@@ -188,7 +188,7 @@ const bankTransactionRouter = router({
       
       const account = await getBankAccountById(importRecord.bankAccountId);
       if (!account || account.userId !== ctx.user.id) {
-        throw new Error("No tienes permiso");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
       }
       
       await matchTransactionImport(input.importId, input.transactionId);
@@ -203,7 +203,7 @@ const bankTransactionRouter = router({
       
       const account = await getBankAccountById(importRecord.bankAccountId);
       if (!account || account.userId !== ctx.user.id) {
-        throw new Error("No tienes permiso");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
       }
       
       await deleteTransactionImport(input.importId);
@@ -219,7 +219,7 @@ const driverStatsRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver estas estadísticas");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estas estadísticas" });
       }
       return getDriverStats(input.driverId);
     }),
@@ -229,7 +229,7 @@ const driverStatsRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver estas estadísticas");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estas estadísticas" });
       }
       return getDriverMonthlyTrends(input.driverId, input.months);
     }),
@@ -239,7 +239,7 @@ const driverStatsRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver estas entregas");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estas entregas" });
       }
       return getDriverRecentDeliveries(input.driverId, input.limit);
     }),
@@ -248,7 +248,7 @@ const driverStatsRouter = router({
     .query(async ({ ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (!isPrivileged) {
-        throw new Error("No tienes permiso para ver las estadísticas de la flota");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver las estadísticas de la flota" });
       }
       return getFleetStats();
     }),
@@ -258,7 +258,7 @@ const driverStatsRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (!isPrivileged) {
-        throw new Error("No tienes permiso para ver las entregas de la flota");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver las entregas de la flota" });
       }
       return getFleetRecentDeliveries(input?.limit ?? 10);
     }),
@@ -462,7 +462,7 @@ const loadsRouter = router({
       if (!load) throw new Error("Carga no encontrada");
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (!isPrivileged && load.assignedDriverId !== ctx.user.id) {
-        throw new Error("No tienes permiso para aceptar esta carga");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para aceptar esta carga" });
       }
       await updateLoad(input.loadId, {
         driverAcceptedAt: new Date(),
@@ -488,7 +488,7 @@ const loadsRouter = router({
       const load = await getLoadById(input.loadId);
       if (!load) throw new Error("Carga no encontrada");
       if (load.assignedDriverId !== ctx.user.id) {
-        throw new Error("No tienes permiso para rechazar esta carga");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para rechazar esta carga" });
       }
 
       await updateLoad(input.loadId, {
@@ -931,7 +931,7 @@ const driverRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver estas estadísticas");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estas estadísticas" });
       }
       return await getDriverStatsForView(input.driverId);
     }),
@@ -944,7 +944,7 @@ const driverRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver estas cargas");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estas cargas" });
       }
       return await getDriverLoads(input.driverId, input.status);
     }),
@@ -954,7 +954,7 @@ const driverRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver este detalle");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver este detalle" });
       }
       return await getLoadDetailsForDriver(input.loadId, input.driverId);
     }),
@@ -964,7 +964,7 @@ const driverRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
       }
       return await getNextPriorityLoad(input.driverId);
     }),
@@ -1068,7 +1068,7 @@ const driverRouter = router({
       const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (!load && !isPrivileged) {
-        throw new Error("No tienes permiso para ver esto");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver esto" });
       }
 
       return await getProofOfDeliveryForLoad(input.loadId);
@@ -1083,7 +1083,7 @@ const driverRouter = router({
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver estas ganancias");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estas ganancias" });
       }
       return await getDriverEarnings(input.driverId, input.startDate, input.endDate);
     }),
@@ -1105,7 +1105,7 @@ const driverRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== "driver" && ctx.user.role !== "owner") {
-        throw new Error("No tienes permiso para actualizar ubicación");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para actualizar ubicación" });
       }
 
       try {
@@ -1132,7 +1132,7 @@ const driverRouter = router({
       const driverId = input.driverId || ctx.user.id;
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver esta ubicación");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver esta ubicación" });
       }
 
       try {
@@ -1150,7 +1150,7 @@ const driverRouter = router({
       const load = await getLoadDetailsForDriver(input.loadId, ctx.user.id);
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (!load && !isPrivileged) {
-        throw new Error("No tienes permiso para ver esta ubicación");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver esta ubicación" });
       }
       try {
         const { getLatestLocationForLoad } = await import("./db-location-tracking");
@@ -1225,7 +1225,7 @@ const driverRouter = router({
       if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
         const load = await getLoadById(input.loadId);
         if (load?.assignedDriverId !== ctx.user.id) {
-          throw new Error("No tienes permiso para ver esta evidencia");
+          throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver esta evidencia" });
         }
       }
       return getLoadEvidenceByLoadId(input.loadId);
@@ -1324,7 +1324,7 @@ const assignmentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const assignment = await getAssignmentById(input.assignmentId);
       if (!assignment) throw new Error("Asignacion no encontrada");
-      if (assignment.driverId !== ctx.user.id) throw new Error("No tienes permiso para aceptar esta carga");
+      if (assignment.driverId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para aceptar esta carga" });
       
       await updateAssignmentStatus(input.assignmentId, "accepted");
       
@@ -1342,7 +1342,7 @@ const assignmentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const assignment = await getAssignmentById(input.assignmentId);
       if (!assignment) throw new Error("Asignacion no encontrada");
-      if (assignment.driverId !== ctx.user.id) throw new Error("No tienes permiso para rechazar esta carga");
+      if (assignment.driverId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para rechazar esta carga" });
       
       await updateAssignmentStatus(input.assignmentId, "rejected");
       
@@ -1366,7 +1366,7 @@ const adminRouter = router({
     .query(async ({ input, ctx }) => {
       // Only owner and admin can check
       if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
-        throw new Error("No tienes permiso para verificar emails");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para verificar emails" });
       }
 
       const db = await getDb();
@@ -1391,7 +1391,7 @@ const adminRouter = router({
     .mutation(async ({ input, ctx }) => {
       // Only owner and admin can create drivers
       if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
-        throw new Error("No tienes permiso para crear choferes");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para crear choferes" });
       }
 
       const db = await getDb();
@@ -1450,7 +1450,7 @@ const adminRouter = router({
     }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
-        throw new Error("No tienes permiso para actualizar choferes");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para actualizar choferes" });
       }
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
@@ -1469,10 +1469,10 @@ const adminRouter = router({
   getDrivers: protectedProcedure
     .query(async ({ ctx }) => {
       if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
-        throw new Error("No tienes permiso para ver los choferes");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver los choferes" });
       }
       const db = await getDb();
-      if (!db) throw new Error("Database connection failed");
+      if (!db) return [];
       // Use raw SQL to safely handle columns that may not exist yet in DB
       const [rows] = await db.execute(sql`
         SELECT
@@ -1505,7 +1505,7 @@ const adminRouter = router({
       const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
       const targetDriverId = input.driverId ?? ctx.user.id;
       if (!isPrivileged && targetDriverId !== ctx.user.id) {
-        throw new Error("No tienes permiso para ver esta billetera");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver esta billetera" });
       }
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
@@ -1640,7 +1640,7 @@ const podRouter = router({
       if (!load) throw new Error("Carga no encontrada");
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (load.assignedDriverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para subir POD de esta carga");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para subir POD de esta carga" });
       }
 
       let documentUrl = input.documentUrl || "";
@@ -1683,7 +1683,7 @@ const podRouter = router({
     .query(({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (input.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para ver estos PODs");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estos PODs" });
       }
       return getPODsByDriverId(input.driverId);
     }),
@@ -1695,7 +1695,7 @@ const podRouter = router({
       if (!pod) throw new Error("POD no encontrado");
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       if (pod.driverId !== ctx.user.id && !isPrivileged) {
-        throw new Error("No tienes permiso para eliminar este POD");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para eliminar este POD" });
       }
 
       await deletePOD(input.podId);
@@ -1792,7 +1792,7 @@ const securityMonitoringRouter = router({
   // Rate limiting statistics (admin only)
   getRateLimitStats: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-      throw new Error("No tienes permiso para acceder a estas estadísticas");
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para acceder a estas estadísticas" });
     }
     return getRateLimitStats();
   }),
@@ -1802,7 +1802,7 @@ const securityMonitoringRouter = router({
     .input(z.object({ host: z.string() }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-        throw new Error("No tienes permiso para realizar esta acción");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para realizar esta acción" });
       }
       const key = `ratelimit:${input.host}`;
       const success = resetRateLimitForHost(key);
@@ -1814,7 +1814,7 @@ const securityMonitoringRouter = router({
     .input(z.object({ host: z.string() }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-        throw new Error("No tienes permiso para realizar esta acción");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para realizar esta acción" });
       }
       const key = `ratelimit:${input.host}`;
       const success = unblockHost(key);
@@ -1826,7 +1826,7 @@ const securityMonitoringRouter = router({
     .input(z.object({ host: z.string() }))
     .query(async ({ input, ctx }) => {
       if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-        throw new Error("No tienes permiso para acceder a estas estadísticas");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para acceder a estas estadísticas" });
       }
       return getHostRejectionStats(input.host);
     }),
@@ -1834,7 +1834,7 @@ const securityMonitoringRouter = router({
   // Get all rejection statistics (admin only)
   getAllRejectionStats: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-      throw new Error("No tienes permiso para acceder a estas estadísticas");
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para acceder a estas estadísticas" });
     }
     return getAllRejectionStats();
   }),
@@ -1851,7 +1851,7 @@ const securityMonitoringRouter = router({
     )
     .query(async ({ input, ctx }) => {
       if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-        throw new Error("No tienes permiso para acceder a estos datos");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para acceder a estos datos" });
       }
       return getRejectionHistory(input);
     }),
@@ -1861,7 +1861,7 @@ const securityMonitoringRouter = router({
     .input(z.object({ limit: z.number().optional() }))
     .query(async ({ input, ctx }) => {
       if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-        throw new Error("No tienes permiso para acceder a estas estadísticas");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para acceder a estas estadísticas" });
       }
       return getTopRejectedHosts(input.limit);
     }),
@@ -1871,7 +1871,7 @@ const securityMonitoringRouter = router({
     .input(z.object({ host: z.string() }))
     .mutation(async ({ input, ctx }) => {
       if (ctx.user?.role !== "owner" && ctx.user?.role !== "admin") {
-        throw new Error("No tienes permiso para realizar esta acción");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para realizar esta acción" });
       }
       const success = clearHostStats(input.host);
       return { success };
@@ -1945,7 +1945,7 @@ const contactRouter = router({
     .input(z.object({ status: z.string().optional() }))
     .query(async ({ input, ctx }) => {
       if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
-        throw new Error("No tienes permiso para ver estas solicitudes");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estas solicitudes" });
       }
       return getContactSubmissions(input.status);
     }),
@@ -1960,7 +1960,7 @@ const contactRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
-        throw new Error("No tienes permiso para actualizar solicitudes");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para actualizar solicitudes" });
       }
       await updateContactSubmissionStatus(
         input.id,
@@ -1973,7 +1973,7 @@ const contactRouter = router({
 
   getStatistics: protectedProcedure.query(async ({ ctx }) => {
     if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
-      throw new Error("No tienes permiso para ver estadísticas");
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver estadísticas" });
     }
     return getContactStatistics();
   }),
@@ -1982,7 +1982,7 @@ const contactRouter = router({
     .input(z.object({ days: z.number().optional() }))
     .query(async ({ input, ctx }) => {
       if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") {
-        throw new Error("No tienes permiso para ver tendencias");
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para ver tendencias" });
       }
       return getContactTrends(input.days || 30);
     }),
@@ -1998,6 +1998,8 @@ export const appRouter = router({
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      // Also clear the email/password session cookie
+      ctx.res.clearCookie("wv_session", { path: "/", maxAge: -1 });
       return { success: true } as const;
     }),
     requestPasswordReset: publicProcedure
@@ -2044,7 +2046,18 @@ export const appRouter = router({
     driverLogin: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string() }))
       .mutation(async ({ input, ctx }) => {
-        return await driverLogin({ email: input.email, password: input.password, ipAddress: ctx.req.ip, userAgent: ctx.req.headers["user-agent"] as string });
+        const result = await driverLogin({ email: input.email, password: input.password, ipAddress: ctx.req.ip, userAgent: ctx.req.headers["user-agent"] as string });
+        // Set wv_session cookie so subsequent tRPC requests are authenticated
+        const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
+        const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
+        ctx.res.cookie("wv_session", result.token, {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: isSecure ? "none" : "lax",
+          maxAge: ONE_YEAR_MS,
+          path: "/",
+        });
+        return result;
       }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") throw new Error("No autorizado");

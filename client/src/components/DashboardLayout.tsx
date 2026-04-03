@@ -1,4 +1,5 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { trpc } from "@/lib/trpc";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -136,9 +137,16 @@ function DashboardLayoutContent({
   setSidebarWidth: (width: number) => void;
   user: { name?: string; email?: string; role?: string };
 }) {
-  const logout = () => {
-    console.log("logout disabled");
-  };
+  const logoutMutation = trpc.auth.logout.useMutation({
+    onSettled: () => {
+      localStorage.removeItem("wv_token");
+      localStorage.removeItem("wv_user_role");
+      localStorage.removeItem("wv_user_email");
+      window.location.href = "/login";
+    },
+  });
+
+  const logout = () => logoutMutation.mutate();
 
   const [location, setLocation] = useLocation();
   const { state, toggleSidebar } = useSidebar();

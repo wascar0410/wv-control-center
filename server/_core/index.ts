@@ -347,6 +347,50 @@ async function startServer() {
         console.log("[Startup] OK: driver settlement fields already exist");
       }
 
+      // Seed owner accounts (idempotent - only creates if not exists)
+      const bcrypt = await import("bcryptjs");
+      const ownerAccounts = [
+        { email: "wascar.orti0410@gmail.com", name: "Wascar Ortiz", openId: "owner-wascar-001" },
+        { email: "yisvel10@gmail.com", name: "Yisvel", openId: "owner-yisvel-002" },
+      ];
+      for (const owner of ownerAccounts) {
+        const [existing] = await conn.execute(
+          `SELECT id FROM users WHERE email = ? LIMIT 1`,
+          [owner.email]
+        ) as any;
+        if (existing.length === 0) {
+          // Default password: WVTransport2026! (must be changed on first login)
+          const passwordHash = await bcrypt.default.hash("WVTransport2026!", 10);
+          await conn.execute(
+            `INSERT INTO users (openId, name, email, role, passwordHash, loginMethod, createdAt, updatedAt, lastSignedIn)
+             VALUES (?, ?, ?, 'owner', ?, 'email', NOW(), NOW(), NOW())`,
+            [owner.openId, owner.name, owner.email, passwordHash]
+          );
+          console.log(`[Startup] Created owner account: ${owner.email}`);
+        } else {
+          // Ensure role is owner and passwordHash is set
+          await conn.execute(
+            `UPDATE users SET role = 'owner' WHERE email = ? AND role NOT IN ('owner', 'admin')`,
+            [owner.email]
+          );
+          // If passwordHash is null, set default password
+          const [pwCheck] = await conn.execute(
+            `SELECT id FROM users WHERE email = ? AND (passwordHash IS NULL OR passwordHash = '') LIMIT 1`,
+            [owner.email]
+          ) as any;
+          if (pwCheck.length > 0) {
+            const passwordHash = await bcrypt.default.hash("WVTransport2026!", 10);
+            await conn.execute(
+              `UPDATE users SET passwordHash = ? WHERE email = ?`,
+              [passwordHash, owner.email]
+            );
+            console.log(`[Startup] Set default password for: ${owner.email}`);
+          } else {
+            console.log(`[Startup] OK: owner account exists: ${owner.email}`);
+          }
+        }
+      }
+
       await conn.end();
     } catch (err) {
       console.warn("[Startup] Safe migration warning (non-fatal):", (err as Error).message);
