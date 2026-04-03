@@ -923,6 +923,54 @@ export async function getQuotationsByStatus(userId: number, status: string) {
 }
 
 
+export async function getQuotationHistory(
+  userId: number,
+  opts: { status?: string; search?: string; limit?: number; offset?: number } = {}
+): Promise<{ quotations: any[]; total: number }> {
+  const db = await getDb();
+  if (!db) return { quotations: [], total: 0 };
+
+  const { status, search, limit = 20, offset = 0 } = opts;
+
+  const conditions: any[] = [eq(loadQuotations.userId, userId)];
+
+  if (status) {
+    conditions.push(eq(loadQuotations.status, status as any));
+  }
+
+  if (search) {
+    const term = `%${search}%`;
+    conditions.push(
+      or(
+        sql`${loadQuotations.pickupAddress} LIKE ${term}`,
+        sql`${loadQuotations.deliveryAddress} LIKE ${term}`,
+        sql`${loadQuotations.cargoDescription} LIKE ${term}`
+      )
+    );
+  }
+
+  const where = conditions.length > 1 ? and(...conditions) : conditions[0];
+
+  const [rows, countRows] = await Promise.all([
+    db
+      .select()
+      .from(loadQuotations)
+      .where(where)
+      .orderBy(desc(loadQuotations.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(loadQuotations)
+      .where(where),
+  ]);
+
+  return {
+    quotations: rows,
+    total: Number(countRows[0]?.count ?? 0),
+  };
+}
+
 // ─── Route Stops ──────────────────────────────────────────────────────────────
 
 export async function createRouteStop(data: InsertRouteStop) {

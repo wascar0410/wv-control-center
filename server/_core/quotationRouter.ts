@@ -7,6 +7,7 @@ import {
   updateLoadQuotation,
   deleteLoadQuotation,
   getQuotationsByStatus,
+  getQuotationHistory,
 } from "../db";
 import { calculateMultipleRoutes } from "./routes";
 import {
@@ -339,5 +340,23 @@ export const quotationRouter = router({
     .mutation(async ({ input }) => {
       await deleteLoadQuotation(input.quotationId);
       return { success: true };
+    }),
+
+  getQuotationHistory: protectedProcedure
+    .input(
+      z.object({
+        status: z.string().optional(),
+        search: z.string().optional(),
+        limit: z.number().optional().default(20),
+        offset: z.number().optional().default(0),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      return await getQuotationHistory(ctx.user.id, {
+        status: input?.status,
+        search: input?.search,
+        limit: input?.limit ?? 20,
+        offset: input?.offset ?? 0,
+      });
     }),
 });
