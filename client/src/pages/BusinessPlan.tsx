@@ -128,6 +128,7 @@ const NAV_SECTIONS = [
   { id: "competitive-advantage", label: "Advantage" },
   { id: "operations", label: "Operations" },
   { id: "technology", label: "Technology" },
+  { id: "product-roadmap", label: "Roadmap" },
   { id: "marketing", label: "Marketing" },
   { id: "revenue-model", label: "Revenue" },
   { id: "financial-plan", label: "Financials" },
@@ -721,18 +722,40 @@ export default function BusinessPlan() {
           <SectionHeader
             number="07"
             title="Competitive Advantage"
-            subtitle="WV Transport differentiates through operational discipline, professional standards, and proprietary internal technology — not just vehicle count."
+            subtitle="WV Transport differentiates through per-load profitability intelligence, verified delivery documentation, and a proprietary internal platform that most small carriers simply do not have."
           />
+
+          {/* Executive Description Block */}
+          <div className="mb-10 rounded-2xl border-l-4 border-[oklch(0.45_0.18_250)] bg-[oklch(0.96_0.02_240)] p-7">
+            <p className="text-xs font-display font-bold uppercase tracking-widest text-[oklch(0.45_0.18_250)] mb-3">Executive Summary — WV Control Center</p>
+            <p className="text-[oklch(0.17_0.05_248)] text-base leading-relaxed font-medium mb-4">
+              WV Control Center is an internal logistics operations platform that enables WV Transport to manage freight loads, calculate real-time per-load profitability, assign loads to drivers, and perform end-to-end tracking with digital proof of delivery. It includes detailed operating cost analysis — fuel, maintenance, insurance — GPS tracking every 30 seconds, intelligent geofencing, and an offline-capable queue for operations in low-connectivity areas.
+            </p>
+            <div className="grid sm:grid-cols-3 gap-4 mt-5">
+              {[
+                { label: "For Investors & Banks", text: "A proprietary platform that transforms operational data into a competitive asset — enabling better decision-making, stronger broker relationships, and a scalable foundation that informal operators cannot replicate." },
+                { label: "For Brokers & Clients", text: "Every load is tracked, documented, and closed with timestamped photos and digital delivery confirmation. No disputes. No missing paperwork. 100% POD compliance." },
+                { label: "For Operations", text: "Dashboard for load creation, profitability calculation, driver assignment, real-time GPS tracking, and delivery proof review — all in one internal system." },
+              ].map(item => (
+                <div key={item.label} className="bg-white rounded-xl p-4 border border-[oklch(0.91_0.01_240)] shadow-sm">
+                  <div className="font-display font-bold text-[oklch(0.28_0.09_250)] text-xs uppercase tracking-wider mb-2">{item.label}</div>
+                  <p className="text-[oklch(0.35_0.03_250)] text-xs leading-relaxed">{item.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="grid lg:grid-cols-[1fr_1fr] gap-8 mb-8">
             <div>
               <h3 className="font-display font-bold text-[oklch(0.17_0.05_248)] text-xl mb-5">Operational Differentiators</h3>
               <div className="space-y-3">
                 {[
-                  { icon: "🏗️", title: "Systems-First Approach", desc: "Internal workflows, documentation standards, and operational protocols are established from day one — not retrofitted after growth." },
-                  { icon: "📞", title: "Professional Communication", desc: "Consistent, timely, and professional communication with brokers and clients. Response standards and follow-through protocols are built into operations." },
-                  { icon: "📸", title: "Verified Delivery Documentation", desc: "Every delivery is documented with photos, timestamps, and notes. POD records are stored and accessible, reducing disputes and building trust." },
-                  { icon: "🚐", title: "Lean Cargo Van Model", desc: "Lower operating costs, higher flexibility, and access to freight segments that larger carriers cannot efficiently serve." },
-                  { icon: "🔁", title: "Relationship-Focused Growth", desc: "Prioritizing repeat broker and client relationships over one-off transactions — building a stable, predictable revenue base." },
+                  { icon: "📊", title: "Real-Time Per-Load Profitability", desc: "WV Control Center calculates gross revenue, operating costs (fuel, maintenance, insurance), and net margin for every individual load — a capability that most TMS platforms and all informal competitors lack entirely." },
+                  { icon: "🏗️", title: "Systems-First Approach", desc: "Internal workflows, documentation standards, and operational protocols are established from day one — not retrofitted after growth. This eliminates the operational debt that plagues most early-stage carriers." },
+                  { icon: "📸", title: "Verified Delivery Documentation", desc: "Every delivery is documented with timestamped photos, digital signature capture, and delivery notes. POD records are stored and accessible, reducing disputes and demonstrating accountability to brokers and clients." },
+                  { icon: "📡", title: "GPS Tracking & Geofencing", desc: "Driver location transmitted every 30 seconds. Intelligent geofencing triggers automatic alerts when drivers arrive at pickup and delivery zones — providing visibility that informal carriers cannot offer." },
+                  { icon: "🚐", title: "Lean Cargo Van Model", desc: "Lower operating costs, higher flexibility, and access to freight segments that larger carriers cannot efficiently serve — with no third-party marketplace commissions eating into margins." },
+                  { icon: "🔁", title: "Relationship-Focused Growth", desc: "Prioritizing repeat broker and client relationships over one-off transactions — building a stable, predictable revenue base with preferred carrier status as the long-term objective." },
                 ].map(item => (
                   <div key={item.title} className="flex items-start gap-4 p-4 rounded-xl bg-[oklch(0.97_0.01_240)] border border-[oklch(0.91_0.01_240)]">
                     <span className="text-xl flex-shrink-0">{item.icon}</span>
@@ -757,13 +780,15 @@ export default function BusinessPlan() {
                   </thead>
                   <tbody>
                     {[
+                      ["Per-Load Profitability Analysis", "✅", "❌"],
                       ["Internal Management Platform", "✅", "❌"],
-                      ["Proof of Delivery Documentation", "✅", "⚠️"],
-                      ["Professional Branding", "✅", "⚠️"],
-                      ["Structured Operational Workflows", "✅", "❌"],
+                      ["Real-Time GPS Tracking (30s)", "✅", "❌"],
+                      ["Proof of Delivery (Photo + Signature)", "✅", "⚠️"],
+                      ["Geofencing & Automated Alerts", "✅", "❌"],
+                      ["Offline-Capable Operations", "✅", "❌"],
+                      ["Professional Branding & Compliance", "✅", "⚠️"],
                       ["Bank-Ready Financial Records", "✅", "❌"],
-                      ["Broker Communication Standards", "✅", "⚠️"],
-                      ["Scalable Systems Architecture", "✅", "❌"],
+                      ["No Third-Party Marketplace Fees", "✅", "✅"],
                     ].map(([cap, wv, comp]) => (
                       <tr key={cap as string}>
                         <td className="text-sm text-[oklch(0.25_0.03_250)]">{cap}</td>
@@ -776,7 +801,7 @@ export default function BusinessPlan() {
               </div>
               <div className="callout-blue">
                 <p className="text-[oklch(0.25_0.03_250)] text-sm leading-relaxed">
-                  <strong className="text-[oklch(0.17_0.05_248)]">Key Insight:</strong> Most early-stage transportation companies operate without formal systems, documentation standards, or professional infrastructure. WV Transport's structured approach creates a measurable competitive advantage in broker relationships and long-term client retention.
+                  <strong className="text-[oklch(0.17_0.05_248)]">Key Insight:</strong> Most early-stage carriers operate without formal systems, documentation standards, or profitability visibility. WV Transport's structured approach — anchored by WV Control Center — creates a measurable and defensible competitive advantage in broker relationships, client retention, and long-term scalability.
                 </p>
               </div>
             </div>
@@ -918,11 +943,146 @@ export default function BusinessPlan() {
         </div>
       </Section>
 
-      {/* ── 10. MARKETING ── */}
-      <Section id="marketing" alt>
+      {/* ── 10. PRODUCT ROADMAP ── */}
+      <Section id="product-roadmap" alt>
         <div className="container mx-auto px-4">
           <SectionHeader
             number="10"
+            title="WV Control Center — Product Roadmap"
+            subtitle="A transparent view of what is live today, what is actively in development, and what is planned for the next 12–18 months."
+          />
+
+          {/* Status Legend */}
+          <div className="flex flex-wrap gap-4 mb-10">
+            {[
+              { dot: "bg-[oklch(0.52_0.14_145)]", label: "Live — Operational Today" },
+              { dot: "bg-[oklch(0.65_0.18_55)]", label: "In Development — Q2–Q3 2026" },
+              { dot: "bg-[oklch(0.45_0.18_258)]", label: "Planned — Q4 2026 – Q2 2027" },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${item.dot}`} />
+                <span className="text-[oklch(0.35_0.03_250)] text-sm font-medium">{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Phase Timeline */}
+          <div className="space-y-8 mb-12">
+
+            {/* Phase 1 — Live */}
+            <div className="rounded-2xl border border-[oklch(0.52_0.14_145)]/30 bg-white overflow-hidden shadow-[0_4px_20px_rgba(7,22,45,0.06)]">
+              <div className="flex items-center gap-4 px-7 py-4 bg-[oklch(0.52_0.14_145)]/8 border-b border-[oklch(0.52_0.14_145)]/20">
+                <div className="w-3 h-3 rounded-full bg-[oklch(0.52_0.14_145)] flex-shrink-0" />
+                <div>
+                  <div className="font-display font-bold text-[oklch(0.52_0.14_145)] text-xs uppercase tracking-widest">Phase 1 — Live</div>
+                  <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-lg">Foundation & Core Operations</div>
+                </div>
+                <div className="ml-auto bg-[oklch(0.52_0.14_145)]/15 text-[oklch(0.35_0.10_145)] text-xs font-bold px-3 py-1 rounded-full">Operational Today</div>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-x divide-y divide-[oklch(0.91_0.01_240)]">
+                {[
+                  { icon: "💰", title: "Per-Load Profitability Calculator", desc: "Calculates gross revenue, fuel cost, maintenance reserve, insurance allocation, and net margin for every individual load before acceptance." },
+                  { icon: "📋", title: "Load Management & Quotation", desc: "Full quotation workflow with ACCEPT / NEGOTIATE / REJECT verdicts based on rate-per-mile thresholds and operating cost benchmarks." },
+                  { icon: "👤", title: "Driver Assignment", desc: "Admin assigns loads to drivers with complete load packages including pickup/delivery details, contact information, and special instructions." },
+                  { icon: "🔄", title: "Load Status Workflow", desc: "Structured status progression: Assigned → Picked Up → In Transit → Delivered. All transitions are timestamped and logged." },
+                  { icon: "📸", title: "Proof of Delivery (POD)", desc: "Timestamped photo upload and delivery notes captured at point of delivery. Records stored in cloud storage for broker and client access." },
+                  { icon: "📡", title: "Real-Time GPS Tracking", desc: "Driver location transmitted every 30 seconds during active loads. Admin dashboard shows all driver positions on a live map." },
+                  { icon: "📊", title: "Admin Dashboard", desc: "Centralized view of all active loads, driver status, pending quotations, and operational KPIs in a single management interface." },
+                  { icon: "📜", title: "Quotation History", desc: "Full searchable history of all quotations with status, profitability data, and load details for financial review and audit." },
+                  { icon: "🔔", title: "Push Notifications", desc: "Real-time alerts for load status changes, delivery confirmations, and driver activity sent to admin via web and mobile." },
+                ].map(f => (
+                  <div key={f.title} className="p-5">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl flex-shrink-0 mt-0.5">{f.icon}</span>
+                      <div>
+                        <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-sm mb-1">{f.title}</div>
+                        <p className="text-[oklch(0.45_0.03_250)] text-xs leading-relaxed">{f.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Phase 2 — In Development */}
+            <div className="rounded-2xl border border-[oklch(0.65_0.18_55)]/40 bg-white overflow-hidden shadow-[0_4px_20px_rgba(7,22,45,0.06)]">
+              <div className="flex items-center gap-4 px-7 py-4 bg-[oklch(0.65_0.18_55)]/8 border-b border-[oklch(0.65_0.18_55)]/20">
+                <div className="w-3 h-3 rounded-full bg-[oklch(0.65_0.18_55)] flex-shrink-0" />
+                <div>
+                  <div className="font-display font-bold text-[oklch(0.55_0.14_55)] text-xs uppercase tracking-widest">Phase 2 — In Development</div>
+                  <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-lg">Enhanced Visibility & Delivery Intelligence</div>
+                </div>
+                <div className="ml-auto bg-[oklch(0.65_0.18_55)]/15 text-[oklch(0.45_0.12_55)] text-xs font-bold px-3 py-1 rounded-full">Q2 – Q3 2026</div>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-x divide-y divide-[oklch(0.91_0.01_240)]">
+                {[
+                  { icon: "✍️", title: "Digital Signature Capture", desc: "Recipient signature collected at point of delivery via touchscreen. Stored alongside POD photos to create a legally defensible delivery record." },
+                  { icon: "📍", title: "Geofencing & Zone Alerts", desc: "Automatic alerts triggered when drivers enter or exit defined pickup and delivery zones — eliminating manual check-in calls and improving ETA accuracy." },
+                  { icon: "📶", title: "Offline-Capable Queue", desc: "Status updates, POD photos, and delivery confirmations queued locally when connectivity is unavailable, then synced automatically when connection is restored." },
+                  { icon: "🗺️", title: "Route Optimization Integration", desc: "Integration with Google Maps and Waze for turn-by-turn navigation directly from load details, with estimated arrival times surfaced in the admin dashboard." },
+                  { icon: "📁", title: "POD Signature Gallery", desc: "Searchable archive of all delivery signatures and photos organized by load, date, and client — providing instant access to historical delivery evidence." },
+                  { icon: "📤", title: "Automated POD Email", desc: "Automatic delivery confirmation email sent to broker and/or client upon delivery completion, including POD photos and timestamp — reducing manual follow-up." },
+                ].map(f => (
+                  <div key={f.title} className="p-5">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl flex-shrink-0 mt-0.5">{f.icon}</span>
+                      <div>
+                        <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-sm mb-1">{f.title}</div>
+                        <p className="text-[oklch(0.45_0.03_250)] text-xs leading-relaxed">{f.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Phase 3 — Planned */}
+            <div className="rounded-2xl border border-[oklch(0.45_0.18_258)]/30 bg-white overflow-hidden shadow-[0_4px_20px_rgba(7,22,45,0.06)]">
+              <div className="flex items-center gap-4 px-7 py-4 bg-[oklch(0.45_0.18_258)]/8 border-b border-[oklch(0.45_0.18_258)]/20">
+                <div className="w-3 h-3 rounded-full bg-[oklch(0.45_0.18_258)] flex-shrink-0" />
+                <div>
+                  <div className="font-display font-bold text-[oklch(0.45_0.18_258)] text-xs uppercase tracking-widest">Phase 3 — Planned</div>
+                  <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-lg">Scale, Analytics & Multi-Vehicle Operations</div>
+                </div>
+                <div className="ml-auto bg-[oklch(0.45_0.18_258)]/15 text-[oklch(0.35_0.14_258)] text-xs font-bold px-3 py-1 rounded-full">Q4 2026 – Q2 2027</div>
+              </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-0 divide-x divide-y divide-[oklch(0.91_0.01_240)]">
+                {[
+                  { icon: "📈", title: "Advanced Profitability Analytics", desc: "Historical trend analysis of per-load margins, cost benchmarks by route and load type, and automated alerts when operating costs exceed thresholds." },
+                  { icon: "🚐", title: "Multi-Vehicle Fleet Dashboard", desc: "Unified view of all vehicles in operation — live location, load status, driver performance, and utilization rates across the entire fleet." },
+                  { icon: "🤝", title: "Broker Portal (Read-Only)", desc: "Secure external portal allowing broker partners to view real-time load status and POD records for their shipments without accessing internal data." },
+                  { icon: "💳", title: "Driver Settlement & Payroll", desc: "Automated calculation of driver compensation per load based on configurable pay structures — integrated with load completion records for accurate settlement." },
+                  { icon: "📊", title: "Operational Reporting Suite", desc: "Monthly and quarterly reports covering revenue, cost breakdown, on-time delivery rate, and broker performance — exportable for financial review and investor reporting." },
+                  { icon: "🔗", title: "Load Board API Integration", desc: "Direct integration with DAT and Truckstop load boards to surface available loads within WV Control Center, reducing time spent on manual load sourcing." },
+                ].map(f => (
+                  <div key={f.title} className="p-5">
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl flex-shrink-0 mt-0.5">{f.icon}</span>
+                      <div>
+                        <div className="font-display font-bold text-[oklch(0.17_0.05_248)] text-sm mb-1">{f.title}</div>
+                        <p className="text-[oklch(0.45_0.03_250)] text-xs leading-relaxed">{f.desc}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Investment Note */}
+          <div className="callout-blue">
+            <p className="text-[oklch(0.25_0.03_250)] text-sm leading-relaxed">
+              <strong className="text-[oklch(0.17_0.05_248)]">Note for Investors & Lenders:</strong> Phase 1 capabilities are fully operational today and actively used in daily freight operations. Phases 2 and 3 represent planned enhancements that will be developed as the company scales. The roadmap is sequenced to prioritize features that directly reduce operational risk and increase broker confidence before expanding to analytics and multi-vehicle management.
+            </p>
+          </div>
+        </div>
+      </Section>
+
+      {/* ── 11. MARKETING ── */}
+      <Section id="marketing" alt>
+        <div className="container mx-auto px-4">
+          <SectionHeader
+            number="11"
             title="Marketing &amp; Sales Strategy"
             subtitle="A focused, relationship-driven approach to building broker partnerships and establishing WV Transport as a trusted regional carrier."
           />
@@ -1020,7 +1180,7 @@ export default function BusinessPlan() {
       <Section id="revenue-model">
         <div className="container mx-auto px-4">
           <SectionHeader
-            number="11"
+            number="12"
             title="Revenue Model"
             subtitle="A transaction-based model in the startup phase, evolving toward relationship-based recurring revenue as the business matures."
           />
@@ -1113,7 +1273,7 @@ export default function BusinessPlan() {
       <Section id="financial-plan" alt>
         <div className="container mx-auto px-4">
           <SectionHeader
-            number="12"
+            number="13"
             title="Financial Plan"
             subtitle="Planning-level financial projections for bank and operational planning purposes. All figures are estimates to be refined with real operating data."
           />
@@ -1248,7 +1408,7 @@ export default function BusinessPlan() {
       <Section id="growth-plan">
         <div className="container mx-auto px-4">
           <SectionHeader
-            number="13"
+            number="14"
             title="12-Month Growth Plan"
             subtitle="A structured three-phase roadmap for building operational stability, expanding broker relationships, and preparing for scalable growth."
           />
@@ -1344,7 +1504,7 @@ export default function BusinessPlan() {
       <Section id="funding" alt>
         <div className="container mx-auto px-4">
           <SectionHeader
-            number="14"
+            number="15"
             title="Funding &amp; Capital Needs"
             subtitle="A conservative, structured approach to capital deployment focused on operational reliability and sustainable growth."
           />
@@ -1430,7 +1590,7 @@ export default function BusinessPlan() {
       <Section id="why-win">
         <div className="container mx-auto px-4">
           <SectionHeader
-            number="15"
+            number="16"
             title="Why This Business Is Positioned to Succeed"
           />
           <div
@@ -1477,7 +1637,7 @@ export default function BusinessPlan() {
       <Section id="contact" alt>
         <div className="container mx-auto px-4">
           <SectionHeader
-            number="16"
+            number="17"
             title="Contact Information"
             subtitle="Reach out to discuss freight opportunities, broker partnerships, or business inquiries."
           />
