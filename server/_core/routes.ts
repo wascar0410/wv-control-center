@@ -16,15 +16,52 @@ export interface RouteRequest {
   destinationLng: number;
 }
 
+export interface MultipleRoutesInput {
+  vanLat: number;
+  vanLng: number;
+  pickupLat: number;
+  pickupLng: number;
+  deliveryLat: number;
+  deliveryLng: number;
+  includeReturnEmpty?: boolean;
+}
+
+export interface MultipleRoutesResult {
+  emptyRoute: RouteResult | null;
+  loadedRoute: RouteResult | null;
+  returnRoute: RouteResult | null;
+  emptyMiles: number;
+  loadedMiles: number;
+  returnEmptyMiles: number;
+  totalMiles: number;
+  totalDistanceMiles: number;
+  totalDurationHours: number;
+}
+
 /**
  * Calculate route distance and duration using Google Routes API
  * Returns distance in miles and duration in hours
  */
-export async function calculateRoute(request: RouteRequest): Promise<RouteResult | null> {
+export async function calculateRoute(
+  request: RouteRequest
+): Promise<RouteResult | null> {
   const { originLat, originLng, destinationLat, destinationLng } = request;
 
-  if (!isValidCoordinate(originLat, originLng) || !isValidCoordinate(destinationLat, destinationLng)) {
-    console.error("[Routes] Invalid coordinates provided");
+  if (
+    !isValidCoordinate(originLat, originLng) ||
+    !isValidCoordinate(destinationLat, destinationLng)
+  ) {
+    console.error("[Routes] Invalid coordinates provided", {
+      originLat,
+      originLng,
+      destinationLat,
+      destinationLng,
+    });
+    return null;
+  }
+
+  if (!ENV.GOOGLE_MAPS_API_KEY) {
+    console.error("[Routes] GOOGLE_MAPS_API_KEY not configured");
     return null;
   }
 
@@ -51,18 +88,28 @@ export async function calculateRoute(request: RouteRequest): Promise<RouteResult
       computeAlternativeRoutes: false,
     };
 
-    const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": ENV.GOOGLE_MAPS_API_KEY,
-        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const response = await fetch(
+      "https://routes.googleapis.com/directions/v2:computeRoutes",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": ENV.GOOGLE_MAPS_API_KEY,
+          "X-Goog-FieldMask":
+            "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline",
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
 
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData: any = null;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = await response.text();
+      }
+
       console.error("[Routes] API error:", response.status, errorData);
       return null;
     }
@@ -75,15 +122,18 @@ export async function calculateRoute(request: RouteRequest): Promise<RouteResult
     }
 
     const route = data.routes[0];
-    const distanceMeters = parseInt(route.distanceMeters, 10);
-    const durationSeconds = parseInt(route.duration.replace("s", ""), 10);
+    const distanceMeters = Number(route.distanceMeters ?? 0);
+
+    // Google suele devolver duration como "123s" o "123.456s"
+    const rawDuration = String(route.duration ?? "0s").replace("s", "");
+    const durationSeconds = Math.round(parseFloat(rawDuration) || 0);
 
     return {
       distanceMeters,
-      distanceMiles: metersToMiles(distanceMeters),
+      distanceMiles: roundTo2(metersToMiles(distanceMeters)),
       durationSeconds,
-      durationMinutes: secondsToMinutes(durationSeconds),
-      durationHours: secondsToHours(durationSeconds),
+      durationMinutes: roundTo2(secondsToMinutes(durationSeconds)),
+      durationHours: roundTo2(secondsToHours(durationSeconds)),
       polyline: route.polyline?.encodedPolyline,
     };
   } catch (error) {
@@ -93,25 +143,41 @@ export async function calculateRoute(request: RouteRequest): Promise<RouteResult
 }
 
 /**
- * Calculate multiple routes (van to pickup, pickup to delivery, delivery to van)
+ * Calculate multiple routes:
+ * - Van -> Pickup (empty)
+ * - Pickup -> Delivery (loaded)
+ * - Delivery -> Van (optional return empty)
  */
 export async function calculateMultipleRoutes(
-  vanLat: number,
-  vanLng: number,
-  pickupLat: number,
-  pickupLng: number,
-  deliveryLat: number,
-  deliveryLng: number,
-  includeReturnEmpty: boolean
-): Promise<{
-  emptyRoute: RouteResult | null;
-  loadedRoute: RouteResult | null;
-  returnRoute: RouteResult | null;
-  totalDistanceMiles: number;
-  totalDurationHours: number;
-} | null> {
+  input: MultipleRoutesInput
+): Promise<MultipleRoutesResult | null> {
+  const {
+    vanLat,
+    vanLng,
+    pickupLat,
+    pickupLng,
+    deliveryLat,
+    deliveryLng,
+    includeReturnEmpty = false,
+  } = input;
+
+  if (
+    !isValidCoordinate(vanLat, vanLng) ||
+    !isValidCoordinate(pickupLat, pickupLng) ||
+    !isValidCoordinate(deliveryLat, deliveryLng)
+  ) {
+    console.error("[Routes] Invalid coordinates provided", {
+      vanLat,
+      vanLng,
+      pickupLat,
+      pickupLng,
+      deliveryLat,
+      deliveryLng,
+    });
+    return null;
+  }
+
   try {
-    // Van to Pickup (empty miles)
     const emptyRoute = await calculateRoute({
       originLat: vanLat,
       originLng: vanLng,
@@ -119,7 +185,6 @@ export async function calculateMultipleRoutes(
       destinationLng: pickupLng,
     });
 
-    // Pickup to Delivery (loaded miles)
     const loadedRoute = await calculateRoute({
       originLat: pickupLat,
       originLng: pickupLng,
@@ -127,8 +192,7 @@ export async function calculateMultipleRoutes(
       destinationLng: deliveryLng,
     });
 
-    // Delivery to Van (return empty miles) - optional
-    let returnRoute = null;
+    let returnRoute: RouteResult | null = null;
     if (includeReturnEmpty) {
       returnRoute = await calculateRoute({
         originLat: deliveryLat,
@@ -138,21 +202,31 @@ export async function calculateMultipleRoutes(
       });
     }
 
-    const totalDistanceMiles =
-      (emptyRoute?.distanceMiles || 0) +
-      (loadedRoute?.distanceMiles || 0) +
-      (returnRoute?.distanceMiles || 0);
+    // La ruta cargada es la crítica. Si falla, no tiene sentido continuar.
+    if (!loadedRoute) {
+      console.error("[Routes] Loaded route could not be calculated");
+      return null;
+    }
 
-    const totalDurationHours =
-      (emptyRoute?.durationHours || 0) +
-      (loadedRoute?.durationHours || 0) +
-      (returnRoute?.durationHours || 0);
+    const emptyMiles = roundTo2(emptyRoute?.distanceMiles ?? 0);
+    const loadedMiles = roundTo2(loadedRoute.distanceMiles ?? 0);
+    const returnEmptyMiles = roundTo2(returnRoute?.distanceMiles ?? 0);
+    const totalMiles = roundTo2(emptyMiles + loadedMiles + returnEmptyMiles);
+    const totalDurationHours = roundTo2(
+      (emptyRoute?.durationHours ?? 0) +
+        (loadedRoute?.durationHours ?? 0) +
+        (returnRoute?.durationHours ?? 0)
+    );
 
     return {
       emptyRoute,
       loadedRoute,
       returnRoute,
-      totalDistanceMiles,
+      emptyMiles,
+      loadedMiles,
+      returnEmptyMiles,
+      totalMiles,
+      totalDistanceMiles: totalMiles,
       totalDurationHours,
     };
   } catch (error) {
@@ -162,7 +236,7 @@ export async function calculateMultipleRoutes(
 }
 
 /**
- * Helper functions for unit conversion
+ * Helper functions
  */
 function metersToMiles(meters: number): number {
   return meters * 0.000621371;
@@ -176,6 +250,19 @@ function secondsToHours(seconds: number): number {
   return seconds / 3600;
 }
 
+function roundTo2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function isValidCoordinate(lat: number, lng: number): boolean {
-  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    !Number.isNaN(lat) &&
+    !Number.isNaN(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
 }
