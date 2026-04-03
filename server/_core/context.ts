@@ -25,7 +25,7 @@ export async function createContext(
       user: {
         id: 1,
         name: "WV Admin (Dev)",
-        email: "wascar.orti0410@gmail.com",
+        email: "wascar.ortiz0410@gmail.com",
         role: "owner",
       } as any,
     };

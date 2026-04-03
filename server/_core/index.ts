@@ -378,7 +378,7 @@ async function startServer() {
       const bcrypt = await import("bcryptjs");
       const defaultPasswordHash = await bcrypt.default.hash("WVTransport2026!", 10);
       const ownerAccounts = [
-        { email: "wascar.orti0410@gmail.com", name: "Wascar Ortiz", openId: "owner-wascar-001" },
+        { email: "wascar.ortiz0410@gmail.com", name: "Wascar Ortiz", openId: "owner-wascar-001" },
         { email: "yisvel10@gmail.com", name: "Yisvel", openId: "owner-yisvel-002" },
       ];
       for (const owner of ownerAccounts) {

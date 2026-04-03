@@ -314,7 +314,7 @@ class SDKServer {
         const rows = await conn
           .select()
           .from(users)
-          .where(eq(users.email, "wascardely@gmail.com"))
+          .where(eq(users.email, "wascar.ortiz0410@gmail.com"))
           .limit(1);
         if (rows[0]) return (rows[0] as User);
         // Then try any admin or owner user
