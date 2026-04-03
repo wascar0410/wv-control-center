@@ -1473,10 +1473,27 @@ const adminRouter = router({
       }
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
-      const drivers = await db.select().from(usersTable)
-        .where(inArray(usersTable.role, ["driver", "owner"]))
-        .orderBy(usersTable.name);
-      return drivers;
+      // Use raw SQL to safely handle columns that may not exist yet in DB
+      const [rows] = await db.execute(sql`
+        SELECT
+          id, name, email, role, phone,
+          profileImageUrl,
+          CASE WHEN (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='fleetType') > 0
+            THEN fleetType ELSE 'internal' END as fleetType,
+          CASE WHEN (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='commissionPercent') > 0
+            THEN commissionPercent ELSE 0 END as commissionPercent,
+          CASE WHEN (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='dotNumber') > 0
+            THEN dotNumber ELSE NULL END as dotNumber,
+          CASE WHEN (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='vehicleInfo') > 0
+            THEN vehicleInfo ELSE NULL END as vehicleInfo,
+          CASE WHEN (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='locationSharingEnabled') > 0
+            THEN locationSharingEnabled ELSE 0 END as locationSharingEnabled,
+          createdAt
+        FROM users
+        WHERE role IN ('driver', 'owner')
+        ORDER BY name ASC
+      `);
+      return rows as any[];
     }),
 
   // Get driver wallet/settlement data
@@ -1565,7 +1582,10 @@ const adminRouter = router({
       try {
         const locations = await db.execute(sql`
           SELECT dl.driverId, dl.latitude, dl.longitude, dl.speed, dl.heading, dl.timestamp,
-                 u.name as driverName, u.fleetType, u.profileImageUrl,
+                 u.name as driverName,
+                 CASE WHEN (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='fleetType') > 0
+                   THEN u.fleetType ELSE 'internal' END as fleetType,
+                 u.profileImageUrl,
                  l.clientName as loadClientName, l.deliveryAddress as loadDestination, l.status as loadStatus
           FROM driver_locations dl
           INNER JOIN (
