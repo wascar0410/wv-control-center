@@ -5,7 +5,7 @@
  */
 import { z } from "zod";
 import { desc } from "drizzle-orm";
-import { publicProcedure, adminProcedure, router } from "./trpc";
+import { publicProcedure, protectedProcedure, router } from "./trpc";
 import { getDb } from "../db";
 import { businessPlanEvents } from "../../drizzle/schema";
 
@@ -50,7 +50,7 @@ export const analyticsRouter = router({
   /**
    * Get analytics summary for the business plan page (admin only)
    */
-  getSummary: adminProcedure.query(async () => {
+  getSummary: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) return { events: [], totals: {} };
 
