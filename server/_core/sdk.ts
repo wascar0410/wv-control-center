@@ -303,18 +303,27 @@ class SDKServer {
       return fallbackByOwnerOpenId as User;
     }
 
+    // Try to find an admin or owner user by email
     const fallbackByEmail = await db
       .getDb()
       .then(async (conn) => {
         if (!conn) return null;
         const { users } = await import("../../drizzle/schema");
-        const { eq } = await import("drizzle-orm");
+        const { eq, or } = await import("drizzle-orm");
+        // First try the known owner email
         const rows = await conn
           .select()
           .from(users)
           .where(eq(users.email, "wascardely@gmail.com"))
           .limit(1);
-        return (rows[0] as User) ?? null;
+        if (rows[0]) return (rows[0] as User);
+        // Then try any admin or owner user
+        const adminRows = await conn
+          .select()
+          .from(users)
+          .where(or(eq(users.role, "owner"), eq(users.role, "admin")))
+          .limit(1);
+        return (adminRows[0] as User) ?? null;
       })
       .catch(() => null);
 
@@ -322,12 +331,7 @@ class SDKServer {
       return fallbackByEmail;
     }
 
-    const firstDrivers = await db.getAllDrivers().catch(() => []);
-    if (firstDrivers.length > 0) {
-      return firstDrivers[0] as User;
-    }
-
-    throw ForbiddenError("No demo user found in database");
+    throw ForbiddenError("No authenticated user found. Please log in.");
   }
 }
 

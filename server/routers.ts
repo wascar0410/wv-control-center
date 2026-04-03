@@ -1576,9 +1576,9 @@ const adminRouter = router({
   getFleetLocations: protectedProcedure
     .query(async ({ ctx }) => {
       const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
-      if (!isPrivileged) throw new Error("No tienes permiso para ver el mapa de flota");
+      if (!isPrivileged) return []; // Silently return empty for non-admin users
       const db = await getDb();
-      if (!db) throw new Error("Database connection failed");
+      if (!db) return []; // Silently return empty if no DB connection
       try {
         const locations = await db.execute(sql`
           SELECT dl.driverId, dl.latitude, dl.longitude, dl.speed, dl.heading, dl.timestamp,

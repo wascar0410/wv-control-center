@@ -306,6 +306,25 @@ async function startServer() {
         console.log("[Startup] OK: driver fleet fields already exist");
       }
 
+      // Migration 0007 (safe): Create driver_locations table if not exists
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS \`driver_locations\` (
+          \`id\` int AUTO_INCREMENT NOT NULL,
+          \`driverId\` int NOT NULL,
+          \`loadId\` int DEFAULT NULL,
+          \`latitude\` decimal(10,7) NOT NULL,
+          \`longitude\` decimal(10,7) NOT NULL,
+          \`accuracy\` decimal(8,2) DEFAULT NULL,
+          \`speed\` decimal(8,2) DEFAULT NULL,
+          \`heading\` decimal(6,2) DEFAULT NULL,
+          \`altitude\` decimal(10,2) DEFAULT NULL,
+          \`timestamp\` timestamp NOT NULL DEFAULT (now()),
+          \`createdAt\` timestamp NOT NULL DEFAULT (now()),
+          CONSTRAINT \`driver_locations_id\` PRIMARY KEY(\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+      console.log("[Startup] Applied: driver_locations table ready");
+
       // Migration 0032: Driver settlement fields on driver_payments
       const [settlementCols] = await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
