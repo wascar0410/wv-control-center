@@ -179,6 +179,29 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
+  // Run pending Drizzle migrations on startup (safe — only applies new SQL files)
+  if (process.env.DATABASE_URL) {
+    try {
+      const { drizzle: drizzleOrm } = await import("drizzle-orm/mysql2");
+      const { migrate } = await import("drizzle-orm/mysql2/migrator");
+      const mysql2 = await import("mysql2/promise");
+      const { fileURLToPath: ftu } = await import("url");
+      const { dirname: dn, resolve: rs } = await import("path");
+      const __d = dn(ftu(import.meta.url));
+      const migrationsFolder = rs(__d, "../drizzle");
+      const conn = await mysql2.default.createConnection({
+        uri: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: true },
+      });
+      const db2 = drizzleOrm(conn);
+      await migrate(db2, { migrationsFolder });
+      await conn.end();
+      console.log("[Startup] Database migrations applied successfully");
+    } catch (err) {
+      console.warn("[Startup] Migration warning (non-fatal):", (err as Error).message);
+    }
+  }
+
   // Initialize WebSocket server
   wsManager.initialize(server);
 
