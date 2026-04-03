@@ -190,7 +190,8 @@ export default function Dashboard() {
                     return (
                       <div
                         key={load.id}
-                        className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-accent/30"
+                        onClick={() => setLocation(`/loads/${load.id}`)}
+                        className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-accent/30 cursor-pointer group"
                       >
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                           <Package className="h-4 w-4 text-primary" />

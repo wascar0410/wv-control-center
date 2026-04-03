@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ const VERDICT_COLORS: Record<string, string> = {
 };
 
 export default function BrokerLoadsManagement() {
+  const [, setLocation] = useLocation();
   const [status, setStatus] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selectedLoad, setSelectedLoad] = useState<any>(null);
@@ -307,7 +309,7 @@ export default function BrokerLoadsManagement() {
                 </TableHeader>
                 <TableBody>
                   {filteredLoads.map((load: any) => (
-                    <TableRow key={load.id}>
+                    <TableRow key={load.id} className="cursor-pointer" onClick={(e) => { if ((e.target as HTMLElement).closest('button, [role="button"], [data-no-nav]')) return; setLocation(`/loads/${load.id}`); }}>
                       <TableCell className="font-medium capitalize">
                         {load.brokerName}
                       </TableCell>

@@ -22,6 +22,7 @@ import About from "./pages/About";
 import BusinessPlan from "./pages/BusinessPlan";
 import BusinessPlanAnalytics from "./pages/BusinessPlanAnalytics";
 import CarrierPacket from "./pages/CarrierPacket";
+import LoadDetail from "./pages/LoadDetail";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <Switch>
       <Route path="/dashboard" component={withLayout(Dashboard)} />
+      <Route path="/loads/:id" component={withLayout(LoadDetail)} />
       <Route path="/loads" component={withLayout(Loads)} />
       <Route path="/finance" component={withLayout(Finance)} />
       <Route path="/transactions" component={withLayout(Transactions)} />
