@@ -350,8 +350,11 @@ export async function getFuelLogs(driverId?: number, loadId?: number) {
 
 export async function getDashboardKPIs() {
   const db = await getDb();
-  if (!db) return { activeLoads: 0, monthIncome: 0, monthExpenses: 0, monthProfit: 0, totalLoads: 0 };
-
+  if (!db) return {
+    activeLoads: 0, monthIncome: 0, monthExpenses: 0, monthProfit: 0, totalLoads: 0,
+    profitPerMile: 0, costPerMile: 0, revenuePerMile: 0, utilizationPercent: 0,
+    avgRevenuePerLoad: 0, monthLoadsCompleted: 0, totalMilesMonth: 0,
+  };
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -360,12 +363,66 @@ export async function getDashboardKPIs() {
     .select({ count: sql<number>`COUNT(*)` })
     .from(loads)
     .where(eq(loads.status, "in_transit"));
-
   const [totalLoadsResult] = await db
     .select({ count: sql<number>`COUNT(*)` })
     .from(loads);
 
+  // Month completed loads
+  const [monthLoadsResult] = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(loads)
+    .where(and(
+      inArray(loads.status, ["delivered", "invoiced", "paid"]),
+      gte(loads.updatedAt, startOfMonth),
+      lte(loads.updatedAt, endOfMonth)
+    ));
+
+  // Revenue and cost aggregates for completed loads this month
+  const [monthRevenueResult] = await db
+    .select({
+      totalRevenue: sql<string>`SUM(CAST(${loads.price} AS DECIMAL(12,2)))`,
+      totalFuel: sql<string>`SUM(CAST(COALESCE(${loads.estimatedFuel}, 0) AS DECIMAL(12,2)))`,
+      totalTolls: sql<string>`SUM(CAST(COALESCE(${loads.estimatedTolls}, 0) AS DECIMAL(12,2)))`,
+    })
+    .from(loads)
+    .where(and(
+      inArray(loads.status, ["delivered", "invoiced", "paid"]),
+      gte(loads.updatedAt, startOfMonth),
+      lte(loads.updatedAt, endOfMonth)
+    ));
+
+  // Miles from quotations this month (best available data source)
+  let totalMiles = 0;
+  try {
+    const milesResult: any = await db.execute(sql`
+      SELECT SUM(CAST(loadedMiles AS DECIMAL(12,2))) as totalMiles
+      FROM quotations
+      WHERE status IN ('accepted') AND createdAt >= ${startOfMonth} AND createdAt <= ${endOfMonth}
+    `);
+    const milesRows = Array.isArray(milesResult) && milesResult.length > 0 && Array.isArray(milesResult[0]) ? milesResult[0] : milesResult;
+    if (Array.isArray(milesRows) && milesRows[0]?.totalMiles) {
+      totalMiles = parseFloat(String(milesRows[0].totalMiles ?? "0"));
+    }
+  } catch (_e) { /* quotations table may not exist yet */ }
+
   const finSummary = await getFinancialSummary(now.getFullYear(), now.getMonth() + 1);
+
+  const monthLoads = Number(monthLoadsResult?.count ?? 0);
+  const totalRevenue = parseFloat(monthRevenueResult?.totalRevenue ?? "0");
+  const totalFuel = parseFloat(monthRevenueResult?.totalFuel ?? "0");
+  const totalTolls = parseFloat(monthRevenueResult?.totalTolls ?? "0");
+  const totalCosts = totalFuel + totalTolls;
+
+  // KPI calculations
+  const revenuePerMile = totalMiles > 0 ? totalRevenue / totalMiles : 0;
+  const costPerMile = totalMiles > 0 ? totalCosts / totalMiles : 0;
+  const profitPerMile = revenuePerMile - costPerMile;
+  const avgRevenuePerLoad = monthLoads > 0 ? totalRevenue / monthLoads : 0;
+  // Utilization: % of working days this month with at least one active/completed load
+  const businessDaysInMonth = 22;
+  const utilizationPercent = Math.min(100, Math.round(
+    ((Number(activeLoadsResult?.count ?? 0) + monthLoads) / businessDaysInMonth) * 100
+  ));
 
   return {
     activeLoads: Number(activeLoadsResult?.count ?? 0),
@@ -373,6 +430,14 @@ export async function getDashboardKPIs() {
     monthIncome: finSummary.income,
     monthExpenses: finSummary.expenses,
     monthProfit: finSummary.netProfit,
+    // Pro KPIs
+    profitPerMile: parseFloat(profitPerMile.toFixed(2)),
+    costPerMile: parseFloat(costPerMile.toFixed(2)),
+    revenuePerMile: parseFloat(revenuePerMile.toFixed(2)),
+    utilizationPercent,
+    avgRevenuePerLoad: parseFloat(avgRevenuePerLoad.toFixed(2)),
+    monthLoadsCompleted: monthLoads,
+    totalMilesMonth: parseFloat(totalMiles.toFixed(0)),
   };
 }
 
