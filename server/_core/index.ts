@@ -158,11 +158,19 @@ async function startServer() {
     app.use("/api", adaptiveRateLimiter);
   }
   
-  // ─── Plaid Webhook (raw body required — must be before express.json parses it) ───
-  app.post("/api/plaid/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  // ─── Plaid Webhook (handles Buffer, string, and pre-parsed JSON) ───────────────────
+  app.post("/api/plaid/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     try {
-      const body = JSON.parse(req.body.toString());
-      const { webhook_type, webhook_code, item_id } = body;
+      let body: any;
+      if (Buffer.isBuffer(req.body)) {
+        body = JSON.parse(req.body.toString("utf8"));
+      } else if (typeof req.body === "string") {
+        body = JSON.parse(req.body);
+      } else {
+        // Already parsed by express.json upstream
+        body = req.body;
+      }
+      const { webhook_type, webhook_code, item_id } = body || {};
       console.log(`[Plaid Webhook] ${webhook_type}/${webhook_code} item=${item_id}`);
       if (webhook_type === "TRANSACTIONS" && webhook_code === "SYNC_UPDATES_AVAILABLE") {
         console.log(`[Plaid Webhook] Transactions sync available for item ${item_id}`);
@@ -170,7 +178,7 @@ async function startServer() {
       res.json({ received: true });
     } catch (err) {
       console.error("[Plaid Webhook] Error:", err);
-      res.status(400).json({ error: "Webhook error" });
+      res.status(200).json({ received: false, error: String(err) }); // 200 so Plaid doesn't retry
     }
   });
 

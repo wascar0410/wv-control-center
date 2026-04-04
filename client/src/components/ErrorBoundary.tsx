@@ -9,20 +9,43 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  isRemoveChildError: boolean;
 }
 
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, isRemoveChildError: false };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    const isRemoveChildError =
+      error.message?.includes("removeChild") ||
+      error.message?.includes("NotFoundError") ||
+      error.name === "NotFoundError";
+    return { hasError: true, error, isRemoveChildError };
+  }
+
+  componentDidCatch(error: Error) {
+    // Auto-recover silently from DOM reconciliation errors (removeChild)
+    if (
+      error.message?.includes("removeChild") ||
+      error.message?.includes("NotFoundError") ||
+      error.name === "NotFoundError"
+    ) {
+      setTimeout(() => {
+        this.setState({ hasError: false, error: null, isRemoveChildError: false });
+      }, 100);
+    }
   }
 
   render() {
     if (this.state.hasError) {
+      // Auto-recover from removeChild: render nothing briefly
+      if (this.state.isRemoveChildError) {
+        return null;
+      }
+
       return (
         <div className="flex items-center justify-center min-h-screen p-8 bg-background">
           <div className="flex flex-col items-center w-full max-w-2xl p-8">
@@ -31,16 +54,16 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-destructive mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
+            <h2 className="text-xl mb-4">Ocurrió un error inesperado.</h2>
 
             <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
               <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
+                {this.state.error?.message}
               </pre>
             </div>
 
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => this.setState({ hasError: false, error: null, isRemoveChildError: false })}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-lg",
                 "bg-primary text-primary-foreground",
@@ -48,7 +71,7 @@ class ErrorBoundary extends Component<Props, State> {
               )}
             >
               <RotateCcw size={16} />
-              Reload Page
+              Intentar de nuevo
             </button>
           </div>
         </div>
