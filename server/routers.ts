@@ -118,9 +118,9 @@ const bankTransactionRouter = router({
       return { success: true, accountId: typeof account === 'object' && 'insertId' in account ? (account as any).insertId : 0 };
     }),
 
-  getBankAccounts: publicProcedure.query(async () => {
+  getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
   try {
-    return await getBankAccountsByUserId(1);
+    return await getBankAccountsByUserId(ctx.user.id);
   } catch (error) {
     console.error("[bankTransaction.getBankAccounts] error:", error);
     return [];
