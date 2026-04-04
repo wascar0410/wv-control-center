@@ -3,7 +3,17 @@ import { ENV } from "./env";
 
 let _plaidClient: PlaidApi | null = null;
 
+/** Returns true only if Plaid credentials are configured */
+export function isPlaidConfigured(): boolean {
+  return !!(ENV.PLAID_CLIENT_ID && ENV.PLAID_SECRET);
+}
+
 export function getPlaidClient(): PlaidApi {
+  if (!isPlaidConfigured()) {
+    throw new Error(
+      "Plaid no está configurado. Agrega PLAID_CLIENT_ID y PLAID_SECRET en las variables de entorno de Railway (Settings → Variables)."
+    );
+  }
   if (_plaidClient) return _plaidClient;
 
   const configuration = new Configuration({
@@ -30,7 +40,7 @@ export async function createLinkToken(userId: number, redirectUri?: string) {
     products: [Products.Auth, Products.Transactions],
     country_codes: [CountryCode.Us],
     webhook: ENV.isProduction
-      ? `https://api.wvtransports.com/api/plaid/webhook`
+      ? `https://wv-control-center-production.up.railway.app/api/plaid/webhook`
       : undefined,
   };
 
@@ -39,21 +49,30 @@ export async function createLinkToken(userId: number, redirectUri?: string) {
     params.redirect_uri = redirectUri;
   }
 
-  const response = await client.linkTokenCreate(params);
-  return response.data.link_token;
+  try {
+    const response = await client.linkTokenCreate(params);
+    return response.data.link_token;
+  } catch (err: any) {
+    const plaidMsg = err?.response?.data?.error_message || err?.message || "Error desconocido de Plaid";
+    throw new Error(`Plaid createLinkToken falló: ${plaidMsg}`);
+  }
 }
 
 export async function exchangePublicToken(publicToken: string) {
   const client = getPlaidClient();
-  
-  const response = await client.itemPublicTokenExchange({
-    public_token: publicToken,
-  });
 
-  return {
-    accessToken: response.data.access_token,
-    itemId: response.data.item_id,
-  };
+  try {
+    const response = await client.itemPublicTokenExchange({
+      public_token: publicToken,
+    });
+    return {
+      accessToken: response.data.access_token,
+      itemId: response.data.item_id,
+    };
+  } catch (err: any) {
+    const plaidMsg = err?.response?.data?.error_message || err?.message || "Error desconocido";
+    throw new Error(`Plaid exchangeToken falló: ${plaidMsg}`);
+  }
 }
 
 export async function getTransactions(accessToken: string, startDate: Date, endDate: Date) {
@@ -123,17 +142,14 @@ function isBusinessExpense(plaidCategory?: string): boolean {
 
 export async function getAccounts(accessToken: string) {
   const client = getPlaidClient();
-  
   const response = await client.accountsGet({
     access_token: accessToken,
   });
-
   return response.data.accounts;
 }
 
 export async function removeItem(accessToken: string) {
   const client = getPlaidClient();
-  
   await client.itemRemove({
     access_token: accessToken,
   });

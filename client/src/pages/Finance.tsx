@@ -171,53 +171,103 @@ function AddTransactionDialog({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+// ─── Plaid Link Inner (isolated to prevent removeChild errors on unmount) ────────
+function PlaidLinkInner({ token, onPlaidSuccess, onPlaidExit }: {
+  token: string;
+  onPlaidSuccess: PlaidLinkOnSuccess;
+  onPlaidExit: PlaidLinkOnExit;
+}) {
+  const config: PlaidLinkOptions = { token, onSuccess: onPlaidSuccess, onExit: onPlaidExit };
+  const { open, ready } = usePlaidLink(config);
+  useEffect(() => { if (ready) open(); }, [ready, open]);
+  return null;
+}
+
 // ─── Plaid Connect Button ─────────────────────────────────────────────────────
 function PlaidConnectButton({ onSuccess }: { onSuccess: () => void }) {
   const [linkToken, setLinkToken] = useState<string | null>(null);
-  const [isExchanging, setIsExchanging] = useState(false);
+  const [linkKey, setLinkKey] = useState(0); // force remount to prevent removeChild
+  const [isLoading, setIsLoading] = useState(false);
+  const [plaidError, setPlaidError] = useState<string | null>(null);
   const redirectUri = typeof window !== "undefined" ? `${window.location.origin}/plaid-oauth-return` : "";
 
-  const { data: tokenData, isLoading: tokenLoading, refetch } =
-    trpc.plaid.createLinkToken.useQuery({ redirectUri }, { enabled: false, retry: false });
+  const { refetch } = trpc.plaid.createLinkToken.useQuery(
+    { redirectUri },
+    { enabled: false, retry: false }
+  );
 
   const exchangeToken = trpc.plaid.exchangeToken.useMutation({
     onSuccess: (data) => {
       toast.success(`${data.accountCount} cuenta(s) vinculada(s) exitosamente`);
+      setLinkToken(null);
+      setIsLoading(false);
       onSuccess();
     },
-    onError: (err) => toast.error(`Error al vincular: ${err.message}`),
+    onError: (err) => {
+      toast.error(`Error al vincular: ${err.message}`);
+      setLinkToken(null);
+      setIsLoading(false);
+    },
   });
 
   const handleOpen = async () => {
-    const result = await refetch();
-    if (result.data?.linkToken) setLinkToken(result.data.linkToken);
+    setPlaidError(null);
+    setIsLoading(true);
+    try {
+      const result = await refetch();
+      if (result.error) {
+        const msg = (result.error as any)?.message || "Error al obtener token de Plaid";
+        setPlaidError(msg);
+        toast.error(msg);
+        setIsLoading(false);
+        return;
+      }
+      if (result.data?.linkToken) {
+        setLinkKey(k => k + 1); // new key = fresh PlaidLinkInner mount
+        setLinkToken(result.data.linkToken);
+      }
+    } catch (err: any) {
+      const msg = err?.message || "Error desconocido";
+      setPlaidError(msg);
+      toast.error(msg);
+      setIsLoading(false);
+    }
   };
 
-  useEffect(() => { if (tokenData?.linkToken) setLinkToken(tokenData.linkToken); }, [tokenData]);
-
   const onPlaidSuccess: PlaidLinkOnSuccess = useCallback(async (publicToken) => {
-    setIsExchanging(true);
-    try { await exchangeToken.mutateAsync({ publicToken }); }
-    finally { setIsExchanging(false); setLinkToken(null); }
+    setIsLoading(true);
+    exchangeToken.mutate({ publicToken });
   }, [exchangeToken]);
 
   const onPlaidExit: PlaidLinkOnExit = useCallback((err) => {
-    if (err && (err as any).error_code !== "USER_EXITED")
+    if (err && (err as any).error_code !== "USER_EXITED") {
       toast.error(`Plaid: ${(err as any).display_message || (err as any).error_message || "Error"}`);
+    }
     setLinkToken(null);
+    setIsLoading(false);
   }, []);
 
-  const config: PlaidLinkOptions = { token: linkToken, onSuccess: onPlaidSuccess, onExit: onPlaidExit };
-  const { open, ready } = usePlaidLink(config);
-  useEffect(() => { if (linkToken && ready) open(); }, [linkToken, ready, open]);
-
-  const isLoading = tokenLoading || isExchanging;
   return (
-    <Button onClick={handleOpen} disabled={isLoading} size="sm" variant="outline"
-      className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
-      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
-      {isLoading ? "Conectando..." : "Vincular Banco"}
-    </Button>
+    <>
+      {linkToken && (
+        <PlaidLinkInner
+          key={linkKey}
+          token={linkToken}
+          onPlaidSuccess={onPlaidSuccess}
+          onPlaidExit={onPlaidExit}
+        />
+      )}
+      <div className="flex flex-col gap-1">
+        <Button onClick={handleOpen} disabled={isLoading} size="sm" variant="outline"
+          className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
+          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+          {isLoading ? "Conectando..." : "Vincular Banco"}
+        </Button>
+        {plaidError && (
+          <p className="text-xs text-red-600 max-w-xs">{plaidError}</p>
+        )}
+      </div>
+    </>
   );
 }
 

@@ -64,8 +64,6 @@ const adminMenuItems = [
   { icon: Download, label: "Importar Cargas", path: "/import-broker-loads", description: "Importar desde brokers" },
   { icon: Package, label: "Gestionar Cargas", path: "/broker-loads-management", description: "Revisar y convertir cargas" },
   { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
-  { icon: BarChart3, label: "Finanzas Contables", path: "/accounting-finance", description: "Reportes y auditoría" },
-  { icon: CreditCard, label: "Transacciones", path: "/transactions", description: "Seguimiento de gastos e ingresos" },
   { icon: Zap, label: "Pagos Masivos", path: "/batch-payments", description: "Procesamiento de lotes de pago" },
   { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes con choferes" },
