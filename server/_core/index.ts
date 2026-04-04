@@ -415,9 +415,14 @@ async function startServer() {
 
       // ── Cleanup: remove test/duplicate accounts ──────────────────────────────────
       try {
-        const [cleaned] = await conn.execute(
-          `DELETE FROM users WHERE email IN ('driver@example.com','test-annual@example.com','test-comparison@example.com','wascar.orti0410@gmail.com') OR (name = 'Test Driver' AND email LIKE '%example%')`
-        ) as any[];
+        const testCondition = `email IN ('driver@example.com','test-annual@example.com','test-comparison@example.com','wascar.orti0410@gmail.com') OR (name = 'Test Driver' AND email LIKE '%example%')`;
+        // Delete FK-dependent child records first to avoid constraint errors
+        await conn.execute(`DELETE FROM load_quotations WHERE userId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
+        await conn.execute(`DELETE FROM driver_payments WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
+        await conn.execute(`DELETE FROM driver_locations WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
+        await conn.execute(`DELETE FROM driver_settlements WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
+        // Now delete the users
+        const [cleaned] = await conn.execute(`DELETE FROM users WHERE ${testCondition}`) as any[];
         if (cleaned.affectedRows > 0) {
           console.log(`[Startup] Cleaned up ${cleaned.affectedRows} test/duplicate user(s)`);
         }

@@ -32,8 +32,9 @@ export const paymentRouter = router({
       const load = await getLoadById(input.loadId);
       if (!load) throw new TRPCError({ code: "NOT_FOUND", message: "Load not found" });
 
-      // Verify driver is assigned to this load
-      if (load.assignedDriverId !== ctx.user.id && ctx.user.role !== "admin") {
+      // Verify driver is assigned to this load (owners/admins can process any load)
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (load.assignedDriverId !== ctx.user.id && !isPrivileged) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Not assigned to this load" });
       }
 
@@ -127,7 +128,7 @@ export const paymentRouter = router({
   getPayment: protectedProcedure
     .input(z.object({ paymentId: z.number() }))
     .query(async ({ ctx, input }) => {
-      if (!ctx.user || ctx.user.role !== "admin") {
+      if (!ctx.user || (ctx.user.role !== "admin" && ctx.user.role !== "owner")) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
@@ -161,7 +162,7 @@ export const paymentRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user || ctx.user.role !== "admin") {
+      if (!ctx.user || (ctx.user.role !== "admin" && ctx.user.role !== "owner")) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
 
