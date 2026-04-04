@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,21 +44,20 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
   const [deliveryPhoto, setDeliveryPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const photoInputRef = React.useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  // Track if component is still mounted to avoid state updates after unmount
+  const isMountedRef = useRef(true);
+  React.useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
-  const utils = trpc.useUtils();
-  const updateStatusMutation = trpc.loads.updateStatus.useMutation({
-    onSuccess: async () => {
-      await utils.driver.myLoads.refetch();
-    },
-  });
+  // NOTE: No onSuccess refetch here — we handle it manually below with a setTimeout
+  // to avoid the insertBefore crash caused by React trying to update a Dialog that's
+  // being unmounted at the same time as the parent list re-renders.
+  const updateStatusMutation = trpc.loads.updateStatus.useMutation();
   
-  const processPaymentMutation = trpc.payment.processDeliveryPayment.useMutation({
-    onSuccess: () => {
-      utils.payment.getMyPaymentStats.invalidate();
-      utils.payment.getMyPayments.invalidate();
-    },
-  });
+  const processPaymentMutation = trpc.payment.processDeliveryPayment.useMutation();
 
   const handleStartRoute = () => {
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(load.deliveryAddress)}&travelmode=driving`;
@@ -72,7 +71,7 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
       setDeliveryPhoto(file);
       const reader = new FileReader();
       reader.onload = (event) => {
-        setPhotoPreview(event.target?.result as string);
+        if (isMountedRef.current) setPhotoPreview(event.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -87,12 +86,15 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
           status: "in_transit",
         });
         toast.success("✓ Carga marcada como En Tránsito");
-        setShowStatusDialog(false);
-        onStatusChange?.();
+        // CRITICAL: Close dialog FIRST, then trigger refetch after a full render cycle.
+        // If we call onStatusChange() before closing, React tries to update the Dialog
+        // while the parent list is re-rendering (removing this card), causing insertBefore crash.
+        if (isMountedRef.current) setShowStatusDialog(false);
+        setTimeout(() => { onStatusChange?.(); }, 100);
       } catch (error: any) {
         toast.error(error?.message || "Error al actualizar estado");
       } finally {
-        setIsUpdating(false);
+        if (isMountedRef.current) setIsUpdating(false);
       }
     } else if (newStatus === "delivered") {
       setIsUpdating(true);
@@ -110,15 +112,19 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
         });
         
         toast.success("✓ Carga entregada y pago procesado");
-        setShowStatusDialog(false);
-        setDeliveryNotes("");
-        setDeliveryPhoto(null);
-        setPhotoPreview(null);
-        onStatusChange?.();
+        // CRITICAL: Close dialog and reset state BEFORE triggering refetch
+        if (isMountedRef.current) {
+          setShowStatusDialog(false);
+          setDeliveryNotes("");
+          setDeliveryPhoto(null);
+          setPhotoPreview(null);
+        }
+        // Delay refetch to let the Dialog fully unmount first
+        setTimeout(() => { onStatusChange?.(); }, 100);
       } catch (error: any) {
         toast.error(error?.message || "Error al actualizar estado");
       } finally {
-        setIsUpdating(false);
+        if (isMountedRef.current) setIsUpdating(false);
       }
     }
   };
@@ -220,8 +226,11 @@ export default function LoadStatusCard({ load, onStatusChange }: LoadStatusCardP
         </CardContent>
       </Card>
 
-      {/* Status Change Dialog */}
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+      {/* Status Change Dialog — rendered outside the Card to avoid DOM nesting issues */}
+      <Dialog open={showStatusDialog} onOpenChange={(open) => {
+        // Only allow closing if not currently updating
+        if (!isUpdating) setShowStatusDialog(open);
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
