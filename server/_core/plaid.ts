@@ -1,4 +1,4 @@
-import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
+import { Configuration, PlaidApi, PlaidEnvironments, Products, CountryCode } from "plaid";
 import { ENV } from "./env";
 
 let _plaidClient: PlaidApi | null = null;
@@ -22,16 +22,24 @@ export function getPlaidClient(): PlaidApi {
 
 export async function createLinkToken(userId: number, redirectUri?: string) {
   const client = getPlaidClient();
-  
-  const response = await client.linkTokenCreate({
-    user: { client_user_id: `user-${userId}` },
+
+  const params: any = {
+    user: { client_user_id: `wv-user-${userId}` },
     client_name: "WV Control Center",
     language: "es",
-    products: ["auth" as any, "transactions" as any],
-    country_codes: ["US" as any, "MX" as any],
-    redirect_uri: redirectUri,
-  });
+    products: [Products.Auth, Products.Transactions],
+    country_codes: [CountryCode.Us],
+    webhook: ENV.isProduction
+      ? `https://api.wvtransports.com/api/plaid/webhook`
+      : undefined,
+  };
 
+  // OAuth redirect URI — required for OAuth-based institutions (Chase, BofA, etc.)
+  if (redirectUri) {
+    params.redirect_uri = redirectUri;
+  }
+
+  const response = await client.linkTokenCreate(params);
   return response.data.link_token;
 }
 
@@ -50,14 +58,67 @@ export async function exchangePublicToken(publicToken: string) {
 
 export async function getTransactions(accessToken: string, startDate: Date, endDate: Date) {
   const client = getPlaidClient();
-  
   const response = await client.transactionsGet({
     access_token: accessToken,
     start_date: startDate.toISOString().split("T")[0],
     end_date: endDate.toISOString().split("T")[0],
+    options: { count: 500, offset: 0 },
   });
-
   return response.data.transactions;
+}
+
+/**
+ * Incremental sync via /transactions/sync (recommended by Plaid).
+ */
+export async function syncTransactions(accessToken: string, cursor?: string) {
+  const client = getPlaidClient();
+  const response = await client.transactionsSync({
+    access_token: accessToken,
+    cursor: cursor ?? undefined,
+    count: 500,
+  });
+  const { added, modified, removed, next_cursor, has_more } = response.data;
+  return { added, modified, removed, nextCursor: next_cursor, hasMore: has_more };
+}
+
+/**
+ * Map a Plaid transaction to our financial_transactions schema.
+ * Plaid convention: positive amount = debit/expense, negative = credit/income.
+ */
+export function mapPlaidTransaction(tx: any) {
+  const isExpense = tx.amount > 0;
+  return {
+    date: tx.date,
+    name: tx.merchant_name || tx.name,
+    merchantName: tx.merchant_name ?? undefined,
+    amount: Math.abs(tx.amount),
+    type: isExpense ? ("expense" as const) : ("income" as const),
+    category: mapPlaidCategory(tx.personal_finance_category?.primary ?? tx.category?.[0]),
+    plaidTransactionId: tx.transaction_id,
+    isTaxDeductible: isBusinessExpense(tx.personal_finance_category?.primary ?? tx.category?.[0]),
+    source: "plaid" as const,
+  };
+}
+
+function mapPlaidCategory(plaidCategory?: string): string {
+  if (!plaidCategory) return "other";
+  const cat = plaidCategory.toLowerCase();
+  if (cat.includes("fuel") || cat.includes("gas")) return "fuel";
+  if (cat.includes("toll")) return "tolls";
+  if (cat.includes("insurance")) return "insurance";
+  if (cat.includes("repair") || cat.includes("maintenance") || cat.includes("auto")) return "maintenance";
+  if (cat.includes("phone") || cat.includes("telecom")) return "phone";
+  if (cat.includes("payroll") || cat.includes("wages")) return "payroll";
+  if (cat.includes("subscription") || cat.includes("software")) return "subscriptions";
+  if (cat.includes("income") || cat.includes("deposit") || cat.includes("transfer_in")) return "load_payment";
+  return "other";
+}
+
+function isBusinessExpense(plaidCategory?: string): boolean {
+  if (!plaidCategory) return false;
+  const cat = plaidCategory.toLowerCase();
+  const deductible = ["fuel", "gas", "toll", "insurance", "repair", "maintenance", "phone", "telecom", "payroll", "subscription", "software"];
+  return deductible.some(d => cat.includes(d));
 }
 
 export async function getAccounts(accessToken: string) {

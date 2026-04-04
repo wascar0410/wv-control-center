@@ -34,6 +34,7 @@ import FleetMap from "./pages/FleetMap";
 import FleetManagement from "./pages/FleetManagement";
 import BrokerDashboard from "./pages/BrokerDashboard";
 import DispatcherPerformance from "./pages/DispatcherPerformance";
+import PlaidOAuthReturn from "./pages/PlaidOAuthReturn";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -78,6 +79,7 @@ export default function App() {
       <Route path="/loads/:id" component={withLayout(LoadDetail)} />
       <Route path="/loads" component={withLayout(Loads)} />
       <Route path="/finance" component={withLayout(Finance)} />
+      <Route path="/plaid-oauth-return" component={PlaidOAuthReturn} />
       <Route path="/transactions" component={withLayout(Transactions)} />
       <Route path="/partnership" component={withLayout(Partnership)} />
       <Route path="/profile" component={withLayout(UserProfile)} />

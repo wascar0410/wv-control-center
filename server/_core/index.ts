@@ -158,6 +158,22 @@ async function startServer() {
     app.use("/api", adaptiveRateLimiter);
   }
   
+  // ─── Plaid Webhook (raw body required — must be before express.json parses it) ───
+  app.post("/api/plaid/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    try {
+      const body = JSON.parse(req.body.toString());
+      const { webhook_type, webhook_code, item_id } = body;
+      console.log(`[Plaid Webhook] ${webhook_type}/${webhook_code} item=${item_id}`);
+      if (webhook_type === "TRANSACTIONS" && webhook_code === "SYNC_UPDATES_AVAILABLE") {
+        console.log(`[Plaid Webhook] Transactions sync available for item ${item_id}`);
+      }
+      res.json({ received: true });
+    } catch (err) {
+      console.error("[Plaid Webhook] Error:", err);
+      res.status(400).json({ error: "Webhook error" });
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",

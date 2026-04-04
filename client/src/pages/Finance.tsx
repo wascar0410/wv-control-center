@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Plus, Download, Trash2, Shield, Zap, Target, ArrowUpRight, ArrowDownRight, FileText, PieChart as PieIcon, BarChart3, Activity } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Plus, Download, Trash2, Shield, Zap, Target, ArrowUpRight, ArrowDownRight, FileText, PieChart as PieIcon, BarChart3, Activity, Building2 } from "lucide-react";
+import { PlaidLinkButton, PlaidBankAccountsList } from "@/components/PlaidLinkButton";
 import { toast } from "sonner";
 
 const fmt = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
@@ -368,6 +369,22 @@ export default function Finance() {
 
       {activeTab==="transactions" && (
         <div className="space-y-4">
+          {/* Bank Accounts — Plaid Integration */}
+          <Card className="bg-slate-800/40 border-slate-700">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="text-white text-sm flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-blue-400" />
+                  Cuentas Bancarias Vinculadas
+                </CardTitle>
+                <PlaidLinkButton onSuccess={() => { refetchTx(); refetchPnl(); }} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <PlaidBankAccountsList onRefresh={() => { refetchTx(); refetchPnl(); }} />
+            </CardContent>
+          </Card>
+
           <div className="flex flex-wrap gap-2 items-center">
             <div className="flex gap-1">
               {(["all","income","expense"] as const).map(f => (
