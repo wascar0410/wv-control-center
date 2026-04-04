@@ -1764,6 +1764,40 @@ const adminRouter = router({
         return [];
       }
     }),
+  // Update any user's role (owner-only)
+  updateUserRole: protectedProcedure
+    .input(z.object({
+      userId: z.number(),
+      role: z.enum(["owner", "admin", "driver"]),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Solo el propietario puede cambiar roles" });
+      }
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+      const target = await db.select().from(usersTable).where(eq(usersTable.id, input.userId)).limit(1).then(r => r[0]);
+      if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Usuario no encontrado" });
+      await db.update(usersTable).set({ role: input.role }).where(eq(usersTable.id, input.userId));
+      return { success: true, message: `Rol de ${target.name || target.email} actualizado a ${input.role}` };
+    }),
+  // List all users (owner/admin only)
+  listAllUsers: protectedProcedure
+    .query(async ({ ctx }) => {
+      if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+      }
+      const db = await getDb();
+      if (!db) return [];
+      const allUsers = await db.select({
+        id: usersTable.id,
+        name: usersTable.name,
+        email: usersTable.email,
+        role: usersTable.role,
+        lastSignedIn: usersTable.lastSignedIn,
+      }).from(usersTable);
+      return allUsers;
+    }),
 });
 
 // ─── POD Router ───────────────────────────────────────────────────────────────

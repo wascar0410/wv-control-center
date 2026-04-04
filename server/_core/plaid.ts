@@ -39,15 +39,15 @@ export async function createLinkToken(userId: number, redirectUri?: string) {
     language: "es",
     products: [Products.Auth, Products.Transactions],
     country_codes: [CountryCode.Us],
+    // Webhook only in production
     webhook: ENV.isProduction
       ? `https://wv-control-center-production.up.railway.app/api/plaid/webhook`
       : undefined,
+    // NOTE: redirect_uri is intentionally omitted.
+    // To enable OAuth institutions (Chase, BofA), register the redirect URI
+    // in dashboard.plaid.com → API → Allowed redirect URIs, then uncomment:
+    // ...(redirectUri ? { redirect_uri: redirectUri } : {}),
   };
-
-  // OAuth redirect URI — required for OAuth-based institutions (Chase, BofA, etc.)
-  if (redirectUri) {
-    params.redirect_uri = redirectUri;
-  }
 
   try {
     const response = await client.linkTokenCreate(params);

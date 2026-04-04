@@ -34,6 +34,7 @@ import FleetManagement from "./pages/FleetManagement";
 import BrokerDashboard from "./pages/BrokerDashboard";
 import DispatcherPerformance from "./pages/DispatcherPerformance";
 import PlaidOAuthReturn from "./pages/PlaidOAuthReturn";
+import UserManagement from "./pages/UserManagement";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -96,6 +97,7 @@ export default function App() {
       <Route path="/dispatcher-performance" component={withLayout(DispatcherPerformance)} />
       <Route path="/chat" component={withLayout(Chat)} />
       <Route path="/about" component={withLayout(About)} />
+      <Route path="/user-management" component={withLayout(UserManagement)} />
       <Route path="/business-plan" component={BusinessPlan} />
       <Route path="/business-plan-analytics" component={withLayout(BusinessPlanAnalytics)} />
 
