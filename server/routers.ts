@@ -162,10 +162,16 @@ const bankTransactionRouter = router({
     }),
 
   // Imported Transactions
-  getImportedTransactions: publicProcedure
+  getImportedTransactions: protectedProcedure
   .input(z.object({ bankAccountId: z.number(), limit: z.number().default(50) }))
-  .query(async ({ input }) => {
+  .query(async ({ input, ctx }) => {
     try {
+      const account = await getBankAccountById(input.bankAccountId);
+
+      if (!account || account.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+      }
+
       return await getTransactionImportsByBankAccount(input.bankAccountId, input.limit);
     } catch (error) {
       console.error("[bankTransaction.getImportedTransactions] error:", error);
