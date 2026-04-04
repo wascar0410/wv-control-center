@@ -78,6 +78,7 @@ import {
   createTransactionImport, getTransactionImportsByBankAccount, getUnmatchedTransactionImports, matchTransactionImport, deleteTransactionImport, getTransactionImportById,
   createLoadEvidence, getLoadEvidenceByLoadId, getLoadEvidenceByDriver,
   getFleetStats, getFleetRecentDeliveries,
+  getBrokerStats, getDispatcherKPIs, submitDriverFeedback, getDriverFeedbackByLoad,
 } from "./db";
 import {
   getDriverLoads,
@@ -2018,8 +2019,54 @@ const contactRouter = router({
     }),
 });
 
-// ─── App Router ───────────────────────────────────────────────────────────────
+// ─── Broker Dashboard Router ────────────────────────────────────────────────
+const brokerDashboardRouter = router({
+  getStats: protectedProcedure.query(async ({ ctx }) => {
+    const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+    if (!isPrivileged) throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    return getBrokerStats();
+  }),
 
+  getDispatcherKPIs: protectedProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      if (!isPrivileged) throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+      return getDispatcherKPIs(input.year, input.month);
+    }),
+});
+
+// ─── Driver Feedback Router ───────────────────────────────────────────────────
+const driverFeedbackRouter = router({
+  submit: protectedProcedure
+    .input(z.object({
+      loadId: z.number(),
+      trafficRating: z.number().min(1).max(5),
+      difficultyRating: z.number().min(1).max(5),
+      estimatedMinutes: z.number().optional(),
+      actualMinutes: z.number().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      return submitDriverFeedback({
+        loadId: input.loadId,
+        driverId: ctx.user.id,
+        trafficRating: input.trafficRating,
+        difficultyRating: input.difficultyRating,
+        estimatedMinutes: input.estimatedMinutes,
+        actualMinutes: input.actualMinutes,
+        notes: input.notes,
+      });
+    }),
+
+  getByLoad: protectedProcedure
+    .input(z.object({ loadId: z.number() }))
+    .query(async ({ input }) => {
+      return getDriverFeedbackByLoad(input.loadId);
+    }),
+});
+
+// ─── App Router ───────────────────────────────────────────────────────────────
 export const appRouter = router({
   system: systemRouter,
   ai: aiRouter,
@@ -2127,6 +2174,8 @@ export const appRouter = router({
   admin: adminRouter,
   profile: profileRouter,
   securityMonitoring: securityMonitoringRouter,
+  brokerDashboard: brokerDashboardRouter,
+  driverFeedback: driverFeedbackRouter,
 });
 
 export type AppRouter = typeof appRouter;

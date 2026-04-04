@@ -413,6 +413,50 @@ async function startServer() {
         }
       }
 
+      // ── Migration: brokerName + brokerContact + loadScore on loads table ─────────
+      const [brokerNameCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'brokerName'
+      `) as any;
+      if (brokerNameCols.length === 0) {
+        await conn.execute("ALTER TABLE `loads` ADD `brokerName` varchar(255) NULL");
+        await conn.execute("ALTER TABLE `loads` ADD `brokerContact` varchar(255) NULL");
+        await conn.execute("ALTER TABLE `loads` ADD `brokerPhone` varchar(50) NULL");
+        await conn.execute("ALTER TABLE `loads` ADD `loadScore` int NULL");
+        await conn.execute("ALTER TABLE `loads` ADD `estimatedMiles` decimal(10,2) NULL");
+        console.log("[Startup] Applied: broker fields + loadScore + estimatedMiles added to loads");
+      } else {
+        // Ensure loadScore and estimatedMiles exist even if brokerName was added earlier
+        const [loadScoreCols] = await conn.execute(`
+          SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'loadScore'
+        `) as any;
+        if (loadScoreCols.length === 0) {
+          await conn.execute("ALTER TABLE `loads` ADD `loadScore` int NULL");
+          await conn.execute("ALTER TABLE `loads` ADD `estimatedMiles` decimal(10,2) NULL");
+          console.log("[Startup] Applied: loadScore + estimatedMiles added to loads");
+        } else {
+          console.log("[Startup] OK: broker fields already exist on loads");
+        }
+      }
+
+      // ── Migration: driver_feedback table ──────────────────────────────────
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS \`driver_feedback\` (
+          \`id\` int AUTO_INCREMENT NOT NULL,
+          \`loadId\` int NOT NULL,
+          \`driverId\` int NOT NULL,
+          \`trafficRating\` int NOT NULL DEFAULT 3,
+          \`difficultyRating\` int NOT NULL DEFAULT 3,
+          \`estimatedMinutes\` int NULL,
+          \`actualMinutes\` int NULL,
+          \`notes\` text NULL,
+          \`createdAt\` timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+      console.log("[Startup] driver_feedback table ready");
+
       // ── Cleanup: remove test/duplicate accounts ──────────────────────────────────
       try {
         const testCondition = `email IN ('driver@example.com','test-annual@example.com','test-comparison@example.com','wascar.orti0410@gmail.com') OR (name = 'Test Driver' AND email LIKE '%example%')`;

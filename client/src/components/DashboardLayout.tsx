@@ -47,6 +47,8 @@ import {
   Wallet,
   Navigation,
   Shield,
+  Building2,
+  Headphones,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -73,6 +75,8 @@ const adminMenuItems = [
   { icon: Wallet, label: "Billetera Conductores", path: "/driver-wallet", description: "Liquidación y pagos" },
   { icon: Navigation, label: "GPS Multi-Track", path: "/fleet-map", description: "Mapa en tiempo real de la flota" },
   { icon: Shield, label: "Gestión de Flota", path: "/fleet-management", description: "Clasificación y comisiones" },
+  { icon: Building2, label: "Dashboard Brokers", path: "/broker-dashboard", description: "Rendimiento y rentabilidad por broker" },
+  { icon: Headphones, label: "Desempeño Dispatcher", path: "/dispatcher-performance", description: "KPIs de Yisvel como dispatcher" },
   { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
   { icon: BarChart3, label: "Business Plan", path: "/business-plan", description: "Plan de negocios ejecutivo" },

@@ -1906,3 +1906,130 @@ export async function getFleetRecentDeliveries(limit: number = 10) {
     return [];
   }
 }
+
+// ── Broker Dashboard ──────────────────────────────────────────────────────────
+export async function getBrokerStats() {
+  if (!process.env.DATABASE_URL) return [];
+  try {
+    const mysql2 = await import("mysql2/promise");
+    const conn = await mysql2.default.createConnection({
+      uri: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: true },
+    });
+    const [rows] = await conn.execute(`
+      SELECT
+        COALESCE(brokerName, 'Sin Broker') AS brokerName,
+        COUNT(*) AS totalLoads,
+        SUM(price) AS totalRevenue,
+        SUM(price - COALESCE(estimatedFuel,0) - COALESCE(estimatedTolls,0)) AS totalProfit,
+        AVG(price) AS avgRate,
+        SUM(COALESCE(estimatedMiles,0)) AS totalMiles,
+        MAX(COALESCE(deliveryDate, createdAt)) AS lastLoadDate
+      FROM loads
+      WHERE status IN ('delivered','invoiced','paid')
+      GROUP BY COALESCE(brokerName, 'Sin Broker')
+      ORDER BY totalRevenue DESC
+    `) as any;
+    await conn.end();
+    return (rows as any[]).map(r => ({
+      brokerName: r.brokerName,
+      totalLoads: Number(r.totalLoads),
+      totalRevenue: parseFloat(r.totalRevenue) || 0,
+      totalProfit: parseFloat(r.totalProfit) || 0,
+      avgRate: parseFloat(r.avgRate) || 0,
+      totalMiles: parseFloat(r.totalMiles) || 0,
+      avgProfitPerMile: r.totalMiles > 0 ? (parseFloat(r.totalProfit) / parseFloat(r.totalMiles)) : 0,
+      reliabilityScore: Math.min(100, 50 + Number(r.totalLoads) * 5),
+      lastLoadDate: r.lastLoadDate,
+    }));
+  } catch (error) {
+    console.error("[Database] Error getting broker stats:", error);
+    return [];
+  }
+}
+
+// ── Dispatcher KPIs ───────────────────────────────────────────────────────────
+export async function getDispatcherKPIs(year: number, month: number) {
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    const mysql2 = await import("mysql2/promise");
+    const conn = await mysql2.default.createConnection({
+      uri: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: true },
+    });
+    const startDate = new Date(year, month - 1, 1).toISOString().slice(0, 10);
+    const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
+    const [rows] = await conn.execute(`
+      SELECT
+        COUNT(*) AS totalLoads,
+        SUM(price) AS totalRevenue,
+        SUM(price - COALESCE(estimatedFuel,0) - COALESCE(estimatedTolls,0)) AS totalProfit,
+        AVG(price) AS avgRate,
+        COUNT(DISTINCT COALESCE(brokerName,'')) AS activeBrokers,
+        AVG(COALESCE(loadScore,0)) AS avgLoadScore
+      FROM loads
+      WHERE status IN ('delivered','invoiced','paid')
+        AND DATE(createdAt) BETWEEN ? AND ?
+    `, [startDate, endDate]) as any;
+    await conn.end();
+    const r = rows[0] || {};
+    return {
+      totalLoads: Number(r.totalLoads) || 0,
+      totalRevenue: parseFloat(r.totalRevenue) || 0,
+      totalProfit: parseFloat(r.totalProfit) || 0,
+      avgRate: parseFloat(r.avgRate) || 0,
+      activeBrokers: Number(r.activeBrokers) || 0,
+      avgLoadScore: Math.round(parseFloat(r.avgLoadScore) || 0),
+    };
+  } catch (error) {
+    console.error("[Database] Error getting dispatcher KPIs:", error);
+    return null;
+  }
+}
+
+// ── Driver Feedback ───────────────────────────────────────────────────────────
+export async function submitDriverFeedback(data: {
+  loadId: number;
+  driverId: number;
+  trafficRating: number;
+  difficultyRating: number;
+  estimatedMinutes?: number;
+  actualMinutes?: number;
+  notes?: string;
+}) {
+  if (!process.env.DATABASE_URL) throw new Error("Database not available");
+  const mysql2 = await import("mysql2/promise");
+  const conn = await mysql2.default.createConnection({
+    uri: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: true },
+  });
+  await conn.execute(
+    `INSERT INTO driver_feedback (loadId, driverId, trafficRating, difficultyRating, estimatedMinutes, actualMinutes, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE trafficRating=VALUES(trafficRating), difficultyRating=VALUES(difficultyRating),
+       estimatedMinutes=VALUES(estimatedMinutes), actualMinutes=VALUES(actualMinutes), notes=VALUES(notes)`,
+    [data.loadId, data.driverId, data.trafficRating, data.difficultyRating,
+     data.estimatedMinutes ?? null, data.actualMinutes ?? null, data.notes ?? null]
+  );
+  await conn.end();
+  return { success: true };
+}
+
+export async function getDriverFeedbackByLoad(loadId: number) {
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    const mysql2 = await import("mysql2/promise");
+    const conn = await mysql2.default.createConnection({
+      uri: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: true },
+    });
+    const [rows] = await conn.execute(
+      `SELECT * FROM driver_feedback WHERE loadId = ? ORDER BY createdAt DESC LIMIT 1`,
+      [loadId]
+    ) as any;
+    await conn.end();
+    return rows[0] || null;
+  } catch (error) {
+    return null;
+  }
+}
