@@ -2,7 +2,7 @@
  * Finance.tsx — WV Control Center Financial Module
  * Light theme compatible. Tabs: Overview, Transacciones (Plaid), P&L, Distribución, Alertas
  */
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,36 @@ import {
   RefreshCw, Link2, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import { usePlaidLink } from "react-plaid-link";
-import type { PlaidLinkOnSuccess, PlaidLinkOnExit, PlaidLinkOptions } from "react-plaid-link";
+
+// ─── Plaid SDK loader (bypasses react-plaid-link to avoid removeChild DOM crash) ─
+function loadPlaidScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Plaid) { resolve(); return; }
+    const existing = document.getElementById('plaid-link-sdk');
+    if (existing) { existing.addEventListener('load', () => resolve()); return; }
+    const script = document.createElement('script');
+    script.id = 'plaid-link-sdk';
+    script.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('No se pudo cargar Plaid SDK'));
+    document.head.appendChild(script);
+  });
+}
+
+function openPlaidLink(token: string, onSuccess: (publicToken: string) => void, onExit: (err?: any) => void) {
+  loadPlaidScript().then(() => {
+    const handler = (window as any).Plaid.create({
+      token,
+      onSuccess: (public_token: string) => { onSuccess(public_token); },
+      onExit: (err: any) => { onExit(err); },
+      onLoad: () => { handler.open(); },
+    });
+    handler.open();
+  }).catch((err) => {
+    toast.error(`Error cargando Plaid: ${err.message}`);
+    onExit(err);
+  });
+}
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (v: number) =>
@@ -171,41 +199,24 @@ function AddTransactionDialog({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-// ─── Plaid Link Inner (isolated to prevent removeChild errors on unmount) ────────
-function PlaidLinkInner({ token, onPlaidSuccess, onPlaidExit }: {
-  token: string;
-  onPlaidSuccess: PlaidLinkOnSuccess;
-  onPlaidExit: PlaidLinkOnExit;
-}) {
-  const config: PlaidLinkOptions = { token, onSuccess: onPlaidSuccess, onExit: onPlaidExit };
-  const { open, ready } = usePlaidLink(config);
-  useEffect(() => { if (ready) open(); }, [ready, open]);
-  return null;
-}
-
-// ─── Plaid Connect Button ─────────────────────────────────────────────────────
+// ─── Plaid Connect Button (uses raw Plaid JS SDK — no react-plaid-link, no removeChild) ──
 function PlaidConnectButton({ onSuccess }: { onSuccess: () => void }) {
-  const [linkToken, setLinkToken] = useState<string | null>(null);
-  const [linkKey, setLinkKey] = useState(0); // force remount to prevent removeChild
   const [isLoading, setIsLoading] = useState(false);
   const [plaidError, setPlaidError] = useState<string | null>(null);
-  const redirectUri = typeof window !== "undefined" ? `${window.location.origin}/plaid-oauth-return` : "";
 
   const { refetch } = trpc.plaid.createLinkToken.useQuery(
-    { redirectUri },
+    { redirectUri: "" },
     { enabled: false, retry: false }
   );
 
   const exchangeToken = trpc.plaid.exchangeToken.useMutation({
     onSuccess: (data) => {
       toast.success(`${data.accountCount} cuenta(s) vinculada(s) exitosamente`);
-      setLinkToken(null);
       setIsLoading(false);
       onSuccess();
     },
     onError: (err) => {
       toast.error(`Error al vincular: ${err.message}`);
-      setLinkToken(null);
       setIsLoading(false);
     },
   });
@@ -215,17 +226,27 @@ function PlaidConnectButton({ onSuccess }: { onSuccess: () => void }) {
     setIsLoading(true);
     try {
       const result = await refetch();
-      if (result.error) {
+      if (result.error || !result.data?.linkToken) {
         const msg = (result.error as any)?.message || "Error al obtener token de Plaid";
         setPlaidError(msg);
         toast.error(msg);
         setIsLoading(false);
         return;
       }
-      if (result.data?.linkToken) {
-        setLinkKey(k => k + 1); // new key = fresh PlaidLinkInner mount
-        setLinkToken(result.data.linkToken);
-      }
+      const token = result.data.linkToken;
+      // Open Plaid via raw SDK — completely outside React tree, no DOM conflict
+      openPlaidLink(
+        token,
+        (publicToken) => {
+          exchangeToken.mutate({ publicToken });
+        },
+        (err) => {
+          if (err && err.error_code !== 'USER_EXITED') {
+            toast.error(`Plaid: ${err.display_message || err.error_message || 'Cancelado'}`);
+          }
+          setIsLoading(false);
+        }
+      );
     } catch (err: any) {
       const msg = err?.message || "Error desconocido";
       setPlaidError(msg);
@@ -234,40 +255,17 @@ function PlaidConnectButton({ onSuccess }: { onSuccess: () => void }) {
     }
   };
 
-  const onPlaidSuccess: PlaidLinkOnSuccess = useCallback(async (publicToken) => {
-    setIsLoading(true);
-    exchangeToken.mutate({ publicToken });
-  }, [exchangeToken]);
-
-  const onPlaidExit: PlaidLinkOnExit = useCallback((err) => {
-    if (err && (err as any).error_code !== "USER_EXITED") {
-      toast.error(`Plaid: ${(err as any).display_message || (err as any).error_message || "Error"}`);
-    }
-    setLinkToken(null);
-    setIsLoading(false);
-  }, []);
-
   return (
-    <>
-      {linkToken && (
-        <PlaidLinkInner
-          key={linkKey}
-          token={linkToken}
-          onPlaidSuccess={onPlaidSuccess}
-          onPlaidExit={onPlaidExit}
-        />
+    <div className="flex flex-col gap-1">
+      <Button onClick={handleOpen} disabled={isLoading} size="sm" variant="outline"
+        className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
+        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+        {isLoading ? "Conectando..." : "Vincular Banco"}
+      </Button>
+      {plaidError && (
+        <p className="text-xs text-red-600 max-w-xs">{plaidError}</p>
       )}
-      <div className="flex flex-col gap-1">
-        <Button onClick={handleOpen} disabled={isLoading} size="sm" variant="outline"
-          className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
-          {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
-          {isLoading ? "Conectando..." : "Vincular Banco"}
-        </Button>
-        {plaidError && (
-          <p className="text-xs text-red-600 max-w-xs">{plaidError}</p>
-        )}
-      </div>
-    </>
+    </div>
   );
 }
 
