@@ -79,6 +79,8 @@ import {
   createLoadEvidence, getLoadEvidenceByLoadId, getLoadEvidenceByDriver,
   getFleetStats, getFleetRecentDeliveries,
   getBrokerStats, getDispatcherKPIs, submitDriverFeedback, getDriverFeedbackByLoad,
+  getFinancialTransactions, createFinancialTransaction, updateFinancialTransaction, deleteFinancialTransaction,
+  getFinancialPnL, getAllocationSettings, updateAllocationSettings, getFinancialTrend, autoCategorize,
 } from "./db";
 import {
   getDriverLoads,
@@ -618,9 +620,122 @@ const financeRouter = router({
         return [];
       }
     }),
+  // ── Advanced Finance Module ─────────────────────────────────────────────────────
+  pnl: publicProcedure
+    .input(z.object({ year: z.number(), month: z.number() }))
+    .query(async ({ input }) => {
+      try {
+        return await getFinancialPnL(input.year, input.month);
+      } catch (error) {
+        console.error("[finance.pnl] error:", error);
+        return null;
+      }
+    }),
+  trend: publicProcedure
+    .input(z.object({ year: z.number() }))
+    .query(async ({ input }) => {
+      try {
+        return await getFinancialTrend(input.year);
+      } catch (error) {
+        console.error("[finance.trend] error:", error);
+        return [];
+      }
+    }),
+  manualTransactions: publicProcedure
+    .input(z.object({
+      type: z.enum(["income", "expense"]).optional(),
+      category: z.string().optional(),
+      startDate: z.string().optional(),
+      endDate: z.string().optional(),
+      limit: z.number().optional(),
+    }).optional())
+    .query(async ({ input }) => {
+      try {
+        return await getFinancialTransactions(input ?? undefined);
+      } catch (error) {
+        console.error("[finance.manualTransactions] error:", error);
+        return [];
+      }
+    }),
+  addManualTransaction: protectedProcedure
+    .input(z.object({
+      date: z.string(),
+      name: z.string().min(1),
+      merchantName: z.string().optional(),
+      amount: z.number().positive(),
+      category: z.string(),
+      type: z.enum(["income", "expense"]),
+      isReviewed: z.boolean().optional(),
+      isTaxDeductible: z.boolean().optional(),
+      linkedLoadId: z.number().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const { category, isTaxDeductible } = autoCategorize(input.name);
+      const id = await createFinancialTransaction({
+        ...input,
+        category: input.category || category,
+        isTaxDeductible: input.isTaxDeductible ?? isTaxDeductible,
+        createdBy: ctx.user.id,
+      });
+      if (input.amount >= 500 && input.type === "expense") {
+        await notifyOwner({
+          title: "\u26a0\ufe0f Gasto Importante Registrado",
+          content: `Gasto de $${input.amount} en "${input.name}" (${input.category || category}).`,
+        });
+      }
+      return { id };
+    }),
+  updateManualTransaction: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      amount: z.number().positive().optional(),
+      category: z.string().optional(),
+      type: z.enum(["income", "expense"]).optional(),
+      isReviewed: z.boolean().optional(),
+      isTaxDeductible: z.boolean().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const { id, ...data } = input;
+      await updateFinancialTransaction(id, data);
+      return { success: true };
+    }),
+  deleteManualTransaction: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      await deleteFinancialTransaction(input.id);
+      return { success: true };
+    }),
+  allocationSettings: publicProcedure
+    .query(async () => {
+      try {
+        return await getAllocationSettings();
+      } catch (error) {
+        return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
+      }
+    }),
+  updateAllocationSettings: protectedProcedure
+    .input(z.object({
+      operatingPct: z.number().min(0).max(100),
+      ownerPayPct: z.number().min(0).max(100),
+      reservePct: z.number().min(0).max(100),
+      growthPct: z.number().min(0).max(100),
+    }))
+    .mutation(async ({ input }) => {
+      const total = input.operatingPct + input.ownerPayPct + input.reservePct + input.growthPct;
+      if (Math.abs(total - 100) > 0.01) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Los porcentajes deben sumar 100%" });
+      }
+      await updateAllocationSettings(input);
+      return { success: true };
+    }),
+  autoCategorize: publicProcedure
+    .input(z.object({ name: z.string() }))
+    .query(({ input }) => autoCategorize(input.name)),
 });
-
-// ─── Partnership Router ───────────────────────────────────────────────────────
+// ─── Partnership Routerr ───────────────────────────────────────────────────────
 
 const partnershipRouter = router({
   list: publicProcedure.query(async () => {

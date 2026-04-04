@@ -457,6 +457,53 @@ async function startServer() {
       `);
       console.log("[Startup] driver_feedback table ready");
 
+      // ── Migration: financial_transactions table ──────────────────────────────────
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS \`financial_transactions\` (
+          \`id\` int AUTO_INCREMENT NOT NULL,
+          \`date\` date NOT NULL,
+          \`postedAt\` timestamp NULL,
+          \`name\` varchar(255) NOT NULL,
+          \`merchantName\` varchar(255) NULL,
+          \`amount\` decimal(10,2) NOT NULL,
+          \`category\` varchar(100) NOT NULL DEFAULT 'uncategorized',
+          \`rawCategory\` varchar(255) NULL,
+          \`type\` enum('income','expense') NOT NULL DEFAULT 'expense',
+          \`isReviewed\` tinyint(1) NOT NULL DEFAULT 0,
+          \`isTaxDeductible\` tinyint(1) NOT NULL DEFAULT 0,
+          \`linkedLoadId\` int NULL,
+          \`notes\` text NULL,
+          \`plaidTransactionId\` varchar(255) NULL,
+          \`accountId\` int NULL,
+          \`source\` enum('plaid','manual','load') NOT NULL DEFAULT 'manual',
+          \`createdBy\` int NULL,
+          \`createdAt\` timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          \`updatedAt\` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+          PRIMARY KEY (\`id\`),
+          INDEX \`idx_ft_date\` (\`date\`),
+          INDEX \`idx_ft_category\` (\`category\`),
+          INDEX \`idx_ft_type\` (\`type\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+      console.log("[Startup] financial_transactions table ready");
+      // ── Migration: allocation_settings table ──────────────────────────────────
+      await conn.execute(`
+        CREATE TABLE IF NOT EXISTS \`allocation_settings\` (
+          \`id\` int AUTO_INCREMENT NOT NULL,
+          \`operatingPct\` decimal(5,2) NOT NULL DEFAULT 50.00,
+          \`ownerPayPct\` decimal(5,2) NOT NULL DEFAULT 20.00,
+          \`reservePct\` decimal(5,2) NOT NULL DEFAULT 20.00,
+          \`growthPct\` decimal(5,2) NOT NULL DEFAULT 10.00,
+          \`updatedAt\` timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+          PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+      await conn.execute(`
+        INSERT IGNORE INTO \`allocation_settings\` (id, operatingPct, ownerPayPct, reservePct, growthPct)
+        VALUES (1, 50.00, 20.00, 20.00, 10.00)
+      `);
+      console.log("[Startup] allocation_settings table ready");
+
       // ── Cleanup: remove test/duplicate accounts ──────────────────────────────────
       try {
         const testCondition = `email IN ('driver@example.com','test-annual@example.com','test-comparison@example.com','wascar.orti0410@gmail.com') OR (name = 'Test Driver' AND email LIKE '%example%')`;

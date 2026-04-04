@@ -2033,3 +2033,314 @@ export async function getDriverFeedbackByLoad(loadId: number) {
     return null;
   }
 }
+
+// ── Financial Module (Advanced) ───────────────────────────────────────────────
+async function getFinanceConn() {
+  if (!process.env.DATABASE_URL) throw new Error("Database not available");
+  const mysql2 = await import("mysql2/promise");
+  return mysql2.default.createConnection({
+    uri: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: true },
+  });
+}
+
+export async function getFinancialTransactions(filters?: {
+  type?: "income" | "expense";
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}) {
+  if (!process.env.DATABASE_URL) return [];
+  try {
+    const conn = await getFinanceConn();
+    let query = `SELECT * FROM financial_transactions WHERE 1=1`;
+    const params: any[] = [];
+    if (filters?.type) { query += ` AND type = ?`; params.push(filters.type); }
+    if (filters?.category) { query += ` AND category = ?`; params.push(filters.category); }
+    if (filters?.startDate) { query += ` AND date >= ?`; params.push(filters.startDate); }
+    if (filters?.endDate) { query += ` AND date <= ?`; params.push(filters.endDate); }
+    query += ` ORDER BY date DESC, id DESC`;
+    if (filters?.limit) { query += ` LIMIT ?`; params.push(filters.limit); }
+    const [rows] = await conn.execute(query, params) as any;
+    await conn.end();
+    return (rows as any[]).map(r => ({
+      id: r.id,
+      date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
+      name: r.name,
+      merchantName: r.merchantName,
+      amount: parseFloat(r.amount) || 0,
+      category: r.category,
+      type: r.type,
+      isReviewed: Boolean(r.isReviewed),
+      isTaxDeductible: Boolean(r.isTaxDeductible),
+      linkedLoadId: r.linkedLoadId,
+      notes: r.notes,
+      source: r.source,
+      createdAt: r.createdAt,
+    }));
+  } catch (error) {
+    console.error("[DB] getFinancialTransactions error:", error);
+    return [];
+  }
+}
+
+export async function createFinancialTransaction(data: {
+  date: string;
+  name: string;
+  merchantName?: string;
+  amount: number;
+  category: string;
+  type: "income" | "expense";
+  isReviewed?: boolean;
+  isTaxDeductible?: boolean;
+  linkedLoadId?: number;
+  notes?: string;
+  source?: string;
+  createdBy?: number;
+}) {
+  if (!process.env.DATABASE_URL) throw new Error("Database not available");
+  const conn = await getFinanceConn();
+  const [result] = await conn.execute(
+    `INSERT INTO financial_transactions (date, name, merchantName, amount, category, type, isReviewed, isTaxDeductible, linkedLoadId, notes, source, createdBy)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [data.date, data.name, data.merchantName ?? null, data.amount, data.category, data.type,
+     data.isReviewed ? 1 : 0, data.isTaxDeductible ? 1 : 0, data.linkedLoadId ?? null,
+     data.notes ?? null, data.source ?? "manual", data.createdBy ?? null]
+  ) as any;
+  await conn.end();
+  return result.insertId as number;
+}
+
+export async function updateFinancialTransaction(id: number, data: {
+  name?: string;
+  amount?: number;
+  category?: string;
+  type?: "income" | "expense";
+  isReviewed?: boolean;
+  isTaxDeductible?: boolean;
+  notes?: string;
+}) {
+  if (!process.env.DATABASE_URL) throw new Error("Database not available");
+  const conn = await getFinanceConn();
+  const sets: string[] = [];
+  const params: any[] = [];
+  if (data.name !== undefined) { sets.push("name = ?"); params.push(data.name); }
+  if (data.amount !== undefined) { sets.push("amount = ?"); params.push(data.amount); }
+  if (data.category !== undefined) { sets.push("category = ?"); params.push(data.category); }
+  if (data.type !== undefined) { sets.push("type = ?"); params.push(data.type); }
+  if (data.isReviewed !== undefined) { sets.push("isReviewed = ?"); params.push(data.isReviewed ? 1 : 0); }
+  if (data.isTaxDeductible !== undefined) { sets.push("isTaxDeductible = ?"); params.push(data.isTaxDeductible ? 1 : 0); }
+  if (data.notes !== undefined) { sets.push("notes = ?"); params.push(data.notes); }
+  if (sets.length === 0) { await conn.end(); return; }
+  params.push(id);
+  await conn.execute(`UPDATE financial_transactions SET ${sets.join(", ")} WHERE id = ?`, params);
+  await conn.end();
+}
+
+export async function deleteFinancialTransaction(id: number) {
+  if (!process.env.DATABASE_URL) throw new Error("Database not available");
+  const conn = await getFinanceConn();
+  await conn.execute(`DELETE FROM financial_transactions WHERE id = ?`, [id]);
+  await conn.end();
+}
+
+export async function getFinancialPnL(year: number, month: number) {
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    const conn = await getFinanceConn();
+    const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+    const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
+
+    const [loadRows] = await conn.execute(`
+      SELECT
+        COUNT(*) AS loadCount,
+        COALESCE(SUM(CAST(price AS DECIMAL(12,2))), 0) AS totalRevenue,
+        COALESCE(SUM(CAST(COALESCE(estimatedFuel,0) AS DECIMAL(12,2))), 0) AS totalFuel,
+        COALESCE(SUM(CAST(COALESCE(estimatedTolls,0) AS DECIMAL(12,2))), 0) AS totalTolls,
+        COALESCE(SUM(CAST(COALESCE(estimatedMiles,0) AS DECIMAL(12,2))), 0) AS totalMiles
+      FROM loads
+      WHERE status IN ('delivered','invoiced','paid')
+        AND DATE(COALESCE(deliveryDate, updatedAt)) BETWEEN ? AND ?
+    `, [startDate, endDate]) as any;
+
+    const [incomeRows] = await conn.execute(`
+      SELECT category, SUM(amount) AS total
+      FROM financial_transactions
+      WHERE type = 'income' AND date BETWEEN ? AND ?
+      GROUP BY category
+    `, [startDate, endDate]) as any;
+
+    const [expenseRows] = await conn.execute(`
+      SELECT category, SUM(amount) AS total
+      FROM financial_transactions
+      WHERE type = 'expense' AND date BETWEEN ? AND ?
+      GROUP BY category
+    `, [startDate, endDate]) as any;
+
+    const [drawRows] = await conn.execute(`
+      SELECT partnerId, SUM(amount) AS total
+      FROM owner_draws
+      WHERE period = ?
+      GROUP BY partnerId
+    `, [`${year}-${String(month).padStart(2, "0")}`]) as any;
+
+    const [partnerRows] = await conn.execute(`SELECT id, partnerName FROM partnership WHERE isActive = 1`) as any;
+    const partnerMap: Record<number, string> = {};
+    (partnerRows as any[]).forEach((p: any) => { partnerMap[p.id] = p.partnerName; });
+
+    await conn.end();
+
+    const load = (loadRows as any[])[0] || {};
+    const loadsRevenue = parseFloat(load.totalRevenue) || 0;
+    const loadsFuel = parseFloat(load.totalFuel) || 0;
+    const loadsTolls = parseFloat(load.totalTolls) || 0;
+    const totalMiles = parseFloat(load.totalMiles) || 0;
+    const loadCount = Number(load.loadCount) || 0;
+
+    const manualIncome = (incomeRows as any[]).reduce((s: number, r: any) => s + (parseFloat(r.total) || 0), 0);
+    const totalRevenue = loadsRevenue + manualIncome;
+
+    const expenseByCategory: Record<string, number> = { fuel: loadsFuel, tolls: loadsTolls };
+    (expenseRows as any[]).forEach((r: any) => {
+      expenseByCategory[r.category] = (expenseByCategory[r.category] || 0) + (parseFloat(r.total) || 0);
+    });
+    const totalExpenses = Object.values(expenseByCategory).reduce((s, v) => s + v, 0);
+    const netProfit = totalRevenue - totalExpenses;
+
+    const totalDraws = (drawRows as any[]).reduce((s: number, r: any) => s + (parseFloat(r.total) || 0), 0);
+    const drawsByPartner = (drawRows as any[]).map((r: any) => ({
+      partnerId: r.partnerId,
+      partnerName: partnerMap[r.partnerId] || `Socio #${r.partnerId}`,
+      amount: parseFloat(r.total) || 0,
+    }));
+
+    return {
+      year, month, loadCount, totalMiles, loadsRevenue, manualIncome, totalRevenue,
+      expenseByCategory, totalExpenses, netProfit,
+      grossMarginPct: totalRevenue > 0 ? ((netProfit / totalRevenue) * 100) : 0,
+      revenuePerMile: totalMiles > 0 ? loadsRevenue / totalMiles : 0,
+      profitPerMile: totalMiles > 0 ? netProfit / totalMiles : 0,
+      totalDraws, drawsByPartner,
+      retainedEarnings: netProfit - totalDraws,
+      allocation: {
+        operating: netProfit * 0.50,
+        ownerPay: netProfit * 0.20,
+        reserve: netProfit * 0.20,
+        growth: netProfit * 0.10,
+      },
+      taxReserve: totalRevenue * 0.20,
+    };
+  } catch (error) {
+    console.error("[DB] getFinancialPnL error:", error);
+    return null;
+  }
+}
+
+export async function getAllocationSettings() {
+  if (!process.env.DATABASE_URL) return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
+  try {
+    const conn = await getFinanceConn();
+    const [rows] = await conn.execute(`SELECT * FROM allocation_settings WHERE id = 1`) as any;
+    await conn.end();
+    if ((rows as any[]).length === 0) return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
+    const r = (rows as any[])[0];
+    return {
+      operatingPct: parseFloat(r.operatingPct) || 50,
+      ownerPayPct: parseFloat(r.ownerPayPct) || 20,
+      reservePct: parseFloat(r.reservePct) || 20,
+      growthPct: parseFloat(r.growthPct) || 10,
+    };
+  } catch (error) {
+    return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
+  }
+}
+
+export async function updateAllocationSettings(data: {
+  operatingPct: number; ownerPayPct: number; reservePct: number; growthPct: number;
+}) {
+  if (!process.env.DATABASE_URL) throw new Error("Database not available");
+  const conn = await getFinanceConn();
+  await conn.execute(
+    `INSERT INTO allocation_settings (id, operatingPct, ownerPayPct, reservePct, growthPct)
+     VALUES (1, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE operatingPct=VALUES(operatingPct), ownerPayPct=VALUES(ownerPayPct),
+       reservePct=VALUES(reservePct), growthPct=VALUES(growthPct)`,
+    [data.operatingPct, data.ownerPayPct, data.reservePct, data.growthPct]
+  );
+  await conn.end();
+}
+
+export async function getFinancialTrend(year: number) {
+  if (!process.env.DATABASE_URL) return [];
+  try {
+    const conn = await getFinanceConn();
+    const [rows] = await conn.execute(`
+      SELECT
+        MONTH(COALESCE(deliveryDate, updatedAt)) AS month,
+        COUNT(*) AS loadCount,
+        COALESCE(SUM(CAST(price AS DECIMAL(12,2))), 0) AS revenue,
+        COALESCE(SUM(CAST(COALESCE(estimatedFuel,0) AS DECIMAL(12,2))) + SUM(CAST(COALESCE(estimatedTolls,0) AS DECIMAL(12,2))), 0) AS loadCosts
+      FROM loads
+      WHERE status IN ('delivered','invoiced','paid')
+        AND YEAR(COALESCE(deliveryDate, updatedAt)) = ?
+      GROUP BY MONTH(COALESCE(deliveryDate, updatedAt))
+    `, [year]) as any;
+
+    const [expRows] = await conn.execute(`
+      SELECT MONTH(date) AS month, SUM(amount) AS total
+      FROM financial_transactions
+      WHERE type = 'expense' AND YEAR(date) = ?
+      GROUP BY MONTH(date)
+    `, [year]) as any;
+
+    await conn.end();
+
+    const monthMap: Record<number, { revenue: number; loadCosts: number; manualExpenses: number; loadCount: number }> = {};
+    for (let i = 1; i <= 12; i++) monthMap[i] = { revenue: 0, loadCosts: 0, manualExpenses: 0, loadCount: 0 };
+    (rows as any[]).forEach((r: any) => {
+      const m = Number(r.month);
+      monthMap[m].revenue = parseFloat(r.revenue) || 0;
+      monthMap[m].loadCosts = parseFloat(r.loadCosts) || 0;
+      monthMap[m].loadCount = Number(r.loadCount) || 0;
+    });
+    (expRows as any[]).forEach((r: any) => {
+      const m = Number(r.month);
+      monthMap[m].manualExpenses = parseFloat(r.total) || 0;
+    });
+
+    const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+    return Object.entries(monthMap).map(([m, d]) => ({
+      month: months[Number(m) - 1],
+      monthNum: Number(m),
+      revenue: d.revenue,
+      expenses: d.loadCosts + d.manualExpenses,
+      profit: d.revenue - d.loadCosts - d.manualExpenses,
+      loadCount: d.loadCount,
+    }));
+  } catch (error) {
+    console.error("[DB] getFinancialTrend error:", error);
+    return [];
+  }
+}
+
+export function autoCategorize(name: string): { category: string; isTaxDeductible: boolean } {
+  const n = name.toLowerCase();
+  if (/fuel|gas|petro|diesel|pilot|loves|ta truck|flying j|kwik trip|speedway|circle k/.test(n))
+    return { category: "fuel", isTaxDeductible: true };
+  if (/toll|ezpass|e-zpass|pike|turnpike|bridge|tunnel/.test(n))
+    return { category: "tolls", isTaxDeductible: true };
+  if (/insurance|progressive|state farm|geico|travelers|great west/.test(n))
+    return { category: "insurance", isTaxDeductible: true };
+  if (/repair|mechanic|tire|oil change|maintenance|maint|autozone|napa|advance auto/.test(n))
+    return { category: "maintenance", isTaxDeductible: true };
+  if (/verizon|at&t|t-mobile|sprint|phone|cellular|wireless/.test(n))
+    return { category: "phone", isTaxDeductible: true };
+  if (/payroll|salary|wage|driver pay|settlement/.test(n))
+    return { category: "payroll", isTaxDeductible: true };
+  if (/subscription|software|saas|quickbooks|google|microsoft|apple|amazon prime/.test(n))
+    return { category: "subscriptions", isTaxDeductible: true };
+  if (/load payment|broker payment|coyote|dat|freight/.test(n))
+    return { category: "load_payment", isTaxDeductible: false };
+  return { category: "other", isTaxDeductible: false };
+}
