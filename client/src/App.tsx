@@ -1,4 +1,4 @@
-import { Route, Switch, useLocation } from "wouter";
+import { Route, Switch, useLocation, Redirect } from "wouter";
 import { useEffect } from "react";
 import DashboardLayout from "./components/DashboardLayout";
 import { useAuth } from "./contexts/AuthContext";
@@ -7,7 +7,6 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import Loads from "./pages/Loads";
 import Finance from "./pages/Finance";
-import Transactions from "./pages/Transactions";
 import Partnership from "./pages/Partnership";
 import UserProfile from "./pages/UserProfile";
 import DriverView from "./pages/DriverView";
@@ -80,7 +79,7 @@ export default function App() {
       <Route path="/loads" component={withLayout(Loads)} />
       <Route path="/finance" component={withLayout(Finance)} />
       <Route path="/plaid-oauth-return" component={PlaidOAuthReturn} />
-      <Route path="/transactions" component={withLayout(Transactions)} />
+      <Route path="/transactions">{() => <Redirect to="/finance" />}</Route>
       <Route path="/partnership" component={withLayout(Partnership)} />
       <Route path="/profile" component={withLayout(UserProfile)} />
       <Route path="/executive-dashboard" component={withLayout(ExecutiveDashboard)} />
