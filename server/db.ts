@@ -45,31 +45,55 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _connection: mysql.Connection | null = null;
+let _pool: mysql.Pool | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
 
-export async function getDb() {
-  if (_db) return _db;
+function createPool(): mysql.Pool {
+  return mysql.createPool({
+    uri: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: true,
+    },
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0,
+  });
+}
 
+export async function getDb() {
   if (!process.env.DATABASE_URL) {
     console.warn("[Database] DATABASE_URL not configured");
     return null;
   }
 
-  try {
-    _connection = await mysql.createConnection({
-      uri: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: true,
-      },
-    });
+  // If we already have a pool and db, verify the pool is still responsive
+  if (_pool && _db) {
+    try {
+      const conn = await _pool.getConnection();
+      conn.release();
+      return _db;
+    } catch (error) {
+      console.warn("[Database] Pool connection check failed, recreating pool:", error);
+      try { await _pool.end(); } catch (_) {}
+      _pool = null;
+      _db = null;
+    }
+  }
 
-    _db = drizzle(_connection);
+  try {
+    _pool = createPool();
+    // Eagerly verify the pool can acquire a connection before returning
+    const conn = await _pool.getConnection();
+    conn.release();
+    _db = drizzle(_pool);
     console.log("[Database] Connected successfully");
     return _db;
   } catch (error) {
     console.error("[Database] Failed to connect:", error);
-    _connection = null;
+    try { if (_pool) await _pool.end(); } catch (_) {}
+    _pool = null;
     _db = null;
     return null;
   }
