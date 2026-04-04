@@ -527,8 +527,18 @@ async function startServer() {
         VALUES (1, 50.00, 20.00, 20.00, 10.00)
       `);
       console.log("[Startup] allocation_settings table ready");
-
-      // ── Cleanup: remove test/duplicate accounts ──────────────────────────────────
+      // ── Migration: plaidSyncCursor column on bank_accounts ───────────────────────
+      const [cursorCols] = await conn.execute(`
+        SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bank_accounts' AND COLUMN_NAME = 'plaidSyncCursor'
+      `) as any;
+      if (cursorCols.length === 0) {
+        await conn.execute("ALTER TABLE `bank_accounts` ADD `plaidSyncCursor` text NULL");
+        console.log("[Startup] Applied: plaidSyncCursor column added to bank_accounts");
+      } else {
+        console.log("[Startup] OK: plaidSyncCursor already exists");
+      }
+      // ── Cleanup: remove test/duplicate accountss ──────────────────────────────────
       try {
         const testCondition = `email IN ('driver@example.com','test-annual@example.com','test-comparison@example.com','wascar.orti0410@gmail.com') OR (name = 'Test Driver' AND email LIKE '%example%')`;
         // Delete FK-dependent child records first to avoid constraint errors

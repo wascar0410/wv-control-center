@@ -89,12 +89,12 @@ export async function getTransactions(accessToken: string, startDate: Date, endD
 /**
  * Incremental sync via /transactions/sync (recommended by Plaid).
  */
-export async function syncTransactions(accessToken: string, cursor?: string) {
+export async function syncTransactions(accessToken: string, cursor?: string, count: number = 100) {
   const client = getPlaidClient();
   const response = await client.transactionsSync({
     access_token: accessToken,
     cursor: cursor ?? undefined,
-    count: 500,
+    count, // paginated: 10-500, default 100 per batch to avoid Railway timeouts
   });
   const { added, modified, removed, next_cursor, has_more } = response.data;
   return { added, modified, removed, nextCursor: next_cursor, hasMore: has_more };

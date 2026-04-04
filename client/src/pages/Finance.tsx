@@ -2,7 +2,7 @@
  * Finance.tsx — WV Control Center Financial Module
  * Light theme compatible. Tabs: Overview, Transacciones (Plaid), P&L, Distribución, Alertas
  */
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -269,23 +269,51 @@ function PlaidConnectButton({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-// ─── Bank Accounts Panel ──────────────────────────────────────────────────────
+// ─── Bank Accounts Panel (paginated sync) ─────────────────────────────────────
+type SyncState = {
+  status: "idle" | "syncing" | "done" | "error";
+  imported: number;
+  hasMore: boolean;
+  error?: string;
+};
+
 function BankAccountsPanel({ onRefresh }: { onRefresh: () => void }) {
   const { data: accounts = [], isLoading, refetch } =
     trpc.plaid.getBankAccounts.useQuery(undefined, { retry: false });
-
-  const syncMutation = trpc.plaid.syncTransactions.useMutation({
-    onSuccess: (data) => {
-      toast.success(`${data.imported} transacciones nuevas importadas`);
-      refetch(); onRefresh();
-    },
-    onError: (err) => toast.error(`Error: ${err.message}`),
-  });
+  const [syncStates, setSyncStates] = useState<Record<number, SyncState>>({});
+  const syncBatchMutation = trpc.plaid.syncBatch.useMutation();
 
   const removeMutation = trpc.plaid.removeBankAccount.useMutation({
     onSuccess: () => { toast.success("Cuenta desvinculada"); refetch(); },
     onError: (err) => toast.error(`Error: ${err.message}`),
   });
+
+  const startSync = useCallback(async (accountId: number) => {
+    setSyncStates(prev => ({ ...prev, [accountId]: { status: "syncing", imported: 0, hasMore: true } }));
+    let totalImported = 0;
+    let hasMore = true;
+    try {
+      while (hasMore) {
+        const result = await syncBatchMutation.mutateAsync({ bankAccountId: accountId, batchSize: 100 });
+        totalImported += result.imported;
+        hasMore = result.hasMore;
+        setSyncStates(prev => ({
+          ...prev,
+          [accountId]: { status: hasMore ? "syncing" : "done", imported: totalImported, hasMore },
+        }));
+        if (hasMore) await new Promise(r => setTimeout(r, 300));
+      }
+      toast.success(`✓ ${totalImported} transacciones importadas`);
+      refetch();
+      onRefresh();
+    } catch (err: any) {
+      setSyncStates(prev => ({
+        ...prev,
+        [accountId]: { status: "error", imported: totalImported, hasMore: false, error: err.message },
+      }));
+      toast.error(`Error al sincronizar: ${err.message}`);
+    }
+  }, [syncBatchMutation, refetch, onRefresh]);
 
   if (isLoading) return (
     <div className="flex items-center gap-2 py-3 text-muted-foreground text-sm">
@@ -309,49 +337,72 @@ function BankAccountsPanel({ onRefresh }: { onRefresh: () => void }) {
 
   return (
     <div className="space-y-2">
-      {(accounts as any[]).map((account) => (
-        <div key={account.id}
-          className="flex items-center justify-between p-3 rounded-lg border border-border bg-background hover:bg-muted/30 transition-colors">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
-              <Building2 className="w-4 h-4 text-blue-600" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-foreground">{account.bankName}</span>
-                <span className="text-xs text-muted-foreground">••••{account.accountLast4}</span>
-                {account.hasPlaid && (
-                  <Badge className="text-xs bg-blue-50 text-blue-700 border-blue-200 border">Plaid</Badge>
+      {(accounts as any[]).map((account) => {
+        const syncState = syncStates[account.id];
+        const isSyncing = syncState?.status === "syncing";
+        return (
+          <div key={account.id}
+            className="flex items-center justify-between p-3 rounded-lg border border-border bg-background hover:bg-muted/30 transition-colors">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center shrink-0 border border-blue-100">
+                <Building2 className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-medium text-foreground">{account.bankName}</span>
+                  <span className="text-xs text-muted-foreground">••••{account.accountLast4}</span>
+                  {account.hasPlaid && (
+                    <Badge className="text-xs bg-blue-50 text-blue-700 border-blue-200 border">Plaid</Badge>
+                  )}
+                </div>
+                {isSyncing && (
+                  <div className="mt-1.5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-blue-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full animate-pulse" style={{ width: "60%" }} />
+                      </div>
+                      <span className="text-xs text-blue-600 shrink-0">{syncState.imported} importadas...</span>
+                    </div>
+                  </div>
+                )}
+                {syncState?.status === "done" && (
+                  <p className="text-xs text-emerald-600 mt-0.5">✓ {syncState.imported} transacciones importadas</p>
+                )}
+                {syncState?.status === "error" && (
+                  <p className="text-xs text-red-500 mt-0.5 truncate">Error: {syncState.error}</p>
+                )}
+                {!syncState && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {account.accountType} ·{" "}
+                    {account.lastSyncedAt
+                      ? `Última sync: ${new Date(account.lastSyncedAt).toLocaleDateString("es-US")}`
+                      : "Sin sincronizar aún"}
+                  </p>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {account.accountType} ·{" "}
-                {account.lastSyncedAt
-                  ? `Última sync: ${new Date(account.lastSyncedAt).toLocaleDateString("es-US")}`
-                  : "Sin sincronizar aún"}
-              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0 ml-2">
+              {account.hasPlaid && (
+                <Button size="sm" variant="ghost"
+                  onClick={() => startSync(account.id)}
+                  disabled={isSyncing}
+                  className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  title="Sincronizar (paginado, sin timeout)">
+                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                  {isSyncing && <span className="ml-1 text-xs">Sync...</span>}
+                </Button>
+              )}
+              <Button size="sm" variant="ghost"
+                onClick={() => removeMutation.mutate({ bankAccountId: account.id })}
+                disabled={removeMutation.isPending || isSyncing}
+                className="h-8 px-2 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                title="Desvincular">
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            {account.hasPlaid && (
-              <Button size="sm" variant="ghost"
-                onClick={() => syncMutation.mutate({ bankAccountId: account.id })}
-                disabled={syncMutation.isPending}
-                className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                title="Sincronizar transacciones">
-                <RefreshCw className={`w-3.5 h-3.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
-              </Button>
-            )}
-            <Button size="sm" variant="ghost"
-              onClick={() => removeMutation.mutate({ bankAccountId: account.id })}
-              disabled={removeMutation.isPending}
-              className="h-8 px-2 text-muted-foreground hover:text-red-600 hover:bg-red-50"
-              title="Desvincular">
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
