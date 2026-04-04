@@ -1387,6 +1387,10 @@ const adminRouter = router({
       password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
       phoneNumber: z.string().optional(),
       licenseNumber: z.string().optional(),
+      dotNumber: z.string().optional(),
+      fleetType: z.enum(["internal", "leased", "external"]).optional().default("internal"),
+      commissionPercent: z.number().min(0).max(100).optional().default(0),
+      vehicleInfo: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       // Only owner and admin can create drivers
@@ -1407,23 +1411,30 @@ const adminRouter = router({
       const passwordHash = await bcrypt.hash(input.password, 10);
 
       // Create new driver user with unique openId
-      const openId = `google-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      const newDriver = await db.insert(usersTable).values({
+      const openId = `driver-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      const insertPayload: Record<string, any> = {
         openId,
         name: input.name,
         email: input.email,
         passwordHash,
         role: "driver",
         loginMethod: "manual",
+        fleetType: input.fleetType ?? "internal",
+        commissionPercent: String(input.commissionPercent ?? 0),
         createdAt: new Date(),
         updatedAt: new Date(),
         lastSignedIn: new Date(),
-      }).$returningId();
+      };
+      if (input.dotNumber) insertPayload.dotNumber = input.dotNumber;
+      if (input.vehicleInfo) insertPayload.vehicleInfo = input.vehicleInfo;
+      if (input.phoneNumber) insertPayload.phone = input.phoneNumber;
+
+      const newDriver = await db.insert(usersTable).values(insertPayload).$returningId();
 
       await notifyOwner({
         title: "Nuevo Chofer Agregado",
-        content: `Se agregó un nuevo chofer: ${input.name} (${input.email})`,
+        content: `Se agregó un nuevo chofer: ${input.name} (${input.email})${input.dotNumber ? ` | DOT: ${input.dotNumber}` : ' | Sin DOT'} | Comisión: ${input.commissionPercent ?? 0}%`,
       });
 
       return {
@@ -1433,6 +1444,9 @@ const adminRouter = router({
           name: input.name,
           email: input.email,
           role: "driver",
+          dotNumber: input.dotNumber,
+          fleetType: input.fleetType,
+          commissionPercent: input.commissionPercent,
         },
         message: `Chofer ${input.name} creado exitosamente`,
       };
@@ -1463,6 +1477,22 @@ const adminRouter = router({
       if (updateData.locationSharingEnabled !== undefined) updatePayload.locationSharingEnabled = updateData.locationSharingEnabled;
       await db.update(usersTable).set(updatePayload).where(eq(usersTable.id, driverId));
       return { success: true };
+    }),
+
+  // Delete a driver user
+  deleteDriver: protectedProcedure
+    .input(z.object({ driverId: z.number() }))
+    .mutation(async ({ input, ctx }) => {
+      if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para eliminar choferes" });
+      }
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      const target = await db.select().from(usersTable).where(eq(usersTable.id, input.driverId)).limit(1).then(r => r[0]);
+      if (!target) throw new TRPCError({ code: "NOT_FOUND", message: "Usuario no encontrado" });
+      if (target.role === "owner") throw new TRPCError({ code: "FORBIDDEN", message: "No se puede eliminar una cuenta de dueño" });
+      await db.delete(usersTable).where(eq(usersTable.id, input.driverId));
+      return { success: true, message: `Usuario ${target.name} eliminado` };
     }),
 
   // Get all drivers with fleet info
