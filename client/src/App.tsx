@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import DashboardLayout from "./components/DashboardLayout";
 import { useAuth } from "./contexts/AuthContext";
 import FleetTracking from "./pages/FleetTracking";
+import LoadsDispatch from "./pages/LoadsDispatch";
 
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
@@ -79,7 +80,7 @@ export default function App() {
       
 <Route path="/command-center" component={withLayout(CommandCenter)} />
 
-<Route path="/loads-dispatch" component={withLayout(Loads)} />
+<Route path="/loads-dispatch" component={withLayout(LoadsDispatch)} />
 
 <Route path="/fleet-drivers" component={withLayout(DriverView)} />
 
