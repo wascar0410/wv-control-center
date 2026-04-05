@@ -112,7 +112,7 @@
   --popover: #111827;
   --popover-foreground: #F8FBFF;
 
-  --primary: #1D4ED8;
+  --primary: #60A5FA;
   --primary-foreground: #FFFFFF;
 
   --secondary: #123D7A;
@@ -169,11 +169,10 @@
   h5,
   h6 {
     @apply font-semibold tracking-tight;
-    color: var(--primary);
   }
 
   p {
-    color: var(--foreground);
+    margin: 0;
   }
 
   button:not(:disabled),
@@ -193,6 +192,11 @@
   select {
     background-color: var(--input);
     color: var(--foreground);
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted-foreground);
   }
 }
 
@@ -217,6 +221,7 @@
     background-color: var(--muted);
     border: 1px solid var(--border);
     border-radius: 1rem;
+    color: var(--foreground);
   }
 
   .app-title {
@@ -239,24 +244,49 @@
     background-color: var(--secondary);
   }
 
+  /* Dark utility helpers for operational screens */
+  .app-dark-page {
+    background-color: #020617;
+    color: #f8fafc;
+  }
+
+  .app-dark-card {
+    background-color: #0f172a;
+    color: #f8fafc;
+    border: 1px solid #1e293b;
+  }
+
+  .app-dark-muted {
+    color: #94a3b8;
+  }
+
+  .app-dark-border {
+    border-color: #1e293b;
+  }
+
   /* ── Business Plan page styles ── */
   .font-display {
     font-family: 'Space Grotesk', 'Inter', sans-serif;
   }
+
   .font-mono-data {
     font-family: 'Space Mono', 'Courier New', monospace;
   }
+
   .card-hover {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+
   .card-hover:hover {
     transform: translateY(-2px);
     box-shadow: 0 16px 48px rgba(7, 22, 45, 0.12);
   }
+
   .data-table {
     width: 100%;
     border-collapse: collapse;
   }
+
   .data-table th {
     background: #eff6ff;
     color: #0b1f3a;
@@ -268,22 +298,28 @@
     letter-spacing: 0.05em;
     border-bottom: 2px solid #bfdbfe;
   }
+
   .data-table td {
     padding: 11px 16px;
     border-bottom: 1px solid #e5e7eb;
     font-size: 0.875rem;
+    color: var(--foreground);
   }
+
   .data-table tbody tr:nth-child(even) {
     background: #f8fbff;
   }
+
   .data-table tbody tr:hover {
     background: #eff6ff;
   }
+
   .data-table .total-row {
     background: #eff6ff !important;
     font-weight: 700;
     border-top: 2px solid #bfdbfe;
   }
+
   .section-number {
     position: absolute;
     top: -0.5rem;
@@ -297,22 +333,30 @@
     user-select: none;
     z-index: 0;
   }
+
   .callout-blue {
     background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
     border: 1px solid #bfdbfe;
     border-radius: 1rem;
     padding: 1.25rem;
+    color: var(--foreground);
   }
+
   .no-print {
     /* visible by default, hidden on print */
   }
+
   @media print {
-    .no-print { display: none !important; }
+    .no-print {
+      display: none !important;
+    }
+
     .card-hover:hover {
       transform: none;
       box-shadow: none;
     }
   }
+
   /* ── End Business Plan styles ── */
 
   .flex {
