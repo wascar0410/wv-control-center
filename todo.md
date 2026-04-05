@@ -1114,3 +1114,33 @@
 - [ ] Store geofence events in database
 - [ ] Display geofence history in admin dashboard
 - [ ] Configure alert thresholds per load
+
+
+## Fase 98: Consolidación de Dashboards en Command Center
+- [x] Crear CommandCenter.tsx unificando Dashboard + ExecutiveDashboard
+- [x] Incluir KPIs principales (4 tarjetas)
+- [x] Incluir KPIs operacionales (Profit/Mile, Revenue/Mile, Cost/Mile, Utilización, Avg/Load, Cargas/Mes)
+- [x] Incluir análisis ejecutivo con gráficos de tendencias
+- [x] Incluir selector de rango de fechas (Hoy, Esta semana, Este mes, Últimos 30/90 días)
+- [x] Incluir cargas recientes con filtros por estado
+- [x] Incluir acciones rápidas (Nueva Carga, Evaluar Carga, Registrar Gasto, Ver Finanzas, Rendimiento Choferes)
+- [x] Incluir distribución financiera 50/20/20/10
+- [x] Incluir gráficos de ingresos vs ganancia
+- [x] Incluir gráfico de tendencia de margen
+- [x] Actualizar App.tsx para usar CommandCenter en /command-center
+- [x] Integración con tRPC queries (dashboard.kpis, dashboard.recentLoads, loads.list)
+- [x] Responsive design (mobile, tablet, desktop)
+- [x] Loading states y error handling
+- [x] Checkpoint guardado
+
+## Fase 99: Próximas Mejoras del Command Center
+- [ ] Agregar widget de alertas de precios bajos
+- [ ] Agregar widget de notificaciones en tiempo real
+- [ ] Agregar mapa en tiempo real de choferes (solo admin)
+- [ ] Agregar chat widget (solo admin)
+- [ ] Agregar exportación de reportes (PDF, Excel)
+- [ ] Agregar comparación histórica (mes anterior, trimestre anterior, año anterior)
+- [ ] Optimizar performance con lazy loading
+- [ ] Agregar filtros avanzados
+- [ ] Agregar búsqueda de cargas
+- [ ] Agregar personalización de widgets

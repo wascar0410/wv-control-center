@@ -5,6 +5,7 @@ import { useAuth } from "./contexts/AuthContext";
 
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
+import CommandCenter from "./pages/CommandCenter";
 import Loads from "./pages/Loads";
 import Finance from "./pages/Finance";
 import Partnership from "./pages/Partnership";
@@ -70,7 +71,7 @@ export default function App() {
     <Switch>
      {/* ===== NEW ARCHITECTURE ROUTES ===== */}
 
-<Route path="/command-center" component={withLayout(Dashboard)} />
+<Route path="/command-center" component={withLayout(CommandCenter)} />
 
 <Route path="/loads-dispatch" component={withLayout(Loads)} />
 
