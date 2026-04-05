@@ -86,8 +86,7 @@ const adminMenuItems = [
   { icon: UserIcon, label: "Profile", path: "/profile", description: "Perfil del usuario" },
 ];
 const driverMenuItems = [
-  { icon: LayoutDashboard, label: "Mi Dashboard", path: "/driver-dashboard", description: "Mis estadísticas personales" },
-  { icon: Truck, label: "Mis Cargas", path: "/driver", description: "Operaciones en campo" },
+  { icon: LayoutDashboard, label: "Driver Ops", path: "/driver", description: "Dashboard + operaciones" },
   { icon: TrendingUp, label: "Mi Desempeño", path: "/driver-performance", description: "Historial y tendencias" },
   { icon: Wallet, label: "Mi Billetera", path: "/finance-wallet", description: "Mis pagos y liquidaciones" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },

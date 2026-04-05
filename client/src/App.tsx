@@ -11,6 +11,7 @@ import Finance from "./pages/Finance";
 import Partnership from "./pages/Partnership";
 import UserProfile from "./pages/UserProfile";
 import DriverView from "./pages/DriverView";
+import DriverOps from "./pages/DriverOps";
 import ExecutiveDashboard from "./pages/ExecutiveDashboard";
 import Quotation from "./pages/Quotation";
 import QuotationHistory from "./pages/QuotationHistory";
@@ -126,9 +127,9 @@ export default function App() {
 
       {/* Driver routes */}
       <Route path="/driver/loads/:id" component={withLayout(DriverLoadDetail)} />
-      <Route path="/driver-dashboard" component={withLayout(DriverDashboard)} />
+      <Route path="/driver-dashboard" component={withLayout(DriverOps)} />
+      <Route path="/driver" component={withLayout(DriverOps)} />
       <Route path="/driver-wallet" component={withLayout(DriverWallet)} />
-      <Route path="/driver" component={withLayout(DriverView)} />
 
       {/* Root → smart redirect */}
       <Route path="/" component={HomeRedirect} />

@@ -1162,3 +1162,15 @@
 - [x] Actualizar DashboardLayout con nuevas opciones de menú
 - [ ] Ejecutar migración SQL en la base de datos
 - [ ] Agregar tests para wallet y settlement routers
+
+## Fase 4: Unificar Driver
+- [x] Crear DriverOps.tsx que unifique DriverDashboard + DriverView
+- [x] Incluir tabs para Dashboard y Operaciones
+- [x] KPIs: Entregas, Ganancias, Gastos, Margen Neto
+- [x] Resumen de Billetera con link a /finance-wallet
+- [x] Cargas activas, disponibles, completadas
+- [x] POD upload modal
+- [x] Actualizar rutas en App.tsx (/driver, /driver-dashboard)
+- [x] Actualizar DashboardLayout para usar DriverOps
+- [ ] Agregar tests para DriverOps
+- [ ] Validar flujo de aceptar/rechazar cargas
