@@ -2,6 +2,7 @@ import { Route, Switch, useLocation, Redirect } from "wouter";
 import { useEffect } from "react";
 import DashboardLayout from "./components/DashboardLayout";
 import { useAuth } from "./contexts/AuthContext";
+import FleetTracking from "./pages/FleetTracking";
 
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
@@ -73,7 +74,9 @@ export default function App() {
   return (
     <Switch>
      {/* ===== NEW ARCHITECTURE ROUTES ===== */}
-
+      
+<Route path="/fleet-tracking" component={withLayout(FleetTracking)} />
+      
 <Route path="/command-center" component={withLayout(CommandCenter)} />
 
 <Route path="/loads-dispatch" component={withLayout(Loads)} />
@@ -115,8 +118,8 @@ export default function App() {
       <Route path="/business-settings" component={withLayout(BusinessSettings)} />
       <Route path="/batch-payments" component={withLayout(BatchPayments)} />
       <Route path="/driver-performance" component={withLayout(DriverPerformance)} />
-      <Route path="/fleet-map" component={withLayout(FleetMap)} />
-      <Route path="/fleet-management" component={withLayout(FleetManagement)} />
+      <Route path="/fleet-map">{() => <Redirect to="/fleet-tracking" />}</Route>
+     <Route path="/fleet-management">{() => <Redirect to="/fleet-tracking" />}</Route>
       <Route path="/broker-dashboard" component={withLayout(BrokerDashboard)} />
       <Route path="/dispatcher-performance" component={withLayout(DispatcherPerformance)} />
       <Route path="/chat" component={withLayout(Chat)} />
