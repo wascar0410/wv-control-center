@@ -23,6 +23,7 @@ import {
   Package,
   Clock,
 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
 
 function formatCurrency(value: number | string) {
   return new Intl.NumberFormat("en-US", {
@@ -57,7 +58,7 @@ export default function DriverPerformance() {
     { enabled: !!driverId, retry: false }
   );
 
-  const safeStats = stats || {};
+  const safeStats = (stats || {}) as any;
   const safeTrends = Array.isArray(trends) ? trends : [];
   const safeDeliveries = Array.isArray(recentDeliveries)
     ? recentDeliveries

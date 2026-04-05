@@ -218,9 +218,9 @@ export default function BusinessPlanAnalytics() {
       sectionData,
       pieData,
       recentEvents,
-      pageViews: totals["page_view"] || 0,
-      pdfDownloads: totals["pdf_download"] || 0,
-      contactClicks: totals["contact_click"] || 0,
+      pageViews: (totals as any)["page_view"] || 0,
+      pdfDownloads: (totals as any)["pdf_download"] || 0,
+      contactClicks: (totals as any)["contact_click"] || 0,
       uniqueSessions: data.uniqueSessions || 0,
       totalEvents: data.totalEvents || 0,
     };

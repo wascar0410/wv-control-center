@@ -7,14 +7,14 @@ import { Link } from "wouter";
 
 export function AlertsWidget() {
   const { data: stats } = trpc.priceAlerts.getAlertStats.useQuery();
-  const { data: unreadAlerts = [] } = trpc.priceAlerts.getUnreadAlerts.useQuery();
+  const { data: unreadAlerts = [] } = trpc.priceAlerts.getUnreadAlerts.useQuery() as any;
 
-  if (!stats || stats.unreadAlerts === 0) {
+  if (!stats || stats.unread === 0) {
     return null;
   }
 
-  const criticalAlerts = unreadAlerts.filter((a) => a.severity === "critical");
-  const warningAlerts = unreadAlerts.filter((a) => a.severity === "warning");
+  const criticalAlerts = (unreadAlerts || []).filter((a: any) => a.severity === "critical");
+  const warningAlerts = (unreadAlerts || []).filter((a: any) => a.severity === "warning");
 
   return (
     <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20">
@@ -24,7 +24,7 @@ export function AlertsWidget() {
             <Bell className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             <CardTitle className="text-base">Alertas de Precios</CardTitle>
           </div>
-          <Badge variant="secondary">{stats.unreadAlerts}</Badge>
+          <Badge variant="secondary">{stats.unread}</Badge>
         </div>
         <CardDescription>Cargas por debajo de tu ganancia mínima</CardDescription>
       </CardHeader>

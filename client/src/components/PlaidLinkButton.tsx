@@ -53,7 +53,7 @@ export function PlaidLinkButton({
   }, [tokenData]);
 
   const onPlaidSuccess: PlaidLinkOnSuccess = useCallback(
-    async (publicToken) => {
+    async (publicToken: string) => {
       setIsExchanging(true);
       try {
         await exchangeToken.mutateAsync({ publicToken });
@@ -65,7 +65,7 @@ export function PlaidLinkButton({
     [exchangeToken]
   );
 
-  const onPlaidExit: PlaidLinkOnExit = useCallback((err) => {
+  const onPlaidExit: PlaidLinkOnExit = useCallback((err: any) => {
     if (err && err.error_code !== "USER_EXITED") {
       toast.error(`Plaid: ${err.display_message || err.error_message || "Error desconocido"}`);
     }

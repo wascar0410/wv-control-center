@@ -124,7 +124,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider style={{ "--sidebar-width": `${sidebarWidth}px` } as CSSProperties}>
-      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} user={user ?? FALLBACK_USER}>
+      <DashboardLayoutContent setSidebarWidth={setSidebarWidth} user={(user ?? FALLBACK_USER) as any}>
         {children}
       </DashboardLayoutContent>
     </SidebarProvider>
