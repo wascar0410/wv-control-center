@@ -1146,17 +1146,19 @@
 - [ ] Agregar personalización de widgets
 
 
-## Fase 3: Wallet/Settlement Module (BACKEND)
+## Fase 3: Wallet/Settlement Module
 - [x] Crear tablas en schema: wallets, wallet_transactions, withdrawals, payment_blocks, settlements, settlement_loads
 - [x] Generar migración SQL con Drizzle
-- [x] Crear DB helpers en server/db.ts para wallets (getOrCreateWallet, getWalletByDriverId, updateWalletBalance, addWalletTransaction, getWalletTransactions, requestWithdrawal, getWithdrawals, approveWithdrawal, completeWithdrawal, failWithdrawal, getWalletSummary)
-- [x] Crear DB helpers para settlements (createSettlement, getSettlementWithLoads, addLoadToSettlement, calculateSettlement, approveSettlement, processSettlement, completeSettlement, getAllSettlements)
-- [x] Crear tRPC router wallet.ts con procedures (getMyWallet, getWalletSummary, getTransactions, requestWithdrawal, getWithdrawals, cancelWithdrawal, addAdjustment, getStats)
-- [x] Crear tRPC router settlement.ts con procedures (create, getById, addLoad, calculate, approve, process, complete, getAll)
+- [x] Crear DB helpers en server/db.ts para wallets (20+ funciones)
+- [x] Crear DB helpers para settlements (8+ funciones)
+- [x] Crear tRPC router wallet.ts con 8 procedures
+- [x] Crear tRPC router settlement.ts con 7 procedures
 - [x] Integrar walletRouter y settlementRouter en server/routers.ts
+- [x] Crear Frontend UI para Wallet (WalletDashboard.tsx)
+- [x] Crear WithdrawalRequestModal.tsx
+- [x] Crear Frontend UI para Settlements (SettlementsPage.tsx)
+- [x] Crear CreateSettlementModal.tsx
+- [x] Integrar rutas en App.tsx (/finance-wallet, /finance-settlements)
+- [x] Actualizar DashboardLayout con nuevas opciones de menú
 - [ ] Ejecutar migración SQL en la base de datos
-- [ ] Crear Frontend UI para Wallet (WalletDashboard.tsx)
-- [ ] Crear Frontend UI para Withdrawals (WithdrawalsPage.tsx)
-- [ ] Crear Frontend UI para Settlements (SettlementsPage.tsx)
-- [ ] Integrar en DashboardLayout navigation
 - [ ] Agregar tests para wallet y settlement routers

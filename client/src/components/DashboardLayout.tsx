@@ -64,6 +64,8 @@ const adminMenuItems = [
 
   // ===== FINANCE =====
   { icon: DollarSign, label: "Finance", path: "/finance", description: "Ingresos, gastos y profit" },
+  { icon: Wallet, label: "Wallet", path: "/finance-wallet", description: "Billetera y retiros" },
+  { icon: CreditCard, label: "Settlements", path: "/finance-settlements", description: "Distribución de ganancias" },
 
   // ===== FLEET =====
   { icon: Truck, label: "Fleet & Drivers", path: "/fleet-drivers", description: "Operaciones de choferes y flota" },
@@ -87,7 +89,7 @@ const driverMenuItems = [
   { icon: LayoutDashboard, label: "Mi Dashboard", path: "/driver-dashboard", description: "Mis estadísticas personales" },
   { icon: Truck, label: "Mis Cargas", path: "/driver", description: "Operaciones en campo" },
   { icon: TrendingUp, label: "Mi Desempeño", path: "/driver-performance", description: "Historial y tendencias" },
-  { icon: Wallet, label: "Mi Billetera", path: "/driver-wallet", description: "Mis pagos y liquidaciones" },
+  { icon: Wallet, label: "Mi Billetera", path: "/finance-wallet", description: "Mis pagos y liquidaciones" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
   { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
 ];

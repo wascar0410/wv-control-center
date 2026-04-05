@@ -36,6 +36,8 @@ import BrokerDashboard from "./pages/BrokerDashboard";
 import DispatcherPerformance from "./pages/DispatcherPerformance";
 import PlaidOAuthReturn from "./pages/PlaidOAuthReturn";
 import UserManagement from "./pages/UserManagement";
+import WalletDashboard from "./pages/WalletDashboard";
+import SettlementsPage from "./pages/SettlementsPage";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -82,6 +84,10 @@ export default function App() {
 <Route path="/company" component={withLayout(About)} />
 
 <Route path="/settings" component={withLayout(BusinessSettings)} />
+
+<Route path="/finance-wallet" component={withLayout(WalletDashboard)} />
+
+<Route path="/finance-settlements" component={withLayout(SettlementsPage)} />
       {/* ===== REDIRECTS (NO BREAK APP) ===== */}
 
 <Route path="/dashboard">{() => <Redirect to="/command-center" />}</Route>
