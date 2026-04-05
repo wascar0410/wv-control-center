@@ -57,7 +57,7 @@ import { AddDriverModal } from "./AddDriverModal";
 
 const adminMenuItems = [
   // ===== CORE =====
-  { icon: LayoutDashboard, label: "Command Center", path: "/command-center", description: "Control total del negocio" },
+  { icon: LayoutDashboard, label: "ZZZ TEST MENU", path: "/command-center", description: "Control total del negocio" },
 
   // ===== OPERATIONS =====
   { icon: Package, label: "Loads & Dispatch", path: "/loads-dispatch", description: "Cargas, cotización y dispatch" },
