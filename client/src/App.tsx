@@ -68,6 +68,24 @@ function HomeRedirect() {
 export default function App() {
   return (
     <Switch>
+      /* ===== NEW ARCHITECTURE ROUTES ===== */}
+
+<Route path="/command-center" component={withLayout(Dashboard)} />
+
+<Route path="/loads-dispatch" component={withLayout(Loads)} />
+
+<Route path="/fleet-drivers" component={withLayout(DriverView)} />
+
+<Route path="/team" component={withLayout(UserManagement)} />
+
+<Route path="/company" component={withLayout(About)} />
+
+<Route path="/settings" component={withLayout(BusinessSettings)} />
+      {/* ===== REDIRECTS (NO BREAK APP) ===== */}
+
+<Route path="/dashboard">{() => <Redirect to="/command-center" />}</Route>
+
+<Route path="/loads">{() => <Redirect to="/loads-dispatch" />}</Route>
       {/* Public routes */}
       <Route path="/login" component={LoginPage} />
       <Route path="/quotation" component={Quotation} />
