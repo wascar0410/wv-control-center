@@ -519,28 +519,33 @@ const loadsRouter = router({
 // ─── Finance Router ───────────────────────────────────────────────────────────────────
 
 const financeRouter = router({
-  transactions: publicProcedure
-    .input(
-      z
-        .object({
-          type: z.enum(["income", "expense"]).optional(),
-          startDate: z.string().optional(),
-          endDate: z.string().optional(),
-        })
-        .optional()
-    )
-    .query(async ({ input }) => {
-      try {
-        return await getTransactions({
-          type: input?.type,
-          startDate: input?.startDate ? new Date(input.startDate) : undefined,
-          endDate: input?.endDate ? new Date(input.endDate) : undefined,
-        });
-      } catch (error) {
-        console.error("[finance.transactions] error:", error);
-        return [];
-      }
-    }),
+  transactions: protectedProcedure
+  .input(
+    z
+      .object({
+        type: z.enum(["income", "expense"]).optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+      })
+      .optional()
+  )
+  .query(async ({ input, ctx }) => {
+    const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+    if (!isPrivileged) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    }
+
+    try {
+      return await getTransactions({
+        type: input?.type,
+        startDate: input?.startDate ? new Date(input.startDate) : undefined,
+        endDate: input?.endDate ? new Date(input.endDate) : undefined,
+      });
+    } catch (error) {
+      console.error("[finance.transactions] error:", error);
+      return [];
+    }
+  }),
 
   addExpense: protectedProcedure
     .input(
@@ -594,38 +599,47 @@ const financeRouter = router({
       return { id };
     }),
 
-  summary: publicProcedure
-    .input(z.object({ year: z.number(), month: z.number() }))
-    .query(async ({ input }) => {
-      try {
-        const result = await getFinancialSummary(input.year, input.month);
-        return {
-          income: result?.income ?? 0,
-          expenses: result?.expenses ?? 0,
-          netProfit: result?.netProfit ?? 0,
-          byCategory: result?.byCategory ?? [],
-        };
-      } catch (error) {
-        console.error("[finance.summary] error:", error);
-        return {
-          income: 0,
-          expenses: 0,
-          netProfit: 0,
-          byCategory: [],
-        };
-      }
-    }),
+  summary: protectedProcedure
+  .input(z.object({ year: z.number(), month: z.number() }))
+  .query(async ({ input, ctx }) => {
+    const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+    if (!isPrivileged) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    }
 
-  cashFlow: publicProcedure
-    .input(z.object({ year: z.number() }))
-    .query(async ({ input }) => {
-      try {
-        return await getMonthlyCashFlow(input.year);
-      } catch (error) {
-        console.error("[finance.cashFlow] error:", error);
-        return [];
-      }
-    }),
+    try {
+      const result = await getFinancialSummary(input.year, input.month);
+      return {
+        income: result?.income ?? 0,
+        expenses: result?.expenses ?? 0,
+        netProfit: result?.netProfit ?? 0,
+        byCategory: result?.byCategory ?? [],
+      };
+    } catch (error) {
+      console.error("[finance.summary] error:", error);
+      return {
+        income: 0,
+        expenses: 0,
+        netProfit: 0,
+        byCategory: [],
+      };
+    }
+  }),
+
+  cashFlow: protectedProcedure
+  .input(z.object({ year: z.number() }))
+  .query(async ({ input, ctx }) => {
+    const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+    if (!isPrivileged) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    }
+
+    try {
+      return await getMonthlyCashFlow(input.year);
+    } catch (error) {
+      console.error("[finance.cashFlow] error:", error);
+      return [];
+    }
   // ── Advanced Finance Module ─────────────────────────────────────────────────────
   pnl: publicProcedure
     .input(z.object({ year: z.number(), month: z.number() }))
