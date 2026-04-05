@@ -68,7 +68,7 @@ const adminMenuItems = [
   { icon: CreditCard, label: "Settlements", path: "/finance-settlements", description: "Distribución de ganancias" },
 
   // ===== FLEET =====
-  { icon: Truck, label: "Fleet & Drivers", path: "/fleet-drivers", description: "Operaciones de choferes y flota" },
+  { icon: Truck, label: "Fleet & Drivers", path: "/fleet-tracking", description: "Operaciones de choferes y flota" },
 
   // ===== TEAM =====
   { icon: Users, label: "Team", path: "/team", description: "Usuarios y desempeño" },
