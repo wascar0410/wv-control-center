@@ -7,7 +7,6 @@ export default function FleetTracking() {
 
   return (
     <div className="h-full flex flex-col bg-slate-950 text-slate-100">
-      {/* Header */}
       <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
         <h1 className="text-xl font-bold">Fleet Tracking</h1>
 
@@ -32,7 +31,6 @@ export default function FleetTracking() {
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 overflow-hidden">
         {tab === "map" && <FleetMap />}
         {tab === "management" && <FleetManagement />}
