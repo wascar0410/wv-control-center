@@ -32,6 +32,8 @@ import { notifyOwner } from "./_core/notification";
 import { wsManager } from "./_core/websocket";
 import { storagePut } from "./storage";
 import { aiRouter } from "./_core/aiRouter";
+import { walletRouter } from "./routers/wallet";
+import { settlementRouter } from "./routers/settlement";
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -2386,6 +2388,8 @@ export const appRouter = router({
   securityMonitoring: securityMonitoringRouter,
   brokerDashboard: brokerDashboardRouter,
   driverFeedback: driverFeedbackRouter,
+  wallet: walletRouter,
+  settlement: settlementRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -1176,3 +1176,203 @@ export const loadEvidence = mysqlTable("load_evidence", {
 
 export type LoadEvidence = typeof loadEvidence.$inferSelect;
 export type InsertLoadEvidence = typeof loadEvidence.$inferInsert;
+
+
+/**
+ * Driver Wallets - Track driver earnings and available balance
+ * Supports both company drivers and independent contractors
+ */
+export const wallets = mysqlTable("wallets", {
+  id: int("id").autoincrement().primaryKey(),
+  driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Balance tracking
+  totalEarnings: decimal("totalEarnings", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  availableBalance: decimal("availableBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  pendingBalance: decimal("pendingBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  blockedBalance: decimal("blockedBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  // Payment method
+  bankAccountId: varchar("bankAccountId", { length: 255 }),
+  bankAccountLast4: varchar("bankAccountLast4", { length: 4 }),
+  bankAccountName: varchar("bankAccountName", { length: 255 }),
+  // Withdrawal settings
+  minimumWithdrawalAmount: decimal("minimumWithdrawalAmount", { precision: 10, scale: 2 }).default("50.00"),
+  withdrawalFeePercent: decimal("withdrawalFeePercent", { precision: 5, scale: 2 }).default("0.00"),
+  // Status
+  status: mysqlEnum("status", ["active", "suspended", "closed"]).default("active").notNull(),
+  suspensionReason: text("suspensionReason"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Wallet = typeof wallets.$inferSelect;
+export type InsertWallet = typeof wallets.$inferInsert;
+
+/**
+ * Wallet Transactions - Track all wallet activity
+ * Includes earnings, withdrawals, fees, and adjustments
+ */
+export const walletTransactions = mysqlTable("wallet_transactions", {
+  id: int("id").autoincrement().primaryKey(),
+  walletId: int("walletId").notNull().references(() => wallets.id, { onDelete: "cascade" }),
+  driverId: int("driverId").notNull().references(() => users.id),
+  // Transaction details
+  type: mysqlEnum("type", [
+    "load_payment",      // Payment from completed load
+    "withdrawal",        // Driver withdrawal request
+    "adjustment",        // Manual adjustment by admin
+    "fee",              // Withdrawal or service fee
+    "bonus",            // Performance bonus
+    "refund",           // Refund for cancelled load
+    "chargeback",       // Payment dispute chargeback
+  ]).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  // Reference
+  loadId: int("loadId").references(() => loads.id),
+  settlementId: int("settlementId").references(() => settlements.id),
+  withdrawalId: int("withdrawalId").references(() => withdrawals.id),
+  // Notes
+  description: text("description"),
+  notes: text("notes"),
+  // Status
+  status: mysqlEnum("status", ["pending", "completed", "failed", "reversed"]).default("pending").notNull(),
+  // Metadata
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  failureReason: text("failureReason"),
+});
+
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type InsertWalletTransaction = typeof walletTransactions.$inferInsert;
+
+/**
+ * Withdrawals - Track driver withdrawal requests
+ * Supports multiple payment methods (bank transfer, check, etc.)
+ */
+export const withdrawals = mysqlTable("withdrawals", {
+  id: int("id").autoincrement().primaryKey(),
+  walletId: int("walletId").notNull().references(() => wallets.id),
+  driverId: int("driverId").notNull().references(() => users.id),
+  // Withdrawal details
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  fee: decimal("fee", { precision: 10, scale: 2 }).default("0.00"),
+  netAmount: decimal("netAmount", { precision: 12, scale: 2 }).notNull(),
+  // Payment method
+  method: mysqlEnum("method", ["bank_transfer", "check", "paypal", "venmo", "other"]).default("bank_transfer").notNull(),
+  bankAccountId: varchar("bankAccountId", { length: 255 }),
+  // Status
+  status: mysqlEnum("status", ["requested", "approved", "processing", "completed", "failed", "cancelled"]).default("requested").notNull(),
+  // Tracking
+  requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: int("approvedBy").references(() => users.id),
+  processedAt: timestamp("processedAt"),
+  completedAt: timestamp("completedAt"),
+  failureReason: text("failureReason"),
+  // Notes
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Withdrawal = typeof withdrawals.$inferSelect;
+export type InsertWithdrawal = typeof withdrawals.$inferInsert;
+
+/**
+ * Payment Blocks - BOL-based payment blocking for legal protection
+ * Prevents payment until BOL (Bill of Lading) is received and verified
+ */
+export const paymentBlocks = mysqlTable("payment_blocks", {
+  id: int("id").autoincrement().primaryKey(),
+  loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+  driverId: int("driverId").notNull().references(() => users.id),
+  // Block reason
+  blockReason: mysqlEnum("blockReason", [
+    "missing_bol",           // Bill of Lading not received
+    "missing_pod",           // Proof of Delivery not received
+    "missing_signature",     // Recipient signature not provided
+    "bol_verification",      // BOL under verification
+    "dispute",               // Payment dispute
+    "compliance",            // Compliance/audit hold
+    "manual",                // Manual hold by admin
+  ]).notNull(),
+  // Block details
+  blockedAmount: decimal("blockedAmount", { precision: 12, scale: 2 }).notNull(),
+  blockDescription: text("blockDescription"),
+  // BOL tracking
+  bolReceivedAt: timestamp("bolReceivedAt"),
+  bolVerifiedAt: timestamp("bolVerifiedAt"),
+  bolVerifiedBy: int("bolVerifiedBy").references(() => users.id),
+  // Resolution
+  status: mysqlEnum("status", ["active", "resolved", "released", "disputed"]).default("active").notNull(),
+  resolvedAt: timestamp("resolvedAt"),
+  resolvedBy: int("resolvedBy").references(() => users.id),
+  resolutionNotes: text("resolutionNotes"),
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type PaymentBlock = typeof paymentBlocks.$inferSelect;
+export type InsertPaymentBlock = typeof paymentBlocks.$inferInsert;
+
+/**
+ * Settlements - Track 50/50 profit distribution between partners
+ * Automated settlement processing based on completed loads
+ */
+export const settlements = mysqlTable("settlements", {
+  id: int("id").autoincrement().primaryKey(),
+  // Settlement period
+  settlementPeriod: varchar("settlementPeriod", { length: 7 }).notNull(), // YYYY-MM format
+  startDate: timestamp("startDate").notNull(),
+  endDate: timestamp("endDate").notNull(),
+  // Financial summary
+  totalLoadsCompleted: int("totalLoadsCompleted").default(0),
+  totalIncome: decimal("totalIncome", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  totalExpenses: decimal("totalExpenses", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  totalProfit: decimal("totalProfit", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  // Partner 1 (Owner/Dispatcher)
+  partner1Id: int("partner1Id").notNull().references(() => users.id),
+  partner1Share: decimal("partner1Share", { precision: 5, scale: 2 }).default("50.00").notNull(),
+  partner1Amount: decimal("partner1Amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  // Partner 2 (Owner/Dispatcher)
+  partner2Id: int("partner2Id").notNull().references(() => users.id),
+  partner2Share: decimal("partner2Share", { precision: 5, scale: 2 }).default("50.00").notNull(),
+  partner2Amount: decimal("partner2Amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
+  // Status
+  status: mysqlEnum("status", ["draft", "calculated", "approved", "processed", "completed", "disputed"]).default("draft").notNull(),
+  // Approval workflow
+  calculatedAt: timestamp("calculatedAt"),
+  approvedAt: timestamp("approvedAt"),
+  approvedBy: int("approvedBy").references(() => users.id),
+  processedAt: timestamp("processedAt"),
+  completedAt: timestamp("completedAt"),
+  // Notes
+  notes: text("notes"),
+  disputeNotes: text("disputeNotes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Settlement = typeof settlements.$inferSelect;
+export type InsertSettlement = typeof settlements.$inferInsert;
+
+/**
+ * Settlement Loads - Track which loads are included in each settlement
+ * Provides audit trail for settlement calculations
+ */
+export const settlementLoads = mysqlTable("settlement_loads", {
+  id: int("id").autoincrement().primaryKey(),
+  settlementId: int("settlementId").notNull().references(() => settlements.id, { onDelete: "cascade" }),
+  loadId: int("loadId").notNull().references(() => loads.id),
+  // Financial details
+  loadIncome: decimal("loadIncome", { precision: 12, scale: 2 }).notNull(),
+  loadExpenses: decimal("loadExpenses", { precision: 12, scale: 2 }).default("0.00"),
+  loadProfit: decimal("loadProfit", { precision: 12, scale: 2 }).notNull(),
+  // Partner allocation
+  partner1Amount: decimal("partner1Amount", { precision: 12, scale: 2 }).notNull(),
+  partner2Amount: decimal("partner2Amount", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SettlementLoad = typeof settlementLoads.$inferSelect;
+export type InsertSettlementLoad = typeof settlementLoads.$inferInsert;

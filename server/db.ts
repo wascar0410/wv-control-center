@@ -2344,3 +2344,595 @@ export function autoCategorize(name: string): { category: string; isTaxDeductibl
     return { category: "load_payment", isTaxDeductible: false };
   return { category: "other", isTaxDeductible: false };
 }
+
+
+// ─── Wallets ─────────────────────────────────────────────────────────────────
+
+import { wallets, walletTransactions, withdrawals, settlements, settlementLoads } from "../drizzle/schema";
+
+/**
+ * Get or create wallet for a driver
+ */
+export async function getOrCreateWallet(driverId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const existing = await db.query.wallets.findFirst({
+    where: eq(wallets.driverId, driverId),
+  });
+
+  if (existing) return existing;
+
+  // Create new wallet
+  const [newWallet] = await db
+    .insert(wallets)
+    .values({
+      driverId,
+      totalEarnings: "0.00",
+      availableBalance: "0.00",
+      pendingBalance: "0.00",
+      blockedBalance: "0.00",
+      status: "active",
+    })
+    .returning();
+
+  return newWallet;
+}
+
+/**
+ * Get wallet by driver ID
+ */
+export async function getWalletByDriverId(driverId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  return db.query.wallets.findFirst({
+    where: eq(wallets.driverId, driverId),
+  });
+}
+
+/**
+ * Update wallet balance
+ */
+export async function updateWalletBalance(
+  walletId: number,
+  updates: {
+    totalEarnings?: number | string;
+    availableBalance?: number | string;
+    pendingBalance?: number | string;
+    blockedBalance?: number | string;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [updated] = await db
+    .update(wallets)
+    .set({
+      ...updates,
+      updatedAt: new Date(),
+    })
+    .where(eq(wallets.id, walletId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Add transaction to wallet
+ */
+export async function addWalletTransaction(
+  walletId: number,
+  driverId: number,
+  transaction: {
+    type: string;
+    amount: number | string;
+    loadId?: number;
+    settlementId?: number;
+    withdrawalId?: number;
+    description?: string;
+    notes?: string;
+    status?: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [newTx] = await db
+    .insert(walletTransactions)
+    .values({
+      walletId,
+      driverId,
+      type: transaction.type as any,
+      amount: String(transaction.amount),
+      loadId: transaction.loadId,
+      settlementId: transaction.settlementId,
+      withdrawalId: transaction.withdrawalId,
+      description: transaction.description,
+      notes: transaction.notes,
+      status: (transaction.status || "pending") as any,
+      createdAt: new Date(),
+    })
+    .returning();
+
+  return newTx;
+}
+
+/**
+ * Get wallet transactions
+ */
+export async function getWalletTransactions(
+  walletId: number,
+  limit: number = 50,
+  offset: number = 0
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  return db.query.walletTransactions.findMany({
+    where: eq(walletTransactions.walletId, walletId),
+    limit,
+    offset,
+    orderBy: desc(walletTransactions.createdAt),
+  });
+}
+
+/**
+ * Request withdrawal
+ */
+export async function requestWithdrawal(
+  walletId: number,
+  driverId: number,
+  data: {
+    amount: number | string;
+    fee?: number | string;
+    method?: string;
+    bankAccountId?: string;
+    notes?: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const amount = Number(data.amount);
+  const fee = Number(data.fee || 0);
+  const netAmount = amount - fee;
+
+  const [withdrawal] = await db
+    .insert(withdrawals)
+    .values({
+      walletId,
+      driverId,
+      amount: String(amount),
+      fee: String(fee),
+      netAmount: String(netAmount),
+      method: (data.method || "bank_transfer") as any,
+      bankAccountId: data.bankAccountId,
+      status: "requested",
+      notes: data.notes,
+      requestedAt: new Date(),
+      createdAt: new Date(),
+    })
+    .returning();
+
+  // Create transaction record
+  await addWalletTransaction(walletId, driverId, {
+    type: "withdrawal",
+    amount: String(amount),
+    withdrawalId: withdrawal.id,
+    description: `Withdrawal request: ${data.method || "bank_transfer"}`,
+    status: "pending",
+  });
+
+  return withdrawal;
+}
+
+/**
+ * Get withdrawal requests for driver
+ */
+export async function getWithdrawals(
+  driverId: number,
+  limit: number = 50,
+  offset: number = 0
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  return db.query.withdrawals.findMany({
+    where: eq(withdrawals.driverId, driverId),
+    limit,
+    offset,
+    orderBy: desc(withdrawals.requestedAt),
+  });
+}
+
+/**
+ * Approve withdrawal
+ */
+export async function approveWithdrawal(
+  withdrawalId: number,
+  approvedBy: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [updated] = await db
+    .update(withdrawals)
+    .set({
+      status: "approved",
+      approvedAt: new Date(),
+      approvedBy,
+      updatedAt: new Date(),
+    })
+    .where(eq(withdrawals.id, withdrawalId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Complete withdrawal
+ */
+export async function completeWithdrawal(withdrawalId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [updated] = await db
+    .update(withdrawals)
+    .set({
+      status: "completed",
+      completedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(withdrawals.id, withdrawalId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Fail withdrawal
+ */
+export async function failWithdrawal(
+  withdrawalId: number,
+  reason: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [updated] = await db
+    .update(withdrawals)
+    .set({
+      status: "failed",
+      failureReason: reason,
+      updatedAt: new Date(),
+    })
+    .where(eq(withdrawals.id, withdrawalId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Get wallet summary for driver
+ */
+export async function getWalletSummary(driverId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const wallet = await getWalletByDriverId(driverId);
+  if (!wallet) return null;
+
+  const recentTransactions = await getWalletTransactions(wallet.id, 10, 0);
+  const pendingWithdrawals = await db.query.withdrawals.findMany({
+    where: and(
+      eq(withdrawals.driverId, driverId),
+      eq(withdrawals.status, "requested" as any)
+    ),
+  });
+
+  return {
+    wallet,
+    recentTransactions,
+    pendingWithdrawals,
+  };
+}
+
+// ─── Settlements ─────────────────────────────────────────────────────────────
+
+/**
+ * Create settlement for a period
+ */
+export async function createSettlement(data: {
+  settlementPeriod: string; // YYYY-MM format
+  startDate: Date;
+  endDate: Date;
+  partner1Id: number;
+  partner2Id: number;
+  partner1Share?: number | string;
+  partner2Share?: number | string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [settlement] = await db
+    .insert(settlements)
+    .values({
+      settlementPeriod: data.settlementPeriod,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      partner1Id: data.partner1Id,
+      partner2Id: data.partner2Id,
+      partner1Share: String(data.partner1Share || "50.00"),
+      partner2Share: String(data.partner2Share || "50.00"),
+      status: "draft",
+      totalLoadsCompleted: 0,
+      totalIncome: "0.00",
+      totalExpenses: "0.00",
+      totalProfit: "0.00",
+      createdAt: new Date(),
+    })
+    .returning();
+
+  return settlement;
+}
+
+/**
+ * Get settlement by ID with loads
+ */
+export async function getSettlementWithLoads(settlementId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const settlement = await db.query.settlements.findFirst({
+    where: eq(settlements.id, settlementId),
+  });
+
+  if (!settlement) return null;
+
+  const settlementLoadsList = await db.query.settlementLoads.findMany({
+    where: eq(settlementLoads.settlementId, settlementId),
+  });
+
+  return {
+    settlement,
+    loads: settlementLoadsList,
+  };
+}
+
+/**
+ * Add load to settlement
+ */
+export async function addLoadToSettlement(
+  settlementId: number,
+  loadId: number,
+  loadIncome: number | string,
+  loadExpenses: number | string,
+  partner1Share: number | string,
+  partner2Share: number | string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const income = Number(loadIncome);
+  const expenses = Number(loadExpenses);
+  const profit = income - expenses;
+  const p1Share = Number(partner1Share);
+  const p2Share = Number(partner2Share);
+
+  const partner1Amount = (profit * p1Share) / 100;
+  const partner2Amount = (profit * p2Share) / 100;
+
+  const [settlementLoad] = await db
+    .insert(settlementLoads)
+    .values({
+      settlementId,
+      loadId,
+      loadIncome: String(income),
+      loadExpenses: String(expenses),
+      loadProfit: String(profit),
+      partner1Amount: String(partner1Amount),
+      partner2Amount: String(partner2Amount),
+      createdAt: new Date(),
+    })
+    .returning();
+
+  return settlementLoad;
+}
+
+/**
+ * Calculate settlement totals
+ */
+export async function calculateSettlement(settlementId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const settlementData = await getSettlementWithLoads(settlementId);
+  if (!settlementData) return null;
+
+  const { settlement: sett, loads: settlementLoadsList } = settlementData;
+
+  let totalIncome = 0;
+  let totalExpenses = 0;
+  let totalProfit = 0;
+  let partner1Total = 0;
+  let partner2Total = 0;
+
+  settlementLoadsList.forEach((sl) => {
+    totalIncome += Number(sl.loadIncome);
+    totalExpenses += Number(sl.loadExpenses);
+    totalProfit += Number(sl.loadProfit);
+    partner1Total += Number(sl.partner1Amount);
+    partner2Total += Number(sl.partner2Amount);
+  });
+
+  const [updated] = await db
+    .update(settlements)
+    .set({
+      totalLoadsCompleted: settlementLoadsList.length,
+      totalIncome: String(totalIncome),
+      totalExpenses: String(totalExpenses),
+      totalProfit: String(totalProfit),
+      partner1Amount: String(partner1Total),
+      partner2Amount: String(partner2Total),
+      status: "calculated",
+      calculatedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(settlements.id, settlementId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Approve settlement
+ */
+export async function approveSettlement(
+  settlementId: number,
+  approvedBy: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [updated] = await db
+    .update(settlements)
+    .set({
+      status: "approved",
+      approvedAt: new Date(),
+      approvedBy,
+      updatedAt: new Date(),
+    })
+    .where(eq(settlements.id, settlementId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Process settlement (distribute funds to wallets)
+ */
+export async function processSettlement(settlementId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const settlementData = await getSettlementWithLoads(settlementId);
+  if (!settlementData) return null;
+
+  const { settlement: sett } = settlementData;
+
+  // Add transactions to partner wallets
+  const partner1Wallet = await db.query.wallets.findFirst({
+    where: eq(wallets.driverId, sett.partner1Id),
+  });
+
+  const partner2Wallet = await db.query.wallets.findFirst({
+    where: eq(wallets.driverId, sett.partner2Id),
+  });
+
+  if (partner1Wallet) {
+    await db.insert(walletTransactions).values({
+      walletId: partner1Wallet.id,
+      driverId: sett.partner1Id,
+      type: "settlement",
+      amount: String(sett.partner1Amount),
+      settlementId,
+      description: `Settlement for period ${sett.settlementPeriod}`,
+      status: "completed",
+      createdAt: new Date(),
+      completedAt: new Date(),
+    });
+
+    // Update wallet balance
+    const newAvailable =
+      Number(partner1Wallet.availableBalance) + Number(sett.partner1Amount);
+    await db
+      .update(wallets)
+      .set({
+        availableBalance: String(newAvailable),
+        totalEarnings: String(
+          Number(partner1Wallet.totalEarnings) + Number(sett.partner1Amount)
+        ),
+        updatedAt: new Date(),
+      })
+      .where(eq(wallets.id, partner1Wallet.id));
+  }
+
+  if (partner2Wallet) {
+    await db.insert(walletTransactions).values({
+      walletId: partner2Wallet.id,
+      driverId: sett.partner2Id,
+      type: "settlement",
+      amount: String(sett.partner2Amount),
+      settlementId,
+      description: `Settlement for period ${sett.settlementPeriod}`,
+      status: "completed",
+      createdAt: new Date(),
+      completedAt: new Date(),
+    });
+
+    // Update wallet balance
+    const newAvailable =
+      Number(partner2Wallet.availableBalance) + Number(sett.partner2Amount);
+    await db
+      .update(wallets)
+      .set({
+        availableBalance: String(newAvailable),
+        totalEarnings: String(
+          Number(partner2Wallet.totalEarnings) + Number(sett.partner2Amount)
+        ),
+        updatedAt: new Date(),
+      })
+      .where(eq(wallets.id, partner2Wallet.id));
+  }
+
+  // Mark settlement as processed
+  const [updated] = await db
+    .update(settlements)
+    .set({
+      status: "processed",
+      processedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(settlements.id, settlementId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Complete settlement
+ */
+export async function completeSettlement(settlementId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [updated] = await db
+    .update(settlements)
+    .set({
+      status: "completed",
+      completedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(settlements.id, settlementId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Get all settlements
+ */
+export async function getAllSettlements(
+  limit: number = 50,
+  offset: number = 0
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  return db.query.settlements.findMany({
+    limit,
+    offset,
+    orderBy: desc(settlements.createdAt),
+  });
+}
