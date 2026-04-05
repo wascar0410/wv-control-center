@@ -80,7 +80,7 @@ import {
   getFleetStats, getFleetRecentDeliveries,
   getBrokerStats, getDispatcherKPIs, submitDriverFeedback, getDriverFeedbackByLoad,
   getFinancialTransactions, createFinancialTransaction, updateFinancialTransaction, deleteFinancialTransaction,
-  getFinancialPnL, getAllocationSettings, updateAllocationSettings, getFinancialTrend, autoCategorize,
+  getFinancial, getAllocationSettings, updateAllocationSettings, getFinancialTrend, autoCategorize,
 } from "./db";
 import {
   getDriverLoads,
@@ -641,42 +641,57 @@ const financeRouter = router({
       return [];
     }
   // ── Advanced Finance Module ─────────────────────────────────────────────────────
-  pnl: publicProcedure
-    .input(z.object({ year: z.number(), month: z.number() }))
-    .query(async ({ input }) => {
-      try {
-        return await getFinancialPnL(input.year, input.month);
-      } catch (error) {
-        console.error("[finance.pnl] error:", error);
-        return null;
-      }
-    }),
-  trend: publicProcedure
-    .input(z.object({ year: z.number() }))
-    .query(async ({ input }) => {
-      try {
-        return await getFinancialTrend(input.year);
-      } catch (error) {
-        console.error("[finance.trend] error:", error);
-        return [];
-      }
-    }),
-  manualTransactions: publicProcedure
-    .input(z.object({
-      type: z.enum(["income", "expense"]).optional(),
-      category: z.string().optional(),
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-      limit: z.number().optional(),
-    }).optional())
-    .query(async ({ input }) => {
-      try {
-        return await getFinancialTransactions(input ?? undefined);
-      } catch (error) {
-        console.error("[finance.manualTransactions] error:", error);
-        return [];
-      }
-    }),
+  pnl: protectedProcedure
+  .input(z.object({ year: z.number(), month: z.number() }))
+  .query(async ({ input, ctx }) => {
+    const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+    if (!isPrivileged) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    }
+
+    try {
+      return await getFinancialPnL(input.year, input.month);
+    } catch (error) {
+      console.error("[finance.pnl] error:", error);
+      return null;
+    }
+  }),
+  trend: protectedProcedure
+  .input(z.object({ year: z.number() }))
+  .query(async ({ input, ctx }) => {
+    const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+    if (!isPrivileged) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    }
+
+    try {
+      return await getFinancialTrend(input.year);
+    } catch (error) {
+      console.error("[finance.trend] error:", error);
+      return [];
+    }
+  }),
+  manualTransactions: protectedProcedure
+  .input(z.object({
+    type: z.enum(["income", "expense"]).optional(),
+    category: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    limit: z.number().optional(),
+  }).optional())
+  .query(async ({ input, ctx }) => {
+    const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+    if (!isPrivileged) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    }
+
+    try {
+      return await getFinancialTransactions(input ?? undefined);
+    } catch (error) {
+      console.error("[finance.manualTransactions] error:", error);
+      return [];
+    }
+  }),
   addManualTransaction: protectedProcedure
     .input(z.object({
       date: z.string(),
@@ -728,14 +743,19 @@ const financeRouter = router({
       await deleteFinancialTransaction(input.id);
       return { success: true };
     }),
-  allocationSettings: publicProcedure
-    .query(async () => {
-      try {
-        return await getAllocationSettings();
-      } catch (error) {
-        return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
-      }
-    }),
+  allocationSettings: protectedProcedure
+  .query(async ({ ctx }) => {
+    const isPrivileged = ctx.user.role === "owner" || ctx.user.role === "admin";
+    if (!isPrivileged) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+    }
+
+    try {
+      return await getAllocationSettings();
+    } catch (error) {
+      return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
+    }
+  }),
   updateAllocationSettings: protectedProcedure
     .input(z.object({
       operatingPct: z.number().min(0).max(100),
