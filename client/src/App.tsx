@@ -56,7 +56,7 @@ function HomeRedirect() {
     if (!user) {
       navigate("/login");
     } else if (user.role === "owner" || user.role === "admin") {
-      navigate("/dashboard");
+      navigate("/command-center");
     } else {
       navigate("/driver");
     }
@@ -68,7 +68,7 @@ function HomeRedirect() {
 export default function App() {
   return (
     <Switch>
-      /* ===== NEW ARCHITECTURE ROUTES ===== */}
+     {/* ===== NEW ARCHITECTURE ROUTES ===== */}
 
 <Route path="/command-center" component={withLayout(Dashboard)} />
 
@@ -92,10 +92,8 @@ export default function App() {
       <Route path="/carrier-packet" component={withLayout(CarrierPacket)} />
 
       {/* Admin / Owner routes */}
-      <Route path="/dashboard" component={withLayout(Dashboard)} />
       <Route path="/loads/new" component={withLayout(NewLoad)} />
       <Route path="/loads/:id" component={withLayout(LoadDetail)} />
-      <Route path="/loads" component={withLayout(Loads)} />
       <Route path="/finance" component={withLayout(Finance)} />
       <Route path="/plaid-oauth-return" component={PlaidOAuthReturn} />
       <Route path="/transactions">{() => <Redirect to="/finance" />}</Route>
