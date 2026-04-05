@@ -56,33 +56,33 @@ import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { AddDriverModal } from "./AddDriverModal";
 
 const adminMenuItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/", description: "Resumen general" },
-  { icon: BarChart3, label: "Dashboard Ejecutivo", path: "/executive-dashboard", description: "KPIs en tiempo real" },
-  { icon: Package, label: "Cargas", path: "/loads", description: "Gestión de envíos" },
-  { icon: Calculator, label: "Cotización", path: "/quotation", description: "Calcular precio y rentabilidad" },
-  { icon: BarChart3, label: "Historial de Cotizaciones", path: "/quotation-history", description: "Ver y exportar cotizaciones" },
-  { icon: Download, label: "Importar Cargas", path: "/import-broker-loads", description: "Importar desde brokers" },
-  { icon: Package, label: "Gestionar Cargas", path: "/broker-loads-management", description: "Revisar y convertir cargas" },
-  { icon: DollarSign, label: "Finanzas", path: "/finance", description: "Ingresos y gastos" },
-  { icon: Zap, label: "Pagos Masivos", path: "/batch-payments", description: "Procesamiento de lotes de pago" },
-  { icon: Users, label: "Socios", path: "/partnership", description: "Distribución de utilidades" },
-  { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes con choferes" },
-  { icon: LayoutDashboard, label: "Mi Dashboard (Chofer)", path: "/driver-dashboard", description: "Dashboard personal de conductor" },
-  { icon: Truck, label: "Vista Chofer", path: "/driver", description: "Operaciones en campo" },
-  { icon: TrendingUp, label: "Desempeño", path: "/driver-performance", description: "Estadísticas del chofer" },
-  { icon: Wallet, label: "Billetera Conductores", path: "/driver-wallet", description: "Liquidación y pagos" },
-  { icon: Navigation, label: "GPS Multi-Track", path: "/fleet-map", description: "Mapa en tiempo real de la flota" },
-  { icon: Shield, label: "Gestión de Flota", path: "/fleet-management", description: "Clasificación y comisiones" },
-  { icon: Building2, label: "Dashboard Brokers", path: "/broker-dashboard", description: "Rendimiento y rentabilidad por broker" },
-  { icon: Headphones, label: "Desempeño Dispatcher", path: "/dispatcher-performance", description: "KPIs de Yisvel como dispatcher" },
-  { icon: Settings, label: "Configuración", path: "/business-settings", description: "Costos y recargos" },
-  { icon: Users, label: "Usuarios", path: "/user-management", description: "Gestionar roles y accesos" },
-  { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
-  { icon: BarChart3, label: "Business Plan", path: "/business-plan", description: "Plan de negocios ejecutivo" },
-  { icon: Activity, label: "BP Analytics", path: "/business-plan-analytics", description: "Engagement de inversores" },
-  { icon: FileText, label: "Carrier Packet", path: "/carrier-packet", description: "Paquete para brokers y embarcadores" },
-];
+  // ===== CORE =====
+  { icon: LayoutDashboard, label: "Command Center", path: "/command-center", description: "Control total del negocio" },
 
+  // ===== OPERATIONS =====
+  { icon: Package, label: "Loads & Dispatch", path: "/loads-dispatch", description: "Cargas, cotización y dispatch" },
+
+  // ===== FINANCE =====
+  { icon: DollarSign, label: "Finance", path: "/finance", description: "Ingresos, gastos y profit" },
+
+  // ===== FLEET =====
+  { icon: Truck, label: "Fleet & Drivers", path: "/fleet-drivers", description: "Operaciones de choferes y flota" },
+
+  // ===== TEAM =====
+  { icon: Users, label: "Team", path: "/team", description: "Usuarios y desempeño" },
+
+  // ===== CHAT =====
+  { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
+
+  // ===== COMPANY =====
+  { icon: Building2, label: "Company", path: "/company", description: "Información corporativa" },
+
+  // ===== SETTINGS =====
+  { icon: Settings, label: "Settings", path: "/settings", description: "Configuración del sistema" },
+
+  // ===== PROFILE =====
+  { icon: UserIcon, label: "Profile", path: "/profile", description: "Perfil del usuario" },
+];
 const driverMenuItems = [
   { icon: LayoutDashboard, label: "Mi Dashboard", path: "/driver-dashboard", description: "Mis estadísticas personales" },
   { icon: Truck, label: "Mis Cargas", path: "/driver", description: "Operaciones en campo" },
