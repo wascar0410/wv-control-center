@@ -194,43 +194,35 @@ export const quotationRouter = router({
         estimatedTollCost
       );
 
-     const quotationInsert: any = await createLoadQuotation({
-  userId: ctx.user.id,
-
-  vanLat: String(input.vanLat),
-  vanLng: String(input.vanLng),
-  vanAddress: input.vanAddress,
-
-  pickupLat: String(input.pickupLat),
-  pickupLng: String(input.pickupLng),
-  pickupAddress: input.pickupAddress,
-
-  deliveryLat: String(input.deliveryLat),
-  deliveryLng: String(input.deliveryLng),
-  deliveryAddress: input.deliveryAddress,
-
-  weight: String(input.weight),
-  weightUnit: input.weightUnit || "lbs",
-  cargoDescription: input.cargoDescription || "",
-
-  emptyMiles: String(emptyMiles),
-  loadedMiles: String(loadedMiles),
-  returnEmptyMiles: String(returnEmptyMiles),
-  totalMiles: String(totalMiles),
-
-  ratePerMile: String(input.ratePerMile ?? baseRatePerMile),
-  ratePerPound: String(input.ratePerPound ?? 0),
-  fuelSurcharge: String(input.fuelSurcharge ?? 0),
-
-  totalPrice: String(totalPrice),
-  estimatedFuelCost: String(profitability.estimatedFuelCost),
-  estimatedOperatingCost: String(profitability.estimatedOperatingCost),
-  estimatedProfit: String(profitability.estimatedProfit),
-  profitMarginPercent: String(profitability.profitMarginPercent),
-  estimatedTolls: String(estimatedTollCost),
-
-  status: "quoted",
-} as any);
+      const quotationInsert: any = await createLoadQuotation({
+        userId: ctx.user.id,
+        vanLat: String(input.vanLat),
+        vanLng: String(input.vanLng),
+        vanAddress: input.vanAddress,
+        pickupLat: String(input.pickupLat),
+        pickupLng: String(input.pickupLng),
+        pickupAddress: input.pickupAddress,
+        deliveryLat: String(input.deliveryLat),
+        deliveryLng: String(input.deliveryLng),
+        deliveryAddress: input.deliveryAddress,
+        weight: String(input.weight),
+        weightUnit: input.weightUnit || "lbs",
+        cargoDescription: input.cargoDescription || "",
+        emptyMiles: String(emptyMiles),
+        loadedMiles: String(loadedMiles),
+        returnEmptyMiles: String(returnEmptyMiles),
+        totalMiles: String(totalMiles),
+        ratePerMile: String(input.ratePerMile ?? baseRatePerMile),
+        ratePerPound: String(input.ratePerPound ?? 0),
+        fuelSurcharge: String(input.fuelSurcharge ?? 0),
+        totalPrice: String(totalPrice),
+        estimatedFuelCost: String(profitability.estimatedFuelCost),
+        estimatedOperatingCost: String(profitability.estimatedOperatingCost),
+        estimatedProfit: String(profitability.estimatedProfit),
+        profitMarginPercent: String(profitability.profitMarginPercent),
+        estimatedTolls: String(estimatedTollCost),
+        status: "quoted",
+      } as any);
 
       const quotationId = Number(
         quotationInsert?.insertId ?? quotationInsert?.[0]?.insertId ?? 0
