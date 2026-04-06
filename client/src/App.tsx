@@ -41,6 +41,7 @@ import PlaidOAuthReturn from "./pages/PlaidOAuthReturn";
 import UserManagement from "./pages/UserManagement";
 import WalletDashboard from "./pages/WalletDashboard";
 import SettlementsPage from "./pages/SettlementsPage";
+import QuoteAnalyzer from "./pages/QuoteAnalyzer";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -113,6 +114,7 @@ export default function App() {
       <Route path="/profile" component={withLayout(UserProfile)} />
       <Route path="/executive-dashboard" component={withLayout(ExecutiveDashboard)} />
       <Route path="/quotation-history" component={withLayout(QuotationHistory)} />
+      <Route path="/quote-analyzer" component={withLayout(QuoteAnalyzer)} />
       <Route path="/import-broker-loads" component={withLayout(ImportBrokerLoads)} />
       <Route path="/broker-loads-management" component={withLayout(BrokerLoadsManagement)} />
       <Route path="/accounting-finance" component={withLayout(AccountingFinance)} />

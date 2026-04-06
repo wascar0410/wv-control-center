@@ -34,6 +34,7 @@ import { storagePut } from "./storage";
 import { aiRouter } from "./_core/aiRouter";
 import { walletRouter } from "./routers/wallet";
 import { settlementRouter } from "./routers/settlement";
+import { quoteAnalysisRouter } from "./routers/quoteAnalysis";
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -2390,6 +2391,7 @@ export const appRouter = router({
   driverFeedback: driverFeedbackRouter,
   wallet: walletRouter,
   settlement: settlementRouter,
+  quoteAnalysis: quoteAnalysisRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -2936,3 +2936,235 @@ export async function getAllSettlements(
     orderBy: desc(settlements.createdAt),
   });
 }
+
+
+/**
+ * ===== QUOTE ANALYSIS HELPERS =====
+ * Formal quotation analysis with assumptions and decision tracking
+ */
+
+/**
+ * Create quote analysis
+ */
+export async function createQuoteAnalysis(data: {
+  loadId: number;
+  brokerId?: number;
+  brokerName?: string;
+  routeName?: string;
+  totalMiles: number;
+  loadedMiles: number;
+  emptyMiles?: number;
+  baseRate: number;
+  distanceSurcharge?: number;
+  weightSurcharge?: number;
+  otherSurcharges?: number;
+  totalIncome: number;
+  estimatedFuel: number;
+  estimatedTolls?: number;
+  estimatedMaintenance?: number;
+  estimatedInsurance?: number;
+  estimatedOther?: number;
+  totalEstimatedCost: number;
+  estimatedProfit: number;
+  estimatedMargin: number;
+  ratePerLoadedMile: number;
+  recommendedMinimumRate: number;
+  rateVsMinimum: number;
+  verdict: "accept" | "negotiate" | "reject";
+  decisionReason?: string;
+  analyzedBy: number;
+  notes?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  const [result] = await db
+    .insert(quoteAnalysis)
+    .values(data)
+    .returning();
+  return result;
+}
+
+/**
+ * Get quote analysis by ID
+ */
+export async function getQuoteAnalysisById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  return db.query.quoteAnalysis.findFirst({
+    where: eq(quoteAnalysis.id, id),
+  });
+}
+
+/**
+ * Get quote analysis by load ID
+ */
+export async function getQuoteAnalysisByLoadId(loadId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  return db.query.quoteAnalysis.findFirst({
+    where: eq(quoteAnalysis.loadId, loadId),
+  });
+}
+
+/**
+ * Update quote analysis with actual costs
+ */
+export async function updateQuoteAnalysisWithActuals(id: number, data: {
+  actualFuel?: number;
+  actualTolls?: number;
+  actualMaintenance?: number;
+  actualInsurance?: number;
+  actualOther?: number;
+  totalActualCost?: number;
+  actualProfit?: number;
+  actualMargin?: number;
+  costVariance?: number;
+  profitVariance?: number;
+  marginVariance?: number;
+  completedAt?: Date;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  const [updated] = await db
+    .update(quoteAnalysis)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(quoteAnalysis.id, id))
+    .returning();
+  return updated;
+}
+
+/**
+ * Get all quote analyses with optional filters
+ */
+export async function getAllQuoteAnalyses(filters?: {
+  verdict?: "accept" | "negotiate" | "reject";
+  brokerName?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  let query = db.query.quoteAnalysis.findMany({
+    orderBy: desc(quoteAnalysis.createdAt),
+    limit: filters?.limit || 100,
+    offset: filters?.offset || 0,
+  });
+
+  if (filters?.verdict) {
+    query = db.query.quoteAnalysis.findMany({
+      where: eq(quoteAnalysis.verdict, filters.verdict),
+      orderBy: desc(quoteAnalysis.createdAt),
+      limit: filters?.limit || 100,
+      offset: filters?.offset || 0,
+    });
+  }
+
+  return query;
+}
+
+/**
+ * Get quote analysis summary (profitability by broker/route)
+ */
+export async function getQuoteAnalysisSummary() {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const analyses = await db.query.quoteAnalysis.findMany({
+    where: isNotNull(quoteAnalysis.completedAt),
+  });
+
+  const summary: Record<string, {
+    count: number;
+    avgMargin: number;
+    avgVariance: number;
+    profitable: number;
+    unprofitable: number;
+  }> = {};
+
+  analyses.forEach((qa: any) => {
+    const key = qa.brokerName || "Unknown";
+    if (!summary[key]) {
+      summary[key] = {
+        count: 0,
+        avgMargin: 0,
+        avgVariance: 0,
+        profitable: 0,
+        unprofitable: 0,
+      };
+    }
+    summary[key].count++;
+    summary[key].avgMargin += Number(qa.actualMargin || qa.estimatedMargin);
+    summary[key].avgVariance += Number(qa.marginVariance || 0);
+    if (Number(qa.actualProfit || qa.estimatedProfit) > 0) {
+      summary[key].profitable++;
+    } else {
+      summary[key].unprofitable++;
+    }
+  });
+
+  // Calculate averages
+  Object.keys(summary).forEach((key) => {
+    summary[key].avgMargin /= summary[key].count;
+    summary[key].avgVariance /= summary[key].count;
+  });
+
+  return summary;
+}
+
+/**
+ * Import quote analysis from quoteAnalysis import
+ */
+export async function importQuoteAnalysisFromQuotation(quotationId: number, analyzedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const quotation = await db.query.loadQuotations.findFirst({
+    where: eq(loadQuotations.id, quotationId),
+  });
+
+  if (!quotation) throw new Error("Quotation not found");
+
+  const estimatedCost = Number(quotation.estimatedFuel || 0) +
+    Number(quotation.estimatedTolls || 0) +
+    Number(quotation.estimatedMaintenance || 0) +
+    Number(quotation.estimatedInsurance || 0) +
+    Number(quotation.estimatedOther || 0);
+
+  const estimatedProfit = Number(quotation.totalIncome || 0) - estimatedCost;
+  const estimatedMargin = estimatedProfit > 0 ? (estimatedProfit / Number(quotation.totalIncome || 1)) * 100 : 0;
+  const ratePerLoadedMile = quotation.loadedMiles ? Number(quotation.totalIncome || 0) / Number(quotation.loadedMiles) : 0;
+
+  return createQuoteAnalysis({
+    loadId: quotation.loadId,
+    brokerId: quotation.brokerId,
+    brokerName: quotation.brokerName,
+    routeName: quotation.routeName,
+    totalMiles: Number(quotation.totalMiles || 0),
+    loadedMiles: Number(quotation.loadedMiles || 0),
+    emptyMiles: Number(quotation.emptyMiles || 0),
+    baseRate: Number(quotation.baseRate || 0),
+    distanceSurcharge: Number(quotation.distanceSurcharge || 0),
+    weightSurcharge: Number(quotation.weightSurcharge || 0),
+    otherSurcharges: Number(quotation.otherSurcharges || 0),
+    totalIncome: Number(quotation.totalIncome || 0),
+    estimatedFuel: Number(quotation.estimatedFuel || 0),
+    estimatedTolls: Number(quotation.estimatedTolls || 0),
+    estimatedMaintenance: Number(quotation.estimatedMaintenance || 0),
+    estimatedInsurance: Number(quotation.estimatedInsurance || 0),
+    estimatedOther: Number(quotation.estimatedOther || 0),
+    totalEstimatedCost: estimatedCost,
+    estimatedProfit,
+    estimatedMargin,
+    ratePerLoadedMile,
+    recommendedMinimumRate: Number(quotation.recommendedMinimumRate || ratePerLoadedMile),
+    rateVsMinimum: ratePerLoadedMile - Number(quotation.recommendedMinimumRate || ratePerLoadedMile),
+    verdict: quotation.verdict as "accept" | "negotiate" | "reject",
+    decisionReason: quotation.decisionReason,
+    analyzedBy,
+    notes: quotation.notes,
+  });
+}

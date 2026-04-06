@@ -1187,3 +1187,21 @@
 - [x] Redirects de /fleet-map y /fleet-management a /fleet-tracking
 - [ ] Agregar tests para FleetTracking
 - [ ] Implementar mapa en tiempo real con Google Maps
+
+
+## Fase 7: Formalizar Quote Analyzer
+- [x] Crear tabla quote_analysis en schema con 43 columnas
+- [x] Generar migracion SQL con Drizzle (0033_left_tyrannus.sql)
+- [x] Crear DB helpers: createQuoteAnalysis, getQuoteAnalysisById, updateWithActuals, getAllQuoteAnalyses, getQuoteAnalysisSummary, importFromQuotation
+- [x] Crear tRPC router quoteAnalysis con 7 procedures
+- [x] Integrar quoteAnalysisRouter en server/routers.ts
+- [x] Crear QuoteAnalyzer.tsx UI con tabs: Analisis y Resumen por Broker
+- [x] Incluir comparativa estimado vs real
+- [x] Edicion inline de costos reales
+- [x] Calculo automatico de varianzas
+- [x] Resumen de profitabilidad por broker
+- [x] Agregar ruta /quote-analyzer en App.tsx
+- [x] Actualizar DashboardLayout con menu item
+- [ ] Ejecutar migracion SQL en la base de datos
+- [ ] Agregar tests para quote analysis routers
+- [ ] Validar flujo completo: crear -> actualizar costos -> ver varianzas

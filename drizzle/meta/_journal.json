@@ -232,6 +232,13 @@
       "when": 1775396405408,
       "tag": "0032_tricky_typhoid_mary",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1775477097793,
+      "tag": "0033_left_tyrannus",
+      "breakpoints": true
     }
   ]
 }

@@ -61,6 +61,7 @@ const adminMenuItems = [
 
   // ===== OPERATIONS =====
   { icon: Package, label: "Loads & Dispatch", path: "/loads-dispatch", description: "Cargas, cotización y dispatch" },
+  { icon: BarChart3, label: "Quote Analyzer", path: "/quote-analyzer", description: "Análisis de cotizaciones estimado vs real" },
 
   // ===== FINANCE =====
   { icon: DollarSign, label: "Finance", path: "/finance", description: "Ingresos, gastos y profit" },

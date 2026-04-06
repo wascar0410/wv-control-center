@@ -1376,3 +1376,79 @@ export const settlementLoads = mysqlTable("settlement_loads", {
 
 export type SettlementLoad = typeof settlementLoads.$inferSelect;
 export type InsertSettlementLoad = typeof settlementLoads.$inferInsert;
+
+
+/**
+ * Quote Analysis - Formal quotation analysis with assumptions and decision tracking
+ * Enables comparison of estimated vs actual costs and profitability
+ * Tracks which brokers/routes are profitable
+ */
+export const quoteAnalysis = mysqlTable("quote_analysis", {
+  id: int("id").autoincrement().primaryKey(),
+  loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+  
+  // Quote details
+  brokerId: int("brokerId").references(() => users.id),
+  brokerName: varchar("brokerName", { length: 255 }),
+  routeName: varchar("routeName", { length: 255 }),
+  
+  // Route metrics
+  totalMiles: decimal("totalMiles", { precision: 10, scale: 2 }).notNull(),
+  loadedMiles: decimal("loadedMiles", { precision: 10, scale: 2 }).notNull(),
+  emptyMiles: decimal("emptyMiles", { precision: 10, scale: 2 }).default("0.00"),
+  
+  // Income calculation
+  baseRate: decimal("baseRate", { precision: 12, scale: 2 }).notNull(),
+  distanceSurcharge: decimal("distanceSurcharge", { precision: 12, scale: 2 }).default("0.00"),
+  weightSurcharge: decimal("weightSurcharge", { precision: 12, scale: 2 }).default("0.00"),
+  otherSurcharges: decimal("otherSurcharges", { precision: 12, scale: 2 }).default("0.00"),
+  totalIncome: decimal("totalIncome", { precision: 12, scale: 2 }).notNull(),
+  
+  // Cost estimation
+  estimatedFuel: decimal("estimatedFuel", { precision: 12, scale: 2 }).notNull(),
+  estimatedTolls: decimal("estimatedTolls", { precision: 12, scale: 2 }).default("0.00"),
+  estimatedMaintenance: decimal("estimatedMaintenance", { precision: 12, scale: 2 }).default("0.00"),
+  estimatedInsurance: decimal("estimatedInsurance", { precision: 12, scale: 2 }).default("0.00"),
+  estimatedOther: decimal("estimatedOther", { precision: 12, scale: 2 }).default("0.00"),
+  totalEstimatedCost: decimal("totalEstimatedCost", { precision: 12, scale: 2 }).notNull(),
+  
+  // Profit analysis
+  estimatedProfit: decimal("estimatedProfit", { precision: 12, scale: 2 }).notNull(),
+  estimatedMargin: decimal("estimatedMargin", { precision: 5, scale: 2 }).notNull(), // percentage
+  
+  // Rate analysis
+  ratePerLoadedMile: decimal("ratePerLoadedMile", { precision: 10, scale: 2 }).notNull(),
+  recommendedMinimumRate: decimal("recommendedMinimumRate", { precision: 10, scale: 2 }).notNull(),
+  rateVsMinimum: decimal("rateVsMinimum", { precision: 10, scale: 2 }).notNull(), // difference
+  
+  // Decision
+  verdict: mysqlEnum("verdict", ["accept", "negotiate", "reject"]).notNull(),
+  decisionReason: text("decisionReason"),
+  
+  // Actual vs Estimated (filled after completion)
+  actualFuel: decimal("actualFuel", { precision: 12, scale: 2 }),
+  actualTolls: decimal("actualTolls", { precision: 12, scale: 2 }),
+  actualMaintenance: decimal("actualMaintenance", { precision: 12, scale: 2 }),
+  actualInsurance: decimal("actualInsurance", { precision: 12, scale: 2 }),
+  actualOther: decimal("actualOther", { precision: 12, scale: 2 }),
+  totalActualCost: decimal("totalActualCost", { precision: 12, scale: 2 }),
+  actualProfit: decimal("actualProfit", { precision: 12, scale: 2 }),
+  actualMargin: decimal("actualMargin", { precision: 5, scale: 2 }),
+  
+  // Variance analysis
+  costVariance: decimal("costVariance", { precision: 12, scale: 2 }), // actual - estimated
+  profitVariance: decimal("profitVariance", { precision: 12, scale: 2 }), // actual - estimated
+  marginVariance: decimal("marginVariance", { precision: 5, scale: 2 }), // percentage points
+  
+  // Metadata
+  analyzedBy: int("analyzedBy").notNull().references(() => users.id),
+  analyzedAt: timestamp("analyzedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type QuoteAnalysis = typeof quoteAnalysis.$inferSelect;
+export type InsertQuoteAnalysis = typeof quoteAnalysis.$inferInsert;
