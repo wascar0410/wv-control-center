@@ -3168,3 +3168,286 @@ export async function importQuoteAnalysisFromQuotation(quotationId: number, anal
     notes: quotation.notes,
   });
 }
+
+
+/**
+ * ===== INVOICING HELPERS =====
+ * Formal invoicing with status tracking and aging
+ */
+
+/**
+ * Create invoice
+ */
+export async function createInvoice(data: {
+  loadId: number;
+  brokerName: string;
+  brokerId?: number;
+  subtotal: number;
+  taxRate?: number;
+  taxAmount?: number;
+  total: number;
+  dueDate: Date;
+  terms?: string;
+  notes?: string;
+  createdBy: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  // Generate invoice number
+  const invoiceNumber = `INV-${Date.now()}`;
+  
+  const [result] = await db
+    .insert(invoices)
+    .values({
+      ...data,
+      invoiceNumber,
+      remainingBalance: data.total,
+    })
+    .returning();
+  
+  // Create receivable record
+  if (result) {
+    await db.insert(receivables).values({
+      invoiceId: result.id,
+      brokerName: data.brokerName,
+      brokerId: data.brokerId,
+      invoiceAmount: data.total,
+      outstandingAmount: data.total,
+      agingBucket: "current",
+      status: "current",
+    });
+  }
+  
+  return result;
+}
+
+/**
+ * Get invoice by ID
+ */
+export async function getInvoiceById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  return db.query.invoices.findFirst({
+    where: eq(invoices.id, id),
+  });
+}
+
+/**
+ * Get all invoices with optional filters
+ */
+export async function getAllInvoices(filters?: {
+  status?: string;
+  brokerName?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  let query = db.query.invoices.findMany({
+    orderBy: desc(invoices.createdAt),
+    limit: filters?.limit || 100,
+    offset: filters?.offset || 0,
+  });
+
+  if (filters?.status) {
+    query = db.query.invoices.findMany({
+      where: eq(invoices.status, filters.status as any),
+      orderBy: desc(invoices.createdAt),
+      limit: filters?.limit || 100,
+      offset: filters?.offset || 0,
+    });
+  }
+
+  return query;
+}
+
+/**
+ * Record invoice payment
+ */
+export async function recordInvoicePayment(data: {
+  invoiceId: number;
+  amount: number;
+  paymentDate: Date;
+  paymentMethod: string;
+  referenceNumber?: string;
+  notes?: string;
+  recordedBy: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  // Add payment record
+  const [payment] = await db
+    .insert(invoicePayments)
+    .values(data)
+    .returning();
+  
+  // Update invoice
+  const invoice = await getInvoiceById(data.invoiceId);
+  if (invoice) {
+    const newPaidAmount = Number(invoice.paidAmount || 0) + data.amount;
+    const newRemainingBalance = Number(invoice.total) - newPaidAmount;
+    const newStatus = newRemainingBalance <= 0 ? "paid" : "partially_paid";
+    
+    await db
+      .update(invoices)
+      .set({
+        paidAmount: newPaidAmount,
+        remainingBalance: newRemainingBalance,
+        status: newStatus as any,
+        paidAt: newStatus === "paid" ? new Date() : invoice.paidAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(invoices.id, data.invoiceId));
+  }
+  
+  return payment;
+}
+
+/**
+ * Get receivables aging report
+ */
+export async function getReceivablesAgingReport() {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const recs = await db.query.receivables.findMany({
+    where: inArray(receivables.status, ["current", "overdue"]),
+  });
+
+  const now = new Date();
+  const summary = {
+    current: { count: 0, total: 0 },
+    "30_days": { count: 0, total: 0 },
+    "60_days": { count: 0, total: 0 },
+    "90_days": { count: 0, total: 0 },
+    "120_plus": { count: 0, total: 0 },
+    totalOutstanding: 0,
+  };
+
+  recs.forEach((rec: any) => {
+    const bucket = rec.agingBucket;
+    summary[bucket as keyof typeof summary].count++;
+    summary[bucket as keyof typeof summary].total += Number(rec.outstandingAmount);
+    summary.totalOutstanding += Number(rec.outstandingAmount);
+  });
+
+  return summary;
+}
+
+/**
+ * Get receivables by broker
+ */
+export async function getReceivablesByBroker(brokerName: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  return db.query.receivables.findMany({
+    where: eq(receivables.brokerName, brokerName),
+  });
+}
+
+/**
+ * Update receivable aging
+ */
+export async function updateReceivableAging(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const rec = await db.query.receivables.findFirst({
+    where: eq(receivables.id, id),
+  });
+  
+  if (!rec) return null;
+  
+  const invoice = await db.query.invoices.findFirst({
+    where: eq(invoices.id, rec.invoiceId),
+  });
+  
+  if (!invoice) return null;
+  
+  const now = new Date();
+  const dueDate = new Date(invoice.dueDate);
+  const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+  
+  let agingBucket = "current";
+  if (daysOverdue > 0) {
+    if (daysOverdue <= 30) agingBucket = "30_days";
+    else if (daysOverdue <= 60) agingBucket = "60_days";
+    else if (daysOverdue <= 90) agingBucket = "90_days";
+    else agingBucket = "120_plus";
+  }
+  
+  const status = daysOverdue > 0 ? "overdue" : "current";
+  
+  const [updated] = await db
+    .update(receivables)
+    .set({
+      daysOverdue: Math.max(0, daysOverdue),
+      agingBucket: agingBucket as any,
+      status: status as any,
+      updatedAt: new Date(),
+    })
+    .where(eq(receivables.id, id))
+    .returning();
+  
+  return updated;
+}
+
+/**
+ * Issue invoice (change status to issued)
+ */
+export async function issueInvoice(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [updated] = await db
+    .update(invoices)
+    .set({
+      status: "issued",
+      issuedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(invoices.id, id))
+    .returning();
+  
+  return updated;
+}
+
+/**
+ * Cancel invoice
+ */
+export async function cancelInvoice(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [updated] = await db
+    .update(invoices)
+    .set({
+      status: "cancelled",
+      updatedAt: new Date(),
+    })
+    .where(eq(invoices.id, id))
+    .returning();
+  
+  return updated;
+}
+
+/**
+ * Get invoice with payments
+ */
+export async function getInvoiceWithPayments(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const invoice = await getInvoiceById(id);
+  if (!invoice) return null;
+  
+  const payments = await db.query.invoicePayments.findMany({
+    where: eq(invoicePayments.invoiceId, id),
+    orderBy: desc(invoicePayments.paymentDate),
+  });
+  
+  return { invoice, payments };
+}

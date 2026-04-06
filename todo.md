@@ -1221,3 +1221,21 @@
 - [ ] Agregar funcionalidad de cambiar estado
 - [ ] Integración con Quote Analyzer para crear cotizaciones
 - [ ] Agregar tests para LoadsDispatch
+
+
+## Fase 8: Formalizar Receivables/Invoicing
+- [x] Crear tablas en schema: invoices, receivables, invoice_payments
+- [x] Generar migración SQL con Drizzle (0034_hesitant_scream.sql)
+- [x] Crear DB helpers para invoicing (12+ funciones)
+- [x] Crear tRPC router invoicing.ts con 8 procedures
+- [x] Integrar invoicingRouter en server/routers.ts
+- [x] Crear InvoicingPage.tsx con Aging Report y Invoices List tabs
+- [x] Agregar InvoiceStatusBadge component con color coding
+- [x] Integrar rutas en App.tsx (/invoicing)
+- [x] Actualizar DashboardLayout con menú de Invoicing
+- [ ] Ejecutar migración SQL en la base de datos
+- [ ] Agregar funcionalidad de crear nueva factura
+- [ ] Agregar funcionalidad de registrar pago
+- [ ] Agregar funcionalidad de descargar factura en PDF
+- [ ] Agregar notificaciones de vencimiento
+- [ ] Agregar tests para invoicing router

@@ -67,6 +67,7 @@ const adminMenuItems = [
   { icon: DollarSign, label: "Finance", path: "/finance", description: "Ingresos, gastos y profit" },
   { icon: Wallet, label: "Wallet", path: "/finance-wallet", description: "Billetera y retiros" },
   { icon: CreditCard, label: "Settlements", path: "/finance-settlements", description: "Distribución de ganancias" },
+  { icon: FileText, label: "Invoicing", path: "/invoicing", description: "Facturas y cuentas por cobrar" },
 
    // ===== FLEET =====
   { icon: Truck, label: "Fleet & Drivers", path: "/fleet-tracking", description: "Operaciones de choferes y flota" },

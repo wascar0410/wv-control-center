@@ -1452,3 +1452,113 @@ export const quoteAnalysis = mysqlTable("quote_analysis", {
 
 export type QuoteAnalysis = typeof quoteAnalysis.$inferSelect;
 export type InsertQuoteAnalysis = typeof quoteAnalysis.$inferInsert;
+
+
+/**
+ * Invoices - Formal invoicing with status tracking
+ * States: pending → issued → paid → overdue
+ */
+export const invoices = mysqlTable("invoices", {
+  id: int("id").autoincrement().primaryKey(),
+  loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+  
+  // Invoice details
+  invoiceNumber: varchar("invoiceNumber", { length: 50 }).notNull().unique(),
+  issueDate: timestamp("issueDate").defaultNow().notNull(),
+  dueDate: timestamp("dueDate").notNull(),
+  
+  // Parties
+  brokerName: varchar("brokerName", { length: 255 }).notNull(),
+  brokerId: int("brokerId").references(() => users.id),
+  
+  // Amounts
+  subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
+  taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("0.00"),
+  taxAmount: decimal("taxAmount", { precision: 12, scale: 2 }).default("0.00"),
+  total: decimal("total", { precision: 12, scale: 2 }).notNull(),
+  
+  // Payment tracking
+  paidAmount: decimal("paidAmount", { precision: 12, scale: 2 }).default("0.00"),
+  remainingBalance: decimal("remainingBalance", { precision: 12, scale: 2 }).notNull(),
+  
+  // Status
+  status: mysqlEnum("status", ["pending", "issued", "partially_paid", "paid", "overdue", "cancelled"]).default("pending").notNull(),
+  
+  // Dates
+  issuedAt: timestamp("issuedAt"),
+  paidAt: timestamp("paidAt"),
+  overdueAt: timestamp("overdueAt"),
+  
+  // Notes
+  notes: text("notes"),
+  terms: text("terms"),
+  
+  // Metadata
+  createdBy: int("createdBy").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = typeof invoices.$inferInsert;
+
+/**
+ * Receivables - Aging and collection tracking
+ * Tracks payment status and aging of invoices
+ */
+export const receivables = mysqlTable("receivables", {
+  id: int("id").autoincrement().primaryKey(),
+  invoiceId: int("invoiceId").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+  
+  // Broker info
+  brokerName: varchar("brokerName", { length: 255 }).notNull(),
+  brokerId: int("brokerId").references(() => users.id),
+  
+  // Amount tracking
+  invoiceAmount: decimal("invoiceAmount", { precision: 12, scale: 2 }).notNull(),
+  paidAmount: decimal("paidAmount", { precision: 12, scale: 2 }).default("0.00"),
+  outstandingAmount: decimal("outstandingAmount", { precision: 12, scale: 2 }).notNull(),
+  
+  // Aging
+  daysOverdue: int("daysOverdue").default(0),
+  agingBucket: mysqlEnum("agingBucket", ["current", "30_days", "60_days", "90_days", "120_plus"]).notNull(),
+  
+  // Status
+  status: mysqlEnum("status", ["current", "overdue", "paid", "disputed", "written_off"]).default("current").notNull(),
+  
+  // Collection notes
+  lastReminderSent: timestamp("lastReminderSent"),
+  reminderCount: int("reminderCount").default(0),
+  collectionNotes: text("collectionNotes"),
+  
+  // Metadata
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Receivable = typeof receivables.$inferSelect;
+export type InsertReceivable = typeof receivables.$inferInsert;
+
+/**
+ * Invoice Payments - Payment history for invoices
+ */
+export const invoicePayments = mysqlTable("invoicePayments", {
+  id: int("id").autoincrement().primaryKey(),
+  invoiceId: int("invoiceId").notNull().references(() => invoices.id, { onDelete: "cascade" }),
+  
+  // Payment details
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  paymentDate: timestamp("paymentDate").notNull(),
+  paymentMethod: varchar("paymentMethod", { length: 50 }).notNull(), // check, wire, credit_card, ach
+  
+  // Reference
+  referenceNumber: varchar("referenceNumber", { length: 100 }),
+  notes: text("notes"),
+  
+  // Metadata
+  recordedBy: int("recordedBy").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type InvoicePayment = typeof invoicePayments.$inferSelect;
+export type InsertInvoicePayment = typeof invoicePayments.$inferInsert;
