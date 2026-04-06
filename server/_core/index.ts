@@ -13,7 +13,7 @@ import { rateLimitMiddleware } from "./rateLimiter";
 import { recordHostRejection } from "./hostMonitoring";
 import { requestLoggerMiddleware, getAbuseReport } from "./requestLogger";
 import { adaptiveRateLimiter, getSystemStatus } from "./adaptiveRateLimiter";
-
+import { getDb } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -40,14 +40,19 @@ async function startServer() {
 
   // 🔥 DEBUG ENDPOINT (TEMPORAL)
   app.get("/debug/users-columns", async (req, res) => {
-    try {
-      const result = await db.execute("SHOW COLUMNS FROM users;");
-      res.json(result);
-    } catch (error) {
-      console.error("DEBUG ERROR:", error);
-      res.status(500).json({ error: String(error) });
+  try {
+    const db = await getDb();
+    if (!db) {
+      return res.status(500).json({ error: "Database not available" });
     }
-  });
+
+    const result = await db.execute("SHOW COLUMNS FROM users;");
+    res.json(result);
+  } catch (error) {
+    console.error("DEBUG ERROR:", error);
+    res.status(500).json({ error: String(error) });
+  }
+});
   
   // Allowed hosts configuration - can be overridden via environment variable
   const defaultAllowedHosts = [
