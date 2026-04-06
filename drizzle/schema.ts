@@ -1562,3 +1562,105 @@ export const invoicePayments = mysqlTable("invoicePayments", {
 
 export type InvoicePayment = typeof invoicePayments.$inferSelect;
 export type InsertInvoicePayment = typeof invoicePayments.$inferInsert;
+
+
+/**
+ * Alerts - System alerts for critical events
+ * Types: invoice_overdue, payment_pending, load_delayed, driver_offline, settlement_ready
+ */
+export const alerts = mysqlTable("alerts", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Alert details
+  type: mysqlEnum("type", [
+    "invoice_overdue",
+    "payment_pending",
+    "load_delayed",
+    "driver_offline",
+    "settlement_ready",
+    "wallet_low",
+    "system_error",
+    "custom",
+  ]).notNull(),
+  
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  severity: mysqlEnum("severity", ["info", "warning", "critical"]).default("info").notNull(),
+  
+  // Related entities
+  relatedEntityType: varchar("relatedEntityType", { length: 50 }), // invoice, load, driver, settlement
+  relatedEntityId: int("relatedEntityId"),
+  
+  // Recipients
+  recipientUserId: int("recipientUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  recipientRole: varchar("recipientRole", { length: 50 }), // admin, driver, all
+  
+  // Status
+  isRead: boolean("isRead").default(false).notNull(),
+  isAcknowledged: boolean("isAcknowledged").default(false).notNull(),
+  
+  // Metadata
+  actionUrl: varchar("actionUrl", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  readAt: timestamp("readAt"),
+  acknowledgedAt: timestamp("acknowledgedAt"),
+});
+
+export type Alert = typeof alerts.$inferSelect;
+export type InsertAlert = typeof alerts.$inferInsert;
+
+/**
+ * Tasks - Team tasks and action items
+ * States: pending → in_progress → completed / cancelled
+ */
+export const tasks = mysqlTable("tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Task details
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
+  
+  // Assignment
+  assignedTo: int("assignedTo").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdBy: int("createdBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Related entities
+  relatedEntityType: varchar("relatedEntityType", { length: 50 }), // invoice, load, driver, settlement
+  relatedEntityId: int("relatedEntityId"),
+  
+  // Status and dates
+  status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
+  dueDate: timestamp("dueDate"),
+  completedAt: timestamp("completedAt"),
+  
+  // Progress
+  progress: int("progress").default(0), // 0-100
+  
+  // Metadata
+  tags: varchar("tags", { length: 500 }), // comma-separated
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = typeof tasks.$inferInsert;
+
+/**
+ * Task Comments - Comments on tasks for collaboration
+ */
+export const taskComments = mysqlTable("taskComments", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: int("taskId").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+  
+  // Comment details
+  comment: text("comment").notNull(),
+  authorId: int("authorId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  
+  // Metadata
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type TaskComment = typeof taskComments.$inferSelect;
+export type InsertTaskComment = typeof taskComments.$inferInsert;

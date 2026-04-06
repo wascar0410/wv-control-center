@@ -1257,3 +1257,24 @@
 - [ ] Agregar comparativas mes anterior
 - [ ] Agregar notificaciones de facturas vencidas
 - [ ] Agregar tests para FinanceDashboard
+
+
+## Fase 10: Alerts & Tasks
+- [x] Crear 3 nuevas tablas en schema: alerts, tasks, taskComments
+- [x] Generar migración SQL con Drizzle (0035_ambiguous_supernaut.sql)
+- [x] Crear 15+ DB helpers para alerts y tasks (createAlert, getAlertsForUser, markAlertAsRead, acknowledgeAlert, getUnreadAlertCount, createTask, getTasksForUser, updateTaskStatus, updateTaskProgress, getTaskWithComments, addTaskComment, getOverdueTasks, getTasksDueToday, getTaskStats)
+- [x] Crear tRPC router alertsAndTasks.ts con 15 procedures
+- [x] Integrar alertsAndTasksRouter en server/routers.ts
+- [x] Crear AlertsTasksPage.tsx con 2 tabs: Alerts y Tasks
+- [x] Alerts tab con unread count, critical alerts, total alerts, list de alertas
+- [x] Tasks tab con stats (total, pending, in_progress, completed, overdue), task management
+- [x] AlertStatusBadge component con color coding por severity
+- [x] TaskPriorityBadge component con color coding por prioridad
+- [x] TaskStatusBadge component con color coding por estado
+- [x] Integrar rutas en App.tsx (/alerts-tasks)
+- [x] Actualizar DashboardLayout con Alerts & Tasks menu item
+- [ ] Ejecutar migración SQL en la base de datos
+- [ ] Agregar notificaciones en tiempo real (WebSocket)
+- [ ] Agregar funcionalidad de crear nueva tarea
+- [ ] Agregar funcionalidad de crear nueva alerta (admin only)
+- [ ] Agregar tests para alertsAndTasks router

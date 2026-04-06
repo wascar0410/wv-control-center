@@ -80,10 +80,11 @@ const adminMenuItems = [
 
   // ===== COMPANY =====
   { icon: Building2, label: "Company", path: "/company", description: "Información corporativa" },
+  // ===== COORDINATION =====
+  { icon: Bell, label: "Alerts & Tasks", path: "/alerts-tasks", description: "Notificaciones y tareas del equipo" },
 
   // ===== SETTINGS =====
-  { icon: Settings, label: "Settings", path: "/settings", description: "Configuración del sistema" },
-
+  { icon: Settings, label: "Settings", path: "/settings", description: "Configuración de la empresa" },
   // ===== PROFILE =====
   { icon: UserIcon, label: "Profile", path: "/profile", description: "Perfil del usuario" },
 ];

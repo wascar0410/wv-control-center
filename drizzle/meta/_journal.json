@@ -246,6 +246,13 @@
       "when": 1775477555375,
       "tag": "0034_hesitant_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1775478003468,
+      "tag": "0035_ambiguous_supernaut",
+      "breakpoints": true
     }
   ]
 }

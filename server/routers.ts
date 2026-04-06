@@ -36,6 +36,7 @@ import { walletRouter } from "./routers/wallet";
 import { settlementRouter } from "./routers/settlement";
 import { quoteAnalysisRouter } from "./routers/quoteAnalysis";
 import { invoicingRouter } from "./routers/invoicing";
+import { alertsAndTasksRouter } from "./routers/alertsAndTasks";
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -2394,6 +2395,7 @@ export const appRouter = router({
   settlement: settlementRouter,
   quoteAnalysis: quoteAnalysisRouter,
   invoicing: invoicingRouter,
+  alertsAndTasks: alertsAndTasksRouter,
 });
 
 export type AppRouter = typeof appRouter;

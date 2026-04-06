@@ -3451,3 +3451,327 @@ export async function getInvoiceWithPayments(id: number) {
   
   return { invoice, payments };
 }
+
+
+/**
+ * ===== ALERTS & TASKS HELPERS =====
+ * System alerts and team task management
+ */
+
+/**
+ * Create alert
+ */
+export async function createAlert(data: {
+  type: string;
+  title: string;
+  message: string;
+  severity?: string;
+  relatedEntityType?: string;
+  relatedEntityId?: number;
+  recipientUserId: number;
+  recipientRole?: string;
+  actionUrl?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [result] = await db
+    .insert(alerts)
+    .values({
+      ...data,
+      severity: data.severity || "info",
+    })
+    .returning();
+  
+  return result;
+}
+
+/**
+ * Get alerts for user
+ */
+export async function getAlertsForUser(userId: number, filters?: {
+  isRead?: boolean;
+  severity?: string;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  let query = db.query.alerts.findMany({
+    where: eq(alerts.recipientUserId, userId),
+    orderBy: desc(alerts.createdAt),
+    limit: filters?.limit || 50,
+  });
+
+  if (filters?.isRead !== undefined) {
+    query = db.query.alerts.findMany({
+      where: and(
+        eq(alerts.recipientUserId, userId),
+        eq(alerts.isRead, filters.isRead)
+      ),
+      orderBy: desc(alerts.createdAt),
+      limit: filters?.limit || 50,
+    });
+  }
+
+  return query;
+}
+
+/**
+ * Mark alert as read
+ */
+export async function markAlertAsRead(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [updated] = await db
+    .update(alerts)
+    .set({
+      isRead: true,
+      readAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(alerts.id, id))
+    .returning();
+  
+  return updated;
+}
+
+/**
+ * Mark alert as acknowledged
+ */
+export async function acknowledgeAlert(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [updated] = await db
+    .update(alerts)
+    .set({
+      isAcknowledged: true,
+      acknowledgedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(alerts.id, id))
+    .returning();
+  
+  return updated;
+}
+
+/**
+ * Get unread alert count for user
+ */
+export async function getUnreadAlertCount(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const result = await db.query.alerts.findMany({
+    where: and(
+      eq(alerts.recipientUserId, userId),
+      eq(alerts.isRead, false)
+    ),
+  });
+  
+  return result.length;
+}
+
+/**
+ * Create task
+ */
+export async function createTask(data: {
+  title: string;
+  description?: string;
+  priority?: string;
+  assignedTo: number;
+  createdBy: number;
+  relatedEntityType?: string;
+  relatedEntityId?: number;
+  dueDate?: Date;
+  tags?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [result] = await db
+    .insert(tasks)
+    .values({
+      ...data,
+      priority: data.priority || "medium",
+    })
+    .returning();
+  
+  return result;
+}
+
+/**
+ * Get tasks for user
+ */
+export async function getTasksForUser(userId: number, filters?: {
+  status?: string;
+  priority?: string;
+  limit?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  let query = db.query.tasks.findMany({
+    where: eq(tasks.assignedTo, userId),
+    orderBy: [desc(tasks.priority), asc(tasks.dueDate)],
+    limit: filters?.limit || 100,
+  });
+
+  if (filters?.status) {
+    query = db.query.tasks.findMany({
+      where: and(
+        eq(tasks.assignedTo, userId),
+        eq(tasks.status, filters.status as any)
+      ),
+      orderBy: [desc(tasks.priority), asc(tasks.dueDate)],
+      limit: filters?.limit || 100,
+    });
+  }
+
+  return query;
+}
+
+/**
+ * Update task status
+ */
+export async function updateTaskStatus(id: number, status: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const completedAt = status === "completed" ? new Date() : null;
+  
+  const [updated] = await db
+    .update(tasks)
+    .set({
+      status: status as any,
+      completedAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(tasks.id, id))
+    .returning();
+  
+  return updated;
+}
+
+/**
+ * Update task progress
+ */
+export async function updateTaskProgress(id: number, progress: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [updated] = await db
+    .update(tasks)
+    .set({
+      progress: Math.min(100, Math.max(0, progress)),
+      updatedAt: new Date(),
+    })
+    .where(eq(tasks.id, id))
+    .returning();
+  
+  return updated;
+}
+
+/**
+ * Get task with comments
+ */
+export async function getTaskWithComments(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const task = await db.query.tasks.findFirst({
+    where: eq(tasks.id, id),
+  });
+  
+  if (!task) return null;
+  
+  const comments = await db.query.taskComments.findMany({
+    where: eq(taskComments.taskId, id),
+    orderBy: desc(taskComments.createdAt),
+  });
+  
+  return { task, comments };
+}
+
+/**
+ * Add comment to task
+ */
+export async function addTaskComment(taskId: number, comment: string, authorId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const [result] = await db
+    .insert(taskComments)
+    .values({
+      taskId,
+      comment,
+      authorId,
+    })
+    .returning();
+  
+  return result;
+}
+
+/**
+ * Get overdue tasks
+ */
+export async function getOverdueTasks() {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const now = new Date();
+  return db.query.tasks.findMany({
+    where: and(
+      inArray(tasks.status, ["pending", "in_progress"]),
+      lt(tasks.dueDate, now)
+    ),
+    orderBy: asc(tasks.dueDate),
+  });
+}
+
+/**
+ * Get tasks due today
+ */
+export async function getTasksDueToday() {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  return db.query.tasks.findMany({
+    where: and(
+      inArray(tasks.status, ["pending", "in_progress"]),
+      gte(tasks.dueDate, today),
+      lt(tasks.dueDate, tomorrow)
+    ),
+    orderBy: asc(tasks.dueDate),
+  });
+}
+
+/**
+ * Get task statistics
+ */
+export async function getTaskStats(userId?: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const allTasks = userId
+    ? await db.query.tasks.findMany({
+        where: eq(tasks.assignedTo, userId),
+      })
+    : await db.query.tasks.findMany();
+  
+  return {
+    total: allTasks.length,
+    pending: allTasks.filter((t: any) => t.status === "pending").length,
+    inProgress: allTasks.filter((t: any) => t.status === "in_progress").length,
+    completed: allTasks.filter((t: any) => t.status === "completed").length,
+    cancelled: allTasks.filter((t: any) => t.status === "cancelled").length,
+    overdue: allTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "completed").length,
+  };
+}
