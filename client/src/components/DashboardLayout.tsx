@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getAccessibleModules } from "@shared/rbac";
+import { filterMenuByRole } from "@shared/rbac";
 import { trpc } from "@/lib/trpc";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -50,6 +50,7 @@ import {
   Shield,
   Building2,
   Headphones,
+  Bell,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -100,6 +101,16 @@ const driverMenuItems = [
 const getMenuItems = (role?: string) => {
   if (role === "driver") return driverMenuItems;
   return adminMenuItems;
+};
+
+const getFilteredMenuItems = (role?: string) => {
+  const baseItems = getMenuItems(role);
+  // Map path to module key for RBAC
+  const itemsWithModuleKey = baseItems.map((item) => ({
+    ...item,
+    moduleKey: item.path.replace("/", ""),
+  }));
+  return filterMenuByRole(itemsWithModuleKey as any, (role as any) || "user");
 };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -164,7 +175,7 @@ function DashboardLayoutContent({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const menuItems = getMenuItems(user?.role);
+  const menuItems = getFilteredMenuItems(user?.role);
   const activeMenuItem = menuItems.find((item) => item.path === location);
 
   const roleLabel =
