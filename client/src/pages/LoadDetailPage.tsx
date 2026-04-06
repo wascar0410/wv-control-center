@@ -4,7 +4,7 @@
  * Allows editing, changing status, and viewing history
  */
 import { useState } from "react";
-import { useParams, useNavigate } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +41,7 @@ function formatDate(date: string | Date | null) {
 
 export default function LoadDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingStatus, setIsChangingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState<string>("");
