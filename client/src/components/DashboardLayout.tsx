@@ -95,7 +95,7 @@ const driverMenuItems = [
   { icon: TrendingUp, label: "Mi Desempeño", path: "/driver-performance", description: "Historial y tendencias" },
   { icon: Wallet, label: "Mi Billetera", path: "/finance-wallet", description: "Mis pagos y liquidaciones" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
-  { icon: Info, label: "Acerca de", path: "/about", description: "Información de WV Transport" },
+  { icon: Building2, label: "Empresa", path: "/company", description: "Información corporativa" },
 ];
 
 const getMenuItems = (role?: string) => {

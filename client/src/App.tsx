@@ -11,7 +11,7 @@ const LoadDetailPage = lazy(() => import("./pages/LoadDetailPage"));
 const FleetTracking = lazy(() => import("./pages/FleetTracking"));
 const DriverOps = lazy(() => import("./pages/DriverOps"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
-const About = lazy(() => import("./pages/About"));
+const Company = lazy(() => import("./pages/Company"));
 const BusinessSettings = lazy(() => import("./pages/BusinessSettings"));
 const WalletDashboard = lazy(() => import("./pages/WalletDashboard"));
 const SettlementsPage = lazy(() => import("./pages/SettlementsPage"));
@@ -67,7 +67,7 @@ export default function App() {
 
         {/* Team & Company */}
         <Route path="/team" component={withLayout(UserManagement)} />
-        <Route path="/company" component={withLayout(About)} />
+        <Route path="/company" component={withLayout(Company)} />
         <Route path="/chat" component={withLayout(Chat)} />
 
         {/* Coordination */}
@@ -81,6 +81,9 @@ export default function App() {
         <Route path="/driver" component={withLayout(DriverOps)} />
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
+        <Route path="/about">{() => <Redirect to="/company" />}</Route>
+        <Route path="/carrier-packet">{() => <Redirect to="/company" />}</Route>
+        <Route path="/business-plan">{() => <Redirect to="/company" />}</Route>
         <Route path="/dashboard">{() => <Redirect to="/command-center" />}</Route>
         <Route path="/loads">{() => <Redirect to="/loads-dispatch" />}</Route>
         <Route path="/finance">{() => <Redirect to="/finance-dashboard" />}</Route>
