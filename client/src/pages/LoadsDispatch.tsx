@@ -4,6 +4,7 @@
  * Pipeline: Available → Quoted → Assigned → In Transit → Delivered → Invoiced → Paid
  */
 import { useState, useMemo } from "react";
+import { useNavigate } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,8 @@ import {
   BarChart3,
   FileText,
   Zap,
+  ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 
 // Status pipeline
@@ -56,13 +59,237 @@ function formatCurrency(value: number | string) {
   }).format(num);
 }
 
+// Create Load Modal
+function CreateLoadModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
+  const [formData, setFormData] = useState({
+    clientName: "",
+    pickupAddress: "",
+    deliveryAddress: "",
+    weight: "",
+    weightUnit: "lbs",
+    merchandiseType: "",
+    price: "",
+    estimatedFuel: "0",
+    estimatedTolls: "0",
+    notes: "",
+  });
+
+  const createMutation = trpc.loads.create.useMutation({
+    onSuccess: () => {
+      toast.success("Carga creada exitosamente");
+      setFormData({
+        clientName: "",
+        pickupAddress: "",
+        deliveryAddress: "",
+        weight: "",
+        weightUnit: "lbs",
+        merchandiseType: "",
+        price: "",
+        estimatedFuel: "0",
+        estimatedTolls: "0",
+        notes: "",
+      });
+      onClose();
+      onSuccess();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const handleSubmit = () => {
+    if (!formData.clientName || !formData.pickupAddress || !formData.deliveryAddress || !formData.weight || !formData.price) {
+      toast.error("Completa todos los campos requeridos");
+      return;
+    }
+
+    createMutation.mutate({
+      clientName: formData.clientName,
+      pickupAddress: formData.pickupAddress,
+      deliveryAddress: formData.deliveryAddress,
+      weight: parseFloat(formData.weight),
+      weightUnit: formData.weightUnit,
+      merchandiseType: formData.merchandiseType,
+      price: parseFloat(formData.price),
+      estimatedFuel: parseFloat(formData.estimatedFuel),
+      estimatedTolls: parseFloat(formData.estimatedTolls),
+      notes: formData.notes,
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card className="w-full max-w-2xl max-h-96 overflow-y-auto">
+        <CardHeader>
+          <CardTitle>Nueva Carga</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              placeholder="Cliente"
+              value={formData.clientName}
+              onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+            />
+            <Input
+              placeholder="Mercancía"
+              value={formData.merchandiseType}
+              onChange={(e) => setFormData({ ...formData, merchandiseType: e.target.value })}
+            />
+            <Input
+              placeholder="Origen"
+              value={formData.pickupAddress}
+              onChange={(e) => setFormData({ ...formData, pickupAddress: e.target.value })}
+            />
+            <Input
+              placeholder="Destino"
+              value={formData.deliveryAddress}
+              onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
+            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Peso"
+                type="number"
+                value={formData.weight}
+                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+              />
+              <select
+                value={formData.weightUnit}
+                onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
+                className="px-3 py-2 rounded-md border border-border bg-background"
+              >
+                <option value="lbs">lbs</option>
+                <option value="kg">kg</option>
+                <option value="tons">tons</option>
+              </select>
+            </div>
+            <Input
+              placeholder="Tarifa ($)"
+              type="number"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+            />
+            <Input
+              placeholder="Combustible Est. ($)"
+              type="number"
+              value={formData.estimatedFuel}
+              onChange={(e) => setFormData({ ...formData, estimatedFuel: e.target.value })}
+            />
+            <Input
+              placeholder="Peajes Est. ($)"
+              type="number"
+              value={formData.estimatedTolls}
+              onChange={(e) => setFormData({ ...formData, estimatedTolls: e.target.value })}
+            />
+          </div>
+          <Input
+            placeholder="Notas (opcional)"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+              Crear Carga
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Change Status Modal
+function ChangeStatusModal({
+  isOpen,
+  onClose,
+  loadId,
+  currentStatus,
+  onSuccess,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  loadId: number;
+  currentStatus: string;
+  onSuccess: () => void;
+}) {
+  const [newStatus, setNewStatus] = useState("");
+
+  const updateStatusMutation = trpc.loads.updateStatus.useMutation({
+    onSuccess: () => {
+      toast.success("Estado actualizado");
+      onClose();
+      onSuccess();
+    },
+    onError: (error) => toast.error(error.message),
+  });
+
+  const handleSubmit = () => {
+    if (!newStatus) {
+      toast.error("Selecciona un estado");
+      return;
+    }
+    updateStatusMutation.mutate({
+      id: loadId,
+      status: newStatus as any,
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Cambiar Estado</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">Estado actual</p>
+            <StatusBadge status={currentStatus} />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">Nuevo estado</p>
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              className="w-full px-3 py-2 rounded-md border border-border bg-background"
+            >
+              <option value="">Selecciona estado...</option>
+              {LOAD_STATUSES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={updateStatusMutation.isPending}>
+              Actualizar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // Load Board Tab
 function LoadBoardTab() {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "income" | "distance">("date");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [selectedLoadId, setSelectedLoadId] = useState<number | null>(null);
+  const [selectedLoadStatus, setSelectedLoadStatus] = useState("");
 
-  const { data: loads } = trpc.loads.getActive.useQuery();
+  const { data: loads, refetch } = trpc.loads.getActive.useQuery();
 
   const filteredLoads = useMemo(() => {
     let result = loads || [];
@@ -70,8 +297,8 @@ function LoadBoardTab() {
     if (searchTerm) {
       result = result.filter(
         (l: any) =>
-          l.pickupLocation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          l.deliveryLocation?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          l.pickupAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          l.deliveryAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           l.id.toString().includes(searchTerm)
       );
     }
@@ -169,7 +396,7 @@ function LoadBoardTab() {
           <option value="income">Mayor ingreso</option>
           <option value="distance">Mayor distancia</option>
         </select>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4" />
           Nueva Carga
         </Button>
@@ -195,11 +422,11 @@ function LoadBoardTab() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground mb-2">
                       <div>
                         <p className="text-xs">Origen</p>
-                        <p className="font-medium text-foreground">{load.pickupLocation || "—"}</p>
+                        <p className="font-medium text-foreground">{load.pickupAddress || "—"}</p>
                       </div>
                       <div>
                         <p className="text-xs">Destino</p>
-                        <p className="font-medium text-foreground">{load.deliveryLocation || "—"}</p>
+                        <p className="font-medium text-foreground">{load.deliveryAddress || "—"}</p>
                       </div>
                       <div>
                         <p className="text-xs">Distancia</p>
@@ -210,17 +437,25 @@ function LoadBoardTab() {
                         <p className="font-medium text-green-600">{formatCurrency(load.estimatedIncome || 0)}</p>
                       </div>
                     </div>
-                    <div className="flex gap-2 text-xs text-muted-foreground">
-                      {load.broker && <span>Broker: {load.broker}</span>}
-                      {load.assignedDriver && <span>Chofer: {load.assignedDriver}</span>}
-                    </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/loads/${load.id}`)}
+                    >
                       Ver Detalles
                     </Button>
-                    <Button size="sm" variant="ghost">
-                      ⋯
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setSelectedLoadId(load.id);
+                        setSelectedLoadStatus(load.status);
+                        setStatusModalOpen(true);
+                      }}
+                    >
+                      <ChevronDown className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
@@ -229,6 +464,22 @@ function LoadBoardTab() {
           ))
         )}
       </div>
+
+      <CreateLoadModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => refetch()}
+      />
+
+      {selectedLoadId && (
+        <ChangeStatusModal
+          isOpen={statusModalOpen}
+          onClose={() => setStatusModalOpen(false)}
+          loadId={selectedLoadId}
+          currentStatus={selectedLoadStatus}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 }
@@ -268,8 +519,8 @@ function PipelineTab() {
                   <Card key={load.id} className="cursor-pointer hover:shadow-md transition-shadow">
                     <CardContent className="p-2 text-xs">
                       <p className="font-semibold">#{load.id}</p>
-                      <p className="text-muted-foreground truncate">{load.pickupLocation}</p>
-                      <p className="text-muted-foreground truncate">→ {load.deliveryLocation}</p>
+                      <p className="text-muted-foreground truncate">{load.pickupAddress}</p>
+                      <p className="text-muted-foreground truncate">→ {load.deliveryAddress}</p>
                       <p className="font-medium text-green-600 mt-1">{formatCurrency(load.estimatedIncome || 0)}</p>
                     </CardContent>
                   </Card>
@@ -299,51 +550,35 @@ function AnalyticsTab() {
       avgIncome,
       avgMiles,
       totalCompleted,
-      completionRate: loads.length > 0 ? (completed.length / loads.length) * 100 : 0,
     };
   }, [loads]);
 
   if (!analytics) return null;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Cargas Completadas</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold">{analytics.completed}</p>
-          <p className="text-xs text-muted-foreground mt-1">Tasa: {analytics.completionRate.toFixed(1)}%</p>
+        <CardContent className="pt-4">
+          <p className="text-xs text-muted-foreground">Cargas Completadas</p>
+          <p className="text-2xl font-bold">{analytics.completed}</p>
         </CardContent>
       </Card>
-
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Ingreso Promedio</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-green-600">{formatCurrency(analytics.avgIncome)}</p>
-          <p className="text-xs text-muted-foreground mt-1">Por carga completada</p>
+        <CardContent className="pt-4">
+          <p className="text-xs text-muted-foreground">Ingreso Promedio</p>
+          <p className="text-lg font-bold text-green-600">{formatCurrency(analytics.avgIncome)}</p>
         </CardContent>
       </Card>
-
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Distancia Promedio</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold">{analytics.avgMiles.toFixed(0)} mi</p>
-          <p className="text-xs text-muted-foreground mt-1">Por carga completada</p>
+        <CardContent className="pt-4">
+          <p className="text-xs text-muted-foreground">Millas Promedio</p>
+          <p className="text-lg font-bold">{analytics.avgMiles.toFixed(0)} mi</p>
         </CardContent>
       </Card>
-
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Ingreso Total</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-bold text-green-600">{formatCurrency(analytics.totalCompleted)}</p>
-          <p className="text-xs text-muted-foreground mt-1">De cargas completadas</p>
+        <CardContent className="pt-4">
+          <p className="text-xs text-muted-foreground">Ingreso Total</p>
+          <p className="text-lg font-bold text-green-600">{formatCurrency(analytics.totalCompleted)}</p>
         </CardContent>
       </Card>
     </div>
@@ -352,35 +587,18 @@ function AnalyticsTab() {
 
 // Main Component
 export default function LoadsDispatch() {
-  const [activeTab, setActiveTab] = useState("board");
-
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
+    <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold">Loads & Dispatch</h1>
-        <p className="text-muted-foreground">Centro operacional: Available → Quoted → Assigned → In Transit → Delivered → Invoiced → Paid</p>
+        <h1 className="text-3xl font-bold">Cargas & Dispatch</h1>
+        <p className="text-muted-foreground">Gestión completa del pipeline operacional</p>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="board" className="gap-2">
-            <Package className="w-4 h-4" />
-            Load Board
-          </TabsTrigger>
-          <TabsTrigger value="pipeline" className="gap-2">
-            <Zap className="w-4 h-4" />
-            Pipeline
-          </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Analytics
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
-            <Clock className="w-4 h-4" />
-            Historial
-          </TabsTrigger>
+      <Tabs defaultValue="board" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="board">Load Board</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="board" className="space-y-4">
@@ -393,18 +611,6 @@ export default function LoadsDispatch() {
 
         <TabsContent value="analytics" className="space-y-4">
           <AnalyticsTab />
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Historial de Cargas</CardTitle>
-              <CardDescription>Últimas 100 cargas completadas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Historial próximamente</p>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

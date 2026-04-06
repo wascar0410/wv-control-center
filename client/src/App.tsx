@@ -45,6 +45,7 @@ import QuoteAnalyzer from "./pages/QuoteAnalyzer";
 import InvoicingPage from "./pages/InvoicingPage";
 import FinanceDashboard from "./pages/FinanceDashboard";
 import AlertsTasksPage from "./pages/AlertsTasksPage";
+import LoadDetailPage from "./pages/LoadDetailPage";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -85,6 +86,8 @@ export default function App() {
 <Route path="/command-center" component={withLayout(CommandCenter)} />
 
 <Route path="/loads-dispatch" component={withLayout(LoadsDispatch)} />
+
+<Route path="/loads/:id" component={withLayout(LoadDetailPage)} />
 
 <Route path="/fleet-drivers" component={withLayout(DriverView)} />
 
