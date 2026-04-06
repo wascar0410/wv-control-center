@@ -13,7 +13,7 @@ import { rateLimitMiddleware } from "./rateLimiter";
 import { recordHostRejection } from "./hostMonitoring";
 import { requestLoggerMiddleware, getAbuseReport } from "./requestLogger";
 import { adaptiveRateLimiter, getSystemStatus } from "./adaptiveRateLimiter";
-import { db } from "./db";
+import { db } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
