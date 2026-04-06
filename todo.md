@@ -1174,3 +1174,16 @@
 - [x] Actualizar DashboardLayout para usar DriverOps
 - [ ] Agregar tests para DriverOps
 - [ ] Validar flujo de aceptar/rechazar cargas
+
+
+## Fase 5: Unificar Fleet
+- [x] Actualizar FleetTracking.tsx para unifique FleetMap + FleetManagement
+- [x] Incluir stats: Total, Internos, Arrendados, Externos
+- [x] Tab de Gestion con edicion inline de flota type y comision
+- [x] Color coding por flota type (azul, purpura, naranja)
+- [x] Edicion de DOT number
+- [x] Actualizar rutas en App.tsx (/fleet-tracking)
+- [x] Actualizar DashboardLayout para usar /fleet-tracking
+- [x] Redirects de /fleet-map y /fleet-management a /fleet-tracking
+- [ ] Agregar tests para FleetTracking
+- [ ] Implementar mapa en tiempo real con Google Maps

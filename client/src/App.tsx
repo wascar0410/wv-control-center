@@ -119,8 +119,9 @@ export default function App() {
       <Route path="/business-settings" component={withLayout(BusinessSettings)} />
       <Route path="/batch-payments" component={withLayout(BatchPayments)} />
       <Route path="/driver-performance" component={withLayout(DriverPerformance)} />
+      <Route path="/fleet-tracking" component={withLayout(FleetTracking)} />
       <Route path="/fleet-map">{() => <Redirect to="/fleet-tracking" />}</Route>
-     <Route path="/fleet-management">{() => <Redirect to="/fleet-tracking" />}</Route>
+      <Route path="/fleet-management">{() => <Redirect to="/fleet-tracking" />}</Route>
       <Route path="/broker-dashboard" component={withLayout(BrokerDashboard)} />
       <Route path="/dispatcher-performance" component={withLayout(DispatcherPerformance)} />
       <Route path="/chat" component={withLayout(Chat)} />
