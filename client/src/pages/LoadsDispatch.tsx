@@ -419,9 +419,9 @@ function LoadBoardTab() {
           <option value="distance">Mayor distancia</option>
         </select>
 
-        <Button className="gap-2" onClick={() => setShowCreateModal(true)}>
+        <Button className="gap-2" onClick={() => navigate("/quotation")}>
           <Plus className="h-4 w-4" />
-          Nueva Carga
+         Analizar Carga
         </Button>
       </div>
 
