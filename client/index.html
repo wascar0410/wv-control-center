@@ -15,6 +15,16 @@
 
   <body>
     <div id="root"></div>
+    <script>
+      // Disable Vite HMR client to prevent WebSocket connection errors
+      window.__VITE_HMR_DISABLED__ = true;
+      if (window.location.search.includes('from_webdev')) {
+        // Disable HMR for webdev preview
+        window.__VITE_HMR_PROTOCOL__ = null;
+        window.__VITE_HMR_HOSTNAME__ = null;
+        window.__VITE_HMR_PORT__ = null;
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

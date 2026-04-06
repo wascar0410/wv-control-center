@@ -1278,3 +1278,17 @@
 - [ ] Agregar funcionalidad de crear nueva tarea
 - [ ] Agregar funcionalidad de crear nueva alerta (admin only)
 - [ ] Agregar tests para alertsAndTasks router
+
+
+## Fase 11: Role Refinement
+- [x] Crear shared/rbac.ts con matriz de permisos por rol (admin, owner, dispatcher, driver, user)
+- [x] Definir módulos accesibles para cada rol
+- [x] Crear funciones: hasModuleAccess, getAccessibleModules, filterMenuByRole
+- [x] Crear ProtectedRoute.tsx component para proteger rutas por rol
+- [x] Agregar role descriptions para cada rol
+- [x] Integrar RBAC en DashboardLayout para filtrar menú por rol
+- [ ] Implementar role-based data filtering en tRPC procedures
+- [ ] Agregar role-based UI hiding (ocultar botones/opciones según rol)
+- [ ] Crear RoleManagement page para admin (asignar roles a usuarios)
+- [ ] Agregar tests para RBAC system
+- [ ] Documentar matriz de permisos para cada rol
