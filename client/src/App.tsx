@@ -43,6 +43,7 @@ import WalletDashboard from "./pages/WalletDashboard";
 import SettlementsPage from "./pages/SettlementsPage";
 import QuoteAnalyzer from "./pages/QuoteAnalyzer";
 import InvoicingPage from "./pages/InvoicingPage";
+import FinanceDashboard from "./pages/FinanceDashboard";
 
 function withLayout(Component: any) {
   return function WrappedPage() {
@@ -117,6 +118,7 @@ export default function App() {
       <Route path="/quotation-history" component={withLayout(QuotationHistory)} />
       <Route path="/quote-analyzer" component={withLayout(QuoteAnalyzer)} />
       <Route path="/invoicing" component={withLayout(InvoicingPage)} />
+      <Route path="/finance-dashboard" component={withLayout(FinanceDashboard)} />
       <Route path="/import-broker-loads" component={withLayout(ImportBrokerLoads)} />
       <Route path="/broker-loads-management" component={withLayout(BrokerLoadsManagement)} />
       <Route path="/accounting-finance" component={withLayout(AccountingFinance)} />

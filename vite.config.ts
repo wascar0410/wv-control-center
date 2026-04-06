@@ -201,7 +201,7 @@ export default defineConfig({
       "localhost",
       "127.0.0.1",
     ],
-    // Completely disable HMR to avoid WebSocket connection errors
+    // Disable HMR completely in development to avoid WebSocket errors
     hmr: false,
     fs: {
       strict: false,

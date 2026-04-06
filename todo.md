@@ -1239,3 +1239,21 @@
 - [ ] Agregar funcionalidad de descargar factura en PDF
 - [ ] Agregar notificaciones de vencimiento
 - [ ] Agregar tests para invoicing router
+
+
+## Fase 9: Consolidar Finance Completo
+- [x] Crear FinanceDashboard.tsx como centro operacional financiero unificado
+- [x] Overview tab con KPIs principales (Total Receivable, Overdue, Wallet Balance, Avg Wallet)
+- [x] Invoicing tab con últimas 10 facturas
+- [x] Wallet tab con saldo de choferes
+- [x] Analytics tab con métricas financieras (Revenue Growth, Profit Margin, Collection Rate, DSO)
+- [x] KPICard component reutilizable
+- [x] Quick Actions para acceso rápido a funcionalidades
+- [x] Financial Summary con Income, Expenses, Net Profit
+- [x] Integrar rutas en App.tsx (/finance-dashboard)
+- [x] Actualizar DashboardLayout con Finance Dashboard como principal
+- [ ] Agregar exportación de reportes (CSV, PDF)
+- [ ] Agregar gráficos de tendencias
+- [ ] Agregar comparativas mes anterior
+- [ ] Agregar notificaciones de facturas vencidas
+- [ ] Agregar tests para FinanceDashboard

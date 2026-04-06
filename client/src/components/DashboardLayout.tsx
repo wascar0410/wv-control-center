@@ -64,7 +64,7 @@ const adminMenuItems = [
   { icon: BarChart3, label: "Quote Analyzer", path: "/quote-analyzer", description: "Análisis de cotizaciones estimado vs real" },
 
   // ===== FINANCE =====
-  { icon: DollarSign, label: "Finance", path: "/finance", description: "Ingresos, gastos y profit" },
+  { icon: DollarSign, label: "Finance Dashboard", path: "/finance-dashboard", description: "Centro operacional financiero unificado" },
   { icon: Wallet, label: "Wallet", path: "/finance-wallet", description: "Billetera y retiros" },
   { icon: CreditCard, label: "Settlements", path: "/finance-settlements", description: "Distribución de ganancias" },
   { icon: FileText, label: "Invoicing", path: "/invoicing", description: "Facturas y cuentas por cobrar" },
