@@ -4,7 +4,7 @@
  * Pipeline: Available → Quoted → Assigned → In Transit → Delivered → Invoiced → Paid
  */
 import { useState, useMemo } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -280,7 +280,7 @@ function ChangeStatusModal({
 
 // Load Board Tab
 function LoadBoardTab() {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "income" | "distance">("date");
