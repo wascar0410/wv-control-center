@@ -1,7 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Router, Route, Switch, Redirect } from "wouter";
 import LoginPage from "./pages/LoginPage";
-import { DashboardLayout } from "./components/DashboardLayout";
+import DashboardLayout from "./components/DashboardLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 // Lazy load pages
