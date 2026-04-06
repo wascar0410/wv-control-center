@@ -12,8 +12,11 @@ export default function SettlementsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("all");
 
-  // Fetch settlements
-  const { data: settlements, isLoading, refetch } = trpc.settlement.getAll.useQuery({ limit: 50, offset: 0 });
+  // Fetch settlements with error handling
+  const { data: settlements, isLoading, error, refetch } = trpc.settlement.getAll.useQuery(
+    { limit: 50, offset: 0 },
+    { retry: 1 }
+  );
 
   if (isLoading) {
     return (
@@ -71,15 +74,15 @@ export default function SettlementsPage() {
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-muted p-3 rounded">
             <p className="text-xs text-muted-foreground">Ingresos</p>
-            <p className="font-bold">{formatCurrency(settlement.totalIncome)}</p>
+            <p className="font-bold">{formatCurrency(settlement.totalIncome || 0)}</p>
           </div>
           <div className="bg-muted p-3 rounded">
             <p className="text-xs text-muted-foreground">Gastos</p>
-            <p className="font-bold">{formatCurrency(settlement.totalExpenses)}</p>
+            <p className="font-bold">{formatCurrency(settlement.totalExpenses || 0)}</p>
           </div>
           <div className="bg-green-50 p-3 rounded">
             <p className="text-xs text-muted-foreground">Ganancia</p>
-            <p className="font-bold text-green-600">{formatCurrency(settlement.totalProfit)}</p>
+            <p className="font-bold text-green-600">{formatCurrency(settlement.totalProfit || 0)}</p>
           </div>
         </div>
 
@@ -88,53 +91,14 @@ export default function SettlementsPage() {
           <p className="text-sm font-medium">Distribución de Ganancias</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-blue-50 p-2 rounded">
-              <p className="text-xs text-muted-foreground">Socio 1 ({settlement.partner1Share}%)</p>
-              <p className="font-bold text-blue-600">{formatCurrency(settlement.partner1Amount)}</p>
+              <p className="text-xs text-muted-foreground">Socio 1 ({settlement.partner1Share || 50}%)</p>
+              <p className="font-bold text-blue-600">{formatCurrency(settlement.partner1Amount || 0)}</p>
             </div>
             <div className="bg-purple-50 p-2 rounded">
-              <p className="text-xs text-muted-foreground">Socio 2 ({settlement.partner2Share}%)</p>
-              <p className="font-bold text-purple-600">{formatCurrency(settlement.partner2Amount)}</p>
+              <p className="text-xs text-muted-foreground">Socio 2 ({settlement.partner2Share || 50}%)</p>
+              <p className="font-bold text-purple-600">{formatCurrency(settlement.partner2Amount || 0)}</p>
             </div>
           </div>
-        </div>
-
-        {/* Cargas */}
-        <div className="border-t pt-3">
-          <p className="text-sm text-muted-foreground">{settlement.totalLoadsCompleted} cargas incluidas</p>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-3 border-t">
-          {settlement.status === "draft" && (
-            <>
-              <Button size="sm" variant="outline" className="flex-1">
-                Agregar Cargas
-              </Button>
-              <Button size="sm" className="flex-1">
-                Calcular
-              </Button>
-            </>
-          )}
-          {settlement.status === "calculated" && (
-            <Button size="sm" className="w-full">
-              Aprobar
-            </Button>
-          )}
-          {settlement.status === "approved" && (
-            <Button size="sm" className="w-full">
-              Procesar
-            </Button>
-          )}
-          {settlement.status === "processed" && (
-            <Button size="sm" className="w-full">
-              Completar
-            </Button>
-          )}
-          {settlement.status === "completed" && (
-            <Button size="sm" variant="outline" className="w-full">
-              Ver Detalles
-            </Button>
-          )}
         </div>
       </CardContent>
     </Card>
@@ -142,6 +106,17 @@ export default function SettlementsPage() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-yellow-900">Aviso</p>
+            <p className="text-sm text-yellow-800">No se pudieron cargar los settlements. Intenta recargar la página.</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -154,49 +129,35 @@ export default function SettlementsPage() {
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Borradores</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{draftSettlements.length}</p>
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="text-2xl font-bold">{settlements?.length || 0}</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Pendientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{calculatedSettlements.length + approvedSettlements.length}</p>
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Borradores</p>
+            <p className="text-2xl font-bold text-gray-600">{draftSettlements.length}</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" />
-              En Proceso
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{processedSettlements.length}</p>
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Calculados</p>
+            <p className="text-2xl font-bold text-blue-600">{calculatedSettlements.length}</p>
           </CardContent>
         </Card>
-
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" />
-              Completados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Aprobados</p>
+            <p className="text-2xl font-bold text-purple-600">{approvedSettlements.length}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <p className="text-xs text-muted-foreground">Completados</p>
             <p className="text-2xl font-bold text-green-600">{completedSettlements.length}</p>
           </CardContent>
         </Card>
@@ -204,94 +165,106 @@ export default function SettlementsPage() {
 
       {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="all">Todos ({settlements?.length || 0})</TabsTrigger>
           <TabsTrigger value="draft">Borradores ({draftSettlements.length})</TabsTrigger>
-          <TabsTrigger value="pending">Pendientes ({calculatedSettlements.length + approvedSettlements.length})</TabsTrigger>
-          <TabsTrigger value="processing">Procesando ({processedSettlements.length})</TabsTrigger>
+          <TabsTrigger value="calculated">Calculados ({calculatedSettlements.length})</TabsTrigger>
+          <TabsTrigger value="approved">Aprobados ({approvedSettlements.length})</TabsTrigger>
+          <TabsTrigger value="processed">Procesados ({processedSettlements.length})</TabsTrigger>
           <TabsTrigger value="completed">Completados ({completedSettlements.length})</TabsTrigger>
         </TabsList>
 
-        {/* All Tab */}
         <TabsContent value="all" className="space-y-4">
           {settlements && settlements.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {settlements.map((settlement) => (
+            <div className="space-y-4">
+              {settlements.map((settlement: any) => (
                 <SettlementCard key={settlement.id} settlement={settlement} />
               ))}
             </div>
           ) : (
             <Card>
-              <CardContent className="py-8">
-                <p className="text-center text-muted-foreground">No hay settlements aún</p>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">No hay settlements</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* Draft Tab */}
         <TabsContent value="draft" className="space-y-4">
           {draftSettlements.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {draftSettlements.map((settlement) => (
+            <div className="space-y-4">
+              {draftSettlements.map((settlement: any) => (
                 <SettlementCard key={settlement.id} settlement={settlement} />
               ))}
             </div>
           ) : (
             <Card>
-              <CardContent className="py-8">
-                <p className="text-center text-muted-foreground">No hay borradores</p>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">No hay borradores</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* Pending Tab */}
-        <TabsContent value="pending" className="space-y-4">
-          {(calculatedSettlements.length > 0 || approvedSettlements.length > 0) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[...calculatedSettlements, ...approvedSettlements].map((settlement) => (
+        <TabsContent value="calculated" className="space-y-4">
+          {calculatedSettlements.length > 0 ? (
+            <div className="space-y-4">
+              {calculatedSettlements.map((settlement: any) => (
                 <SettlementCard key={settlement.id} settlement={settlement} />
               ))}
             </div>
           ) : (
             <Card>
-              <CardContent className="py-8">
-                <p className="text-center text-muted-foreground">No hay settlements pendientes</p>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">No hay settlements calculados</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* Processing Tab */}
-        <TabsContent value="processing" className="space-y-4">
+        <TabsContent value="approved" className="space-y-4">
+          {approvedSettlements.length > 0 ? (
+            <div className="space-y-4">
+              {approvedSettlements.map((settlement: any) => (
+                <SettlementCard key={settlement.id} settlement={settlement} />
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">No hay settlements aprobados</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="processed" className="space-y-4">
           {processedSettlements.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {processedSettlements.map((settlement) => (
+            <div className="space-y-4">
+              {processedSettlements.map((settlement: any) => (
                 <SettlementCard key={settlement.id} settlement={settlement} />
               ))}
             </div>
           ) : (
             <Card>
-              <CardContent className="py-8">
-                <p className="text-center text-muted-foreground">No hay settlements en proceso</p>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">No hay settlements procesados</p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
 
-        {/* Completed Tab */}
         <TabsContent value="completed" className="space-y-4">
           {completedSettlements.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {completedSettlements.map((settlement) => (
+            <div className="space-y-4">
+              {completedSettlements.map((settlement: any) => (
                 <SettlementCard key={settlement.id} settlement={settlement} />
               ))}
             </div>
           ) : (
             <Card>
-              <CardContent className="py-8">
-                <p className="text-center text-muted-foreground">No hay settlements completados</p>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">No hay settlements completados</p>
               </CardContent>
             </Card>
           )}
@@ -299,16 +272,11 @@ export default function SettlementsPage() {
       </Tabs>
 
       {/* Create Settlement Modal */}
-      {showCreateModal && (
-        <CreateSettlementModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-          onSuccess={() => {
-            setShowCreateModal(false);
-            refetch();
-          }}
-        />
-      )}
+      <CreateSettlementModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }
