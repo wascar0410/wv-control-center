@@ -1205,3 +1205,19 @@
 - [ ] Ejecutar migracion SQL en la base de datos
 - [ ] Agregar tests para quote analysis routers
 - [ ] Validar flujo completo: crear -> actualizar costos -> ver varianzas
+
+
+## Fase 6: Consolidar Loads & Dispatch
+- [x] Reescribir LoadsDispatch.tsx como centro operacional unificado
+- [x] Load Board con búsqueda, filtros por estado, y ordenamiento
+- [x] Pipeline visual con 7 estados (Available → Quoted → Assigned → In Transit → Delivered → Invoiced → Paid)
+- [x] Stats en tiempo real (total, disponibles, activas, completadas, ingreso total)
+- [x] Analytics tab con métricas de cargas completadas
+- [x] Historial tab (placeholder para futuro)
+- [x] StatusBadge component con color coding por estado
+- [x] Integración con trpc.loads.getActive
+- [ ] Agregar funcionalidad de crear nueva carga
+- [ ] Agregar funcionalidad de asignar chofer
+- [ ] Agregar funcionalidad de cambiar estado
+- [ ] Integración con Quote Analyzer para crear cotizaciones
+- [ ] Agregar tests para LoadsDispatch
