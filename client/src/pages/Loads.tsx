@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,8 @@ import {
   CheckCircle2,
   Receipt,
   CreditCard,
-  Plus,
+  ClipboardCheck,
+  LayoutDashboard,
 } from "lucide-react";
 
 function formatCurrency(value: number | string | null | undefined) {
@@ -90,45 +91,60 @@ export default function Loads() {
 
   const safeLoads: any[] = Array.isArray(loads) ? loads : [];
 
-  const countByStatus = safeLoads.reduce((acc: Record<string, number>, load: any) => {
-    acc[load.status] = (acc[load.status] ?? 0) + 1;
-    return acc;
-  }, {});
+  const countByStatus = useMemo(() => {
+    return safeLoads.reduce((acc: Record<string, number>, load: any) => {
+      acc[load.status] = (acc[load.status] ?? 0) + 1;
+      return acc;
+    }, {});
+  }, [safeLoads]);
 
-  const filteredLoads = safeLoads.filter((load: any) => {
-    const matchesTab = activeTab === "all" || load.status === activeTab;
-    const matchesSearch =
-      search === "" ||
-      String(load.clientName ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      String(load.pickupAddress ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      String(load.deliveryAddress ?? "").toLowerCase().includes(search.toLowerCase());
+  const filteredLoads = useMemo(() => {
+    return safeLoads.filter((load: any) => {
+      const matchesTab = activeTab === "all" || load.status === activeTab;
+      const matchesSearch =
+        search === "" ||
+        String(load.clientName ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        String(load.pickupAddress ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        String(load.deliveryAddress ?? "").toLowerCase().includes(search.toLowerCase()) ||
+        String(load.id ?? "").includes(search);
 
-    return matchesTab && matchesSearch;
-  });
+      return matchesTab && matchesSearch;
+    });
+  }, [safeLoads, activeTab, search]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="space-y-5 px-6 py-6">
-        {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-4xl font-bold text-white">Gestión de Cargas</h1>
             <p className="mt-2 text-sm text-slate-300">
-              {safeLoads.length} cargas en total · Selecciona una para ver el detalle
+              {safeLoads.length} cargas registradas · Aquí ves cargas ya creadas y listas para seguimiento
             </p>
           </div>
 
-          <Button
-            size="sm"
-            className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
-            onClick={() => setLocation("/quotation")}
-          >
-            <Plus className="h-4 w-4" />
-            Nueva Carga
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-slate-700 bg-slate-900 text-slate-100 hover:bg-slate-800"
+              onClick={() => setLocation("/loads-dispatch")}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Loads & Dispatch
+            </Button>
+
+            <Button
+              size="sm"
+              className="gap-1.5 bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => setLocation("/quotation")}
+            >
+              <ClipboardCheck className="h-4 w-4" />
+              Analizar Carga
+            </Button>
+          </div>
         </div>
 
-        {/* Summary Cards */}
         {safeLoads.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {Object.entries(STATUS_CONFIG).map(([status, cfg]) => {
@@ -170,7 +186,6 @@ export default function Loads() {
           </div>
         )}
 
-        {/* Status Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {STATUS_TABS.map((tab) => {
             const count = tab.value === "all" ? safeLoads.length : countByStatus[tab.value] ?? 0;
@@ -201,18 +216,16 @@ export default function Loads() {
           })}
         </div>
 
-        {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
-            placeholder="Buscar por cliente, origen o destino..."
+            placeholder="Buscar por cliente, origen, destino o ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="border-slate-700 bg-slate-950 pl-10 text-slate-100 placeholder:text-slate-400"
           />
         </div>
 
-        {/* Load List */}
         <Card className="border-slate-700 bg-slate-900 p-4 text-slate-100">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-12">
@@ -223,7 +236,7 @@ export default function Loads() {
             <div className="py-8 text-center">
               <Package className="mx-auto mb-2 h-10 w-10 text-slate-500" />
               <p className="text-sm text-slate-300">
-                No se pudieron cargar las cargas. Verifica tu sesión.
+                No se pudieron cargar las cargas. Verifica tu sesión o el backend.
               </p>
             </div>
           ) : filteredLoads.length === 0 ? (
@@ -243,7 +256,7 @@ export default function Loads() {
                   ? "Intenta con otro término de búsqueda."
                   : activeTab !== "all"
                   ? "Prueba seleccionando otro filtro."
-                  : "Crea tu primera carga con el botón de arriba."}
+                  : "Analiza una carga nueva para comenzar."}
               </p>
             </div>
           ) : (
@@ -262,16 +275,14 @@ export default function Loads() {
                     onClick={() => setLocation(`/loads/${load.id}`)}
                     className="group flex cursor-pointer items-center gap-3 rounded-2xl border border-slate-700 bg-slate-800/70 p-4 transition-all hover:border-blue-500/30 hover:bg-slate-800"
                   >
-                    {/* Status icon */}
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${cfg.bg}`}>
                       <Icon className={`h-4 w-4 ${cfg.color}`} />
                     </div>
 
-                    {/* Main info */}
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate text-sm font-semibold text-white">
-                          {load.clientName}
+                          {load.clientName || "Sin cliente"}
                         </p>
                         <span
                           className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${cfg.bg} ${cfg.border} ${cfg.color}`}
@@ -281,11 +292,10 @@ export default function Loads() {
                       </div>
 
                       <p className="mt-1 truncate text-xs text-slate-300">
-                        {load.pickupAddress} → {load.deliveryAddress}
+                        {load.pickupAddress || "—"} → {load.deliveryAddress || "—"}
                       </p>
                     </div>
 
-                    {/* Price & arrow */}
                     <div className="flex shrink-0 items-center gap-2 text-right">
                       <div>
                         <p className="text-sm font-bold text-white">
