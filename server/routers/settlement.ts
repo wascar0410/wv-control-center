@@ -28,20 +28,25 @@ export const settlementRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
-      }
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
+        }
 
-      return await createSettlement({
-        settlementPeriod: input.settlementPeriod,
-        startDate: input.startDate,
-        endDate: input.endDate,
-        partner1Id: input.partner1Id,
-        partner2Id: input.partner2Id,
-        partner1Share: input.partner1Share,
-        partner2Share: input.partner2Share,
-      });
+        return await createSettlement({
+          settlementPeriod: input.settlementPeriod,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          partner1Id: input.partner1Id,
+          partner2Id: input.partner2Id,
+          partner1Share: input.partner1Share,
+          partner2Share: input.partner2Share,
+        });
+      } catch (err) {
+        console.error("[settlement.create] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -50,7 +55,12 @@ export const settlementRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return await getSettlementWithLoads(input.id);
+      try {
+        return await getSettlementWithLoads(input.id);
+      } catch (err) {
+        console.error("[settlement.getById] Error:", err);
+        return null;
+      }
     }),
 
   /**
@@ -68,19 +78,24 @@ export const settlementRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
-      }
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
+        }
 
-      return await addLoadToSettlement(
-        input.settlementId,
-        input.loadId,
-        input.loadIncome,
-        input.loadExpenses,
-        input.partner1Share,
-        input.partner2Share
-      );
+        return await addLoadToSettlement(
+          input.settlementId,
+          input.loadId,
+          input.loadIncome,
+          input.loadExpenses,
+          input.partner1Share,
+          input.partner2Share
+        );
+      } catch (err) {
+        console.error("[settlement.addLoad] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -89,12 +104,17 @@ export const settlementRouter = router({
   calculate: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
-      }
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
+        }
 
-      return await calculateSettlement(input.id);
+        return await calculateSettlement(input.id);
+      } catch (err) {
+        console.error("[settlement.calculate] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -103,12 +123,17 @@ export const settlementRouter = router({
   approve: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
-      }
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
+        }
 
-      return await approveSettlement(input.id, ctx.user.id);
+        return await approveSettlement(input.id, ctx.user.id);
+      } catch (err) {
+        console.error("[settlement.approve] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -117,12 +142,17 @@ export const settlementRouter = router({
   process: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
-      }
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
+        }
 
-      return await processSettlement(input.id);
+        return await processSettlement(input.id);
+      } catch (err) {
+        console.error("[settlement.process] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -131,15 +161,18 @@ export const settlementRouter = router({
   complete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
+        }
+
+        return await completeSettlement(input.id);
+      } catch (err) {
+        console.error("[settlement.complete] Error:", err);
+        throw err;
       }
-
-      return await completeSettlement(input.id);
     }),
-
-
 
   /**
    * Get all settlements
@@ -152,13 +185,17 @@ export const settlementRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
+        }
+
+        const result = await getAllSettlements(input.limit, input.offset);
+        return result || [];
+      } catch (err) {
+        console.error("[settlement.getAll] Error:", err);
+        return [];
       }
-
-      return await getAllSettlements(input.limit, input.offset);
     }),
-
-
 });

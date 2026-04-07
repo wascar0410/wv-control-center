@@ -19,18 +19,40 @@ export const walletRouter = router({
    * Get current user's wallet
    */
   getMyWallet: protectedProcedure.query(async ({ ctx }) => {
-    const wallet = await getWalletByDriverId(ctx.user.id);
-    if (!wallet) {
-      return await getOrCreateWallet(ctx.user.id);
+    try {
+      const wallet = await getWalletByDriverId(ctx.user.id);
+      if (!wallet) {
+        return await getOrCreateWallet(ctx.user.id);
+      }
+      return wallet;
+    } catch (err) {
+      console.error("[wallet.getMyWallet] Error:", err);
+      return null;
     }
-    return wallet;
   }),
 
   /**
    * Get wallet summary (wallet + recent transactions + pending withdrawals)
    */
   getWalletSummary: protectedProcedure.query(async ({ ctx }) => {
-    return await getWalletSummary(ctx.user.id);
+    try {
+      const result = await getWalletSummary(ctx.user.id);
+      if (!result) {
+        return {
+          wallet: null,
+          recentTransactions: [],
+          pendingWithdrawals: [],
+        };
+      }
+      return result;
+    } catch (err) {
+      console.error("[wallet.getWalletSummary] Error:", err);
+      return {
+        wallet: null,
+        recentTransactions: [],
+        pendingWithdrawals: [],
+      };
+    }
   }),
 
   /**
@@ -44,10 +66,15 @@ export const walletRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const wallet = await getWalletByDriverId(ctx.user.id);
-      if (!wallet) return [];
+      try {
+        const wallet = await getWalletByDriverId(ctx.user.id);
+        if (!wallet) return [];
 
-      return await getWalletTransactions(wallet.id, input.limit, input.offset);
+        return await getWalletTransactions(wallet.id, input.limit, input.offset);
+      } catch (err) {
+        console.error("[wallet.getTransactions] Error:", err);
+        return [];
+      }
     }),
 
   /**
@@ -63,40 +90,45 @@ export const walletRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const wallet = await getWalletByDriverId(ctx.user.id);
-      if (!wallet) {
-        throw new Error("Wallet not found");
+      try {
+        const wallet = await getWalletByDriverId(ctx.user.id);
+        if (!wallet) {
+          throw new Error("Wallet not found");
+        }
+
+        // Check available balance
+        const available = Number(wallet.availableBalance);
+        if (available < input.amount) {
+          throw new Error("Insufficient balance");
+        }
+
+        // Check minimum withdrawal amount
+        const minimum = Number(wallet.minimumWithdrawalAmount);
+        if (input.amount < minimum) {
+          throw new Error(`Minimum withdrawal amount is $${minimum}`);
+        }
+
+        const fee = (input.amount * Number(wallet.withdrawalFeePercent)) / 100;
+
+        const withdrawal = await requestWithdrawal(wallet.id, ctx.user.id, {
+          amount: input.amount,
+          fee,
+          method: input.method,
+          bankAccountId: input.bankAccountId,
+          notes: input.notes,
+        });
+
+        // Deduct from available balance
+        await updateWalletBalance(wallet.id, {
+          availableBalance: String(available - input.amount),
+          pendingBalance: String(Number(wallet.pendingBalance) + input.amount),
+        });
+
+        return withdrawal;
+      } catch (err) {
+        console.error("[wallet.requestWithdrawal] Error:", err);
+        throw err;
       }
-
-      // Check available balance
-      const available = Number(wallet.availableBalance);
-      if (available < input.amount) {
-        throw new Error("Insufficient balance");
-      }
-
-      // Check minimum withdrawal amount
-      const minimum = Number(wallet.minimumWithdrawalAmount);
-      if (input.amount < minimum) {
-        throw new Error(`Minimum withdrawal amount is $${minimum}`);
-      }
-
-      const fee = (input.amount * Number(wallet.withdrawalFeePercent)) / 100;
-
-      const withdrawal = await requestWithdrawal(wallet.id, ctx.user.id, {
-        amount: input.amount,
-        fee,
-        method: input.method,
-        bankAccountId: input.bankAccountId,
-        notes: input.notes,
-      });
-
-      // Deduct from available balance
-      await updateWalletBalance(wallet.id, {
-        availableBalance: String(available - input.amount),
-        pendingBalance: String(Number(wallet.pendingBalance) + input.amount),
-      });
-
-      return withdrawal;
     }),
 
   /**
@@ -110,7 +142,12 @@ export const walletRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      return await getWithdrawals(ctx.user.id, input.limit, input.offset);
+      try {
+        return await getWithdrawals(ctx.user.id, input.limit, input.offset);
+      } catch (err) {
+        console.error("[wallet.getWithdrawals] Error:", err);
+        return [];
+      }
     }),
 
   /**
@@ -123,30 +160,35 @@ export const walletRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin or owner
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new Error("Unauthorized");
-      }
-
-      const withdrawal = await failWithdrawal(
-        input.withdrawalId,
-        "Cancelled by admin"
-      );
-
-      // Restore balance
-      if (withdrawal) {
-        const wallet = await getWalletByDriverId(withdrawal.driverId);
-        if (wallet) {
-          const available = Number(wallet.availableBalance) + Number(withdrawal.amount);
-          const pending = Math.max(0, Number(wallet.pendingBalance) - Number(withdrawal.amount));
-          await updateWalletBalance(wallet.id, {
-            availableBalance: String(available),
-            pendingBalance: String(pending),
-          });
+      try {
+        // Verify user is admin or owner
+        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new Error("Unauthorized");
         }
-      }
 
-      return withdrawal;
+        const withdrawal = await failWithdrawal(
+          input.withdrawalId,
+          "Cancelled by admin"
+        );
+
+        // Restore balance
+        if (withdrawal) {
+          const wallet = await getWalletByDriverId(withdrawal.driverId);
+          if (wallet) {
+            const available = Number(wallet.availableBalance) + Number(withdrawal.amount);
+            const pending = Math.max(0, Number(wallet.pendingBalance) - Number(withdrawal.amount));
+            await updateWalletBalance(wallet.id, {
+              availableBalance: String(available),
+              pendingBalance: String(pending),
+            });
+          }
+        }
+
+        return withdrawal;
+      } catch (err) {
+        console.error("[wallet.cancelWithdrawal] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -161,43 +203,65 @@ export const walletRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify user is admin
-      if (ctx.user.role !== "admin") {
-        throw new Error("Unauthorized");
-      }
-
-      const wallet = await getWalletByDriverId(input.driverId);
-      if (!wallet) {
-        throw new Error("Wallet not found");
-      }
-
-      const newAvailable = Number(wallet.availableBalance) + input.amount;
-
-      await updateWalletBalance(wallet.id, {
-        availableBalance: String(newAvailable),
-        totalEarnings: String(Number(wallet.totalEarnings) + input.amount),
-      });
-
-      const transaction = await addWalletTransaction(
-        wallet.id,
-        input.driverId,
-        {
-          type: "adjustment",
-          amount: input.amount,
-          description: input.reason,
-          status: "completed",
+      try {
+        // Verify user is admin
+        if (ctx.user.role !== "admin") {
+          throw new Error("Unauthorized");
         }
-      );
 
-      return transaction;
+        const wallet = await getWalletByDriverId(input.driverId);
+        if (!wallet) {
+          throw new Error("Wallet not found");
+        }
+
+        const newAvailable = Number(wallet.availableBalance) + input.amount;
+
+        await updateWalletBalance(wallet.id, {
+          availableBalance: String(newAvailable),
+          totalEarnings: String(Number(wallet.totalEarnings) + input.amount),
+        });
+
+        const transaction = await addWalletTransaction(
+          wallet.id,
+          input.driverId,
+          {
+            type: "adjustment",
+            amount: input.amount,
+            description: input.reason,
+            status: "completed",
+          }
+        );
+
+        return transaction;
+      } catch (err) {
+        console.error("[wallet.addAdjustment] Error:", err);
+        throw err;
+      }
     }),
 
   /**
    * Get wallet statistics
    */
   getStats: protectedProcedure.query(async ({ ctx }) => {
-    const wallet = await getWalletByDriverId(ctx.user.id);
-    if (!wallet) {
+    try {
+      const wallet = await getWalletByDriverId(ctx.user.id);
+      if (!wallet) {
+        return {
+          totalEarnings: 0,
+          availableBalance: 0,
+          pendingBalance: 0,
+          blockedBalance: 0,
+        };
+      }
+
+      return {
+        totalEarnings: Number(wallet.totalEarnings),
+        availableBalance: Number(wallet.availableBalance),
+        pendingBalance: Number(wallet.pendingBalance),
+        blockedBalance: Number(wallet.blockedBalance),
+      };
+    } catch (err) {
+      console.error("[wallet.getStats] Error:", err);
       return {
         totalEarnings: 0,
         availableBalance: 0,
@@ -205,12 +269,5 @@ export const walletRouter = router({
         blockedBalance: 0,
       };
     }
-
-    return {
-      totalEarnings: Number(wallet.totalEarnings),
-      availableBalance: Number(wallet.availableBalance),
-      pendingBalance: Number(wallet.pendingBalance),
-      blockedBalance: Number(wallet.blockedBalance),
-    };
   }),
 });

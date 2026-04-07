@@ -41,10 +41,15 @@ export const alertsAndTasksRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      try {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await createAlert(input);
+      } catch (err) {
+        console.error("[alerts.createAlert] Error:", err);
+        throw err;
       }
-      return createAlert(input);
     }),
 
   /**
@@ -59,7 +64,13 @@ export const alertsAndTasksRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      return getAlertsForUser(ctx.user.id, input);
+      try {
+        const result = await getAlertsForUser(ctx.user.id, input);
+        return result || [];
+      } catch (err) {
+        console.error("[alerts.getMyAlerts] Error:", err);
+        return [];
+      }
     }),
 
   /**
@@ -68,7 +79,12 @@ export const alertsAndTasksRouter = router({
   markAsRead: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      return markAlertAsRead(input.id);
+      try {
+        return await markAlertAsRead(input.id);
+      } catch (err) {
+        console.error("[alerts.markAsRead] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -77,14 +93,25 @@ export const alertsAndTasksRouter = router({
   acknowledge: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
-      return acknowledgeAlert(input.id);
+      try {
+        return await acknowledgeAlert(input.id);
+      } catch (err) {
+        console.error("[alerts.acknowledge] Error:", err);
+        throw err;
+      }
     }),
 
   /**
    * Get unread alert count
    */
   getUnreadCount: protectedProcedure.query(async ({ ctx }) => {
-    return getUnreadAlertCount(ctx.user.id);
+    try {
+      const result = await getUnreadAlertCount(ctx.user.id);
+      return result || 0;
+    } catch (err) {
+      console.error("[alerts.getUnreadCount] Error:", err);
+      return 0;
+    }
   }),
 
   /**
@@ -108,13 +135,18 @@ export const alertsAndTasksRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      try {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await createTask({
+          ...input,
+          createdBy: ctx.user.id,
+        });
+      } catch (err) {
+        console.error("[tasks.createTask] Error:", err);
+        throw err;
       }
-      return createTask({
-        ...input,
-        createdBy: ctx.user.id,
-      });
     }),
 
   /**
@@ -129,7 +161,13 @@ export const alertsAndTasksRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      return getTasksForUser(ctx.user.id, input);
+      try {
+        const result = await getTasksForUser(ctx.user.id, input);
+        return result || [];
+      } catch (err) {
+        console.error("[tasks.getMyTasks] Error:", err);
+        return [];
+      }
     }),
 
   /**
@@ -143,7 +181,12 @@ export const alertsAndTasksRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      return updateTaskStatus(input.id, input.status);
+      try {
+        return await updateTaskStatus(input.id, input.status);
+      } catch (err) {
+        console.error("[tasks.updateStatus] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -157,7 +200,12 @@ export const alertsAndTasksRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      return updateTaskProgress(input.id, input.progress);
+      try {
+        return await updateTaskProgress(input.id, input.progress);
+      } catch (err) {
+        console.error("[tasks.updateProgress] Error:", err);
+        throw err;
+      }
     }),
 
   /**
@@ -166,7 +214,12 @@ export const alertsAndTasksRouter = router({
   getWithComments: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return getTaskWithComments(input.id);
+      try {
+        return await getTaskWithComments(input.id);
+      } catch (err) {
+        console.error("[tasks.getWithComments] Error:", err);
+        return null;
+      }
     }),
 
   /**
@@ -180,27 +233,44 @@ export const alertsAndTasksRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return addTaskComment(input.taskId, input.comment, ctx.user.id);
+      try {
+        return await addTaskComment(input.taskId, input.comment, ctx.user.id);
+      } catch (err) {
+        console.error("[tasks.addComment] Error:", err);
+        throw err;
+      }
     }),
 
   /**
    * Get overdue tasks
    */
   getOverdue: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-      throw new TRPCError({ code: "FORBIDDEN" });
+    try {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const result = await getOverdueTasks();
+      return result || [];
+    } catch (err) {
+      console.error("[tasks.getOverdue] Error:", err);
+      return [];
     }
-    return getOverdueTasks();
   }),
 
   /**
    * Get tasks due today
    */
   getDueToday: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-      throw new TRPCError({ code: "FORBIDDEN" });
+    try {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const result = await getTasksDueToday();
+      return result || [];
+    } catch (err) {
+      console.error("[tasks.getDueToday] Error:", err);
+      return [];
     }
-    return getTasksDueToday();
   }),
 
   /**
@@ -209,9 +279,27 @@ export const alertsAndTasksRouter = router({
   getStats: protectedProcedure
     .input(z.object({ userId: z.number().optional() }))
     .query(async ({ ctx, input }) => {
-      if (input.userId && input.userId !== ctx.user.id && ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      try {
+        if (input.userId && input.userId !== ctx.user.id && ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        const result = await getTaskStats(input.userId);
+        return result || {
+          total: 0,
+          pending: 0,
+          inProgress: 0,
+          completed: 0,
+          cancelled: 0,
+        };
+      } catch (err) {
+        console.error("[tasks.getStats] Error:", err);
+        return {
+          total: 0,
+          pending: 0,
+          inProgress: 0,
+          completed: 0,
+          cancelled: 0,
+        };
       }
-      return getTaskStats(input.userId);
     }),
 });

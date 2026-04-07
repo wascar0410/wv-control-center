@@ -34,13 +34,18 @@ export const invoicingRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      try {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await createInvoice({
+          ...input,
+          createdBy: ctx.user.id,
+        });
+      } catch (err) {
+        console.error("[invoicing.create] Error:", err);
+        throw err;
       }
-      return createInvoice({
-        ...input,
-        createdBy: ctx.user.id,
-      });
     }),
 
   /**
@@ -49,7 +54,12 @@ export const invoicingRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return getInvoiceById(input.id);
+      try {
+        return await getInvoiceById(input.id);
+      } catch (err) {
+        console.error("[invoicing.getById] Error:", err);
+        return null;
+      }
     }),
 
   /**
@@ -65,7 +75,13 @@ export const invoicingRouter = router({
       })
     )
     .query(async ({ input }) => {
-      return getAllInvoices(input);
+      try {
+        const result = await getAllInvoices(input);
+        return result || [];
+      } catch (err) {
+        console.error("[invoicing.getAll] Error:", err);
+        return [];
+      }
     }),
 
   /**
@@ -83,23 +99,48 @@ export const invoicingRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      try {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await recordInvoicePayment({
+          ...input,
+          recordedBy: ctx.user.id,
+        });
+      } catch (err) {
+        console.error("[invoicing.recordPayment] Error:", err);
+        throw err;
       }
-      return recordInvoicePayment({
-        ...input,
-        recordedBy: ctx.user.id,
-      });
     }),
 
   /**
    * Get aging report
    */
   getAgingReport: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-      throw new TRPCError({ code: "FORBIDDEN" });
+    try {
+      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      const result = await getReceivablesAgingReport();
+      return result || {
+        totalOverdue: 0,
+        total30Days: 0,
+        total60Days: 0,
+        total90Days: 0,
+        totalOutstanding: 0,
+        invoices: [],
+      };
+    } catch (err) {
+      console.error("[invoicing.getAgingReport] Error:", err);
+      return {
+        totalOverdue: 0,
+        total30Days: 0,
+        total60Days: 0,
+        total90Days: 0,
+        totalOutstanding: 0,
+        invoices: [],
+      };
     }
-    return getReceivablesAgingReport();
   }),
 
   /**
@@ -108,7 +149,13 @@ export const invoicingRouter = router({
   getReceivablesByBroker: protectedProcedure
     .input(z.object({ brokerName: z.string() }))
     .query(async ({ input }) => {
-      return getReceivablesByBroker(input.brokerName);
+      try {
+        const result = await getReceivablesByBroker(input.brokerName);
+        return result || [];
+      } catch (err) {
+        console.error("[invoicing.getReceivablesByBroker] Error:", err);
+        return [];
+      }
     }),
 
   /**
@@ -117,10 +164,15 @@ export const invoicingRouter = router({
   issue: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      try {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await issueInvoice(input.id);
+      } catch (err) {
+        console.error("[invoicing.issue] Error:", err);
+        throw err;
       }
-      return issueInvoice(input.id);
     }),
 
   /**
@@ -129,10 +181,15 @@ export const invoicingRouter = router({
   cancel: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      try {
+        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
+          throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return await cancelInvoice(input.id);
+      } catch (err) {
+        console.error("[invoicing.cancel] Error:", err);
+        throw err;
       }
-      return cancelInvoice(input.id);
     }),
 
   /**
@@ -141,6 +198,11 @@ export const invoicingRouter = router({
   getWithPayments: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
-      return getInvoiceWithPayments(input.id);
+      try {
+        return await getInvoiceWithPayments(input.id);
+      } catch (err) {
+        console.error("[invoicing.getWithPayments] Error:", err);
+        return null;
+      }
     }),
 });

@@ -101,13 +101,11 @@ export const quoteAnalysisRouter = router({
       }
 
       try {
-        return await getQuoteAnalysisById(input.id);
+        const result = await getQuoteAnalysisById(input.id);
+        return result || null;
       } catch (error) {
         console.error("[quoteAnalysis.getById] error:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "No se pudo obtener el análisis",
-        });
+        return null;
       }
     }),
 
@@ -122,13 +120,11 @@ export const quoteAnalysisRouter = router({
       }
 
       try {
-        return await getQuoteAnalysisByLoadId(input.loadId);
+        const result = await getQuoteAnalysisByLoadId(input.loadId);
+        return result || null;
       } catch (error) {
         console.error("[quoteAnalysis.getByLoadId] error:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "No se pudo obtener el análisis por carga",
-        });
+        return null;
       }
     }),
 
@@ -190,18 +186,16 @@ export const quoteAnalysisRouter = router({
       }
 
       try {
-        return await getAllQuoteAnalyses({
+        const result = await getAllQuoteAnalyses({
           verdict: input.verdict,
           brokerName: input.brokerName,
           limit: input.limit,
           offset: input.offset,
         });
+        return result || [];
       } catch (error) {
         console.error("[quoteAnalysis.getAll] error:", error);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "No se pudo obtener la lista de análisis",
-        });
+        return [];
       }
     }),
 
@@ -214,13 +208,25 @@ export const quoteAnalysisRouter = router({
     }
 
     try {
-      return await getQuoteAnalysisSummary();
+      const result = await getQuoteAnalysisSummary();
+      return result || {
+        totalAnalyzed: 0,
+        acceptedCount: 0,
+        negotiateCount: 0,
+        rejectedCount: 0,
+        avgMargin: 0,
+        brokerSummary: [],
+      };
     } catch (error) {
       console.error("[quoteAnalysis.getSummary] error:", error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "No se pudo obtener el resumen de análisis",
-      });
+      return {
+        totalAnalyzed: 0,
+        acceptedCount: 0,
+        negotiateCount: 0,
+        rejectedCount: 0,
+        avgMargin: 0,
+        brokerSummary: [],
+      };
     }
   }),
 
