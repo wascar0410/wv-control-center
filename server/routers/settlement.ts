@@ -12,22 +12,30 @@ import {
   getAllSettlements,
 } from "../db";
 
+/**
+ * Validation
+ */
 const settlementPeriodSchema = z
   .string()
   .regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM");
+
+const percentageSchema = z.number().min(0).max(100);
+
+const positiveIdSchema = z.number().int().positive();
 
 const paginationSchema = z.object({
   limit: z.number().int().min(1).max(200).default(50),
   offset: z.number().int().min(0).default(0),
 });
 
-const settlementShareSchema = z.number().min(0).max(100);
-
+/**
+ * Helpers
+ */
 function canManageSettlements(role?: string) {
   return role === "admin" || role === "owner";
 }
 
-function assertSettlementAccess(role?: string) {
+function assertCanManageSettlements(role?: string) {
   if (!canManageSettlements(role)) {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -57,10 +65,10 @@ export const settlementRouter = router({
           settlementPeriod: settlementPeriodSchema,
           startDate: z.date(),
           endDate: z.date(),
-          partner1Id: z.number().int().positive(),
-          partner2Id: z.number().int().positive(),
-          partner1Share: settlementShareSchema.default(50),
-          partner2Share: settlementShareSchema.default(50),
+          partner1Id: positiveIdSchema,
+          partner2Id: positiveIdSchema,
+          partner1Share: percentageSchema.default(50),
+          partner2Share: percentageSchema.default(50),
         })
         .superRefine((data, ctx) => {
           if (data.endDate < data.startDate) {
@@ -90,7 +98,7 @@ export const settlementRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
 
         return await createSettlement({
           settlementPeriod: input.settlementPeriod,
@@ -119,10 +127,10 @@ export const settlementRouter = router({
    * Get settlement with loads
    */
   getById: protectedProcedure
-    .input(z.object({ id: z.number().int().positive() }))
+    .input(z.object({ id: positiveIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
 
         const result = await getSettlementWithLoads(input.id);
         return result ?? null;
@@ -139,12 +147,12 @@ export const settlementRouter = router({
     .input(
       z
         .object({
-          settlementId: z.number().int().positive(),
-          loadId: z.number().int().positive(),
+          settlementId: positiveIdSchema,
+          loadId: positiveIdSchema,
           loadIncome: z.number().min(0),
           loadExpenses: z.number().min(0),
-          partner1Share: settlementShareSchema.default(50),
-          partner2Share: settlementShareSchema.default(50),
+          partner1Share: percentageSchema.default(50),
+          partner2Share: percentageSchema.default(50),
         })
         .superRefine((data, ctx) => {
           if (Math.abs(data.partner1Share + data.partner2Share - 100) > 0.0001) {
@@ -158,7 +166,7 @@ export const settlementRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
         validateShares(input.partner1Share, input.partner2Share);
 
         return await addLoadToSettlement(
@@ -187,10 +195,10 @@ export const settlementRouter = router({
    * Calculate settlement totals
    */
   calculate: protectedProcedure
-    .input(z.object({ id: z.number().int().positive() }))
+    .input(z.object({ id: positiveIdSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
         return await calculateSettlement(input.id);
       } catch (err) {
         console.error("[settlement.calculate]", err);
@@ -210,10 +218,10 @@ export const settlementRouter = router({
    * Approve settlement
    */
   approve: protectedProcedure
-    .input(z.object({ id: z.number().int().positive() }))
+    .input(z.object({ id: positiveIdSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
         return await approveSettlement(input.id, ctx.user.id);
       } catch (err) {
         console.error("[settlement.approve]", err);
@@ -233,10 +241,10 @@ export const settlementRouter = router({
    * Process settlement (distribute funds)
    */
   process: protectedProcedure
-    .input(z.object({ id: z.number().int().positive() }))
+    .input(z.object({ id: positiveIdSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
         return await processSettlement(input.id);
       } catch (err) {
         console.error("[settlement.process]", err);
@@ -256,10 +264,10 @@ export const settlementRouter = router({
    * Complete settlement
    */
   complete: protectedProcedure
-    .input(z.object({ id: z.number().int().positive() }))
+    .input(z.object({ id: positiveIdSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
         return await completeSettlement(input.id);
       } catch (err) {
         console.error("[settlement.complete]", err);
@@ -282,7 +290,7 @@ export const settlementRouter = router({
     .input(paginationSchema)
     .query(async ({ ctx, input }) => {
       try {
-        assertSettlementAccess(ctx.user.role);
+        assertCanManageSettlements(ctx.user.role);
 
         const result = await getAllSettlements(input.limit, input.offset);
         return Array.isArray(result) ? result : [];
