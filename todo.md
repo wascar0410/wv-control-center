@@ -1314,3 +1314,30 @@
 - [ ] Remover archivos obsoletos
 - [ ] Validar build sin errores
 - [ ] Crear README.md con instrucciones de setup
+
+
+## Próximas Tareas - Sesión Actual
+
+### TAREA 1: Crear Company Management UI
+- [x] Crear CompanyManagement.tsx con formulario modal para crear empresas
+- [x] Integrar en App.tsx con ruta /company-management
+- [x] Agregar menu item en DashboardLayout
+- [x] Implementar DB helpers en server/db.ts (getAll, create, update, delete)
+- [x] Crear tRPC router company.ts con procedures
+
+### TAREA 2: Agregar Seed Data
+- [x] Crear script seed-data.mjs con datos de prueba
+- [x] Generar 3-5 empresas (carriers) de prueba
+- [x] Generar 5-10 usuarios (admin, dispatcher, drivers)
+- [x] Generar 20-30 cargas de prueba
+- [x] Generar facturas, billeteras, transacciones de prueba
+- [x] Ejecutar script para poblar base de datos
+- [x] Ejecutar migración 0036_watery_shard.sql (companies table)
+- [x] Crear empresa de prueba "WV Transport LLC" con ownerId
+
+### TAREA 3: Implementar Company Context en Frontend
+- [ ] Crear CompanyContext.tsx para manejar companyId global
+- [ ] Agregar filtrado de companyId en todas las queries tRPC
+- [ ] Validar que datos estén aislados por empresa
+- [ ] Agregar selector de empresa en DashboardLayout (si multi-tenant)
+- [ ] Tests para company isolation

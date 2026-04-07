@@ -11,6 +11,7 @@ const FleetTracking = lazy(() => import("./pages/FleetTracking"));
 const DriverOps = lazy(() => import("./pages/DriverOps"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
 const Company = lazy(() => import("./pages/Company"));
+const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
 const BusinessSettings = lazy(() => import("./pages/BusinessSettings"));
 const WalletDashboard = lazy(() => import("./pages/WalletDashboard"));
 const SettlementsPage = lazy(() => import("./pages/SettlementsPage"));
@@ -87,6 +88,7 @@ export default function App() {
         {/* Team & Company */}
         <Route path="/team" component={withLayout(UserManagement)} />
         <Route path="/company" component={withLayout(Company)} />
+        <Route path="/company-management" component={withLayout(CompanyManagement)} />
         <Route path="/chat" component={withLayout(Chat)} />
         <Route path="/profile" component={withLayout(UserProfile)} />
         <Route path="/settings" component={withLayout(BusinessSettings)} />

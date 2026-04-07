@@ -82,6 +82,7 @@ const adminMenuItems = [
 
   // ===== COMPANY =====
   { icon: Building2, label: "Company", path: "/company", description: "Información corporativa" },
+  { icon: Building2, label: "Company Management", path: "/company-management", description: "Gestión de empresas (carriers)" },
   // ===== COORDINATION =====
   { icon: Bell, label: "Alerts & Tasks", path: "/alerts-tasks", description: "Notificaciones y tareas del equipo" },
 

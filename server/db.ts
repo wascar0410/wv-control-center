@@ -3783,3 +3783,116 @@ export async function getTaskStats(userId?: number) {
     overdue: allTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== "completed").length,
   };
 }
+
+
+// ─── Companies ──────────────────────────────────────────────────────────────
+
+/**
+ * Create a new company
+ */
+export async function createCompany(data: {
+  name: string;
+  dotNumber?: string;
+  mcNumber?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+  logoUrl?: string;
+  description?: string;
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  insuranceExpiryDate?: Date;
+  complianceStatus?: "active" | "suspended" | "inactive";
+  ownerId: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [company] = await db
+    .insert(companies)
+    .values({
+      name: data.name,
+      dotNumber: data.dotNumber,
+      mcNumber: data.mcNumber,
+      phone: data.phone,
+      email: data.email,
+      website: data.website,
+      address: data.address,
+      city: data.city,
+      state: data.state,
+      zipCode: data.zipCode,
+      country: data.country || "USA",
+      logoUrl: data.logoUrl,
+      description: data.description,
+      insuranceProvider: data.insuranceProvider,
+      insurancePolicyNumber: data.insurancePolicyNumber,
+      insuranceExpiryDate: data.insuranceExpiryDate,
+      complianceStatus: data.complianceStatus || "active",
+      ownerId: data.ownerId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+
+  return company;
+}
+
+/**
+ * Get company by ID
+ */
+export async function getCompanyById(companyId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return db.query.companies.findFirst({
+    where: eq(companies.id, companyId),
+  });
+}
+
+/**
+ * Get all companies for an owner
+ */
+export async function getCompaniesByOwnerId(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db.query.companies.findMany({
+    where: eq(companies.ownerId, ownerId),
+    orderBy: desc(companies.createdAt),
+  });
+}
+
+/**
+ * Update company
+ */
+export async function updateCompany(companyId: number, data: Partial<typeof companies.$inferInsert>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const [updated] = await db
+    .update(companies)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
+    .where(eq(companies.id, companyId))
+    .returning();
+
+  return updated;
+}
+
+/**
+ * Delete company
+ */
+export async function deleteCompany(companyId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  await db.delete(companies).where(eq(companies.id, companyId));
+  return true;
+}
