@@ -3,7 +3,7 @@
  * Unified Loads & Dispatch - Operational hub for approved loads
  * Flow: Analyze -> Approve -> Operate
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +27,6 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 
-// Status pipeline
 const LOAD_STATUSES = [
   { value: "available", label: "Disponible", color: "bg-blue-500/20 text-blue-300", icon: Package },
   { value: "quoted", label: "Cotizado", color: "bg-purple-500/20 text-purple-300", icon: FileText },
@@ -59,6 +58,38 @@ function formatCurrency(value: number | string | null | undefined) {
     currency: "USD",
     minimumFractionDigits: 2,
   }).format(Number.isFinite(num) ? num : 0);
+}
+
+function CreatedLoadBanner({
+  loadId,
+  onDismiss,
+}: {
+  loadId: string | null;
+  onDismiss: () => void;
+}) {
+  return (
+    <Card className="border-green-300 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
+      <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="rounded-full bg-green-600 p-2 text-white">
+            <CheckCircle className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="font-semibold text-green-700 dark:text-green-400">
+              ✅ Carga {loadId ? `#${loadId}` : ""} aprobada y enviada al pipeline
+            </p>
+            <p className="text-sm text-green-700/80 dark:text-green-400/80">
+              Ya está disponible en Loads & Dispatch para asignación, seguimiento y operación.
+            </p>
+          </div>
+        </div>
+
+        <Button variant="outline" size="sm" onClick={onDismiss}>
+          Cerrar
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
 
 function ChangeStatusModal({
@@ -498,8 +529,38 @@ function AnalyticsTab() {
 }
 
 export default function LoadsDispatch() {
+  const [createdBanner, setCreatedBanner] = useState<{
+    show: boolean;
+    loadId: string | null;
+  }>({ show: false, loadId: null });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const created = params.get("created");
+    const loadId = params.get("loadId");
+
+    if (created === "1") {
+      setCreatedBanner({ show: true, loadId });
+      toast.success(
+        loadId
+          ? `✅ Carga #${loadId} aprobada y enviada al pipeline`
+          : "✅ Carga aprobada y enviada al pipeline"
+      );
+
+      const cleanUrl = `${window.location.pathname}`;
+      window.history.replaceState({}, "", cleanUrl);
+    }
+  }, []);
+
   return (
     <div className="space-y-4">
+      {createdBanner.show && (
+        <CreatedLoadBanner
+          loadId={createdBanner.loadId}
+          onDismiss={() => setCreatedBanner({ show: false, loadId: null })}
+        />
+      )}
+
       <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Loads & Dispatch</h1>
