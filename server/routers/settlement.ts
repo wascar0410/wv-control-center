@@ -1,322 +1,294 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
 import {
-  getOrCreateWallet,
-  getWalletByDriverId,
-  updateWalletBalance,
-  addWalletTransaction,
-  getWalletTransactions,
-  requestWithdrawal,
-  getWithdrawals,
-  failWithdrawal,
-  getWalletSummary,
+  createSettlement,
+  getSettlementWithLoads,
+  addLoadToSettlement,
+  calculateSettlement,
+  approveSettlement,
+  processSettlement,
+  completeSettlement,
+  getAllSettlements,
 } from "../db";
 
-/**
- * Helpers
- */
-function toNumber(value: any): number {
-  const n = typeof value === "number" ? value : parseFloat(value);
-  return Number.isFinite(n) ? n : 0;
+const settlementPeriodSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}$/, "Format must be YYYY-MM");
+
+const paginationSchema = z.object({
+  limit: z.number().int().min(1).max(200).default(50),
+  offset: z.number().int().min(0).default(0),
+});
+
+const settlementShareSchema = z.number().min(0).max(100);
+
+function canManageSettlements(role?: string) {
+  return role === "admin" || role === "owner";
 }
 
-function safeWallet(wallet: any) {
-  if (!wallet) return null;
-
-  return {
-    ...wallet,
-    totalEarnings: toNumber(wallet.totalEarnings),
-    availableBalance: toNumber(wallet.availableBalance),
-    pendingBalance: toNumber(wallet.pendingBalance),
-    blockedBalance: toNumber(wallet.blockedBalance),
-    minimumWithdrawalAmount: toNumber(wallet.minimumWithdrawalAmount),
-    withdrawalFeePercent: toNumber(wallet.withdrawalFeePercent),
-  };
+function assertSettlementAccess(role?: string) {
+  if (!canManageSettlements(role)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Unauthorized",
+    });
+  }
 }
 
-export const walletRouter = router({
+function validateShares(partner1Share: number, partner2Share: number) {
+  const total = partner1Share + partner2Share;
+  if (Math.abs(total - 100) > 0.0001) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Partner shares must total 100",
+    });
+  }
+}
+
+export const settlementRouter = router({
   /**
-   * Get current user's wallet
+   * Create new settlement
    */
-  getMyWallet: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      let wallet = await getWalletByDriverId(ctx.user.id);
-
-      if (!wallet) {
-        wallet = await getOrCreateWallet(ctx.user.id);
-      }
-
-      return safeWallet(wallet);
-    } catch (err) {
-      console.error("[wallet.getMyWallet]", err);
-      return null;
-    }
-  }),
-
-  /**
-   * Wallet summary
-   */
-  getWalletSummary: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const result = await getWalletSummary(ctx.user.id);
-
-      if (!result) {
-        return {
-          wallet: null,
-          recentTransactions: [],
-          pendingWithdrawals: [],
-        };
-      }
-
-      return {
-        wallet: safeWallet(result.wallet),
-        recentTransactions: result.recentTransactions || [],
-        pendingWithdrawals: result.pendingWithdrawals || [],
-      };
-    } catch (err) {
-      console.error("[wallet.getWalletSummary]", err);
-      return {
-        wallet: null,
-        recentTransactions: [],
-        pendingWithdrawals: [],
-      };
-    }
-  }),
-
-  /**
-   * Transactions
-   */
-  getTransactions: protectedProcedure
+  create: protectedProcedure
     .input(
-      z.object({
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      try {
-        const wallet = await getWalletByDriverId(ctx.user.id);
-        if (!wallet) return [];
-
-        return await getWalletTransactions(wallet.id, input.limit, input.offset);
-      } catch (err) {
-        console.error("[wallet.getTransactions]", err);
-        return [];
-      }
-    }),
-
-  /**
-   * Request withdrawal
-   */
-  requestWithdrawal: protectedProcedure
-    .input(
-      z.object({
-        amount: z.number().positive(),
-        method: z
-          .enum(["bank_transfer", "check", "paypal", "venmo", "other"])
-          .default("bank_transfer"),
-        bankAccountId: z.string().optional(),
-        notes: z.string().optional(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const walletRaw = await getWalletByDriverId(ctx.user.id);
-        if (!walletRaw) {
-          throw new Error("Wallet not found");
-        }
-
-        const wallet = safeWallet(walletRaw);
-
-        const available = wallet.availableBalance;
-        const minimum = wallet.minimumWithdrawalAmount;
-
-        if (available <= 0) {
-          throw new Error("No available balance");
-        }
-
-        if (input.amount > available) {
-          throw new Error("Insufficient balance");
-        }
-
-        if (input.amount < minimum) {
-          throw new Error(`Minimum withdrawal is $${minimum}`);
-        }
-
-        const fee =
-          (input.amount * wallet.withdrawalFeePercent) / 100;
-
-        const withdrawal = await requestWithdrawal(
-          wallet.id,
-          ctx.user.id,
-          {
-            amount: input.amount,
-            fee,
-            method: input.method,
-            bankAccountId: input.bankAccountId,
-            notes: input.notes,
-          }
-        );
-
-        await updateWalletBalance(wallet.id, {
-          availableBalance: String(available - input.amount),
-          pendingBalance: String(wallet.pendingBalance + input.amount),
-        });
-
-        return withdrawal;
-      } catch (err) {
-        console.error("[wallet.requestWithdrawal]", err);
-        throw err;
-      }
-    }),
-
-  /**
-   * Withdrawals list
-   */
-  getWithdrawals: protectedProcedure
-    .input(
-      z.object({
-        limit: z.number().default(50),
-        offset: z.number().default(0),
-      })
-    )
-    .query(async ({ ctx, input }) => {
-      try {
-        return await getWithdrawals(
-          ctx.user.id,
-          input.limit,
-          input.offset
-        );
-      } catch (err) {
-        console.error("[wallet.getWithdrawals]", err);
-        return [];
-      }
-    }),
-
-  /**
-   * Cancel withdrawal
-   */
-  cancelWithdrawal: protectedProcedure
-    .input(
-      z.object({
-        withdrawalId: z.number(),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      try {
-        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-          throw new Error("Unauthorized");
-        }
-
-        const withdrawal = await failWithdrawal(
-          input.withdrawalId,
-          "Cancelled by admin"
-        );
-
-        if (withdrawal) {
-          const walletRaw = await getWalletByDriverId(
-            withdrawal.driverId
-          );
-
-          if (walletRaw) {
-            const wallet = safeWallet(walletRaw);
-
-            await updateWalletBalance(wallet.id, {
-              availableBalance: String(
-                wallet.availableBalance + toNumber(withdrawal.amount)
-              ),
-              pendingBalance: String(
-                Math.max(
-                  0,
-                  wallet.pendingBalance - toNumber(withdrawal.amount)
-                )
-              ),
+      z
+        .object({
+          settlementPeriod: settlementPeriodSchema,
+          startDate: z.date(),
+          endDate: z.date(),
+          partner1Id: z.number().int().positive(),
+          partner2Id: z.number().int().positive(),
+          partner1Share: settlementShareSchema.default(50),
+          partner2Share: settlementShareSchema.default(50),
+        })
+        .superRefine((data, ctx) => {
+          if (data.endDate < data.startDate) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "endDate must be after startDate",
+              path: ["endDate"],
             });
           }
-        }
 
-        return withdrawal;
-      } catch (err) {
-        console.error("[wallet.cancelWithdrawal]", err);
-        throw err;
-      }
-    }),
+          if (data.partner1Id === data.partner2Id) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Partners must be different users",
+              path: ["partner2Id"],
+            });
+          }
 
-  /**
-   * Manual adjustment
-   */
-  addAdjustment: protectedProcedure
-    .input(
-      z.object({
-        driverId: z.number(),
-        amount: z.number(),
-        reason: z.string(),
-      })
+          if (Math.abs(data.partner1Share + data.partner2Share - 100) > 0.0001) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Partner shares must total 100",
+              path: ["partner2Share"],
+            });
+          }
+        })
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        if (ctx.user.role !== "admin") {
-          throw new Error("Unauthorized");
-        }
+        assertSettlementAccess(ctx.user.role);
 
-        const walletRaw = await getWalletByDriverId(input.driverId);
-        if (!walletRaw) {
-          throw new Error("Wallet not found");
-        }
-
-        const wallet = safeWallet(walletRaw);
-
-        const newAvailable = wallet.availableBalance + input.amount;
-
-        await updateWalletBalance(wallet.id, {
-          availableBalance: String(newAvailable),
-          totalEarnings: String(wallet.totalEarnings + input.amount),
-        });
-
-        return await addWalletTransaction(wallet.id, input.driverId, {
-          type: "adjustment",
-          amount: input.amount,
-          description: input.reason,
-          status: "completed",
+        return await createSettlement({
+          settlementPeriod: input.settlementPeriod,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          partner1Id: input.partner1Id,
+          partner2Id: input.partner2Id,
+          partner1Share: input.partner1Share,
+          partner2Share: input.partner2Share,
         });
       } catch (err) {
-        console.error("[wallet.addAdjustment]", err);
-        throw err;
+        console.error("[settlement.create]", err);
+
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create settlement",
+        });
       }
     }),
 
   /**
-   * Wallet stats
+   * Get settlement with loads
    */
-  getStats: protectedProcedure.query(async ({ ctx }) => {
-    try {
-      const walletRaw = await getWalletByDriverId(ctx.user.id);
+  getById: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        assertSettlementAccess(ctx.user.role);
 
-      if (!walletRaw) {
-        return {
-          totalEarnings: 0,
-          availableBalance: 0,
-          pendingBalance: 0,
-          blockedBalance: 0,
-        };
+        const result = await getSettlementWithLoads(input.id);
+        return result ?? null;
+      } catch (err) {
+        console.error("[settlement.getById]", err);
+        return null;
       }
+    }),
 
-      const wallet = safeWallet(walletRaw);
+  /**
+   * Add load to settlement
+   */
+  addLoad: protectedProcedure
+    .input(
+      z
+        .object({
+          settlementId: z.number().int().positive(),
+          loadId: z.number().int().positive(),
+          loadIncome: z.number().min(0),
+          loadExpenses: z.number().min(0),
+          partner1Share: settlementShareSchema.default(50),
+          partner2Share: settlementShareSchema.default(50),
+        })
+        .superRefine((data, ctx) => {
+          if (Math.abs(data.partner1Share + data.partner2Share - 100) > 0.0001) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Partner shares must total 100",
+              path: ["partner2Share"],
+            });
+          }
+        })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertSettlementAccess(ctx.user.role);
+        validateShares(input.partner1Share, input.partner2Share);
 
-      return {
-        totalEarnings: wallet.totalEarnings,
-        availableBalance: wallet.availableBalance,
-        pendingBalance: wallet.pendingBalance,
-        blockedBalance: wallet.blockedBalance,
-      };
-    } catch (err) {
-      console.error("[wallet.getStats]", err);
-      return {
-        totalEarnings: 0,
-        availableBalance: 0,
-        pendingBalance: 0,
-        blockedBalance: 0,
-      };
-    }
-  }),
+        return await addLoadToSettlement(
+          input.settlementId,
+          input.loadId,
+          input.loadIncome,
+          input.loadExpenses,
+          input.partner1Share,
+          input.partner2Share
+        );
+      } catch (err) {
+        console.error("[settlement.addLoad]", err);
+
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add load to settlement",
+        });
+      }
+    }),
+
+  /**
+   * Calculate settlement totals
+   */
+  calculate: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertSettlementAccess(ctx.user.role);
+        return await calculateSettlement(input.id);
+      } catch (err) {
+        console.error("[settlement.calculate]", err);
+
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to calculate settlement",
+        });
+      }
+    }),
+
+  /**
+   * Approve settlement
+   */
+  approve: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertSettlementAccess(ctx.user.role);
+        return await approveSettlement(input.id, ctx.user.id);
+      } catch (err) {
+        console.error("[settlement.approve]", err);
+
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to approve settlement",
+        });
+      }
+    }),
+
+  /**
+   * Process settlement (distribute funds)
+   */
+  process: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertSettlementAccess(ctx.user.role);
+        return await processSettlement(input.id);
+      } catch (err) {
+        console.error("[settlement.process]", err);
+
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to process settlement",
+        });
+      }
+    }),
+
+  /**
+   * Complete settlement
+   */
+  complete: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertSettlementAccess(ctx.user.role);
+        return await completeSettlement(input.id);
+      } catch (err) {
+        console.error("[settlement.complete]", err);
+
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to complete settlement",
+        });
+      }
+    }),
+
+  /**
+   * Get all settlements
+   */
+  getAll: protectedProcedure
+    .input(paginationSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertSettlementAccess(ctx.user.role);
+
+        const result = await getAllSettlements(input.limit, input.offset);
+        return Array.isArray(result) ? result : [];
+      } catch (err) {
+        console.error("[settlement.getAll]", err);
+        return [];
+      }
+    }),
 });
