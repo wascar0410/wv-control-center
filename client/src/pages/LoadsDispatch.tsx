@@ -1,9 +1,9 @@
 /**
  * LoadsDispatch.tsx
- * Unified Loads & Dispatch - The operational heart of WV Control Center
- * Pipeline: Available → Quoted → Assigned → In Transit → Delivered → Invoiced → Paid
+ * Unified Loads & Dispatch - Operational hub for approved loads
+ * Flow: Analyze -> Approve -> Operate
  */
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +18,13 @@ import {
   MapPin,
   DollarSign,
   CheckCircle,
-  Plus,
   FileText,
   ChevronDown,
+  Search,
+  BarChart3,
+  ShieldCheck,
+  ArrowRight,
+  ClipboardCheck,
 } from "lucide-react";
 
 // Status pipeline
@@ -57,164 +61,6 @@ function formatCurrency(value: number | string | null | undefined) {
   }).format(Number.isFinite(num) ? num : 0);
 }
 
-// Create Load Modal
-function CreateLoadModal({
-  isOpen,
-  onClose,
-  onSuccess,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    clientName: "",
-    pickupAddress: "",
-    deliveryAddress: "",
-    weight: "",
-    weightUnit: "lbs",
-    merchandiseType: "",
-    price: "",
-    estimatedFuel: "0",
-    estimatedTolls: "0",
-    notes: "",
-  });
-
-  const createMutation = trpc.loads.create.useMutation({
-    onSuccess: () => {
-      toast.success("Carga creada exitosamente");
-      setFormData({
-        clientName: "",
-        pickupAddress: "",
-        deliveryAddress: "",
-        weight: "",
-        weightUnit: "lbs",
-        merchandiseType: "",
-        price: "",
-        estimatedFuel: "0",
-        estimatedTolls: "0",
-        notes: "",
-      });
-      onClose();
-      onSuccess();
-    },
-    onError: (error) => toast.error(error.message),
-  });
-
-  const handleSubmit = () => {
-    if (
-      !formData.clientName ||
-      !formData.pickupAddress ||
-      !formData.deliveryAddress ||
-      !formData.weight ||
-      !formData.price
-    ) {
-      toast.error("Completa todos los campos requeridos");
-      return;
-    }
-
-    createMutation.mutate({
-      clientName: formData.clientName,
-      pickupAddress: formData.pickupAddress,
-      deliveryAddress: formData.deliveryAddress,
-      weight: Number.parseFloat(formData.weight),
-      weightUnit: formData.weightUnit,
-      merchandiseType: formData.merchandiseType,
-      price: Number.parseFloat(formData.price),
-      estimatedFuel: Number.parseFloat(formData.estimatedFuel),
-      estimatedTolls: Number.parseFloat(formData.estimatedTolls),
-      notes: formData.notes,
-    });
-  };
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <Card className="max-h-96 w-full max-w-2xl overflow-y-auto">
-        <CardHeader>
-          <CardTitle>Nueva Carga</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input
-              placeholder="Cliente"
-              value={formData.clientName}
-              onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-            />
-            <Input
-              placeholder="Mercancía"
-              value={formData.merchandiseType}
-              onChange={(e) => setFormData({ ...formData, merchandiseType: e.target.value })}
-            />
-            <Input
-              placeholder="Origen"
-              value={formData.pickupAddress}
-              onChange={(e) => setFormData({ ...formData, pickupAddress: e.target.value })}
-            />
-            <Input
-              placeholder="Destino"
-              value={formData.deliveryAddress}
-              onChange={(e) => setFormData({ ...formData, deliveryAddress: e.target.value })}
-            />
-            <div className="flex gap-2">
-              <Input
-                placeholder="Peso"
-                type="number"
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-              />
-              <select
-                value={formData.weightUnit}
-                onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
-                className="rounded-md border border-border bg-background px-3 py-2"
-              >
-                <option value="lbs">lbs</option>
-                <option value="kg">kg</option>
-                <option value="tons">tons</option>
-              </select>
-            </div>
-            <Input
-              placeholder="Tarifa ($)"
-              type="number"
-              value={formData.price}
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-            />
-            <Input
-              placeholder="Combustible Est. ($)"
-              type="number"
-              value={formData.estimatedFuel}
-              onChange={(e) => setFormData({ ...formData, estimatedFuel: e.target.value })}
-            />
-            <Input
-              placeholder="Peajes Est. ($)"
-              type="number"
-              value={formData.estimatedTolls}
-              onChange={(e) => setFormData({ ...formData, estimatedTolls: e.target.value })}
-            />
-          </div>
-
-          <Input
-            placeholder="Notas (opcional)"
-            value={formData.notes}
-            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          />
-
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={createMutation.isPending}>
-              Crear Carga
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// Change Status Modal
 function ChangeStatusModal({
   isOpen,
   onClose,
@@ -293,13 +139,11 @@ function ChangeStatusModal({
   );
 }
 
-// Load Board Tab
 function LoadBoardTab() {
   const [, navigate] = useLocation();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"date" | "income" | "distance">("date");
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<number | null>(null);
   const [selectedLoadStatus, setSelectedLoadStatus] = useState("");
@@ -314,6 +158,7 @@ function LoadBoardTab() {
         (l: any) =>
           l.pickupAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           l.deliveryAddress?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          l.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           String(l.id).includes(searchTerm)
       );
     }
@@ -351,7 +196,31 @@ function LoadBoardTab() {
 
   return (
     <div className="space-y-4">
-      {/* Stats */}
+      <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30">
+        <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-blue-600" />
+              <p className="font-semibold">Flujo recomendado para Yisvel</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Primero se analiza la carga en <strong>Quotation</strong>. Solo las cargas aprobadas deben entrar al pipeline.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <Button className="gap-2" onClick={() => navigate("/quotation")}>
+              <ClipboardCheck className="h-4 w-4" />
+              Analizar Carga
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/quote-analyzer")}>
+              Ver Historial de Análisis
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
         <Card>
           <CardContent className="pt-4">
@@ -385,15 +254,17 @@ function LoadBoardTab() {
         </Card>
       </div>
 
-      {/* Controls */}
       <div className="flex flex-wrap gap-2">
         <div className="min-w-64 flex-1">
-          <Input
-            placeholder="Buscar por ubicación o ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="text-sm"
-          />
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por cliente, ubicación o ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 text-sm"
+            />
+          </div>
         </div>
 
         <select
@@ -420,17 +291,17 @@ function LoadBoardTab() {
         </select>
 
         <Button className="gap-2" onClick={() => navigate("/quotation")}>
-          <Plus className="h-4 w-4" />
-         Analizar Carga
+          <ClipboardCheck className="h-4 w-4" />
+          Analizar Nueva
         </Button>
       </div>
 
-      {/* Load List */}
       <div className="space-y-3">
         {filteredLoads.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
             <Package className="mx-auto mb-2 h-12 w-12 opacity-50" />
             <p>No hay cargas para mostrar</p>
+            <p className="mt-1 text-sm">Analiza una carga nueva para comenzar.</p>
           </div>
         ) : (
           filteredLoads.map((load: any) => (
@@ -438,10 +309,14 @@ function LoadBoardTab() {
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="mb-2 flex items-center gap-2">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
                       <p className="font-semibold">Carga #{load.id}</p>
                       <StatusBadge status={load.status} />
+                      {load.clientName ? (
+                        <Badge variant="outline">{load.clientName}</Badge>
+                      ) : null}
                     </div>
+
                     <div className="mb-2 grid grid-cols-2 gap-2 text-sm text-muted-foreground md:grid-cols-4">
                       <div>
                         <p className="text-xs">Origen</p>
@@ -491,14 +366,6 @@ function LoadBoardTab() {
         )}
       </div>
 
-      <CreateLoadModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={() => {
-          void refetch();
-        }}
-      />
-
       {selectedLoadId !== null && (
         <ChangeStatusModal
           isOpen={statusModalOpen}
@@ -514,7 +381,6 @@ function LoadBoardTab() {
   );
 }
 
-// Pipeline Tab
 function PipelineTab() {
   const { data: loads = [] } = trpc.loads.list.useQuery();
 
@@ -569,7 +435,6 @@ function PipelineTab() {
   );
 }
 
-// Analytics Tab
 function AnalyticsTab() {
   const { data: loads = [] } = trpc.loads.list.useQuery();
 
@@ -632,20 +497,32 @@ function AnalyticsTab() {
   );
 }
 
-// Main Component
 export default function LoadsDispatch() {
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-3xl font-bold">Cargas & Dispatch</h1>
-        <p className="text-muted-foreground">Gestión completa del pipeline operacional</p>
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Loads & Dispatch</h1>
+          <p className="text-muted-foreground">
+            Centro operativo de cargas aprobadas, asignación y seguimiento.
+          </p>
+        </div>
+
+        <Button className="gap-2" onClick={() => window.location.assign("/quotation")}>
+          <ClipboardCheck className="h-4 w-4" />
+          Analizar Carga
+          <ArrowRight className="h-4 w-4" />
+        </Button>
       </div>
 
       <Tabs defaultValue="board" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="board">Load Board</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="analytics">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            Analytics
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="board" className="space-y-4">
