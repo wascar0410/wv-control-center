@@ -222,8 +222,8 @@ export default function Quotation() {
 
   const createLoadMutation = trpc.loads.create.useMutation({
     onSuccess: (data) => {
-      toast.success(`✅ Carga #${data.id} creada exitosamente`);
-      setLocation("/loads-dispatch");
+      toast.success(`✅ Carga #${data.id} aprobada y enviada al pipeline`);
+      setLocation(`/loads-dispatch?created=1&loadId=${data.id}`);
     },
     onError: (error) => {
       toast.error(error.message || "Error al crear la carga");
