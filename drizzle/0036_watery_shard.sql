@@ -1,0 +1,30 @@
+CREATE TABLE `companies` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`name` varchar(255) NOT NULL,
+	`dotNumber` varchar(20),
+	`mcNumber` varchar(20),
+	`phone` varchar(20),
+	`email` varchar(320),
+	`website` varchar(255),
+	`address` text,
+	`city` varchar(100),
+	`state` varchar(50),
+	`zipCode` varchar(10),
+	`country` varchar(100) DEFAULT 'USA',
+	`logoUrl` text,
+	`description` text,
+	`insuranceProvider` varchar(255),
+	`insurancePolicyNumber` varchar(255),
+	`insuranceExpiryDate` timestamp,
+	`complianceStatus` enum('active','suspended','inactive') DEFAULT 'active',
+	`bankAccountNumber` varchar(255),
+	`routingNumber` varchar(20),
+	`ownerId` int NOT NULL,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `companies_id` PRIMARY KEY(`id`),
+	CONSTRAINT `companies_dotNumber_unique` UNIQUE(`dotNumber`),
+	CONSTRAINT `companies_mcNumber_unique` UNIQUE(`mcNumber`)
+);
+--> statement-breakpoint
+ALTER TABLE `companies` ADD CONSTRAINT `companies_ownerId_users_id_fk` FOREIGN KEY (`ownerId`) REFERENCES `users`(`id`) ON DELETE cascade ON UPDATE no action;

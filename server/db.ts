@@ -3045,74 +3045,82 @@ export async function getAllQuoteAnalyses(filters?: {
   limit?: number;
   offset?: number;
 }) {
-  const db = await getDb();
-  if (!db) throw new Error("Database connection failed");
-  
-  let query = db.query.quoteAnalysis.findMany({
-    orderBy: desc(quoteAnalysis.createdAt),
-    limit: filters?.limit || 100,
-    offset: filters?.offset || 0,
-  });
+  try {
+    const db = await getDb();
+    if (!db) return [];
+    
+    if (filters?.verdict) {
+      return await db.query.quoteAnalysis.findMany({
+        where: eq(quoteAnalysis.verdict, filters.verdict),
+        orderBy: desc(quoteAnalysis.createdAt),
+        limit: filters?.limit || 100,
+        offset: filters?.offset || 0,
+      });
+    }
 
-  if (filters?.verdict) {
-    query = db.query.quoteAnalysis.findMany({
-      where: eq(quoteAnalysis.verdict, filters.verdict),
+    return await db.query.quoteAnalysis.findMany({
       orderBy: desc(quoteAnalysis.createdAt),
       limit: filters?.limit || 100,
       offset: filters?.offset || 0,
     });
+  } catch (error) {
+    console.error("Error in getAllQuoteAnalyses:", error);
+    return [];
   }
-
-  return query;
 }
 
 /**
  * Get quote analysis summary (profitability by broker/route)
  */
 export async function getQuoteAnalysisSummary() {
-  const db = await getDb();
-  if (!db) throw new Error("Database connection failed");
-  
-  const analyses = await db.query.quoteAnalysis.findMany({
-    where: isNotNull(quoteAnalysis.completedAt),
-  });
+  try {
+    const db = await getDb();
+    if (!db) return {};
+    
+    const analyses = await db.query.quoteAnalysis.findMany({
+      where: isNotNull(quoteAnalysis.completedAt),
+    });
 
-  const summary: Record<string, {
-    count: number;
-    avgMargin: number;
-    avgVariance: number;
-    profitable: number;
-    unprofitable: number;
-  }> = {};
+    const summary: Record<string, {
+      count: number;
+      avgMargin: number;
+      avgVariance: number;
+      profitable: number;
+      unprofitable: number;
+    }> = {};
 
-  analyses.forEach((qa: any) => {
-    const key = qa.brokerName || "Unknown";
-    if (!summary[key]) {
-      summary[key] = {
-        count: 0,
-        avgMargin: 0,
-        avgVariance: 0,
-        profitable: 0,
-        unprofitable: 0,
-      };
-    }
-    summary[key].count++;
-    summary[key].avgMargin += Number(qa.actualMargin || qa.estimatedMargin);
-    summary[key].avgVariance += Number(qa.marginVariance || 0);
-    if (Number(qa.actualProfit || qa.estimatedProfit) > 0) {
-      summary[key].profitable++;
-    } else {
-      summary[key].unprofitable++;
-    }
-  });
+    analyses.forEach((qa: any) => {
+      const key = qa.brokerName || "Unknown";
+      if (!summary[key]) {
+        summary[key] = {
+          count: 0,
+          avgMargin: 0,
+          avgVariance: 0,
+          profitable: 0,
+          unprofitable: 0,
+        };
+      }
+      summary[key].count++;
+      summary[key].avgMargin += Number(qa.actualMargin || qa.estimatedMargin || 0);
+      summary[key].avgVariance += Number(qa.marginVariance || 0);
+      if (Number(qa.actualProfit || qa.estimatedProfit || 0) > 0) {
+        summary[key].profitable++;
+      } else {
+        summary[key].unprofitable++;
+      }
+    });
 
-  // Calculate averages
-  Object.keys(summary).forEach((key) => {
-    summary[key].avgMargin /= summary[key].count;
-    summary[key].avgVariance /= summary[key].count;
-  });
+    // Calculate averages
+    Object.keys(summary).forEach((key) => {
+      summary[key].avgMargin = summary[key].count > 0 ? summary[key].avgMargin / summary[key].count : 0;
+      summary[key].avgVariance = summary[key].count > 0 ? summary[key].avgVariance / summary[key].count : 0;
+    });
 
-  return summary;
+    return summary;
+  } catch (error) {
+    console.error("Error in getQuoteAnalysisSummary:", error);
+    return {};
+  }
 }
 
 /**

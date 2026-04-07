@@ -1664,3 +1664,51 @@ export const taskComments = mysqlTable("taskComments", {
 
 export type TaskComment = typeof taskComments.$inferSelect;
 export type InsertTaskComment = typeof taskComments.$inferInsert;
+
+
+/**
+ * Companies (Carriers) - Multi-tenant support
+ * Represents trucking companies/carriers in the system
+ */
+export const companies = mysqlTable("companies", {
+  id: int("id").autoincrement().primaryKey(),
+  
+  // Basic info
+  name: varchar("name", { length: 255 }).notNull(),
+  dotNumber: varchar("dotNumber", { length: 20 }).unique(),
+  mcNumber: varchar("mcNumber", { length: 20 }).unique(),
+  
+  // Contact info
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 320 }),
+  website: varchar("website", { length: 255 }),
+  
+  // Address
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  zipCode: varchar("zipCode", { length: 10 }),
+  country: varchar("country", { length: 100 }).default("USA"),
+  
+  // Branding
+  logoUrl: text("logoUrl"),
+  description: text("description"),
+  
+  // Insurance & Compliance
+  insuranceProvider: varchar("insuranceProvider", { length: 255 }),
+  insurancePolicyNumber: varchar("insurancePolicyNumber", { length: 255 }),
+  insuranceExpiryDate: timestamp("insuranceExpiryDate"),
+  complianceStatus: mysqlEnum("complianceStatus", ["active", "suspended", "inactive"]).default("active"),
+  
+  // Financial
+  bankAccountNumber: varchar("bankAccountNumber", { length: 255 }), // encrypted
+  routingNumber: varchar("routingNumber", { length: 20 }), // encrypted
+  
+  // Metadata
+  ownerId: int("ownerId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = typeof companies.$inferInsert;
