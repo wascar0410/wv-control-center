@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import {
   createQuoteAnalysis,
   getQuoteAnalysisById,
@@ -11,6 +11,31 @@ import {
 } from "../db";
 import { TRPCError } from "@trpc/server";
 
+const quoteVerdictSchema = z.enum(["accept", "negotiate", "reject"]);
+
+const nullableOptionalString = z.preprocess(
+  (val) => (val === null || val === "" ? undefined : val),
+  z.string().optional()
+);
+
+const nullableOptionalNumber = z.preprocess(
+  (val) => (val === null || val === "" ? undefined : val),
+  z.number().optional()
+);
+
+const nullableOptionalVerdict = z.preprocess(
+  (val) => (val === null || val === "" ? undefined : val),
+  quoteVerdictSchema.optional()
+);
+
+function canManageQuoteAnalysis(role?: string) {
+  return role === "admin" || role === "owner";
+}
+
+function canViewQuoteAnalysis(role?: string) {
+  return role === "admin" || role === "owner" || role === "dispatcher";
+}
+
 export const quoteAnalysisRouter = router({
   /**
    * Create new quote analysis
@@ -19,9 +44,9 @@ export const quoteAnalysisRouter = router({
     .input(
       z.object({
         loadId: z.number(),
-        brokerId: z.number().optional(),
-        brokerName: z.string().optional(),
-        routeName: z.string().optional(),
+        brokerId: nullableOptionalNumber,
+        brokerName: nullableOptionalString,
+        routeName: nullableOptionalString,
         totalMiles: z.number(),
         loadedMiles: z.number(),
         emptyMiles: z.number().default(0),
@@ -41,19 +66,28 @@ export const quoteAnalysisRouter = router({
         ratePerLoadedMile: z.number(),
         recommendedMinimumRate: z.number(),
         rateVsMinimum: z.number(),
-        verdict: z.enum(["accept", "negotiate", "reject"]),
-        decisionReason: z.string().optional(),
-        notes: z.string().optional(),
+        verdict: quoteVerdictSchema,
+        decisionReason: nullableOptionalString,
+        notes: nullableOptionalString,
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      if (!canManageQuoteAnalysis(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
       }
-      return createQuoteAnalysis({
-        ...input,
-        analyzedBy: ctx.user.id,
-      });
+
+      try {
+        return await createQuoteAnalysis({
+          ...input,
+          analyzedBy: ctx.user.id,
+        });
+      } catch (error) {
+        console.error("[quoteAnalysis.create] error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo crear el análisis de cotización",
+        });
+      }
     }),
 
   /**
@@ -61,8 +95,20 @@ export const quoteAnalysisRouter = router({
    */
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .query(async ({ input }) => {
-      return getQuoteAnalysisById(input.id);
+    .query(async ({ ctx, input }) => {
+      if (!canViewQuoteAnalysis(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+      }
+
+      try {
+        return await getQuoteAnalysisById(input.id);
+      } catch (error) {
+        console.error("[quoteAnalysis.getById] error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo obtener el análisis",
+        });
+      }
     }),
 
   /**
@@ -70,8 +116,20 @@ export const quoteAnalysisRouter = router({
    */
   getByLoadId: protectedProcedure
     .input(z.object({ loadId: z.number() }))
-    .query(async ({ input }) => {
-      return getQuoteAnalysisByLoadId(input.loadId);
+    .query(async ({ ctx, input }) => {
+      if (!canViewQuoteAnalysis(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+      }
+
+      try {
+        return await getQuoteAnalysisByLoadId(input.loadId);
+      } catch (error) {
+        console.error("[quoteAnalysis.getByLoadId] error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo obtener el análisis por carga",
+        });
+      }
     }),
 
   /**
@@ -81,28 +139,37 @@ export const quoteAnalysisRouter = router({
     .input(
       z.object({
         id: z.number(),
-        actualFuel: z.number().optional(),
-        actualTolls: z.number().optional(),
-        actualMaintenance: z.number().optional(),
-        actualInsurance: z.number().optional(),
-        actualOther: z.number().optional(),
-        totalActualCost: z.number().optional(),
-        actualProfit: z.number().optional(),
-        actualMargin: z.number().optional(),
-        costVariance: z.number().optional(),
-        profitVariance: z.number().optional(),
-        marginVariance: z.number().optional(),
+        actualFuel: nullableOptionalNumber,
+        actualTolls: nullableOptionalNumber,
+        actualMaintenance: nullableOptionalNumber,
+        actualInsurance: nullableOptionalNumber,
+        actualOther: nullableOptionalNumber,
+        totalActualCost: nullableOptionalNumber,
+        actualProfit: nullableOptionalNumber,
+        actualMargin: nullableOptionalNumber,
+        costVariance: nullableOptionalNumber,
+        profitVariance: nullableOptionalNumber,
+        marginVariance: nullableOptionalNumber,
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      if (!canManageQuoteAnalysis(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
       }
-      const { id, ...data } = input;
-      return updateQuoteAnalysisWithActuals(id, {
-        ...data,
-        completedAt: new Date(),
-      });
+
+      try {
+        const { id, ...data } = input;
+        return await updateQuoteAnalysisWithActuals(id, {
+          ...data,
+          completedAt: new Date(),
+        });
+      } catch (error) {
+        console.error("[quoteAnalysis.updateWithActuals] error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo actualizar el análisis con costos reales",
+        });
+      }
     }),
 
   /**
@@ -111,24 +178,50 @@ export const quoteAnalysisRouter = router({
   getAll: protectedProcedure
     .input(
       z.object({
-        verdict: z.enum(["accept", "negotiate", "reject"]).optional(),
-        brokerName: z.string().optional(),
-        limit: z.number().default(100),
-        offset: z.number().default(0),
+        verdict: nullableOptionalVerdict,
+        brokerName: nullableOptionalString,
+        limit: z.number().min(1).max(500).default(100),
+        offset: z.number().min(0).default(0),
       })
     )
-    .query(async ({ input }) => {
-      return getAllQuoteAnalyses(input);
+    .query(async ({ ctx, input }) => {
+      if (!canViewQuoteAnalysis(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
+      }
+
+      try {
+        return await getAllQuoteAnalyses({
+          verdict: input.verdict,
+          brokerName: input.brokerName,
+          limit: input.limit,
+          offset: input.offset,
+        });
+      } catch (error) {
+        console.error("[quoteAnalysis.getAll] error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo obtener la lista de análisis",
+        });
+      }
     }),
 
   /**
    * Get quote analysis summary (profitability by broker/route)
    */
   getSummary: protectedProcedure.query(async ({ ctx }) => {
-    if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-      throw new TRPCError({ code: "FORBIDDEN" });
+    if (!canViewQuoteAnalysis(ctx.user.role)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
     }
-    return getQuoteAnalysisSummary();
+
+    try {
+      return await getQuoteAnalysisSummary();
+    } catch (error) {
+      console.error("[quoteAnalysis.getSummary] error:", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "No se pudo obtener el resumen de análisis",
+      });
+    }
   }),
 
   /**
@@ -137,9 +230,18 @@ export const quoteAnalysisRouter = router({
   importFromQuotation: protectedProcedure
     .input(z.object({ quotationId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      if (!canManageQuoteAnalysis(ctx.user.role)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso" });
       }
-      return importQuoteAnalysisFromQuotation(input.quotationId, ctx.user.id);
+
+      try {
+        return await importQuoteAnalysisFromQuotation(input.quotationId, ctx.user.id);
+      } catch (error) {
+        console.error("[quoteAnalysis.importFromQuotation] error:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "No se pudo importar el análisis desde quotation",
+        });
+      }
     }),
 });
