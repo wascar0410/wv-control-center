@@ -58,6 +58,16 @@ function formatCurrency(value: number | string) {
 function AgingReportTab() {
   const { data: agingReport } = trpc.invoicing.getAgingReport.useQuery();
 
+  // Safe defaults for aging report structure
+  const safeReport = agingReport || {
+    current: { count: 0, total: 0 },
+    "30_days": { count: 0, total: 0 },
+    "60_days": { count: 0, total: 0 },
+    "90_days": { count: 0, total: 0 },
+    "120_plus": { count: 0, total: 0 },
+    totalOutstanding: 0,
+  };
+
   if (!agingReport) {
     return <div className="text-center py-12 text-muted-foreground">Cargando reporte...</div>;
   }
@@ -81,15 +91,15 @@ function AgingReportTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Total Pendiente</p>
-              <p className="text-3xl font-bold text-red-600">{formatCurrency(agingReport.totalOutstanding)}</p>
+              <p className="text-3xl font-bold text-red-600">{formatCurrency(safeReport.totalOutstanding || 0)}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Facturas Vencidas</p>
               <p className="text-3xl font-bold text-orange-600">
-                {(agingReport["30_days"].count +
-                  agingReport["60_days"].count +
-                  agingReport["90_days"].count +
-                  agingReport["120_plus"].count)}
+                {((safeReport["30_days"]?.count || 0) +
+                  (safeReport["60_days"]?.count || 0) +
+                  (safeReport["90_days"]?.count || 0) +
+                  (safeReport["120_plus"]?.count || 0))}
               </p>
             </div>
           </div>
@@ -99,7 +109,7 @@ function AgingReportTab() {
       {/* Aging Buckets */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {agingBuckets.map((bucket) => {
-          const data = agingReport[bucket.key as keyof typeof agingReport];
+          const data = safeReport[bucket.key as keyof typeof safeReport] || { count: 0, total: 0 };
           return (
             <Card key={bucket.key}>
               <CardHeader className="pb-2">
@@ -108,11 +118,11 @@ function AgingReportTab() {
               <CardContent className="space-y-2">
                 <div>
                   <p className="text-xs text-muted-foreground">Facturas</p>
-                  <p className="text-2xl font-bold">{data.count}</p>
+                  <p className="text-2xl font-bold">{data?.count || 0}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Monto</p>
-                  <p className="text-lg font-semibold text-green-600">{formatCurrency(data.total)}</p>
+                  <p className="text-lg font-semibold text-green-600">{formatCurrency(data?.total || 0)}</p>
                 </div>
               </CardContent>
             </Card>
