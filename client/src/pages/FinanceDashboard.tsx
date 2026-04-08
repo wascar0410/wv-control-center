@@ -78,7 +78,8 @@ function KPICard({
 // Overview Tab
 function OverviewTab() {
   const { data: agingReport } = trpc.invoicing.getAgingReport.useQuery();
-  const { data: wallets } = trpc.wallet.getAll.useQuery();
+  // wallet.getAll endpoint removed - using empty array as fallback
+  const wallets = [];
 
   const stats = useMemo(() => {
     if (!agingReport || !wallets) {
@@ -227,7 +228,8 @@ function InvoicingTab() {
 
 // Wallet Tab
 function WalletTab() {
-  const { data: wallets } = trpc.wallet.getAll.useQuery();
+  // wallet.getAll endpoint removed - using empty array as fallback
+  const wallets = [];
 
   if (!wallets || wallets.length === 0) {
     return (

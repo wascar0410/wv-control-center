@@ -32,7 +32,7 @@ async function seedData() {
     const companyId = companyResult[0].insertId;
     console.log(`✅ Company created: ID ${companyId}\n`);
 
-    // 2. Create Users (without companyId - not in schema)
+    // 2. Create Users
     console.log("👥 Creating users...");
     const adminResult = await connection.execute(
       `INSERT INTO users (name, email, role, openId, loginMethod, createdAt, updatedAt, lastSignedIn)
@@ -88,26 +88,26 @@ async function seedData() {
     );
     console.log(`✅ Wallet transactions created\n`);
 
-    // 6. Create Loads
+    // 6. Create Loads (using correct schema: clientName, pickupAddress, deliveryAddress, weight, merchandiseType, price, status)
     console.log("📦 Creating loads...");
     const load1Result = await connection.execute(
-      `INSERT INTO loads (companyId, brokerId, brokerName, pickupLocation, deliveryLocation, pickupDate, deliveryDate, status, totalMiles, loadedMiles, weight, ratePerMile, totalRate, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [companyId, 1, "Broker A", "Atlanta, GA", "Charlotte, NC", new Date(), new Date(Date.now() + 86400000), "dispatched", 250, 200, 10000, 2.5, 625]
+      `INSERT INTO loads (clientName, pickupAddress, deliveryAddress, weight, weightUnit, merchandiseType, price, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      ["Broker A", "Atlanta, GA", "Charlotte, NC", 10000, "lbs", "General Cargo", 625, "available"]
     );
     const loadId1 = load1Result[0].insertId;
 
     const load2Result = await connection.execute(
-      `INSERT INTO loads (companyId, brokerId, brokerName, pickupLocation, deliveryLocation, pickupDate, deliveryDate, status, totalMiles, loadedMiles, weight, ratePerMile, totalRate, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [companyId, 2, "Broker B", "Nashville, TN", "Memphis, TN", new Date(), new Date(Date.now() + 86400000), "approved", 180, 150, 8000, 2.0, 360]
+      `INSERT INTO loads (clientName, pickupAddress, deliveryAddress, weight, weightUnit, merchandiseType, price, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      ["Broker B", "Nashville, TN", "Memphis, TN", 8000, "lbs", "General Cargo", 360, "available"]
     );
     const loadId2 = load2Result[0].insertId;
 
     const load3Result = await connection.execute(
-      `INSERT INTO loads (companyId, brokerId, brokerName, pickupLocation, deliveryLocation, pickupDate, deliveryDate, status, totalMiles, loadedMiles, weight, ratePerMile, totalRate, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [companyId, 3, "Broker C", "Louisville, KY", "Indianapolis, IN", new Date(), new Date(Date.now() + 86400000), "pending", 120, 100, 6000, 2.2, 264]
+      `INSERT INTO loads (clientName, pickupAddress, deliveryAddress, weight, weightUnit, merchandiseType, price, status, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      ["Broker C", "Louisville, KY", "Indianapolis, IN", 6000, "lbs", "General Cargo", 264, "available"]
     );
     const loadId3 = load3Result[0].insertId;
     console.log(`✅ Loads created: ${loadId1}, ${loadId2}, ${loadId3}\n`);
@@ -115,17 +115,19 @@ async function seedData() {
     // 7. Create Quote Analyses
     console.log("📈 Creating quote analyses...");
     await connection.execute(
-      `INSERT INTO quote_analysis (loadId, brokerName, totalMiles, loadedMiles, baseRate, totalIncome, estimatedFuel, totalEstimatedCost, estimatedProfit, estimatedMargin, ratePerLoadedMile, recommendedMinimumRate, verdict, analyzedBy, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [loadId1, "Broker A", 250, 200, 625, 625, 150, 400, 225, 36, 3.125, 2.5, "accept", adminId]
+      `INSERT INTO quote_analysis (loadId, brokerName, totalMiles, loadedMiles, baseRate, totalIncome, estimatedFuel, totalEstimatedCost, estimatedProfit, estimatedMargin, ratePerLoadedMile, recommendedMinimumRate, rateVsMinimum, verdict, analyzedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [loadId1, "Broker A", 250, 200, 625, 625, 150, 400, 225, 36, 3.125, 2.5, 0.625, "accept"]
     );
 
     await connection.execute(
-      `INSERT INTO quote_analysis (loadId, brokerName, totalMiles, loadedMiles, baseRate, totalIncome, estimatedFuel, totalEstimatedCost, estimatedProfit, estimatedMargin, ratePerLoadedMile, recommendedMinimumRate, verdict, analyzedBy, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [loadId2, "Broker B", 180, 150, 360, 360, 120, 300, 60, 16.67, 2.4, 2.8, "reject", adminId]
+      `INSERT INTO quote_analysis (loadId, brokerName, totalMiles, loadedMiles, baseRate, totalIncome, estimatedFuel, totalEstimatedCost, estimatedProfit, estimatedMargin, ratePerLoadedMile, recommendedMinimumRate, rateVsMinimum, verdict, analyzedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [loadId2, "Broker B", 180, 150, 360, 360, 120, 300, 60, 16.67, 2.4, 2.8, -0.4, "reject"]
     );
-    console.log(`✅ Quote analyses created\n`);
+    console.log(`✅ Quote analyses created
+`);
+
 
     // 8. Create Settlement
     console.log("🏦 Creating settlement...");

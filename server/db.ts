@@ -42,6 +42,20 @@ import {
   transactionImports,
   users,
   userPreferences,
+  wallets,
+  walletTransactions,
+  withdrawals,
+  paymentBlocks,
+  settlements,
+  settlementLoads,
+  quoteAnalysis,
+  invoices,
+  receivables,
+  invoicePayments,
+  alerts,
+  tasks,
+  taskComments,
+  companies,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -64,7 +78,37 @@ export async function getDb() {
       },
     });
 
-    _db = drizzle(_connection);
+    _db = drizzle(_connection, {
+      schema: {
+        users,
+        wallets,
+        walletTransactions,
+        withdrawals,
+        paymentBlocks,
+        settlements,
+        settlementLoads,
+        quoteAnalysis,
+        invoices,
+        receivables,
+        invoicePayments,
+        alerts,
+        tasks,
+        taskComments,
+        companies,
+        loads,
+        loadAssignments,
+        loadQuotations,
+        transactions,
+        partnership,
+        ownerDraws,
+        fuelLogs,
+        podDocuments,
+        bankAccounts,
+        transactionImports,
+        loadEvidence,
+        // ... other tables
+      },
+    });
     console.log("[Database] Connected successfully");
     return _db;
   } catch (error) {
