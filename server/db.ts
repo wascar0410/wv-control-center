@@ -79,6 +79,7 @@ export async function getDb() {
     });
 
     _db = drizzle(_connection, {
+      mode: "default",
       schema: {
         users,
         wallets,

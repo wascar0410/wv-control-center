@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import {
+  getDb,
   getOrCreateWallet,
   getWalletByDriverId,
   updateWalletBalance,
@@ -141,6 +142,28 @@ export const walletRouter = router({
 
         if (input.amount < minimum) {
           throw new Error(`Minimum withdrawal is $${minimum}`);
+        }
+
+        // ✅ Check for active payment blocks (BOL/POD enforcement)
+        const db = await getDb();
+        if (db) {
+          const activeBlocks = await db.query.paymentBlocks.findMany({
+            where: (pb, { eq, and }) =>
+              and(
+                eq(pb.driverId, ctx.user.id),
+                eq(pb.status, "active")
+              ),
+          });
+
+          if (activeBlocks.length > 0) {
+            const blockedAmount = activeBlocks.reduce(
+              (sum, b) => sum + Number(b.blockedAmount),
+              0
+            );
+            throw new Error(
+              `Cannot withdraw: $${blockedAmount} blocked due to missing BOL/POD or compliance holds`
+            );
+          }
         }
 
         const fee =
