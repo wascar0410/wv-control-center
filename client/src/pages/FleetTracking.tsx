@@ -47,21 +47,21 @@ import {
 const FLEET_COLORS: Record<string, { bg: string; text: string; marker: string; border: string }> = {
   internal: {
     bg: "bg-blue-500/20",
-    text: "text-blue-300",
+    text: "text-blue-200",
     marker: "#3b82f6",
-    border: "border-blue-500/30",
+    border: "border-blue-400/40",
   },
   leased: {
     bg: "bg-purple-500/20",
-    text: "text-purple-300",
+    text: "text-purple-200",
     marker: "#a855f7",
-    border: "border-purple-500/30",
+    border: "border-purple-400/40",
   },
   external: {
     bg: "bg-orange-500/20",
-    text: "text-orange-300",
+    text: "text-orange-200",
     marker: "#f97316",
-    border: "border-orange-500/30",
+    border: "border-orange-400/40",
   },
 };
 
@@ -76,19 +76,19 @@ const FLEET_TYPES = [
     value: "internal",
     label: "Interno",
     desc: "Empleado directo de WV",
-    color: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    color: "bg-blue-500/20 text-blue-200 border-blue-400/40",
   },
   {
     value: "leased",
     label: "Arrendado",
     desc: "Contrato de arrendamiento",
-    color: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+    color: "bg-purple-500/20 text-purple-200 border-purple-400/40",
   },
   {
     value: "external",
     label: "Externo",
     desc: "Contratista independiente",
-    color: "bg-orange-500/20 text-orange-300 border-orange-500/30",
+    color: "bg-orange-500/20 text-orange-200 border-orange-400/40",
   },
 ] as const;
 
@@ -98,49 +98,49 @@ const LOAD_STATUS_META: Record<
 > = {
   available: {
     label: "Disponible",
-    className: "bg-slate-500/20 text-slate-300 border-slate-500/30",
+    className: "bg-slate-500/20 text-slate-200 border-slate-400/30",
     icon: Package,
     step: 0,
   },
   quoted: {
     label: "Cotizada",
-    className: "bg-violet-500/20 text-violet-300 border-violet-500/30",
+    className: "bg-violet-500/20 text-violet-200 border-violet-400/30",
     icon: FileText,
     step: 1,
   },
   assigned: {
     label: "Asignada",
-    className: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    className: "bg-blue-500/20 text-blue-200 border-blue-400/30",
     icon: Truck,
     step: 2,
   },
   started: {
     label: "Iniciada",
-    className: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
+    className: "bg-cyan-500/20 text-cyan-200 border-cyan-400/30",
     icon: Activity,
     step: 3,
   },
   in_transit: {
     label: "En tránsito",
-    className: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+    className: "bg-amber-500/20 text-amber-200 border-amber-400/30",
     icon: Navigation,
     step: 4,
   },
   delivered: {
     label: "Entregada",
-    className: "bg-green-500/20 text-green-300 border-green-500/30",
+    className: "bg-green-500/20 text-green-200 border-green-400/30",
     icon: CheckCircle2,
     step: 5,
   },
   invoiced: {
     label: "Facturada",
-    className: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+    className: "bg-indigo-500/20 text-indigo-200 border-indigo-400/30",
     icon: FileText,
     step: 6,
   },
   paid: {
     label: "Pagada",
-    className: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    className: "bg-emerald-500/20 text-emerald-200 border-emerald-400/30",
     icon: CreditCard,
     step: 7,
   },
@@ -307,7 +307,7 @@ function LoadProgress({ status }: { status?: string | null }) {
               className={`rounded-full border px-2 py-1 text-[11px] font-medium ${
                 active
                   ? meta.className
-                  : "border-slate-700 bg-slate-800 text-slate-500"
+                  : "border-slate-600 bg-slate-800/80 text-slate-300"
               }`}
             >
               {meta.label}
@@ -415,24 +415,24 @@ function FleetManagementView({
   }, [drivers, locationsByDriverId, search]);
 
   if (!drivers) {
-    return <div className="py-8 text-center text-muted-foreground">Cargando choferes...</div>;
+    return <div className="py-8 text-center text-slate-200">Cargando choferes...</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar chofer, email, DOT o cliente..."
-          className="border-slate-700 bg-slate-900 pl-9 text-slate-100 placeholder:text-slate-500"
+          className="border-slate-600 bg-slate-800 pl-9 text-slate-100 placeholder:text-slate-300"
         />
       </div>
 
       {filteredDrivers.length === 0 ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-900 p-10 text-center text-slate-500">
-          <Users className="mx-auto mb-3 h-10 w-10 opacity-40" />
+        <div className="rounded-xl border border-slate-700 bg-slate-800/80 p-10 text-center text-slate-200">
+          <Users className="mx-auto mb-3 h-10 w-10 opacity-60" />
           <p>No hay conductores para mostrar</p>
         </div>
       ) : (
@@ -444,33 +444,33 @@ function FleetManagementView({
             const safeFleetType = getSafeFleetType(driver.fleetType);
 
             return (
-              <Card key={driver.id} className="border-slate-800 bg-slate-900/80">
+              <Card key={driver.id} className="border-slate-700 bg-slate-900">
                 <CardContent className="p-5">
                   {isEditing && editState ? (
                     <div className="space-y-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="font-semibold text-white">{driver.name}</p>
-                          <p className="text-sm text-slate-400">{driver.email}</p>
+                          <p className="text-sm text-slate-200">{driver.email}</p>
                         </div>
                         <StatusBadge status={operation.loadStatus} />
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-300">
+                          <label className="mb-1 block text-sm font-semibold text-slate-100">
                             Tipo de Flota
                           </label>
                           <Select
                             value={editState.fleetType}
                             onValueChange={(v) => setEditState({ ...editState, fleetType: v })}
                           >
-                            <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-100">
-                              <SelectValue />
+                            <SelectTrigger className="border-slate-600 bg-slate-800 text-slate-100">
+                              <SelectValue className="text-slate-100" />
                             </SelectTrigger>
-                            <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
+                            <SelectContent className="border-slate-600 bg-slate-800 text-slate-100">
                               {FLEET_TYPES.map((ft) => (
-                                <SelectItem key={ft.value} value={ft.value}>
+                                <SelectItem key={ft.value} value={ft.value} className="text-slate-100 focus:bg-slate-700 focus:text-white">
                                   {ft.label}
                                 </SelectItem>
                               ))}
@@ -479,7 +479,7 @@ function FleetManagementView({
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-300">
+                          <label className="mb-1 block text-sm font-semibold text-slate-100">
                             Comisión %
                           </label>
                           <Input
@@ -491,12 +491,12 @@ function FleetManagementView({
                             onChange={(e) =>
                               setEditState({ ...editState, commissionPercent: e.target.value })
                             }
-                            className="border-slate-700 bg-slate-800 text-slate-100"
+                            className="border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-300"
                           />
                         </div>
 
                         <div>
-                          <label className="mb-1 block text-sm font-medium text-slate-300">
+                          <label className="mb-1 block text-sm font-semibold text-slate-100">
                             Número DOT
                           </label>
                           <Input
@@ -505,18 +505,18 @@ function FleetManagementView({
                               setEditState({ ...editState, dotNumber: e.target.value })
                             }
                             placeholder="DOT123456"
-                            className="border-slate-700 bg-slate-800 text-slate-100"
+                            className="border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-300"
                           />
                         </div>
                       </div>
 
-                      <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                      <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-800/80 p-3">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-sm font-medium text-slate-200">Estado operativo actual</p>
+                          <p className="text-sm font-semibold text-white">Estado operativo actual</p>
                           <StatusBadge status={operation.loadStatus} />
                         </div>
-                        <p className="text-sm text-slate-400">{operation.clientLabel}</p>
-                        <p className="text-xs text-slate-500">{operation.routeLabel}</p>
+                        <p className="text-sm text-slate-100">{operation.clientLabel}</p>
+                        <p className="text-xs text-slate-300">{operation.routeLabel}</p>
                         <LoadProgress status={operation.loadStatus} />
                       </div>
 
@@ -525,7 +525,11 @@ function FleetManagementView({
                           <Check className="h-4 w-4" />
                           Guardar
                         </Button>
-                        <Button variant="outline" onClick={cancelEdit} className="gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={cancelEdit}
+                          className="gap-2 border-slate-500 text-slate-100 hover:bg-slate-800 hover:text-white"
+                        >
                           <X className="h-4 w-4" />
                           Cancelar
                         </Button>
@@ -535,7 +539,7 @@ function FleetManagementView({
                     <div className="space-y-4">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-800 font-bold text-white">
+                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700 font-bold text-white">
                             {(driver.name ?? "?").charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -544,31 +548,35 @@ function FleetManagementView({
                               <FleetBadge type={safeFleetType} />
                               <Badge
                                 variant="outline"
-                                className="border-slate-700 text-slate-400"
+                                className="border-slate-500 text-slate-100"
                               >
                                 {driver.role}
                               </Badge>
                             </div>
-                            <p className="text-sm text-slate-400">{driver.email}</p>
+                            <p className="text-sm text-slate-200">{driver.email}</p>
                             {driver.phone ? (
-                              <p className="text-xs text-slate-500">{driver.phone}</p>
+                              <p className="text-xs text-slate-300">{driver.phone}</p>
                             ) : null}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
                           <div className="text-right">
-                            <p className="text-xs text-slate-500">GPS</p>
+                            <p className="text-xs text-slate-300">GPS</p>
                             <p
-                              className={`text-xs font-medium ${
-                                operation.hasGps ? "text-emerald-400" : "text-slate-500"
+                              className={`text-xs font-semibold ${
+                                operation.hasGps ? "text-emerald-300" : "text-slate-200"
                               }`}
                             >
                               {operation.hasGps ? "Activo" : "Inactivo"}
                             </p>
                           </div>
 
-                          <Button variant="outline" onClick={() => startEdit(driver)} className="gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => startEdit(driver)}
+                            className="gap-2 border-slate-500 text-slate-100 hover:bg-slate-800 hover:text-white"
+                          >
                             <Edit2 className="h-4 w-4" />
                             Editar
                           </Button>
@@ -576,40 +584,40 @@ function FleetManagementView({
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                          <p className="text-xs text-slate-500">Comisión WV</p>
-                          <p className="font-semibold text-amber-400">
+                        <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+                          <p className="text-xs font-medium text-slate-200">Comisión WV</p>
+                          <p className="font-semibold text-amber-300">
                             {toNumber(driver.commissionPercent, 0)}%
                           </p>
                         </div>
 
-                        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                          <p className="text-xs text-slate-500">Chofer recibe</p>
-                          <p className="font-semibold text-emerald-400">
+                        <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+                          <p className="text-xs font-medium text-slate-200">Chofer recibe</p>
+                          <p className="font-semibold text-emerald-300">
                             {100 - toNumber(driver.commissionPercent, 0)}%
                           </p>
                         </div>
 
-                        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                          <p className="text-xs text-slate-500">DOT</p>
-                          <p className="font-semibold text-slate-200">
+                        <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+                          <p className="text-xs font-medium text-slate-200">DOT</p>
+                          <p className="font-semibold text-white">
                             {driver.dotNumber || "—"}
                           </p>
                         </div>
 
-                        <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-                          <p className="text-xs text-slate-500">Último ping</p>
-                          <p className="font-semibold text-slate-200">
+                        <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+                          <p className="text-xs font-medium text-slate-200">Último ping</p>
+                          <p className="font-semibold text-white">
                             {getTimeSince(location?.timestamp)}
                           </p>
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                      <div className="rounded-xl border border-slate-700 bg-slate-800/80 p-4">
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
-                            <Route className="h-4 w-4 text-blue-400" />
-                            <p className="font-medium text-white">Operación actual</p>
+                            <Route className="h-4 w-4 text-blue-300" />
+                            <p className="font-semibold text-white">Operación actual</p>
                           </div>
                           <StatusBadge status={operation.loadStatus} />
                         </div>
@@ -618,22 +626,22 @@ function FleetManagementView({
                           <div className="space-y-3">
                             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                               <div>
-                                <p className="text-xs text-slate-500">Cliente / Broker</p>
-                                <p className="text-sm font-medium text-slate-200">
+                                <p className="text-xs font-medium text-slate-200">Cliente / Broker</p>
+                                <p className="text-sm font-semibold text-white">
                                   {operation.clientLabel}
                                 </p>
                               </div>
 
                               <div>
-                                <p className="text-xs text-slate-500">Ruta</p>
-                                <p className="text-sm font-medium text-slate-200">
+                                <p className="text-xs font-medium text-slate-200">Ruta</p>
+                                <p className="text-sm font-semibold text-white">
                                   {operation.routeLabel}
                                 </p>
                               </div>
 
                               <div>
-                                <p className="text-xs text-slate-500">Velocidad</p>
-                                <p className="text-sm font-medium text-slate-200">
+                                <p className="text-xs font-medium text-slate-200">Velocidad</p>
+                                <p className="text-sm font-semibold text-white">
                                   {location?.speed ? `${Math.round(location.speed)} mph` : "—"}
                                 </p>
                               </div>
@@ -642,7 +650,7 @@ function FleetManagementView({
                             <LoadProgress status={operation.loadStatus} />
                           </div>
                         ) : (
-                          <div className="rounded-lg border border-dashed border-slate-800 p-4 text-sm text-slate-500">
+                          <div className="rounded-lg border border-dashed border-slate-600 p-4 text-sm text-slate-100">
                             Sin carga activa en este momento.
                           </div>
                         )}
@@ -864,12 +872,12 @@ function FleetMapView({
                 <Navigation className="h-5 w-5 text-blue-400" />
                 GPS Multi-Track
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-slate-300">
                 Seguimiento en tiempo real por conductor y carga.
               </CardDescription>
             </div>
 
-            <Button variant="outline" size="sm" onClick={onManualRefresh} className="gap-2">
+            <Button variant="outline" size="sm" onClick={onManualRefresh} className="gap-2 border-slate-600 text-slate-100 hover:bg-slate-800 hover:text-white">
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Actualizar
             </Button>
@@ -879,20 +887,20 @@ function FleetMapView({
         <CardContent className="p-0">
           <div className="grid grid-cols-2 gap-px border-b border-slate-800 bg-slate-800">
             <div className="bg-slate-900 p-4">
-              <p className="text-xs text-slate-500">Conductores activos</p>
+              <p className="text-xs text-slate-300">Conductores activos</p>
               <p className="text-2xl font-bold text-white">{activeCount}</p>
             </div>
             <div className="bg-slate-900 p-4">
-              <p className="text-xs text-slate-500">Con carga en curso</p>
-              <p className="text-2xl font-bold text-emerald-400">{inRouteCount}</p>
+              <p className="text-xs text-slate-300">Con carga en curso</p>
+              <p className="text-2xl font-bold text-emerald-300">{inRouteCount}</p>
             </div>
           </div>
 
           {activeCount === 0 ? (
-            <div className="p-10 text-center text-slate-500">
-              <WifiOff className="mx-auto mb-3 h-10 w-10 opacity-40" />
+            <div className="p-10 text-center text-slate-200">
+              <WifiOff className="mx-auto mb-3 h-10 w-10 opacity-50" />
               <p>Sin conductores activos</p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-xs text-slate-300">
                 Los choferes aparecen aquí cuando comparten GPS.
               </p>
             </div>
@@ -935,13 +943,13 @@ function FleetMapView({
                           <p className="truncate text-sm font-medium text-white">
                             {loc.driverName ?? "Conductor"}
                           </p>
-                          <Wifi className="h-3.5 w-3.5 text-emerald-400" />
+                          <Wifi className="h-3.5 w-3.5 text-emerald-300" />
                         </div>
 
                         <div className="mt-1 flex items-center gap-2">
                           <FleetBadge type={safeFleetType} />
                           {loc.speed ? (
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-slate-200">
                               {Math.round(toNumber(loc.speed))} mph
                             </span>
                           ) : null}
@@ -949,10 +957,10 @@ function FleetMapView({
 
                         {operation.activeLoad ? (
                           <div className="mt-2 space-y-1 rounded-md bg-slate-950/60 p-2">
-                            <p className="truncate text-xs text-slate-300">
+                            <p className="truncate text-xs text-slate-100">
                               📦 {operation.clientLabel}
                             </p>
-                            <p className="truncate text-xs text-slate-500">
+                            <p className="truncate text-xs text-slate-300">
                               {operation.routeLabel}
                             </p>
                             <div className="pt-1">
@@ -960,10 +968,10 @@ function FleetMapView({
                             </div>
                           </div>
                         ) : (
-                          <p className="mt-2 text-xs text-slate-500">Sin carga activa</p>
+                          <p className="mt-2 text-xs text-slate-200">Sin carga activa</p>
                         )}
 
-                        <p className="mt-2 text-xs text-slate-600">
+                        <p className="mt-2 text-xs text-slate-300">
                           {getTimeSince(loc.timestamp)}
                         </p>
                       </div>
@@ -975,7 +983,7 @@ function FleetMapView({
           )}
 
           <div className="border-t border-slate-800 p-4">
-            <p className="mb-2 text-xs uppercase tracking-wider text-slate-500">Leyenda</p>
+            <p className="mb-2 text-xs uppercase tracking-wider text-slate-300">Leyenda</p>
             <div className="space-y-1.5">
               {Object.entries(FLEET_LABELS).map(([key, label]) => (
                 <div key={key} className="flex items-center gap-2">
@@ -983,7 +991,7 @@ function FleetMapView({
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: FLEET_COLORS[key]?.marker }}
                   />
-                  <span className="text-xs text-slate-400">{label}</span>
+                  <span className="text-xs text-slate-200">{label}</span>
                 </div>
               ))}
             </div>
@@ -999,8 +1007,8 @@ function FleetMapView({
             <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
               <div className="text-center">
                 <div className="mx-auto mb-3 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500" />
-                <p className="text-sm text-slate-400">Cargando mapa...</p>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="text-sm text-slate-200">Cargando mapa...</p>
+                <p className="mt-1 text-xs text-slate-300">
                   Inicializando Google Maps...
                 </p>
               </div>
@@ -1010,12 +1018,12 @@ function FleetMapView({
           {mapError && (
             <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
               <div className="max-w-sm px-6 text-center">
-                <MapPin className="mx-auto mb-4 h-12 w-12 text-slate-600" />
+                <MapPin className="mx-auto mb-4 h-12 w-12 text-slate-500" />
                 <h3 className="mb-2 font-semibold text-white">Mapa no disponible</h3>
-                <p className="mb-4 text-sm text-slate-400">{mapError}</p>
+                <p className="mb-4 text-sm text-slate-200">{mapError}</p>
                 <div className="rounded-lg bg-slate-800 p-4 text-left">
-                  <p className="mb-2 text-xs font-medium text-slate-500">Revisa esto:</p>
-                  <p className="text-xs text-slate-400">
+                  <p className="mb-2 text-xs font-medium text-slate-200">Revisa esto:</p>
+                  <p className="text-xs text-slate-100">
                     Verifica que{" "}
                     <code className="rounded bg-slate-700 px-1">
                       VITE_GOOGLE_MAPS_API_KEY
@@ -1030,10 +1038,10 @@ function FleetMapView({
 
           {mapReady && activeCount === 0 && (
             <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-900/90 px-6 py-3 text-center backdrop-blur-sm">
-              <p className="text-sm font-medium text-slate-300">
+              <p className="text-sm font-medium text-slate-100">
                 Sin conductores activos en este momento
               </p>
-              <p className="mt-0.5 text-xs text-slate-500">
+              <p className="mt-0.5 text-xs text-slate-200">
                 Los conductores deben activar el GPS en la app del driver.
               </p>
             </div>
@@ -1125,12 +1133,16 @@ export default function FleetTracking() {
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Fleet & Drivers</h1>
-          <p className="mt-1 text-slate-400">
+          <p className="mt-1 text-slate-200">
             Seguimiento GPS, gestión de choferes y progreso operativo de cargas.
           </p>
         </div>
 
-        <Button onClick={handleManualRefresh} variant="outline" className="gap-2 self-start">
+        <Button
+          onClick={handleManualRefresh}
+          variant="outline"
+          className="gap-2 self-start border-slate-600 text-slate-100 hover:bg-slate-800 hover:text-white"
+        >
           <RefreshCw
             className={`h-4 w-4 ${
               driversLoading || locationsLoading ? "animate-spin" : ""
@@ -1143,43 +1155,43 @@ export default function FleetTracking() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-4">
-            <p className="text-xs text-slate-500">Choferes</p>
+            <p className="text-xs text-slate-200">Choferes</p>
             <p className="text-2xl font-bold text-white">{fleetStats.totalDrivers}</p>
           </CardContent>
         </Card>
 
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-4">
-            <p className="text-xs text-slate-500">GPS activos</p>
-            <p className="text-2xl font-bold text-emerald-400">{fleetStats.gpsActive}</p>
+            <p className="text-xs text-slate-200">GPS activos</p>
+            <p className="text-2xl font-bold text-emerald-300">{fleetStats.gpsActive}</p>
           </CardContent>
         </Card>
 
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-4">
-            <p className="text-xs text-slate-500">Con carga</p>
-            <p className="text-2xl font-bold text-blue-400">{fleetStats.withActiveLoad}</p>
+            <p className="text-xs text-slate-200">Con carga</p>
+            <p className="text-2xl font-bold text-blue-300">{fleetStats.withActiveLoad}</p>
           </CardContent>
         </Card>
 
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-4">
-            <p className="text-xs text-slate-500">En tránsito</p>
-            <p className="text-2xl font-bold text-amber-400">{fleetStats.inTransit}</p>
+            <p className="text-xs text-slate-200">En tránsito</p>
+            <p className="text-2xl font-bold text-amber-300">{fleetStats.inTransit}</p>
           </CardContent>
         </Card>
 
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-4">
-            <p className="text-xs text-slate-500">Entregadas</p>
-            <p className="text-2xl font-bold text-green-400">{fleetStats.delivered}</p>
+            <p className="text-xs text-slate-200">Entregadas</p>
+            <p className="text-2xl font-bold text-green-300">{fleetStats.delivered}</p>
           </CardContent>
         </Card>
 
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-4">
-            <p className="text-xs text-slate-500">Facturadas / Pagadas</p>
-            <p className="text-2xl font-bold text-indigo-400">
+            <p className="text-xs text-slate-200">Facturadas / Pagadas</p>
+            <p className="text-2xl font-bold text-indigo-300">
               {fleetStats.invoiced + fleetStats.paid}
             </p>
           </CardContent>
@@ -1189,51 +1201,51 @@ export default function FleetTracking() {
       <Card className="border-slate-800 bg-slate-900">
         <CardHeader>
           <CardTitle className="text-white">Flujo operacional actual</CardTitle>
-          <CardDescription>
+          <CardDescription className="text-slate-200">
             Vista rápida del punto en que van las cargas que están moviendo los choferes.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs text-slate-500">Asignadas</p>
-              <p className="text-xl font-bold text-blue-400">{fleetStats.assigned}</p>
+            <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+              <p className="text-xs text-slate-200">Asignadas</p>
+              <p className="text-xl font-bold text-blue-300">{fleetStats.assigned}</p>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs text-slate-500">Iniciadas</p>
-              <p className="text-xl font-bold text-cyan-400">{fleetStats.started}</p>
+            <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+              <p className="text-xs text-slate-200">Iniciadas</p>
+              <p className="text-xl font-bold text-cyan-300">{fleetStats.started}</p>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs text-slate-500">En tránsito</p>
-              <p className="text-xl font-bold text-amber-400">{fleetStats.inTransit}</p>
+            <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+              <p className="text-xs text-slate-200">En tránsito</p>
+              <p className="text-xl font-bold text-amber-300">{fleetStats.inTransit}</p>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs text-slate-500">Entregadas</p>
-              <p className="text-xl font-bold text-green-400">{fleetStats.delivered}</p>
+            <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+              <p className="text-xs text-slate-200">Entregadas</p>
+              <p className="text-xl font-bold text-green-300">{fleetStats.delivered}</p>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs text-slate-500">Facturadas</p>
-              <p className="text-xl font-bold text-indigo-400">{fleetStats.invoiced}</p>
+            <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+              <p className="text-xs text-slate-200">Facturadas</p>
+              <p className="text-xl font-bold text-indigo-300">{fleetStats.invoiced}</p>
             </div>
-            <div className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-xs text-slate-500">Pagadas</p>
-              <p className="text-xl font-bold text-emerald-400">{fleetStats.paid}</p>
+            <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+              <p className="text-xs text-slate-200">Pagadas</p>
+              <p className="text-xl font-bold text-emerald-300">{fleetStats.paid}</p>
             </div>
           </div>
 
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="mt-4 text-xs text-slate-200">
             Última actualización: {getTimeSince(lastRefresh)}
           </p>
         </CardContent>
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 bg-slate-900">
-          <TabsTrigger value="map" className="gap-2">
+        <TabsList className="grid w-full grid-cols-2 bg-slate-800 text-slate-100">
+          <TabsTrigger value="map" className="gap-2 text-slate-100 data-[state=active]:bg-slate-700 data-[state=active]:text-white">
             <MapPin className="h-4 w-4" />
             Mapa operativo
           </TabsTrigger>
-          <TabsTrigger value="management" className="gap-2">
+          <TabsTrigger value="management" className="gap-2 text-slate-100 data-[state=active]:bg-slate-700 data-[state=active]:text-white">
             <Users className="h-4 w-4" />
             Gestión de flota
           </TabsTrigger>
@@ -1252,7 +1264,7 @@ export default function FleetTracking() {
           <Card className="border-slate-800 bg-slate-900">
             <CardHeader>
               <CardTitle className="text-white">Choferes y estado de operación</CardTitle>
-              <CardDescription>
+              <CardDescription className="text-slate-200">
                 Edita configuración de flota y visualiza en qué fase va cada carga.
               </CardDescription>
             </CardHeader>
