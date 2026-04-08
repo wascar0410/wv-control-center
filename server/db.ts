@@ -2307,36 +2307,31 @@ export async function getFinancialPnL(year: number, month: number) {
 
 export async function getAllocationSettings(userId?: number) {
   const db = await getDb();
-  if (!db) {
-    return {
-      ownerDrawPercent: 40,
-      reserveFundPercent: 20,
-      reinvestmentPercent: 20,
-      operatingCashPercent: 20,
-      marginAlertThreshold: 10,
-      quoteVarianceThreshold: 20,
-      overdueDaysThreshold: 30,
-    };
-  }
+
+  const DEFAULTS = {
+    ownerDrawPercent: 40,
+    reserveFundPercent: 20,
+    reinvestmentPercent: 20,
+    operatingCashPercent: 20,
+    marginAlertThreshold: 10,
+    quoteVarianceThreshold: 20,
+    overdueDaysThreshold: 30,
+  };
+
+  if (!db) return DEFAULTS;
 
   try {
-    const config = userId
-      ? await db.query.businessConfig.findFirst({
-          where: eq(businessConfig.userId, userId),
-        })
-      : await db.query.businessConfig.findFirst();
+    const result = userId
+      ? await db
+          .select()
+          .from(businessConfig)
+          .where(eq(businessConfig.userId, userId))
+          .limit(1)
+      : await db.select().from(businessConfig).limit(1);
 
-    if (!config) {
-      return {
-        ownerDrawPercent: 40,
-        reserveFundPercent: 20,
-        reinvestmentPercent: 20,
-        operatingCashPercent: 20,
-        marginAlertThreshold: 10,
-        quoteVarianceThreshold: 20,
-        overdueDaysThreshold: 30,
-      };
-    }
+    const config = result?.[0];
+
+    if (!config) return DEFAULTS;
 
     return {
       ownerDrawPercent: Number(config.ownerDrawPercent ?? 40),
@@ -2349,15 +2344,7 @@ export async function getAllocationSettings(userId?: number) {
     };
   } catch (error) {
     console.error("[DB] getAllocationSettings error:", error);
-    return {
-      ownerDrawPercent: 40,
-      reserveFundPercent: 20,
-      reinvestmentPercent: 20,
-      operatingCashPercent: 20,
-      marginAlertThreshold: 10,
-      quoteVarianceThreshold: 20,
-      overdueDaysThreshold: 30,
-    };
+    return DEFAULTS;
   }
 }
 
@@ -2383,11 +2370,13 @@ export async function updateAllocationSettings(
     throw new Error("Allocation percentages must sum to 100");
   }
 
-  const existing = await db.query.businessConfig.findFirst({
-    where: eq(businessConfig.userId, userId),
-  });
+  const existing = await db
+    .select()
+    .from(businessConfig)
+    .where(eq(businessConfig.userId, userId))
+    .limit(1);
 
-  if (!existing) {
+  if (!existing.length) {
     await db.insert(businessConfig).values({
       userId,
       ownerDrawPercent: String(data.ownerDrawPercent),
@@ -2397,26 +2386,26 @@ export async function updateAllocationSettings(
       createdAt: new Date(),
       updatedAt: new Date(),
     });
-
-    return await db.query.businessConfig.findFirst({
-      where: eq(businessConfig.userId, userId),
-    });
+  } else {
+    await db
+      .update(businessConfig)
+      .set({
+        ownerDrawPercent: String(data.ownerDrawPercent),
+        reserveFundPercent: String(data.reserveFundPercent),
+        reinvestmentPercent: String(data.reinvestmentPercent),
+        operatingCashPercent: String(data.operatingCashPercent),
+        updatedAt: new Date(),
+      })
+      .where(eq(businessConfig.userId, userId));
   }
 
-  await db
-    .update(businessConfig)
-    .set({
-      ownerDrawPercent: String(data.ownerDrawPercent),
-      reserveFundPercent: String(data.reserveFundPercent),
-      reinvestmentPercent: String(data.reinvestmentPercent),
-      operatingCashPercent: String(data.operatingCashPercent),
-      updatedAt: new Date(),
-    })
-    .where(eq(businessConfig.userId, userId));
+  const updated = await db
+    .select()
+    .from(businessConfig)
+    .where(eq(businessConfig.userId, userId))
+    .limit(1);
 
-  return await db.query.businessConfig.findFirst({
-    where: eq(businessConfig.userId, userId),
-  });
+  return updated[0];
 }
 
 export async function getFinancialTrend(year: number) {
@@ -2505,11 +2494,13 @@ export async function getOrCreateWallet(driverId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  let existing = await db.query.wallets.findFirst({
-    where: eq(wallets.driverId, driverId),
-  });
+  let existing = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.driverId, driverId))
+    .limit(1);
 
-  if (existing) return existing;
+  if (existing.length) return existing[0];
 
   await db.insert(wallets).values({
     driverId,
@@ -2524,17 +2515,18 @@ export async function getOrCreateWallet(driverId: number) {
     updatedAt: new Date(),
   });
 
-  existing = await db.query.wallets.findFirst({
-    where: eq(wallets.driverId, driverId),
-  });
+  const created = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.driverId, driverId))
+    .limit(1);
 
-  if (!existing) {
+  if (!created.length) {
     throw new Error("Failed to create wallet");
   }
 
-  return existing;
+  return created[0];
 }
-
 /**
  * Get wallet by driver ID
  */
@@ -2542,14 +2534,13 @@ export async function getWalletByDriverId(driverId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  if (!db.query?.wallets) {
-    console.error("[getWalletByDriverId] db.query.wallets is undefined");
-    throw new Error("Wallet schema not registered in Drizzle");
-  }
+  const result = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.driverId, driverId))
+    .limit(1);
 
-  return db.query.wallets.findFirst({
-    where: eq(wallets.driverId, driverId),
-  });
+  return result[0] || null;
 }
 
 /**
@@ -2707,17 +2698,6 @@ export async function requestWithdrawal(
   await updateWalletBalance(wallet.id, {
     availableBalance: String(availableBalance - amount),
     pendingBalance: String(Number(wallet.pendingBalance || 0) + amount),
-  });
-
-  return withdrawal;
-}
-  // Create transaction record
-  await addWalletTransaction(walletId, driverId, {
-    type: "adjustment",
-    amount: String(amount),
-    withdrawalId: withdrawal.id,
-    description: `Withdrawal request: ${data.method || "bank_transfer"}`,
-    status: "pending",
   });
 
   return withdrawal;
@@ -3515,30 +3495,54 @@ export async function recordInvoicePayment(data: {
  */
 export async function getReceivablesAgingReport() {
   const db = await getDb();
-  if (!db) throw new Error("Database connection failed");
-  
-  const recs = await db.query.receivables.findMany({
-    where: inArray(receivables.status, ["current", "overdue"]),
-  });
+  if (!db) {
+    return {
+      current: { count: 0, total: 0 },
+      "30_days": { count: 0, total: 0 },
+      "60_days": { count: 0, total: 0 },
+      "90_days": { count: 0, total: 0 },
+      "120_plus": { count: 0, total: 0 },
+      totalOutstanding: 0,
+    };
+  }
 
-  const now = new Date();
-  const summary = {
-    current: { count: 0, total: 0 },
-    "30_days": { count: 0, total: 0 },
-    "60_days": { count: 0, total: 0 },
-    "90_days": { count: 0, total: 0 },
-    "120_plus": { count: 0, total: 0 },
-    totalOutstanding: 0,
-  };
+  try {
+    const recs = await db
+      .select()
+      .from(receivables)
+      .where(inArray(receivables.status, ["current", "overdue"]));
 
-  recs.forEach((rec: any) => {
-    const bucket = rec.agingBucket;
-    summary[bucket as keyof typeof summary].count++;
-    summary[bucket as keyof typeof summary].total += Number(rec.outstandingAmount);
-    summary.totalOutstanding += Number(rec.outstandingAmount);
-  });
+    const summary = {
+      current: { count: 0, total: 0 },
+      "30_days": { count: 0, total: 0 },
+      "60_days": { count: 0, total: 0 },
+      "90_days": { count: 0, total: 0 },
+      "120_plus": { count: 0, total: 0 },
+      totalOutstanding: 0,
+    };
 
-  return summary;
+    recs.forEach((rec: any) => {
+      const bucket = rec.agingBucket || "current";
+
+      if (!summary[bucket as keyof typeof summary]) return;
+
+      summary[bucket as keyof typeof summary].count++;
+      summary[bucket as keyof typeof summary].total += Number(rec.outstandingAmount || 0);
+      summary.totalOutstanding += Number(rec.outstandingAmount || 0);
+    });
+
+    return summary;
+  } catch (error) {
+    console.error("[DB] getReceivablesAgingReport error:", error);
+    return {
+      current: { count: 0, total: 0 },
+      "30_days": { count: 0, total: 0 },
+      "60_days": { count: 0, total: 0 },
+      "90_days": { count: 0, total: 0 },
+      "120_plus": { count: 0, total: 0 },
+      totalOutstanding: 0,
+    };
+  }
 }
 
 /**
