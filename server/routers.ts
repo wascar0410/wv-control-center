@@ -38,6 +38,7 @@ import { quoteAnalysisRouter } from "./routers/quoteAnalysis";
 import { invoicingRouter } from "./routers/invoicing";
 import { alertsAndTasksRouter } from "./routers/alertsAndTasks";
 import { companyRouter } from "./routers/company";
+import { financialRouter } from "./routers/financial";
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -2284,6 +2285,7 @@ const driverFeedbackRouter = router({
 
 // ─── App Router ───────────────────────────────────────────────────────────────
 export const appRouter = router({
+  financial: financialRouter,
   system: systemRouter,
   ai: aiRouter,
   auth: router({

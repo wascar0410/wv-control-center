@@ -21,6 +21,7 @@ import {
   Wallet,
   CreditCard,
 } from "lucide-react";
+import { FinancialDashboard } from "@/components/FinancialDashboard";
 
 function formatCurrency(value: number | string) {
   const num = typeof value === "string" ? parseFloat(value) : value;
@@ -331,7 +332,7 @@ export default function FinanceDashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="gap-2">
             <DollarSign className="w-4 h-4" />
             Overview
@@ -347,6 +348,10 @@ export default function FinanceDashboard() {
           <TabsTrigger value="analytics" className="gap-2">
             <BarChart3 className="w-4 h-4" />
             Analytics
+          </TabsTrigger>
+          <TabsTrigger value="financial" className="gap-2">
+            <TrendingUp className="w-4 h-4" />
+            P&L Analysis
           </TabsTrigger>
         </TabsList>
 
@@ -364,6 +369,9 @@ export default function FinanceDashboard() {
 
         <TabsContent value="analytics" className="space-y-4">
           <AnalyticsTab />
+        </TabsContent>
+        <TabsContent value="financial" className="space-y-4">
+          <FinancialDashboard />
         </TabsContent>
       </Tabs>
     </div>
