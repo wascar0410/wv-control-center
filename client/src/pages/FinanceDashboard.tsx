@@ -92,12 +92,12 @@ function OverviewTab() {
       };
     }
 
-    const totalReceivable = agingReport.totalOutstanding;
+    const totalReceivable = agingReport?.totalOutstanding || 0;
     const overdue =
-      agingReport["30_days"].total +
-      agingReport["60_days"].total +
-      agingReport["90_days"].total +
-      agingReport["120_plus"].total;
+      (agingReport?.["30_days"]?.total || 0) +
+      (agingReport?.["60_days"]?.total || 0) +
+      (agingReport?.["90_days"]?.total || 0) +
+      (agingReport?.["120_plus"]?.total || 0);
     const totalWalletBalance = wallets.reduce((sum: number, w: any) => sum + Number(w.balance || 0), 0);
     const avgWalletBalance = wallets.length > 0 ? totalWalletBalance / wallets.length : 0;
 
