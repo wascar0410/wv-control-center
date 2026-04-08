@@ -65,22 +65,22 @@ VALUES (@loadId2, 'Test Broker B', 180, 150, 360, 360, 120, 300, 60, 16.67, 2.4,
 
 -- 8. Create Settlement
 INSERT INTO settlements (settlementPeriod, startDate, endDate, partner1Id, partner2Id, partner1Share, partner2Share, status, createdAt, updatedAt)
-VALUES ('2026-04', '2026-04-01', '2026-04-30', @adminId, @dispatcherId, 50, 50, 'pending', NOW(), NOW());
+VALUES ('2026-04', '2026-04-01', '2026-04-30', @adminId, @dispatcherId, 50, 50, 'draft', NOW(), NOW());
 
 SET @settlementId = LAST_INSERT_ID();
 
 -- 9. Create Invoice
-INSERT INTO invoices (loadId, brokerName, brokerId, subtotal, taxRate, taxAmount, total, dueDate, status, createdBy, createdAt, updatedAt)
-VALUES (@loadId1, 'Test Broker A', 1, 625, 0.08, 50, 675, DATE_ADD(NOW(), INTERVAL 30 DAY), 'issued', @adminId, NOW(), NOW());
+INSERT INTO invoices (invoiceNumber, loadId, driverId, brokerName, amount, status, dueDate, issuedDate)
+VALUES (CONCAT('INV-', DATE_FORMAT(NOW(), '%Y%m%d'), '-', FLOOR(RAND() * 10000)), @loadId1, @driverId, 'Test Broker A', 675, 'sent', DATE_ADD(NOW(), INTERVAL 30 DAY), NOW());
 
 SET @invoiceId = LAST_INSERT_ID();
 
 -- 10. Create Alerts
-INSERT INTO alerts (type, title, message, severity, recipientUserId, status, createdAt, updatedAt)
-VALUES ('load_assigned', 'New Load Assigned', CONCAT('Load #', @loadId1, ' assigned'), 'info', @driverId, 'unread', NOW(), NOW());
+INSERT INTO alerts (type, title, message, severity, recipientUserId, isRead, isAcknowledged, createdAt)
+VALUES ('payment_pending', 'Payment Pending', CONCAT('Load #', @loadId1, ' payment pending'), 'info', @driverId, false, false, NOW());
 
-INSERT INTO alerts (type, title, message, severity, recipientUserId, status, createdAt, updatedAt)
-VALUES ('payment_processed', 'Payment Processed', 'Wallet credited with $1,500', 'info', @driverId, 'unread', NOW(), NOW());
+INSERT INTO alerts (type, title, message, severity, recipientUserId, isRead, isAcknowledged, createdAt)
+VALUES ('wallet_low', 'Wallet Balance Low', 'Your wallet balance is below minimum threshold', 'warning', @driverId, false, false, NOW());
 
 -- Summary
 SELECT CONCAT('✅ Seed data created successfully!
