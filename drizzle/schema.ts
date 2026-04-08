@@ -411,6 +411,15 @@ export const businessConfig = mysqlTable("business_config", {
   // Goals and targets
   targetMilesPerMonth: int("targetMilesPerMonth").default(4000),
   minimumProfitPerMile: decimal("minimumProfitPerMile", { precision: 6, scale: 2 }).default("1.50"),
+  // Profit allocation percentages (must sum to 100)
+  ownerDrawPercent: decimal("ownerDrawPercent", { precision: 5, scale: 2 }).default("40.00"),
+  reserveFundPercent: decimal("reserveFundPercent", { precision: 5, scale: 2 }).default("20.00"),
+  reinvestmentPercent: decimal("reinvestmentPercent", { precision: 5, scale: 2 }).default("20.00"),
+  operatingCashPercent: decimal("operatingCashPercent", { precision: 5, scale: 2 }).default("20.00"),
+  // Financial alert thresholds
+  marginAlertThreshold: decimal("marginAlertThreshold", { precision: 5, scale: 2 }).default("10.00"),
+  quoteVarianceThreshold: decimal("quoteVarianceThreshold", { precision: 5, scale: 2 }).default("20.00"),
+  overdueDaysThreshold: int("overdueDaysThreshold").default(30),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
