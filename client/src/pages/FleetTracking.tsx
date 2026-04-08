@@ -29,10 +29,7 @@ import {
   Edit2,
   Check,
   X,
-  DollarSign,
-  Shield,
   Package,
-  Clock,
   Wifi,
   WifiOff,
   MapPin,
@@ -156,19 +153,22 @@ const OPERATION_FLOW = [
   { key: "delivered", label: "Entregada" },
   { key: "invoiced", label: "Facturada" },
   { key: "paid", label: "Pagada" },
-];
+] as const;
 
 /**
- * Google Maps via Manus proxy
+ * Google Maps direct loader
  */
-const FORGE_API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-const FORGE_BASE_URL =
-  import.meta.env.VITE_FRONTEND_FORGE_API_URL || "https://forge.butterfly-effect.dev";
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 let googleMapsLoadPromise: Promise<void> | null = null;
 
 function loadGoogleMapsScript(): Promise<void> {
+  if (!GOOGLE_MAPS_API_KEY) {
+    return Promise.reject(
+      new Error("Missing VITE_GOOGLE_MAPS_API_KEY in environment variables")
+    );
+  }
+
   if (googleMapsLoadPromise) return googleMapsLoadPromise;
 
   googleMapsLoadPromise = new Promise((resolve, reject) => {
@@ -177,23 +177,31 @@ function loadGoogleMapsScript(): Promise<void> {
       return;
     }
 
-    const existing = document.querySelector(`script[src*="${MAPS_PROXY_URL}/maps/api/js"]`);
+    const existing = document.querySelector(
+      'script[src*="maps.googleapis.com/maps/api/js"]'
+    ) as HTMLScriptElement | null;
+
     if (existing) {
+      if ((window as any).google?.maps) {
+        resolve();
+        return;
+      }
       existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error("Failed to load Google Maps. Check API key or restrictions.")),
+        { once: true }
+      );
       return;
     }
 
     const script = document.createElement("script");
-   script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&v=weekly&libraries=marker,places,geometry`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&v=weekly&libraries=marker,places,geometry`;
     script.async = true;
-    script.crossOrigin = "anonymous";
+    script.defer = true;
     script.onload = () => resolve();
     script.onerror = () =>
-      reject(
-        new Error(
-          "Failed to load Google Maps via Manus proxy. Check VITE_FRONTEND_FORGE_API_KEY."
-        )
-      );
+      reject(new Error("Failed to load Google Maps. Check API key or restrictions."));
 
     document.head.appendChild(script);
   });
@@ -213,7 +221,11 @@ type EditState = {
 
 function getTimeSince(ts?: string | Date | null): string {
   if (!ts) return "Sin registro";
-  const diff = Date.now() - new Date(ts).getTime();
+
+  const parsed = new Date(ts).getTime();
+  if (Number.isNaN(parsed)) return "Sin registro";
+
+  const diff = Date.now() - parsed;
   const mins = Math.floor(diff / 60000);
 
   if (mins < 1) return "Ahora mismo";
@@ -231,7 +243,7 @@ function toNumber(value: any, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function getSafeFleetType(type?: string) {
+function getSafeFleetType(type?: string | null) {
   return FLEET_LABELS[type || ""] ? type! : "internal";
 }
 
@@ -241,7 +253,6 @@ function normalizeLoadStatus(raw?: string | null): string {
   const value = String(raw).toLowerCase();
 
   if (LOAD_STATUS_META[value]) return value;
-
   if (value === "picked_up" || value === "pickup" || value === "started") return "started";
   if (value === "transit" || value === "en_route") return "in_transit";
   if (value === "complete") return "delivered";
@@ -270,7 +281,7 @@ function StatusBadge({ status }: { status?: string | null }) {
 }
 
 function FleetBadge({ type }: { type?: string | null }) {
-  const safeType = getSafeFleetType(type || undefined);
+  const safeType = getSafeFleetType(type);
   const fleet = FLEET_TYPES.find((f) => f.value === safeType) ?? FLEET_TYPES[0];
 
   return (
@@ -653,7 +664,6 @@ function FleetManagementView({
  */
 function FleetMapView({
   locations,
-  lastRefresh,
   onManualRefresh,
   isRefreshing,
 }: {
@@ -700,8 +710,9 @@ function FleetMapView({
         infoWindowRef.current = new google.maps.InfoWindow();
         setMapInstance(map);
         setMapReady(true);
+        setMapError(null);
       } catch (err: any) {
-        if (!cancelled) setMapError(err.message);
+        if (!cancelled) setMapError(err?.message || "No se pudo cargar Google Maps");
       }
     })();
 
@@ -711,7 +722,7 @@ function FleetMapView({
   }, []);
 
   useEffect(() => {
-    if (!mapInstance || !locations) return;
+    if (!mapInstance || !Array.isArray(locations)) return;
 
     const google = (window as any).google;
     const currentIds = new Set(locations.map((l: any) => l.driverId));
@@ -727,7 +738,11 @@ function FleetMapView({
       const safeFleetType = getSafeFleetType(loc.fleetType);
       const color = FLEET_COLORS[safeFleetType]?.marker ?? "#3b82f6";
       const existing = markersRef.current.get(loc.driverId);
-      const position = { lat: loc.latitude, lng: loc.longitude };
+      const position = { lat: toNumber(loc.latitude), lng: toNumber(loc.longitude) };
+
+      if (!Number.isFinite(position.lat) || !Number.isFinite(position.lng)) return;
+      if (position.lat === 0 && position.lng === 0) return;
+
       const statusMeta = getStatusMeta(loc?.activeLoad?.status);
 
       if (existing) {
@@ -791,7 +806,7 @@ function FleetMapView({
                 ${
                   loc.speed
                     ? `<div style="font-size: 11px; color: #666; margin-top: 6px;">🚗 ${Math.round(
-                        loc.speed
+                        toNumber(loc.speed)
                       )} mph</div>`
                     : ""
                 }
@@ -805,16 +820,23 @@ function FleetMapView({
       }
     });
 
-    if (locations.length > 0 && markersRef.current.size > 0) {
+    const validLocations = locations.filter((loc: any) => {
+      const lat = toNumber(loc.latitude, NaN);
+      const lng = toNumber(loc.longitude, NaN);
+      return Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+    });
+
+    if (validLocations.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      locations.forEach((loc: any) =>
-        bounds.extend({ lat: loc.latitude, lng: loc.longitude })
+
+      validLocations.forEach((loc: any) =>
+        bounds.extend({ lat: toNumber(loc.latitude), lng: toNumber(loc.longitude) })
       );
 
-      if (locations.length === 1) {
+      if (validLocations.length === 1) {
         mapInstance.setCenter({
-          lat: locations[0].latitude,
-          lng: locations[0].longitude,
+          lat: toNumber(validLocations[0].latitude),
+          lng: toNumber(validLocations[0].longitude),
         });
         mapInstance.setZoom(12);
       } else {
@@ -823,16 +845,17 @@ function FleetMapView({
     }
   }, [mapInstance, locations]);
 
-  const activeCount = locations?.length ?? 0;
+  const activeCount = Array.isArray(locations) ? locations.length : 0;
   const inRouteCount =
-    locations?.filter((l: any) => {
-      const status = normalizeLoadStatus(l?.activeLoad?.status);
-      return ["assigned", "started", "in_transit"].includes(status);
-    }).length ?? 0;
+    Array.isArray(locations)
+      ? locations.filter((l: any) => {
+          const status = normalizeLoadStatus(l?.activeLoad?.status);
+          return ["assigned", "started", "in_transit"].includes(status);
+        }).length
+      : 0;
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      {/* Side panel */}
       <Card className="overflow-hidden border-slate-800 bg-slate-900">
         <CardHeader className="border-b border-slate-800">
           <div className="flex items-center justify-between gap-3">
@@ -890,7 +913,10 @@ function FleetMapView({
                     onClick={() => {
                       setSelectedDriver(loc.driverId);
                       if (mapInstance) {
-                        mapInstance.panTo({ lat: loc.latitude, lng: loc.longitude });
+                        mapInstance.panTo({
+                          lat: toNumber(loc.latitude),
+                          lng: toNumber(loc.longitude),
+                        });
                         mapInstance.setZoom(13);
                       }
                     }}
@@ -916,7 +942,7 @@ function FleetMapView({
                           <FleetBadge type={safeFleetType} />
                           {loc.speed ? (
                             <span className="text-xs text-slate-500">
-                              {Math.round(loc.speed)} mph
+                              {Math.round(toNumber(loc.speed))} mph
                             </span>
                           ) : null}
                         </div>
@@ -965,7 +991,6 @@ function FleetMapView({
         </CardContent>
       </Card>
 
-      {/* Map */}
       <Card className="overflow-hidden border-slate-800 bg-slate-900">
         <CardContent className="relative h-[760px] p-0">
           <div ref={mapContainerRef} className="h-full w-full" />
@@ -976,7 +1001,7 @@ function FleetMapView({
                 <div className="mx-auto mb-3 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-500" />
                 <p className="text-sm text-slate-400">Cargando mapa...</p>
                 <p className="mt-1 text-xs text-slate-600">
-                  Obteniendo configuración del servidor...
+                  Inicializando Google Maps...
                 </p>
               </div>
             </div>
@@ -989,13 +1014,14 @@ function FleetMapView({
                 <h3 className="mb-2 font-semibold text-white">Mapa no disponible</h3>
                 <p className="mb-4 text-sm text-slate-400">{mapError}</p>
                 <div className="rounded-lg bg-slate-800 p-4 text-left">
-                  <p className="mb-2 text-xs font-medium text-slate-500">Posible causa:</p>
+                  <p className="mb-2 text-xs font-medium text-slate-500">Revisa esto:</p>
                   <p className="text-xs text-slate-400">
                     Verifica que{" "}
                     <code className="rounded bg-slate-700 px-1">
-                      VITE_FRONTEND_FORGE_API_KEY
+                      VITE_GOOGLE_MAPS_API_KEY
                     </code>{" "}
-                    esté configurado en Railway.
+                    esté configurada en Railway y que la API key tenga habilitada la
+                    Maps JavaScript API.
                   </p>
                 </div>
               </div>
@@ -1096,7 +1122,6 @@ export default function FleetTracking() {
 
   return (
     <div className="min-h-screen space-y-6 bg-slate-950 p-6 text-slate-100">
-      {/* Header */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Fleet & Drivers</h1>
@@ -1115,7 +1140,6 @@ export default function FleetTracking() {
         </Button>
       </div>
 
-      {/* Top stats */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
         <Card className="border-slate-800 bg-slate-900">
           <CardContent className="pt-4">
@@ -1162,7 +1186,6 @@ export default function FleetTracking() {
         </Card>
       </div>
 
-      {/* Operation flow snapshot */}
       <Card className="border-slate-800 bg-slate-900">
         <CardHeader>
           <CardTitle className="text-white">Flujo operacional actual</CardTitle>
@@ -1204,7 +1227,6 @@ export default function FleetTracking() {
         </CardContent>
       </Card>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-2 bg-slate-900">
           <TabsTrigger value="map" className="gap-2">
