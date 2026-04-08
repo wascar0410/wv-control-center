@@ -8,8 +8,9 @@ import {
   decimal,
   boolean,
   json,
+  uniqueIndex,
+  index,
 } from "drizzle-orm/mysql-core";
-
 /**
  * Core user table backing auth flow.
  */
@@ -82,29 +83,31 @@ export type InsertPasswordAuditLog = typeof passwordAuditLog.$inferInsert;
 /**
  * User Preferences - Notification and system preferences
  */
-export const userPreferences = mysqlTable("user_preferences", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id),
-  // Notification preferences
-  emailNotifications: boolean("emailNotifications").default(true).notNull(),
-  smsNotifications: boolean("smsNotifications").default(true).notNull(),
-  pushNotifications: boolean("pushNotifications").default(true).notNull(),
-  // Notification types
-  notifyOnLoadAssignment: boolean("notifyOnLoadAssignment").default(true).notNull(),
-  notifyOnLoadStatus: boolean("notifyOnLoadStatus").default(true).notNull(),
-  notifyOnPayment: boolean("notifyOnPayment").default(true).notNull(),
-  notifyOnMessage: boolean("notifyOnMessage").default(true).notNull(),
-  notifyOnBonus: boolean("notifyOnBonus").default(true).notNull(),
-  // System preferences
-  theme: mysqlEnum("theme", ["dark", "light", "auto"]).default("dark").notNull(),
-  language: varchar("language", { length: 10 }).default("es").notNull(),
-  timezone: varchar("timezone", { length: 50 }).default("America/New_York").notNull(),
-  // Privacy
-  showOnlineStatus: boolean("showOnlineStatus").default(true).notNull(),
-  allowLocationTracking: boolean("allowLocationTracking").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const userPreferences = mysqlTable(
+  "user_preferences",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    emailNotifications: boolean("emailNotifications").default(true).notNull(),
+    smsNotifications: boolean("smsNotifications").default(true).notNull(),
+    pushNotifications: boolean("pushNotifications").default(true).notNull(),
+    notifyOnLoadAssignment: boolean("notifyOnLoadAssignment").default(true).notNull(),
+    notifyOnLoadStatus: boolean("notifyOnLoadStatus").default(true).notNull(),
+    notifyOnPayment: boolean("notifyOnPayment").default(true).notNull(),
+    notifyOnMessage: boolean("notifyOnMessage").default(true).notNull(),
+    notifyOnBonus: boolean("notifyOnBonus").default(true).notNull(),
+    theme: mysqlEnum("theme", ["dark", "light", "auto"]).default("dark").notNull(),
+    language: varchar("language", { length: 10 }).default("es").notNull(),
+    timezone: varchar("timezone", { length: 50 }).default("America/New_York").notNull(),
+    showOnlineStatus: boolean("showOnlineStatus").default(true).notNull(),
+    allowLocationTracking: boolean("allowLocationTracking").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("user_preferences_user_id_unique").on(table.userId),
+  })
+);
 
 export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InsertUserPreferences = typeof userPreferences.$inferInsert;
@@ -112,46 +115,46 @@ export type InsertUserPreferences = typeof userPreferences.$inferInsert;
 /**
  * Loads (Cargas) - Core shipment records
  */
-export const loads = mysqlTable("loads", {
-  id: int("id").autoincrement().primaryKey(),
-  // Client info
-  clientName: varchar("clientName", { length: 255 }).notNull(),
-  // Route
-  pickupAddress: text("pickupAddress").notNull(),
-  deliveryAddress: text("deliveryAddress").notNull(),
-  pickupLat: decimal("pickupLat", { precision: 10, scale: 7 }),
-  pickupLng: decimal("pickupLng", { precision: 10, scale: 7 }),
-  deliveryLat: decimal("deliveryLat", { precision: 10, scale: 7 }),
-  deliveryLng: decimal("deliveryLng", { precision: 10, scale: 7 }),
-  // Cargo details
-  weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
-  weightUnit: varchar("weightUnit", { length: 10 }).default("lbs").notNull(),
-  merchandiseType: varchar("merchandiseType", { length: 255 }).notNull(),
-  // Pricing
-  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
-  estimatedFuel: decimal("estimatedFuel", { precision: 10, scale: 2 }).default("0"),
-  estimatedTolls: decimal("estimatedTolls", { precision: 10, scale: 2 }).default("0"),
-  netMargin: decimal("netMargin", { precision: 10, scale: 2 }),
-  // Status
-  status: mysqlEnum("status", ["available", "in_transit", "delivered", "invoiced", "paid"]).default("available").notNull(),
-  // Assignment
-  assignedDriverId: int("assignedDriverId"),
-  driverAcceptedAt: timestamp("driverAcceptedAt"),
-  driverRejectedAt: timestamp("driverRejectedAt"),
-  driverRejectionReason: varchar("driverRejectionReason", { length: 500 }),
-  // Rate Confirmation
-  rateConfirmationNumber: varchar("rateConfirmationNumber", { length: 100 }),
-  // Notes
-  notes: text("notes"),
-  bolImageUrl: text("bolImageUrl"),
-  // Timestamps
-  pickupDate: timestamp("pickupDate"),
-  deliveryDate: timestamp("deliveryDate"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  createdBy: int("createdBy"),
-});
-
+export const loads = mysqlTable(
+  "loads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    clientName: varchar("clientName", { length: 255 }).notNull(),
+    pickupAddress: text("pickupAddress").notNull(),
+    deliveryAddress: text("deliveryAddress").notNull(),
+    pickupLat: decimal("pickupLat", { precision: 10, scale: 7 }),
+    pickupLng: decimal("pickupLng", { precision: 10, scale: 7 }),
+    deliveryLat: decimal("deliveryLat", { precision: 10, scale: 7 }),
+    deliveryLng: decimal("deliveryLng", { precision: 10, scale: 7 }),
+    weight: decimal("weight", { precision: 10, scale: 2 }).notNull(),
+    weightUnit: varchar("weightUnit", { length: 10 }).default("lbs").notNull(),
+    merchandiseType: varchar("merchandiseType", { length: 255 }).notNull(),
+    price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+    estimatedFuel: decimal("estimatedFuel", { precision: 10, scale: 2 }).default("0.00"),
+    estimatedTolls: decimal("estimatedTolls", { precision: 10, scale: 2 }).default("0.00"),
+    netMargin: decimal("netMargin", { precision: 10, scale: 2 }),
+    status: mysqlEnum("status", ["available", "in_transit", "delivered", "invoiced", "paid"])
+      .default("available")
+      .notNull(),
+    assignedDriverId: int("assignedDriverId").references(() => users.id, { onDelete: "set null" }),
+    driverAcceptedAt: timestamp("driverAcceptedAt"),
+    driverRejectedAt: timestamp("driverRejectedAt"),
+    driverRejectionReason: varchar("driverRejectionReason", { length: 500 }),
+    rateConfirmationNumber: varchar("rateConfirmationNumber", { length: 100 }),
+    notes: text("notes"),
+    bolImageUrl: text("bolImageUrl"),
+    pickupDate: timestamp("pickupDate"),
+    deliveryDate: timestamp("deliveryDate"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    createdBy: int("createdBy").references(() => users.id, { onDelete: "set null" }),
+  },
+  (table) => ({
+    statusIdx: index("loads_status_idx").on(table.status),
+    assignedDriverIdx: index("loads_assigned_driver_idx").on(table.assignedDriverId),
+    createdByIdx: index("loads_created_by_idx").on(table.createdBy),
+  })
+);
 export type Load = typeof loads.$inferSelect;
 export type InsertLoad = typeof loads.$inferInsert;
 
@@ -176,29 +179,35 @@ export type InsertLoadNotification = typeof loadNotifications.$inferInsert;
 /**
  * Transactions - Income and expense records
  */
-export const transactions = mysqlTable("transactions", {
-  id: int("id").autoincrement().primaryKey(),
-  type: mysqlEnum("type", ["income", "expense"]).notNull(),
-  category: mysqlEnum("category", [
-    "load_payment",
-    "fuel",
-    "maintenance",
-    "insurance",
-    "subscriptions",
-    "phone",
-    "payroll",
-    "tolls",
-    "other",
-  ]).notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  description: text("description"),
-  referenceLoadId: int("referenceLoadId"),
-  receiptUrl: text("receiptUrl"),
-  transactionDate: timestamp("transactionDate").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  createdBy: int("createdBy"),
-});
-
+export const transactions = mysqlTable(
+  "transactions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    type: mysqlEnum("type", ["income", "expense"]).notNull(),
+    category: mysqlEnum("category", [
+      "load_payment",
+      "fuel",
+      "maintenance",
+      "insurance",
+      "subscriptions",
+      "phone",
+      "payroll",
+      "tolls",
+      "other",
+    ]).notNull(),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    description: text("description"),
+    referenceLoadId: int("referenceLoadId").references(() => loads.id, { onDelete: "set null" }),
+    receiptUrl: text("receiptUrl"),
+    transactionDate: timestamp("transactionDate").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    createdBy: int("createdBy").references(() => users.id, { onDelete: "set null" }),
+  },
+  (table) => ({
+    referenceLoadIdx: index("transactions_reference_load_idx").on(table.referenceLoadId),
+    createdByIdx: index("transactions_created_by_idx").on(table.createdBy),
+  })
+);
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
 
@@ -239,38 +248,52 @@ export type InsertOwnerDraw = typeof ownerDraws.$inferInsert;
 /**
  * Fuel Logs - Driver fuel expense tracking
  */
-export const fuelLogs = mysqlTable("fuel_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  driverId: int("driverId").notNull(),
-  loadId: int("loadId"),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
-  gallons: decimal("gallons", { precision: 8, scale: 3 }),
-  pricePerGallon: decimal("pricePerGallon", { precision: 6, scale: 3 }),
-  location: text("location"),
-  receiptUrl: text("receiptUrl"),
-  logDate: timestamp("logDate").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
+export const fuelLogs = mysqlTable(
+  "fuel_logs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    loadId: int("loadId").references(() => loads.id, { onDelete: "set null" }),
+    amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+    gallons: decimal("gallons", { precision: 8, scale: 3 }),
+    pricePerGallon: decimal("pricePerGallon", { precision: 6, scale: 3 }),
+    location: text("location"),
+    receiptUrl: text("receiptUrl"),
+    logDate: timestamp("logDate").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    driverIdx: index("fuel_logs_driver_idx").on(table.driverId),
+    loadIdx: index("fuel_logs_load_idx").on(table.loadId),
+  })
+);
 export type FuelLog = typeof fuelLogs.$inferSelect;
 export type InsertFuelLog = typeof fuelLogs.$inferInsert;
 
 /**
  * Load Assignments - Track which driver is assigned to which load
  */
-export const loadAssignments = mysqlTable("load_assignments", {
-  id: int("id").autoincrement().primaryKey(),
-  loadId: int("loadId").notNull(),
-  driverId: int("driverId").notNull(),
-  assignedBy: int("assignedBy").notNull(), // Manager/Admin who assigned
-  status: mysqlEnum("status", ["pending", "accepted", "rejected", "completed"]).default("pending").notNull(),
-  assignedAt: timestamp("assignedAt").defaultNow().notNull(),
-  acceptedAt: timestamp("acceptedAt"),
-  completedAt: timestamp("completedAt"),
-  notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const loadAssignments = mysqlTable(
+  "load_assignments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+    driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    assignedBy: int("assignedBy").notNull().references(() => users.id, { onDelete: "restrict" }),
+    status: mysqlEnum("status", ["pending", "accepted", "rejected", "completed"]).default("pending").notNull(),
+    assignedAt: timestamp("assignedAt").defaultNow().notNull(),
+    acceptedAt: timestamp("acceptedAt"),
+    completedAt: timestamp("completedAt"),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    loadIdx: index("load_assignments_load_idx").on(table.loadId),
+    driverIdx: index("load_assignments_driver_idx").on(table.driverId),
+    assignedByIdx: index("load_assignments_assigned_by_idx").on(table.assignedBy),
+  })
+);
 
 export type LoadAssignment = typeof loadAssignments.$inferSelect;
 export type InsertLoadAssignment = typeof loadAssignments.$inferInsert;
@@ -278,22 +301,29 @@ export type InsertLoadAssignment = typeof loadAssignments.$inferInsert;
 /**
  * POD Documents - Proof of Delivery documents
  */
-export const podDocuments = mysqlTable("pod_documents", {
-  id: int("id").autoincrement().primaryKey(),
-  loadId: int("loadId").notNull(),
-  driverId: int("driverId").notNull(),
-  assignmentId: int("assignmentId"),
-  documentUrl: text("documentUrl").notNull(),
-  documentKey: varchar("documentKey", { length: 512 }).notNull(),
-  fileName: varchar("fileName", { length: 255 }).notNull(),
-  fileSize: int("fileSize"),
-  mimeType: varchar("mimeType", { length: 50 }),
-  notes: text("notes"), // Delivery notes
-  signatureUrl: text("signatureUrl"), // Digital signature image URL
-  signatureKey: varchar("signatureKey", { length: 512 }), // S3 key for signature
-  uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+export const podDocuments = mysqlTable(
+  "pod_documents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    loadId: int("loadId").notNull().references(() => loads.id, { onDelete: "cascade" }),
+    driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    assignmentId: int("assignmentId").references(() => loadAssignments.id, { onDelete: "set null" }),
+    documentUrl: text("documentUrl").notNull(),
+    documentKey: varchar("documentKey", { length: 512 }).notNull(),
+    fileName: varchar("fileName", { length: 255 }).notNull(),
+    fileSize: int("fileSize"),
+    mimeType: varchar("mimeType", { length: 50 }),
+    notes: text("notes"),
+    signatureUrl: text("signatureUrl"),
+    signatureKey: varchar("signatureKey", { length: 512 }),
+    uploadedAt: timestamp("uploadedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    loadIdx: index("pod_documents_load_idx").on(table.loadId),
+    driverIdx: index("pod_documents_driver_idx").on(table.driverId),
+  })
+);
 
 export type PODDocument = typeof podDocuments.$inferSelect;
 export type InsertPODDocument = typeof podDocuments.$inferInsert;
@@ -301,19 +331,25 @@ export type InsertPODDocument = typeof podDocuments.$inferInsert;
 /**
  * Bank Accounts - Connected bank accounts for automatic sync
  */
-export const bankAccounts = mysqlTable("bank_accounts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  bankName: varchar("bankName", { length: 255 }).notNull(),
-  accountType: mysqlEnum("accountType", ["checking", "savings", "credit_card", "other"]).notNull(),
-  accountLast4: varchar("accountLast4", { length: 4 }).notNull(),
-  plaidAccountId: varchar("plaidAccountId", { length: 255 }),
-  plaidAccessToken: text("plaidAccessToken"),
-  isActive: boolean("isActive").default(true).notNull(),
-  lastSyncedAt: timestamp("lastSyncedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const bankAccounts = mysqlTable(
+  "bank_accounts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    bankName: varchar("bankName", { length: 255 }).notNull(),
+    accountType: mysqlEnum("accountType", ["checking", "savings", "credit_card", "other"]).notNull(),
+    accountLast4: varchar("accountLast4", { length: 4 }).notNull(),
+    plaidAccountId: varchar("plaidAccountId", { length: 255 }),
+    plaidAccessToken: text("plaidAccessToken"),
+    isActive: boolean("isActive").default(true).notNull(),
+    lastSyncedAt: timestamp("lastSyncedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("bank_accounts_user_idx").on(table.userId),
+  })
+);
 
 export type BankAccount = typeof bankAccounts.$inferSelect;
 export type InsertBankAccount = typeof bankAccounts.$inferInsert;
@@ -393,36 +429,36 @@ export type InsertLoadQuotation = typeof loadQuotations.$inferInsert;
 /**
  * Business Configuration - Costs and pricing parameters
  */
-export const businessConfig = mysqlTable("business_config", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id),
-  // Fuel costs
-  fuelPricePerGallon: decimal("fuelPricePerGallon", { precision: 6, scale: 2 }).default("3.60"),
-  vanMpg: decimal("vanMpg", { precision: 5, scale: 1 }).default("18.0"),
-  // Operating costs per mile
-  maintenancePerMile: decimal("maintenancePerMile", { precision: 6, scale: 3 }).default("0.12"),
-  tiresPerMile: decimal("tiresPerMile", { precision: 6, scale: 3 }).default("0.03"),
-  // Fixed monthly costs
-  insuranceMonthly: decimal("insuranceMonthly", { precision: 8, scale: 2 }).default("450.00"),
-  phoneInternetMonthly: decimal("phoneInternetMonthly", { precision: 8, scale: 2 }).default("70.00"),
-  loadBoardAppsMonthly: decimal("loadBoardAppsMonthly", { precision: 8, scale: 2 }).default("45.00"),
-  accountingSoftwareMonthly: decimal("accountingSoftwareMonthly", { precision: 8, scale: 2 }).default("30.00"),
-  otherFixedMonthly: decimal("otherFixedMonthly", { precision: 8, scale: 2 }).default("80.00"),
-  // Goals and targets
-  targetMilesPerMonth: int("targetMilesPerMonth").default(4000),
-  minimumProfitPerMile: decimal("minimumProfitPerMile", { precision: 6, scale: 2 }).default("1.50"),
-  // Profit allocation percentages (must sum to 100)
-  ownerDrawPercent: decimal("ownerDrawPercent", { precision: 5, scale: 2 }).default("40.00"),
-  reserveFundPercent: decimal("reserveFundPercent", { precision: 5, scale: 2 }).default("20.00"),
-  reinvestmentPercent: decimal("reinvestmentPercent", { precision: 5, scale: 2 }).default("20.00"),
-  operatingCashPercent: decimal("operatingCashPercent", { precision: 5, scale: 2 }).default("20.00"),
-  // Financial alert thresholds
-  marginAlertThreshold: decimal("marginAlertThreshold", { precision: 5, scale: 2 }).default("10.00"),
-  quoteVarianceThreshold: decimal("quoteVarianceThreshold", { precision: 5, scale: 2 }).default("20.00"),
-  overdueDaysThreshold: int("overdueDaysThreshold").default(30),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const businessConfig = mysqlTable(
+  "business_config",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    fuelPricePerGallon: decimal("fuelPricePerGallon", { precision: 6, scale: 2 }).default("3.60"),
+    vanMpg: decimal("vanMpg", { precision: 5, scale: 1 }).default("18.0"),
+    maintenancePerMile: decimal("maintenancePerMile", { precision: 6, scale: 3 }).default("0.12"),
+    tiresPerMile: decimal("tiresPerMile", { precision: 6, scale: 3 }).default("0.03"),
+    insuranceMonthly: decimal("insuranceMonthly", { precision: 8, scale: 2 }).default("450.00"),
+    phoneInternetMonthly: decimal("phoneInternetMonthly", { precision: 8, scale: 2 }).default("70.00"),
+    loadBoardAppsMonthly: decimal("loadBoardAppsMonthly", { precision: 8, scale: 2 }).default("45.00"),
+    accountingSoftwareMonthly: decimal("accountingSoftwareMonthly", { precision: 8, scale: 2 }).default("30.00"),
+    otherFixedMonthly: decimal("otherFixedMonthly", { precision: 8, scale: 2 }).default("80.00"),
+    targetMilesPerMonth: int("targetMilesPerMonth").default(4000),
+    minimumProfitPerMile: decimal("minimumProfitPerMile", { precision: 6, scale: 2 }).default("1.50"),
+    ownerDrawPercent: decimal("ownerDrawPercent", { precision: 5, scale: 2 }).default("40.00"),
+    reserveFundPercent: decimal("reserveFundPercent", { precision: 5, scale: 2 }).default("20.00"),
+    reinvestmentPercent: decimal("reinvestmentPercent", { precision: 5, scale: 2 }).default("20.00"),
+    operatingCashPercent: decimal("operatingCashPercent", { precision: 5, scale: 2 }).default("20.00"),
+    marginAlertThreshold: decimal("marginAlertThreshold", { precision: 5, scale: 2 }).default("10.00"),
+    quoteVarianceThreshold: decimal("quoteVarianceThreshold", { precision: 5, scale: 2 }).default("20.00"),
+    overdueDaysThreshold: int("overdueDaysThreshold").default(30),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    userIdUnique: uniqueIndex("business_config_user_id_unique").on(table.userId),
+  })
+);
 
 export type BusinessConfig = typeof businessConfig.$inferSelect;
 export type InsertBusinessConfig = typeof businessConfig.$inferInsert;
@@ -1192,26 +1228,30 @@ export type InsertLoadEvidence = typeof loadEvidence.$inferInsert;
  * Supports both company drivers and independent contractors
  */
 export const wallets = mysqlTable("wallets", {
-  id: int("id").autoincrement().primaryKey(),
-  driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  // Balance tracking
-  totalEarnings: decimal("totalEarnings", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  availableBalance: decimal("availableBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  pendingBalance: decimal("pendingBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  blockedBalance: decimal("blockedBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  // Payment method
-  bankAccountId: varchar("bankAccountId", { length: 255 }),
-  bankAccountLast4: varchar("bankAccountLast4", { length: 4 }),
-  bankAccountName: varchar("bankAccountName", { length: 255 }),
-  // Withdrawal settings
-  minimumWithdrawalAmount: decimal("minimumWithdrawalAmount", { precision: 10, scale: 2 }).default("50.00"),
-  withdrawalFeePercent: decimal("withdrawalFeePercent", { precision: 5, scale: 2 }).default("0.00"),
-  // Status
-  status: mysqlEnum("status", ["active", "suspended", "closed"]).default("active").notNull(),
-  suspensionReason: text("suspensionReason"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+  id: iexport const wallets = mysqlTable(
+  "wallets",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    totalEarnings: decimal("totalEarnings", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    availableBalance: decimal("availableBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    pendingBalance: decimal("pendingBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    blockedBalance: decimal("blockedBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    bankAccountId: varchar("bankAccountId", { length: 255 }),
+    bankAccountLast4: varchar("bankAccountLast4", { length: 4 }),
+    bankAccountName: varchar("bankAccountName", { length: 255 }),
+    minimumWithdrawalAmount: decimal("minimumWithdrawalAmount", { precision: 10, scale: 2 }).default("50.00"),
+    withdrawalFeePercent: decimal("withdrawalFeePercent", { precision: 5, scale: 2 }).default("0.00"),
+    status: mysqlEnum("status", ["active", "suspended", "closed"]).default("active").notNull(),
+    suspensionReason: text("suspensionReason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    driverIdUnique: uniqueIndex("wallets_driver_id_unique").on(table.driverId),
+    statusIdx: index("wallets_status_idx").on(table.status),
+  })
+);
 
 export type Wallet = typeof wallets.$inferSelect;
 export type InsertWallet = typeof wallets.$inferInsert;
@@ -1328,39 +1368,39 @@ export type InsertPaymentBlock = typeof paymentBlocks.$inferInsert;
  * Settlements - Track 50/50 profit distribution between partners
  * Automated settlement processing based on completed loads
  */
-export const settlements = mysqlTable("settlements", {
-  id: int("id").autoincrement().primaryKey(),
-  // Settlement period
-  settlementPeriod: varchar("settlementPeriod", { length: 7 }).notNull(), // YYYY-MM format
-  startDate: timestamp("startDate").notNull(),
-  endDate: timestamp("endDate").notNull(),
-  // Financial summary
-  totalLoadsCompleted: int("totalLoadsCompleted").default(0),
-  totalIncome: decimal("totalIncome", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  totalExpenses: decimal("totalExpenses", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  totalProfit: decimal("totalProfit", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  // Partner 1 (Owner/Dispatcher)
-  partner1Id: int("partner1Id").notNull().references(() => users.id),
-  partner1Share: decimal("partner1Share", { precision: 5, scale: 2 }).default("50.00").notNull(),
-  partner1Amount: decimal("partner1Amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  // Partner 2 (Owner/Dispatcher)
-  partner2Id: int("partner2Id").notNull().references(() => users.id),
-  partner2Share: decimal("partner2Share", { precision: 5, scale: 2 }).default("50.00").notNull(),
-  partner2Amount: decimal("partner2Amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
-  // Status
-  status: mysqlEnum("status", ["draft", "calculated", "approved", "processed", "completed", "disputed"]).default("draft").notNull(),
-  // Approval workflow
-  calculatedAt: timestamp("calculatedAt"),
-  approvedAt: timestamp("approvedAt"),
-  approvedBy: int("approvedBy").references(() => users.id),
-  processedAt: timestamp("processedAt"),
-  completedAt: timestamp("completedAt"),
-  // Notes
-  notes: text("notes"),
-  disputeNotes: text("disputeNotes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const settlements = mysqlTable(
+  "settlements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    settlementPeriod: varchar("settlementPeriod", { length: 7 }).notNull(),
+    startDate: timestamp("startDate").notNull(),
+    endDate: timestamp("endDate").notNull(),
+    totalLoadsCompleted: int("totalLoadsCompleted").default(0),
+    totalIncome: decimal("totalIncome", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    totalExpenses: decimal("totalExpenses", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    totalProfit: decimal("totalProfit", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    partner1Id: int("partner1Id").notNull().references(() => users.id),
+    partner1Share: decimal("partner1Share", { precision: 5, scale: 2 }).default("50.00").notNull(),
+    partner1Amount: decimal("partner1Amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    partner2Id: int("partner2Id").notNull().references(() => users.id),
+    partner2Share: decimal("partner2Share", { precision: 5, scale: 2 }).default("50.00").notNull(),
+    partner2Amount: decimal("partner2Amount", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    status: mysqlEnum("status", ["draft", "calculated", "approved", "processed", "completed", "disputed"]).default("draft").notNull(),
+    calculatedAt: timestamp("calculatedAt"),
+    approvedAt: timestamp("approvedAt"),
+    approvedBy: int("approvedBy").references(() => users.id),
+    processedAt: timestamp("processedAt"),
+    completedAt: timestamp("completedAt"),
+    notes: text("notes"),
+    disputeNotes: text("disputeNotes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    statusIdx: index("settlements_status_idx").on(table.status),
+    periodIdx: index("settlements_period_idx").on(table.settlementPeriod),
+  })
+);
 
 export type Settlement = typeof settlements.$inferSelect;
 export type InsertSettlement = typeof settlements.$inferInsert;
@@ -1577,44 +1617,40 @@ export type InsertInvoicePayment = typeof invoicePayments.$inferInsert;
  * Alerts - System alerts for critical events
  * Types: invoice_overdue, payment_pending, load_delayed, driver_offline, settlement_ready
  */
-export const alerts = mysqlTable("alerts", {
-  id: int("id").autoincrement().primaryKey(),
-  
-  // Alert details
-  type: mysqlEnum("type", [
-    "invoice_overdue",
-    "payment_pending",
-    "load_delayed",
-    "driver_offline",
-    "settlement_ready",
-    "wallet_low",
-    "system_error",
-    "custom",
-  ]).notNull(),
-  
-  title: varchar("title", { length: 255 }).notNull(),
-  message: text("message").notNull(),
-  severity: mysqlEnum("severity", ["info", "warning", "critical"]).default("info").notNull(),
-  
-  // Related entities
-  relatedEntityType: varchar("relatedEntityType", { length: 50 }), // invoice, load, driver, settlement
-  relatedEntityId: int("relatedEntityId"),
-  
-  // Recipients
-  recipientUserId: int("recipientUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  recipientRole: varchar("recipientRole", { length: 50 }), // admin, driver, all
-  
-  // Status
-  isRead: boolean("isRead").default(false).notNull(),
-  isAcknowledged: boolean("isAcknowledged").default(false).notNull(),
-  
-  // Metadata
-  actionUrl: varchar("actionUrl", { length: 500 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  readAt: timestamp("readAt"),
-  acknowledgedAt: timestamp("acknowledgedAt"),
-});
-
+export const alerts = mysqlTable(
+  "alerts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    type: mysqlEnum("type", [
+      "invoice_overdue",
+      "payment_pending",
+      "load_delayed",
+      "driver_offline",
+      "settlement_ready",
+      "wallet_low",
+      "system_error",
+      "custom",
+    ]).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    message: text("message").notNull(),
+    severity: mysqlEnum("severity", ["info", "warning", "critical"]).default("info").notNull(),
+    relatedEntityType: varchar("relatedEntityType", { length: 50 }),
+    relatedEntityId: int("relatedEntityId"),
+    recipientUserId: int("recipientUserId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    recipientRole: varchar("recipientRole", { length: 50 }),
+    isRead: boolean("isRead").default(false).notNull(),
+    isAcknowledged: boolean("isAcknowledged").default(false).notNull(),
+    actionUrl: varchar("actionUrl", { length: 500 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    readAt: timestamp("readAt"),
+    acknowledgedAt: timestamp("acknowledgedAt"),
+  },
+  (table) => ({
+    recipientIdx: index("alerts_recipient_user_idx").on(table.recipientUserId),
+    readIdx: index("alerts_is_read_idx").on(table.isRead),
+    severityIdx: index("alerts_severity_idx").on(table.severity),
+  })
+);
 export type Alert = typeof alerts.$inferSelect;
 export type InsertAlert = typeof alerts.$inferInsert;
 
@@ -1625,53 +1661,53 @@ export type InsertAlert = typeof alerts.$inferInsert;
 export const tasks = mysqlTable("tasks", {
   id: int("id").autoincrement().primaryKey(),
   
-  // Task details
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description"),
-  priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
-  
-  // Assignment
-  assignedTo: int("assignedTo").notNull().references(() => users.id, { onDelete: "cascade" }),
-  createdBy: int("createdBy").notNull().references(() => users.id, { onDelete: "cascade" }),
-  
-  // Related entities
-  relatedEntityType: varchar("relatedEntityType", { length: 50 }), // invoice, load, driver, settlement
-  relatedEntityId: int("relatedEntityId"),
-  
-  // Status and dates
-  status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
-  dueDate: timestamp("dueDate"),
-  completedAt: timestamp("completedAt"),
-  
-  // Progress
-  progress: int("progress").default(0), // 0-100
-  
-  // Metadata
-  tags: varchar("tags", { length: 500 }), // comma-separated
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
+  // Task detailexport const tasks = mysqlTable(
+  "tasks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]).default("medium").notNull(),
+    assignedTo: int("assignedTo").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdBy: int("createdBy").notNull().references(() => users.id, { onDelete: "cascade" }),
+    relatedEntityType: varchar("relatedEntityType", { length: 50 }),
+    relatedEntityId: int("relatedEntityId"),
+    status: mysqlEnum("status", ["pending", "in_progress", "completed", "cancelled"]).default("pending").notNull(),
+    dueDate: timestamp("dueDate"),
+    completedAt: timestamp("completedAt"),
+    progress: int("progress").default(0),
+    tags: varchar("tags", { length: 500 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    assignedToIdx: index("tasks_assigned_to_idx").on(table.assignedTo),
+    statusIdx: index("tasks_status_idx").on(table.status),
+    priorityIdx: index("tasks_priority_idx").on(table.priority),
+  })
+);
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = typeof tasks.$inferInsert;
 
 /**
  * Task Comments - Comments on tasks for collaboration
  */
-export const taskComments = mysqlTable("taskComments", {
-  id: int("id").autoincrement().primaryKey(),
-  taskId: int("taskId").notNull().references(() => tasks.id, { onDelete: "cascade" }),
-  
-  // Comment details
-  comment: text("comment").notNull(),
-  authorId: int("authorId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  
-  // Metadata
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const taskComments = mysqlTable(
+  "taskComments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    taskId: int("taskId").notNull().references(() => tasks.id, { onDelete: "cascade" }),
+    comment: text("comment").notNull(),
+    authorId: int("authorId").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    taskIdx: index("task_comments_task_idx").on(table.taskId),
+    authorIdx: index("task_comments_author_idx").on(table.authorId),
+  })
+);
 
-export type TaskComment = typeof taskComments.$inferSelect;
 export type InsertTaskComment = typeof taskComments.$inferInsert;
 
 
