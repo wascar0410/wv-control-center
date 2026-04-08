@@ -1,8 +1,24 @@
-import { and, desc, eq, gte, isNull, lte, or, sql, inArray } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import {
+  alerts,
   bankAccounts,
+  businessConfig,
+  companies,
   contactSubmissions,
   driverLocations,
   driverPayments,
@@ -16,6 +32,7 @@ import {
   InsertFuelLog,
   InsertLoad,
   InsertLoadAssignment,
+  InsertLoadEvidence,
   InsertLoadQuotation,
   InsertOwnerDraw,
   InsertPartner,
@@ -27,7 +44,8 @@ import {
   InsertTransactionImport,
   InsertUser,
   InsertUserPreferences,
-  InsertLoadEvidence,
+  invoicePayments,
+  invoices,
   loadAssignments,
   loadEvidence,
   loadQuotations,
@@ -36,8 +54,15 @@ import {
   partnership,
   paymentAudit,
   paymentBatches,
+  paymentBlocks,
   podDocuments,
+  quoteAnalysis,
+  receivables,
   routeStops,
+  settlementLoads,
+  settlements,
+  taskComments,
+  tasks,
   transactions,
   transactionImports,
   users,
@@ -45,17 +70,6 @@ import {
   wallets,
   walletTransactions,
   withdrawals,
-  paymentBlocks,
-  settlements,
-  settlementLoads,
-  quoteAnalysis,
-  invoices,
-  receivables,
-  invoicePayments,
-  alerts,
-  tasks,
-  taskComments,
-  companies,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -82,6 +96,25 @@ export async function getDb() {
       mode: "default",
       schema: {
         users,
+        userPreferences,
+        loads,
+        loadAssignments,
+        loadQuotations,
+        routeStops,
+        transactions,
+        partnership,
+        ownerDraws,
+        fuelLogs,
+        podDocuments,
+        bankAccounts,
+        transactionImports,
+        driverLocations,
+        driverPayments,
+        paymentBatches,
+        paymentAudit,
+        exportLogs,
+        contactSubmissions,
+        loadEvidence,
         wallets,
         walletTransactions,
         withdrawals,
@@ -96,20 +129,10 @@ export async function getDb() {
         tasks,
         taskComments,
         companies,
-        loads,
-        loadAssignments,
-        loadQuotations,
-        transactions,
-        partnership,
-        ownerDraws,
-        fuelLogs,
-        podDocuments,
-        bankAccounts,
-        transactionImports,
-        loadEvidence,
-        // ... other tables
+        businessConfig,
       },
     });
+
     console.log("[Database] Connected successfully");
     return _db;
   } catch (error) {
@@ -2282,38 +2305,118 @@ export async function getFinancialPnL(year: number, month: number) {
   }
 }
 
-export async function getAllocationSettings() {
-  if (!process.env.DATABASE_URL) return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
-  try {
-    const conn = await getFinanceConn();
-    const [rows] = await conn.execute(`SELECT * FROM allocation_settings WHERE id = 1`) as any;
-    await conn.end();
-    if ((rows as any[]).length === 0) return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
-    const r = (rows as any[])[0];
+export async function getAllocationSettings(userId?: number) {
+  const db = await getDb();
+  if (!db) {
     return {
-      operatingPct: parseFloat(r.operatingPct) || 50,
-      ownerPayPct: parseFloat(r.ownerPayPct) || 20,
-      reservePct: parseFloat(r.reservePct) || 20,
-      growthPct: parseFloat(r.growthPct) || 10,
+      ownerDrawPercent: 40,
+      reserveFundPercent: 20,
+      reinvestmentPercent: 20,
+      operatingCashPercent: 20,
+      marginAlertThreshold: 10,
+      quoteVarianceThreshold: 20,
+      overdueDaysThreshold: 30,
+    };
+  }
+
+  try {
+    const config = userId
+      ? await db.query.businessConfig.findFirst({
+          where: eq(businessConfig.userId, userId),
+        })
+      : await db.query.businessConfig.findFirst();
+
+    if (!config) {
+      return {
+        ownerDrawPercent: 40,
+        reserveFundPercent: 20,
+        reinvestmentPercent: 20,
+        operatingCashPercent: 20,
+        marginAlertThreshold: 10,
+        quoteVarianceThreshold: 20,
+        overdueDaysThreshold: 30,
+      };
+    }
+
+    return {
+      ownerDrawPercent: Number(config.ownerDrawPercent ?? 40),
+      reserveFundPercent: Number(config.reserveFundPercent ?? 20),
+      reinvestmentPercent: Number(config.reinvestmentPercent ?? 20),
+      operatingCashPercent: Number(config.operatingCashPercent ?? 20),
+      marginAlertThreshold: Number(config.marginAlertThreshold ?? 10),
+      quoteVarianceThreshold: Number(config.quoteVarianceThreshold ?? 20),
+      overdueDaysThreshold: Number(config.overdueDaysThreshold ?? 30),
     };
   } catch (error) {
-    return { operatingPct: 50, ownerPayPct: 20, reservePct: 20, growthPct: 10 };
+    console.error("[DB] getAllocationSettings error:", error);
+    return {
+      ownerDrawPercent: 40,
+      reserveFundPercent: 20,
+      reinvestmentPercent: 20,
+      operatingCashPercent: 20,
+      marginAlertThreshold: 10,
+      quoteVarianceThreshold: 20,
+      overdueDaysThreshold: 30,
+    };
   }
 }
 
-export async function updateAllocationSettings(data: {
-  operatingPct: number; ownerPayPct: number; reservePct: number; growthPct: number;
-}) {
-  if (!process.env.DATABASE_URL) throw new Error("Database not available");
-  const conn = await getFinanceConn();
-  await conn.execute(
-    `INSERT INTO allocation_settings (id, operatingPct, ownerPayPct, reservePct, growthPct)
-     VALUES (1, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE operatingPct=VALUES(operatingPct), ownerPayPct=VALUES(ownerPayPct),
-       reservePct=VALUES(reservePct), growthPct=VALUES(growthPct)`,
-    [data.operatingPct, data.ownerPayPct, data.reservePct, data.growthPct]
-  );
-  await conn.end();
+export async function updateAllocationSettings(
+  userId: number,
+  data: {
+    ownerDrawPercent: number;
+    reserveFundPercent: number;
+    reinvestmentPercent: number;
+    operatingCashPercent: number;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const total =
+    data.ownerDrawPercent +
+    data.reserveFundPercent +
+    data.reinvestmentPercent +
+    data.operatingCashPercent;
+
+  if (Math.abs(total - 100) > 0.001) {
+    throw new Error("Allocation percentages must sum to 100");
+  }
+
+  const existing = await db.query.businessConfig.findFirst({
+    where: eq(businessConfig.userId, userId),
+  });
+
+  if (!existing) {
+    await db.insert(businessConfig).values({
+      userId,
+      ownerDrawPercent: String(data.ownerDrawPercent),
+      reserveFundPercent: String(data.reserveFundPercent),
+      reinvestmentPercent: String(data.reinvestmentPercent),
+      operatingCashPercent: String(data.operatingCashPercent),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    return await db.query.businessConfig.findFirst({
+      where: eq(businessConfig.userId, userId),
+    });
+  }
+
+  await db
+    .update(businessConfig)
+    .set({
+      ownerDrawPercent: String(data.ownerDrawPercent),
+      reserveFundPercent: String(data.reserveFundPercent),
+      reinvestmentPercent: String(data.reinvestmentPercent),
+      operatingCashPercent: String(data.operatingCashPercent),
+      updatedAt: new Date(),
+    })
+    .where(eq(businessConfig.userId, userId));
+
+  return await db.query.businessConfig.findFirst({
+    where: eq(businessConfig.userId, userId),
+  });
 }
 
 export async function getFinancialTrend(year: number) {
@@ -2402,26 +2505,34 @@ export async function getOrCreateWallet(driverId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const existing = await db.query.wallets.findFirst({
+  let existing = await db.query.wallets.findFirst({
     where: eq(wallets.driverId, driverId),
   });
 
   if (existing) return existing;
 
-  // Create new wallet
-  const [newWallet] = await db
-    .insert(wallets)
-    .values({
-      driverId,
-      totalEarnings: "0.00",
-      availableBalance: "0.00",
-      pendingBalance: "0.00",
-      blockedBalance: "0.00",
-      status: "active",
-    })
-    .returning();
+  await db.insert(wallets).values({
+    driverId,
+    totalEarnings: "0.00",
+    availableBalance: "0.00",
+    pendingBalance: "0.00",
+    blockedBalance: "0.00",
+    minimumWithdrawalAmount: "50.00",
+    withdrawalFeePercent: "0.00",
+    status: "active",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 
-  return newWallet;
+  existing = await db.query.wallets.findFirst({
+    where: eq(wallets.driverId, driverId),
+  });
+
+  if (!existing) {
+    throw new Error("Failed to create wallet");
+  }
+
+  return existing;
 }
 
 /**
@@ -2430,6 +2541,11 @@ export async function getOrCreateWallet(driverId: number) {
 export async function getWalletByDriverId(driverId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
+
+  if (!db.query?.wallets) {
+    console.error("[getWalletByDriverId] db.query.wallets is undefined");
+    throw new Error("Wallet schema not registered in Drizzle");
+  }
 
   return db.query.wallets.findFirst({
     where: eq(wallets.driverId, driverId),
@@ -2539,14 +2655,33 @@ export async function requestWithdrawal(
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
+  let wallet = await getWalletByDriverId(driverId);
+  if (!wallet) {
+    wallet = await getOrCreateWallet(driverId);
+  }
+
   const amount = Number(data.amount);
   const fee = Number(data.fee || 0);
   const netAmount = amount - fee;
+  const availableBalance = Number(wallet.availableBalance || 0);
+  const minimumWithdrawal = Number(wallet.minimumWithdrawalAmount || 50);
+
+  if (amount <= 0) {
+    throw new Error("Withdrawal amount must be greater than 0");
+  }
+
+  if (amount < minimumWithdrawal) {
+    throw new Error(`Minimum withdrawal is ${minimumWithdrawal}`);
+  }
+
+  if (availableBalance < amount) {
+    throw new Error("Insufficient available balance");
+  }
 
   const [withdrawal] = await db
     .insert(withdrawals)
     .values({
-      walletId,
+      walletId: wallet.id,
       driverId,
       amount: String(amount),
       fee: String(fee),
@@ -2557,12 +2692,28 @@ export async function requestWithdrawal(
       notes: data.notes,
       requestedAt: new Date(),
       createdAt: new Date(),
+      updatedAt: new Date(),
     })
     .returning();
 
+  await addWalletTransaction(wallet.id, driverId, {
+    type: "withdrawal",
+    amount: String(amount),
+    withdrawalId: withdrawal.id,
+    description: `Withdrawal request: ${data.method || "bank_transfer"}`,
+    status: "pending",
+  });
+
+  await updateWalletBalance(wallet.id, {
+    availableBalance: String(availableBalance - amount),
+    pendingBalance: String(Number(wallet.pendingBalance || 0) + amount),
+  });
+
+  return withdrawal;
+}
   // Create transaction record
   await addWalletTransaction(walletId, driverId, {
-    type: "withdrawal",
+    type: "adjustment",
     amount: String(amount),
     withdrawalId: withdrawal.id,
     description: `Withdrawal request: ${data.method || "bank_transfer"}`,
