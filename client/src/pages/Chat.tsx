@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import { ChatWidget } from "@/components/ChatWidget";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Search, Users, Wifi } from "lucide-react";
 
@@ -15,29 +21,30 @@ export function Chat({
 }: ChatProps) {
   const [search, setSearch] = useState("");
 
-  const summary = useMemo(
-    () => ({
+  const summary = useMemo(() => {
+    return {
       activeConversationsLabel:
         activeConversationsCount === 1
           ? "1 conversación activa"
           : `${activeConversationsCount} conversaciones activas`,
+
       onlineDriversLabel:
         onlineDriversCount === 1
           ? "1 chofer en línea"
           : `${onlineDriversCount} choferes en línea`,
-    }),
-    [activeConversationsCount, onlineDriversCount]
-  );
+    };
+  }, [activeConversationsCount, onlineDriversCount]);
 
   return (
     <section className="space-y-6" aria-labelledby="chat-page-title">
+      {/* HEADER */}
       <header className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
             <MessageSquare className="h-5 w-5 text-primary" />
           </div>
 
-          <div className="min-w-0">
+          <div>
             <h1
               id="chat-page-title"
               className="text-2xl font-bold tracking-tight text-foreground"
@@ -45,12 +52,12 @@ export function Chat({
               Chat con Choferes
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Comunicación en tiempo real con tu equipo de choferes para coordinar
-              cargas, rutas y actualizaciones operativas.
+              Comunicación en tiempo real para coordinación operativa y seguimiento de cargas.
             </p>
           </div>
         </div>
 
+        {/* STATS */}
         <div className="grid gap-3 md:grid-cols-3">
           <Card className="border-border bg-card shadow-sm">
             <CardContent className="flex items-center gap-3 p-4">
@@ -58,7 +65,7 @@ export function Chat({
                 <MessageSquare className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs uppercase text-muted-foreground">
                   Conversaciones
                 </p>
                 <p className="text-sm font-semibold text-foreground">
@@ -74,7 +81,7 @@ export function Chat({
                 <Wifi className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs uppercase text-muted-foreground">
                   En línea
                 </p>
                 <p className="text-sm font-semibold text-foreground">
@@ -90,11 +97,11 @@ export function Chat({
                 <Users className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs uppercase text-muted-foreground">
                   Enfoque
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  Coordinación operativa
+                  Operaciones en tiempo real
                 </p>
               </div>
             </CardContent>
@@ -102,16 +109,20 @@ export function Chat({
         </div>
       </header>
 
+      {/* CHAT */}
       <Card className="border-border bg-card shadow-sm">
         <CardHeader className="border-b border-border pb-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <CardTitle className="text-base font-semibold">Mensajes</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Mensajes
+              </CardTitle>
               <CardDescription>
-                Conversaciones activas, seguimiento operativo y comunicación con choferes.
+                Comunicación directa con choferes y seguimiento de operaciones.
               </CardDescription>
             </div>
 
+            {/* SEARCH GLOBAL */}
             <div className="w-full max-w-sm">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -120,7 +131,6 @@ export function Chat({
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar chofer o conversación..."
                   className="pl-9"
-                  aria-label="Buscar chofer o conversación"
                 />
               </div>
             </div>
@@ -129,7 +139,8 @@ export function Chat({
 
         <CardContent className="p-0">
           <div className="min-h-[520px] overflow-hidden rounded-b-xl">
-            <ChatWidget />
+            {/* 🔥 AQUÍ ESTÁ LA CLAVE */}
+            <ChatWidget search={search} />
           </div>
         </CardContent>
       </Card>
