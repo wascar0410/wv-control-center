@@ -1,218 +1,138 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useMemo, useState } from "react";
+import { ChatWidget } from "@/components/ChatWidget";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, Search, Circle } from "lucide-react";
-import { trpc } from "@/lib/trpc";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { MessageSquare, Search, Users, Wifi } from "lucide-react";
 
-interface ChatUser {
-  id: number;
-  name: string;
-  unreadCount?: number;
-  isOnline?: boolean;
-}
+type ChatProps = {
+  activeConversationsCount?: number;
+  onlineDriversCount?: number;
+};
 
-export function ChatWidget() {
-  const { user } = useAuth();
-  const utils = trpc.useUtils();
+export function Chat({
+  activeConversationsCount = 0,
+  onlineDriversCount = 0,
+}: ChatProps) {
+  const [search, setSearch] = useState("");
 
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [messageText, setMessageText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Queries seguras
-  const { data: recentChats } = trpc.chat.getRecentChats.useQuery(
-    { limit: 50 },
-    { enabled: !!user, retry: false }
-  );
-
-  const { data: messages } = trpc.chat.getMessages.useQuery(
-    { contactId: selectedUserId || 0 },
-    { enabled: !!selectedUserId && !!user, retry: false }
-  );
-
-  const safeChats = Array.isArray(recentChats) ? recentChats : [];
-  const safeMessages = Array.isArray(messages) ? messages : [];
-
-  const sendMessageMutation = trpc.chat.sendMessage.useMutation({
-    onSuccess: () => {
-      setMessageText("");
-      utils.chat.getMessages.invalidate();
-      utils.chat.getRecentChats.invalidate();
-    },
-    onError: (err) => {
-      console.error("Chat send error:", err);
-    },
-  });
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedUserId || !user) return;
-
-    setIsLoading(true);
-    try {
-      await sendMessageMutation.mutateAsync({
-        recipientId: selectedUserId,
-        message: messageText,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Auto scroll
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [safeMessages]);
-
-  // Filtro seguro
-  const filteredChats = safeChats.filter((chat: ChatUser) =>
-    (chat.name || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalUnread = safeChats.reduce(
-    (sum, chat) => sum + (chat.unreadCount || 0),
-    0
+  const summary = useMemo(
+    () => ({
+      activeConversationsLabel:
+        activeConversationsCount === 1
+          ? "1 conversación activa"
+          : `${activeConversationsCount} conversaciones activas`,
+      onlineDriversLabel:
+        onlineDriversCount === 1
+          ? "1 chofer en línea"
+          : `${onlineDriversCount} choferes en línea`,
+    }),
+    [activeConversationsCount, onlineDriversCount]
   );
 
   return (
-    <div className="flex h-96 gap-4 bg-card rounded-lg border overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-48 border-r flex flex-col">
-        <div className="p-3 border-b">
-          <div className="flex justify-between mb-2">
-            <p className="text-xs font-semibold">CHOFERES</p>
-            {totalUnread > 0 && (
-              <span className="text-xs bg-red-500 text-white px-1.5 rounded-full">
-                {totalUnread}
-              </span>
-            )}
+    <section className="space-y-6" aria-labelledby="chat-page-title">
+      <header className="flex flex-col gap-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+            <MessageSquare className="h-5 w-5 text-primary" />
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4" />
-            <Input
-              placeholder="Buscar..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-xs"
-            />
+          <div className="min-w-0">
+            <h1
+              id="chat-page-title"
+              className="text-2xl font-bold tracking-tight text-foreground"
+            >
+              Chat con Choferes
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Comunicación en tiempo real con tu equipo de choferes para coordinar
+              cargas, rutas y actualizaciones operativas.
+            </p>
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {filteredChats.length === 0 ? (
-              <p className="text-xs text-center py-4">
-                {searchQuery ? "Sin resultados" : "Sin conversaciones"}
-              </p>
-            ) : (
-              filteredChats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => setSelectedUserId(chat.id)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-xs ${
-                    selectedUserId === chat.id
-                      ? "bg-primary/20"
-                      : "hover:bg-muted"
-                  }`}
-                >
-                  <div className="flex gap-2">
-                    <Circle
-                      className={`h-2 w-2 mt-1 ${
-                        chat.isOnline ? "text-green-500" : "text-gray-500"
-                      }`}
-                    />
-                    <div className="flex-1">
-                      <p className="truncate">{chat.name}</p>
-                      {chat.unreadCount ? (
-                        <span className="text-xs bg-red-500 text-white px-1 rounded">
-                          {chat.unreadCount}
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Chat */}
-      <div className="flex-1 flex flex-col">
-        {selectedUserId ? (
-          <>
-            {/* Header */}
-            <div className="border-b p-3">
-              <p className="text-sm font-semibold">
-                {safeChats.find((c) => c.id === selectedUserId)?.name || "Chat"}
-              </p>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-auto p-4" ref={scrollRef}>
-              {safeMessages.length === 0 ? (
-                <p className="text-center text-sm py-8">
-                  Sin mensajes
+        <div className="grid gap-3 md:grid-cols-3">
+          <Card className="border-border bg-card shadow-sm">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <MessageSquare className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Conversaciones
                 </p>
-              ) : (
-                safeMessages.map((msg: any) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${
-                      msg.senderId === user?.id
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
-                  >
-                    <div className="max-w-xs px-3 py-2 rounded-lg text-sm bg-muted">
-                      {msg.content || ""}
-                      <p className="text-xs mt-1 opacity-70">
-                        {msg.createdAt
-                          ? new Date(msg.createdAt).toLocaleTimeString()
-                          : ""}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
+                <p className="text-sm font-semibold text-foreground">
+                  {summary.activeConversationsLabel}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card shadow-sm">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
+                <Wifi className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  En línea
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  {summary.onlineDriversLabel}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border bg-card shadow-sm">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Enfoque
+                </p>
+                <p className="text-sm font-semibold text-foreground">
+                  Coordinación operativa
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </header>
+
+      <Card className="border-border bg-card shadow-sm">
+        <CardHeader className="border-b border-border pb-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <CardTitle className="text-base font-semibold">Mensajes</CardTitle>
+              <CardDescription>
+                Conversaciones activas, seguimiento operativo y comunicación con choferes.
+              </CardDescription>
             </div>
 
-            {/* Input */}
-            <div className="border-t p-3 flex gap-2">
-              <Input
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                placeholder="Escribe..."
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <Button onClick={handleSendMessage} disabled={!messageText.trim()}>
-                {isLoading ? (
-                  <Loader2 className="animate-spin w-4 h-4" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
+            <div className="w-full max-w-sm">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar chofer o conversación..."
+                  className="pl-9"
+                  aria-label="Buscar chofer o conversación"
+                />
+              </div>
             </div>
-          </>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-sm">
-            Selecciona un chofer
           </div>
-        )}
-      </div>
-    </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="min-h-[520px] overflow-hidden rounded-b-xl">
+            <ChatWidget />
+          </div>
+        </CardContent>
+      </Card>
+    </section>
   );
 }
