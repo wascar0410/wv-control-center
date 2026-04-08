@@ -1,8 +1,14 @@
 import { useMemo, useState } from "react";
 import { ChatWidget } from "@/components/ChatWidget";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MessageSquare, Search, Users, Wifi } from "lucide-react";
+import { MessageSquare, Search, Users, Wifi, Activity } from "lucide-react";
 
 type ChatProps = {
   activeConversationsCount?: number;
@@ -33,7 +39,7 @@ export function Chat({
     <section className="space-y-6" aria-labelledby="chat-page-title">
       <header className="flex flex-col gap-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10">
             <MessageSquare className="h-5 w-5 text-primary" />
           </div>
 
@@ -54,7 +60,7 @@ export function Chat({
         <div className="grid gap-3 md:grid-cols-3">
           <Card className="border-border bg-card shadow-sm">
             <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
                 <MessageSquare className="h-5 w-5 text-primary" />
               </div>
               <div>
@@ -70,7 +76,7 @@ export function Chat({
 
           <Card className="border-border bg-card shadow-sm">
             <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
                 <Wifi className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
@@ -86,8 +92,8 @@ export function Chat({
 
           <Card className="border-border bg-card shadow-sm">
             <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                <Users className="h-5 w-5 text-blue-600" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
+                <Activity className="h-5 w-5 text-blue-600" />
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -102,7 +108,7 @@ export function Chat({
         </div>
       </header>
 
-      <Card className="border-border bg-card shadow-sm">
+      <Card className="overflow-hidden border-border bg-card shadow-sm">
         <CardHeader className="border-b border-border pb-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -128,8 +134,8 @@ export function Chat({
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="min-h-[520px] overflow-hidden rounded-b-xl">
-            <ChatWidget />
+          <div className="min-h-[560px] overflow-hidden rounded-b-xl">
+            <ChatWidget search={search} />
           </div>
         </CardContent>
       </Card>
