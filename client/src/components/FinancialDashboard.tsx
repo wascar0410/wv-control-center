@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AllocationSettings } from "./AllocationSettings";
 import {
   LineChart,
   Line,
@@ -110,12 +111,13 @@ export function FinancialDashboard() {
   return (
     <div className="w-full space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="invoicing">Invoicing</TabsTrigger>
           <TabsTrigger value="wallet">Wallet</TabsTrigger>
           <TabsTrigger value="pl">P&L</TabsTrigger>
           <TabsTrigger value="allocation">Allocation</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -590,6 +592,11 @@ export function FinancialDashboard() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Settings Tab */}
+        <TabsContent value="settings" className="space-y-4">
+          <AllocationSettings />
         </TabsContent>
       </Tabs>
     </div>
