@@ -9,14 +9,13 @@ import { createContext } from "./context";
 import wsTokenRouter from "./wsTokenEndpoint";
 import { wsManager } from "./websocket";
 import { serveStatic, setupVite } from "./vite";
-import { rateLimitMiddleware } from "./rateLimiter";
 import { recordHostRejection } from "./hostMonitoring";
-import { requestLoggerMiddleware, getAbuseReport } from "./requestLogger";
-import { adaptiveRateLimiter, getSystemStatus } from "./adaptiveRateLimiter";
+import { requestLoggerMiddleware } from "./requestLogger";
+import { adaptiveRateLimiter } from "./adaptiveRateLimiter";
 import { getDb } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     const server = net.createServer();
     server.listen(port, () => {
       server.close(() => resolve(true));
@@ -34,27 +33,71 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+function normalizeList(values: string[]) {
+  return [...new Set(values.map((v) => v.trim()).filter(Boolean))];
+}
+
+function getHostWithoutPort(host?: string | null) {
+  if (!host) return "";
+  return host.split(":")[0].trim().toLowerCase();
+}
+
+function normalizeOrigin(origin?: string | null) {
+  if (!origin) return "";
+  return origin.trim().toLowerCase().replace(/\/+$/, "");
+}
+
+function isHostAllowed(hostHeader: string | undefined, allowedHosts: string[]) {
+  const fullHost = (hostHeader || "").trim().toLowerCase();
+  const hostOnly = getHostWithoutPort(fullHost);
+
+  if (!fullHost || !hostOnly) return false;
+
+  return allowedHosts.some((allowed) => {
+    const allowedValue = allowed.trim().toLowerCase();
+    const allowedHostOnly = getHostWithoutPort(allowedValue);
+
+    return (
+      fullHost === allowedValue ||
+      hostOnly === allowedValue ||
+      hostOnly === allowedHostOnly
+    );
+  });
+}
+
+function isOriginAllowed(originHeader: string | undefined, allowedOrigins: string[]) {
+  const origin = normalizeOrigin(originHeader);
+  if (!origin) return false;
+
+  return allowedOrigins.some((allowed) => origin === normalizeOrigin(allowed));
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // 🔥 DEBUG ENDPOINT (TEMPORAL)
-  app.get("/debug/users-columns", async (req, res) => {
-  try {
-    const db = await getDb();
-    if (!db) {
-      return res.status(500).json({ error: "Database not available" });
-    }
+  // Importante detrás de Railway / proxies para cookies seguras y req.secure
+  app.set("trust proxy", 1);
 
-    const result = await db.execute("SHOW COLUMNS FROM users;");
-    res.json(result);
-  } catch (error) {
-    console.error("DEBUG ERROR:", error);
-    res.status(500).json({ error: String(error) });
+  // Debug endpoint solo en desarrollo
+  if (process.env.NODE_ENV !== "production") {
+    app.get("/debug/users-columns", async (_req, res) => {
+      try {
+        const db = await getDb();
+        if (!db) {
+          return res.status(500).json({ error: "Database not available" });
+        }
+
+        const result = await db.execute("SHOW COLUMNS FROM users;");
+        return res.json(result);
+      } catch (error) {
+        console.error("DEBUG ERROR:", error);
+        return res.status(500).json({ error: String(error) });
+      }
+    });
   }
-});
-  
-  // Allowed hosts configuration - can be overridden via environment variable
+
+  // Allowed hosts
   const defaultAllowedHosts = [
     "localhost",
     "localhost:3000",
@@ -63,34 +106,35 @@ async function startServer() {
     "app.wvtransports.com",
     "api.wvtransports.com",
     "3000-iop08n4oqcm170ethc0yz-164a9fa2.us2.manus.computer",
+    "wv-control-center-production.up.railway.app",
   ];
-  
-  const envHosts = process.env.ALLOWED_HOSTS ? process.env.ALLOWED_HOSTS.split(",").map((h: string) => h.trim()) : [];
-  const allowedHosts = [...defaultAllowedHosts, ...envHosts];
-  
+
+  const envHosts = process.env.ALLOWED_HOSTS
+    ? process.env.ALLOWED_HOSTS.split(",")
+    : [];
+
+  const allowedHosts = normalizeList([...defaultAllowedHosts, ...envHosts]);
+
   console.log("[Host Validation] Allowed hosts:", allowedHosts);
 
-  // Host validation middleware with monitoring
   app.use((req, res, next) => {
-    const host = req.get("host")?.split(":")[0]; // Get hostname without port
-    const fullHost = req.get("host"); // Get full host with port
-    
-    // Allow if host matches or is in allowed list
-    const isAllowed = allowedHosts.some(
-      (allowed) => allowed === host || allowed === fullHost || allowed.includes(host || "")
-    );
-    
-    if (!isAllowed && process.env.NODE_ENV === "production") {
+    const fullHost = req.get("host");
+
+    if (
+      process.env.NODE_ENV === "production" &&
+      !isHostAllowed(fullHost, allowedHosts)
+    ) {
       console.warn(`[Host Validation] Rejected request from host: ${fullHost}`);
-      // Record rejection for monitoring
-      recordHostRejection(fullHost || "unknown", "Invalid host header", req).catch(console.error);
+      recordHostRejection(fullHost || "unknown", "Invalid host header", req).catch(
+        console.error
+      );
       return res.status(400).json({ error: "Invalid host" });
     }
-    
+
     next();
   });
 
-  // CORS middleware - can be overridden via environment variable
+  // CORS
   const defaultCorsOrigins = [
     "http://localhost:3000",
     "http://localhost:5173",
@@ -99,107 +143,100 @@ async function startServer() {
     "https://app.wvtransports.com",
     "https://api.wvtransports.com",
     "https://3000-iop08n4oqcm170ethc0yz-164a9fa2.us2.manus.computer",
+    "https://wv-control-center-production.up.railway.app",
   ];
-  
-  const envOrigins = process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(",").map((o: string) => o.trim()) : [];
-  const corsOrigins = [...defaultCorsOrigins, ...envOrigins];
-  
+
+  const envOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(",")
+    : [];
+
+  const corsOrigins = normalizeList([...defaultCorsOrigins, ...envOrigins]);
+
   console.log("[CORS] Allowed origins:", corsOrigins);
 
   app.use((req, res, next) => {
     const origin = req.get("origin");
-    
-    // Allow CORS for matching origins
-    if (origin && corsOrigins.some((allowed) => origin.includes(allowed) || allowed.includes(origin))) {
-      res.set("Access-Control-Allow-Origin", origin);
-      res.set("Access-Control-Allow-Credentials", "true");
-      res.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Cookie");
+
+    if (origin && isOriginAllowed(origin, corsOrigins)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+      );
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, Cookie, X-Requested-With"
+      );
     }
-    
-    // Handle preflight requests
+
     if (req.method === "OPTIONS") {
-      return res.sendStatus(200);
+      return res.sendStatus(204);
     }
-    
+
     next();
   });
-  
-  // Add request logging middleware
+
   app.use(requestLoggerMiddleware);
-  
-  // Configure body parser with larger size limit for file uploads
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  
-  // Bypass dev/static resources FIRST - before any rate limiting
+
   app.get("/favicon.ico", (_req, res) => {
     res.status(204).end();
   });
-  
-  app.use((req, res, next) => {
-    const path = req.path;
-    const isDevAsset =
-      path === "/client" ||
-      path === "/favicon.ico" ||
-      path.startsWith("/@react-refresh") ||
-      path.startsWith("/src/") ||
-      path.startsWith("/assets/") ||
-      path.endsWith(".js") ||
-      path.endsWith(".css") ||
-      path.endsWith(".map") ||
-      path.endsWith(".tsx");
-    
-    // In development, bypass all dev assets
-    if (process.env.NODE_ENV !== "production" && isDevAsset) {
-      return next();
-    }
-    
-    return next();
-  });
-  
-  // OAuth callback under /api/oauth/callback
+
   registerOAuthRoutes(app);
-  // WebSocket token endpoint
   app.use(wsTokenRouter);
 
-  // Public config endpoint - serves non-sensitive frontend config from server env
   app.get("/api/config", (_req, res) => {
     res.json({
-      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_MAPS_API_KEY || "",
+      googleMapsApiKey:
+        process.env.GOOGLE_MAPS_API_KEY ||
+        process.env.VITE_GOOGLE_MAPS_API_KEY ||
+        "",
     });
   });
-  
-  // Apply adaptive rate limiting ONLY to API routes in production
+
   if (process.env.NODE_ENV === "production") {
     app.use("/api", adaptiveRateLimiter);
   }
-  
-  // ─── Plaid Webhook (handles Buffer, string, and pre-parsed JSON) ───────────────────
+
   app.post("/api/plaid/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     try {
       let body: any;
+
       if (Buffer.isBuffer(req.body)) {
         body = JSON.parse(req.body.toString("utf8"));
       } else if (typeof req.body === "string") {
         body = JSON.parse(req.body);
       } else {
-        // Already parsed by express.json upstream
         body = req.body;
       }
+
       const { webhook_type, webhook_code, item_id } = body || {};
-      console.log(`[Plaid Webhook] ${webhook_type}/${webhook_code} item=${item_id}`);
-      if (webhook_type === "TRANSACTIONS" && webhook_code === "SYNC_UPDATES_AVAILABLE") {
-        console.log(`[Plaid Webhook] Transactions sync available for item ${item_id}`);
+
+      console.log(
+        `[Plaid Webhook] ${webhook_type}/${webhook_code} item=${item_id}`
+      );
+
+      if (
+        webhook_type === "TRANSACTIONS" &&
+        webhook_code === "SYNC_UPDATES_AVAILABLE"
+      ) {
+        console.log(
+          `[Plaid Webhook] Transactions sync available for item ${item_id}`
+        );
       }
-      res.json({ received: true });
+
+      return res.json({ received: true });
     } catch (err) {
       console.error("[Plaid Webhook] Error:", err);
-      res.status(200).json({ received: false, error: String(err) }); // 200 so Plaid doesn't retry
+      return res.status(200).json({ received: false, error: String(err) });
     }
   });
 
-  // tRPC API
   app.use(
     "/api/trpc",
     createExpressMiddleware({
@@ -207,27 +244,25 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
-  // Serve static files BEFORE rate limiting to ensure they're not affected
+
   if (process.env.NODE_ENV === "development") {
-  await setupVite(app, server);
-} else {
-  serveStatic(app);
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
 
-  // 🔥 SPA fallback FIX
-  app.get("*", (_req, res) => {
-    res.sendFile("index.html", { root: "dist/public" });
-  });
-}
+    app.get("*", (_req, res) => {
+      res.sendFile("index.html", { root: "dist/public" });
+    });
+  }
 
-  const preferredPort = parseInt(process.env.PORT || "3000");
+  const preferredPort = parseInt(process.env.PORT || "3000", 10);
   const port = await findAvailablePort(preferredPort);
 
   if (port !== preferredPort) {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  // Ensure business_plan_events table exists (CREATE TABLE IF NOT EXISTS — safe to run every startup)
+  // Ensure business_plan_events table exists
   if (process.env.DATABASE_URL) {
     try {
       const mysql2 = await import("mysql2/promise");
@@ -235,7 +270,7 @@ async function startServer() {
         uri: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: true },
       });
-      // Drop old snake_case table if it exists (wrong column names), then create correct one
+
       await conn.execute(`DROP TABLE IF EXISTS business_plan_events`);
       await conn.execute(`
         CREATE TABLE IF NOT EXISTS business_plan_events (
@@ -249,14 +284,18 @@ async function startServer() {
           createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
+
       await conn.end();
       console.log("[Startup] business_plan_events table ready");
     } catch (err) {
-      console.warn("[Startup] Table creation warning (non-fatal):", (err as Error).message);
+      console.warn(
+        "[Startup] Table creation warning (non-fatal):",
+        (err as Error).message
+      );
     }
   }
 
-  // Safe column migrations — idempotent, run every startup to ensure DB is in sync
+  // Safe migrations
   if (process.env.DATABASE_URL) {
     try {
       const mysql2 = await import("mysql2/promise");
@@ -265,47 +304,49 @@ async function startServer() {
         ssl: { rejectUnauthorized: true },
       });
 
-      // Migration 0025: driverAcceptedAt, driverRejectedAt, driverRejectionReason
-      const [driverAcceptedCols] = await conn.execute(`
+      const [driverAcceptedCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'driverAcceptedAt'
-      `) as any;
+      `)) as any;
+
       if (driverAcceptedCols.length === 0) {
         await conn.execute("ALTER TABLE `loads` ADD `driverAcceptedAt` timestamp NULL");
         await conn.execute("ALTER TABLE `loads` ADD `driverRejectedAt` timestamp NULL");
         await conn.execute("ALTER TABLE `loads` ADD `driverRejectionReason` varchar(500) NULL");
         console.log("[Startup] Applied: driver accept/reject columns added to loads");
       }
-      // Migration 0026: notes column on pod_documents
-      const [podNotesCols] = await conn.execute(`
+
+      const [podNotesCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pod_documents' AND COLUMN_NAME = 'notes'
-      `) as any;
+      `)) as any;
+
       if (podNotesCols.length === 0) {
         await conn.execute("ALTER TABLE `pod_documents` ADD `notes` text NULL");
         console.log("[Startup] Applied: notes column added to pod_documents");
       }
-      // Migration 0027: signatureUrl, signatureKey on pod_documents
-      const [podSigCols] = await conn.execute(`
+
+      const [podSigCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pod_documents' AND COLUMN_NAME = 'signatureUrl'
-      `) as any;
+      `)) as any;
+
       if (podSigCols.length === 0) {
         await conn.execute("ALTER TABLE `pod_documents` ADD `signatureUrl` text NULL");
         await conn.execute("ALTER TABLE `pod_documents` ADD `signatureKey` varchar(512) NULL");
         console.log("[Startup] Applied: signature columns added to pod_documents");
       }
-      // Migration 0029: Add rateConfirmationNumber to loads table
-      const [rateConfCols] = await conn.execute(`
+
+      const [rateConfCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'rateConfirmationNumber'
-      `) as any;
+      `)) as any;
+
       if (rateConfCols.length === 0) {
         await conn.execute("ALTER TABLE `loads` ADD `rateConfirmationNumber` varchar(100) NULL");
         console.log("[Startup] Applied: rateConfirmationNumber column added to loads");
       }
 
-      // Migration 0030: Create load_evidence table
       await conn.execute(`
         CREATE TABLE IF NOT EXISTS \`load_evidence\` (
           \`id\` int AUTO_INCREMENT NOT NULL,
@@ -328,11 +369,11 @@ async function startServer() {
       `);
       console.log("[Startup] Applied: load_evidence table ready");
 
-      // Migration 0031: Driver fleet classification fields on users
-      const [fleetTypeCols] = await conn.execute(`
+      const [fleetTypeCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'fleetType'
-      `) as any;
+      `)) as any;
+
       if (fleetTypeCols.length === 0) {
         await conn.execute("ALTER TABLE `users` ADD `fleetType` ENUM('internal','leased','external') DEFAULT 'internal'");
         await conn.execute("ALTER TABLE `users` ADD `commissionPercent` DECIMAL(5,2) DEFAULT 0.00");
@@ -347,7 +388,6 @@ async function startServer() {
         console.log("[Startup] OK: driver fleet fields already exist");
       }
 
-      // Migration 0007 (safe): Create driver_locations table if not exists
       await conn.execute(`
         CREATE TABLE IF NOT EXISTS \`driver_locations\` (
           \`id\` int AUTO_INCREMENT NOT NULL,
@@ -366,11 +406,11 @@ async function startServer() {
       `);
       console.log("[Startup] Applied: driver_locations table ready");
 
-      // Migration 0032: Driver settlement fields on driver_payments
-      const [settlementCols] = await conn.execute(`
+      const [settlementCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'driver_payments' AND COLUMN_NAME = 'settlementWeek'
-      `) as any;
+      `)) as any;
+
       if (settlementCols.length === 0) {
         await conn.execute("ALTER TABLE `driver_payments` ADD `settlementWeek` VARCHAR(10) NULL");
         await conn.execute("ALTER TABLE `driver_payments` ADD `grossAmount` DECIMAL(12,2) NULL");
@@ -388,11 +428,11 @@ async function startServer() {
         console.log("[Startup] OK: driver settlement fields already exist");
       }
 
-      // Migration 0021: Add passwordHash column to users table
-      const [pwHashCols] = await conn.execute(`
+      const [pwHashCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'passwordHash'
-      `) as any;
+      `)) as any;
+
       if (pwHashCols.length === 0) {
         await conn.execute("ALTER TABLE `users` ADD `passwordHash` TEXT NULL");
         console.log("[Startup] Applied: passwordHash column added to users");
@@ -400,35 +440,32 @@ async function startServer() {
         console.log("[Startup] OK: passwordHash column already exists");
       }
 
-      // Migration 0018: Ensure users.role enum includes 'owner' and 'driver'
-      // We do this by checking if any user has role='owner' or if the column allows it
-      // Safe approach: try to modify the enum; ignore error if already correct
       try {
         await conn.execute(
           "ALTER TABLE `users` MODIFY COLUMN `role` ENUM('user','admin','driver','owner') NOT NULL DEFAULT 'user'"
         );
         console.log("[Startup] Applied: users.role enum updated to include owner/driver");
       } catch (enumErr: any) {
-        // Ignore if already correct
         if (!String(enumErr.message).includes("Duplicate")) {
           console.log("[Startup] OK: users.role enum already includes owner/driver");
         }
       }
 
-      // Seed owner accounts (idempotent UPSERT - always ensures correct state)
       const bcrypt = await import("bcryptjs");
       const defaultPasswordHash = await bcrypt.default.hash("WVTransport2026!", 10);
+
       const ownerAccounts = [
         { email: "wascar.ortiz0410@gmail.com", name: "Wascar Ortiz", openId: "owner-wascar-001" },
         { email: "yisvel10@gmail.com", name: "Yisvel", openId: "owner-yisvel-002" },
       ];
+
       for (const owner of ownerAccounts) {
-        const [existing] = await conn.execute(
+        const [existing] = (await conn.execute(
           `SELECT id, passwordHash FROM users WHERE email = ? LIMIT 1`,
           [owner.email]
-        ) as any;
+        )) as any;
+
         if (existing.length === 0) {
-          // User doesn't exist - create with default password
           await conn.execute(
             `INSERT INTO users (openId, name, email, role, passwordHash, loginMethod, createdAt, updatedAt, lastSignedIn)
              VALUES (?, ?, ?, 'owner', ?, 'email', NOW(), NOW(), NOW())`,
@@ -436,8 +473,9 @@ async function startServer() {
           );
           console.log(`[Startup] Created owner account: ${owner.email}`);
         } else {
-          // User exists - always ensure role=owner and set password if missing
-          const hasPassword = existing[0].passwordHash && existing[0].passwordHash.length > 10;
+          const hasPassword =
+            existing[0].passwordHash && existing[0].passwordHash.length > 10;
+
           if (!hasPassword) {
             await conn.execute(
               `UPDATE users SET role = 'owner', passwordHash = ?, loginMethod = 'email' WHERE email = ?`,
@@ -445,20 +483,19 @@ async function startServer() {
             );
             console.log(`[Startup] Updated owner account (set password): ${owner.email}`);
           } else {
-            await conn.execute(
-              `UPDATE users SET role = 'owner' WHERE email = ?`,
-              [owner.email]
-            );
+            await conn.execute(`UPDATE users SET role = 'owner' WHERE email = ?`, [
+              owner.email,
+            ]);
             console.log(`[Startup] OK: owner account verified: ${owner.email}`);
           }
         }
       }
 
-      // ── Migration: brokerName + brokerContact + loadScore on loads table ─────────
-      const [brokerNameCols] = await conn.execute(`
+      const [brokerNameCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'brokerName'
-      `) as any;
+      `)) as any;
+
       if (brokerNameCols.length === 0) {
         await conn.execute("ALTER TABLE `loads` ADD `brokerName` varchar(255) NULL");
         await conn.execute("ALTER TABLE `loads` ADD `brokerContact` varchar(255) NULL");
@@ -467,11 +504,11 @@ async function startServer() {
         await conn.execute("ALTER TABLE `loads` ADD `estimatedMiles` decimal(10,2) NULL");
         console.log("[Startup] Applied: broker fields + loadScore + estimatedMiles added to loads");
       } else {
-        // Ensure loadScore and estimatedMiles exist even if brokerName was added earlier
-        const [loadScoreCols] = await conn.execute(`
+        const [loadScoreCols] = (await conn.execute(`
           SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
           WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'loadScore'
-        `) as any;
+        `)) as any;
+
         if (loadScoreCols.length === 0) {
           await conn.execute("ALTER TABLE `loads` ADD `loadScore` int NULL");
           await conn.execute("ALTER TABLE `loads` ADD `estimatedMiles` decimal(10,2) NULL");
@@ -481,7 +518,6 @@ async function startServer() {
         }
       }
 
-      // ── Migration: driver_feedback table ──────────────────────────────────
       await conn.execute(`
         CREATE TABLE IF NOT EXISTS \`driver_feedback\` (
           \`id\` int AUTO_INCREMENT NOT NULL,
@@ -498,7 +534,6 @@ async function startServer() {
       `);
       console.log("[Startup] driver_feedback table ready");
 
-      // ── Migration: financial_transactions table ──────────────────────────────────
       await conn.execute(`
         CREATE TABLE IF NOT EXISTS \`financial_transactions\` (
           \`id\` int AUTO_INCREMENT NOT NULL,
@@ -527,7 +562,7 @@ async function startServer() {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
       console.log("[Startup] financial_transactions table ready");
-      // ── Migration: allocation_settings table ──────────────────────────────────
+
       await conn.execute(`
         CREATE TABLE IF NOT EXISTS \`allocation_settings\` (
           \`id\` int AUTO_INCREMENT NOT NULL,
@@ -539,37 +574,53 @@ async function startServer() {
           PRIMARY KEY (\`id\`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
+
       await conn.execute(`
         INSERT IGNORE INTO \`allocation_settings\` (id, operatingPct, ownerPayPct, reservePct, growthPct)
         VALUES (1, 50.00, 20.00, 20.00, 10.00)
       `);
       console.log("[Startup] allocation_settings table ready");
-      // ── Migration: plaidSyncCursor column on bank_accounts ───────────────────────
-      const [cursorCols] = await conn.execute(`
+
+      const [cursorCols] = (await conn.execute(`
         SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'bank_accounts' AND COLUMN_NAME = 'plaidSyncCursor'
-      `) as any;
+      `)) as any;
+
       if (cursorCols.length === 0) {
         await conn.execute("ALTER TABLE `bank_accounts` ADD `plaidSyncCursor` text NULL");
         console.log("[Startup] Applied: plaidSyncCursor column added to bank_accounts");
       } else {
         console.log("[Startup] OK: plaidSyncCursor already exists");
       }
-      // ── Cleanup: remove test/duplicate accountss ──────────────────────────────────
+
       try {
         const testCondition = `email IN ('driver@example.com','test-annual@example.com','test-comparison@example.com','wascar.orti0410@gmail.com') OR (name = 'Test Driver' AND email LIKE '%example%')`;
-        // Delete FK-dependent child records first to avoid constraint errors
-        await conn.execute(`DELETE FROM load_quotations WHERE userId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
-        await conn.execute(`DELETE FROM driver_payments WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
-        await conn.execute(`DELETE FROM driver_locations WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
-        await conn.execute(`DELETE FROM driver_settlements WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`).catch(() => {});
-        // Now delete the users
-        const [cleaned] = await conn.execute(`DELETE FROM users WHERE ${testCondition}`) as any[];
+
+        await conn.execute(
+          `DELETE FROM load_quotations WHERE userId IN (SELECT id FROM users WHERE ${testCondition})`
+        ).catch(() => {});
+        await conn.execute(
+          `DELETE FROM driver_payments WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`
+        ).catch(() => {});
+        await conn.execute(
+          `DELETE FROM driver_locations WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`
+        ).catch(() => {});
+        await conn.execute(
+          `DELETE FROM driver_settlements WHERE driverId IN (SELECT id FROM users WHERE ${testCondition})`
+        ).catch(() => {});
+
+        const [cleaned] = (await conn.execute(
+          `DELETE FROM users WHERE ${testCondition}`
+        )) as any[];
+
         if (cleaned.affectedRows > 0) {
           console.log(`[Startup] Cleaned up ${cleaned.affectedRows} test/duplicate user(s)`);
         }
       } catch (cleanupErr) {
-        console.warn("[Startup] Cleanup warning (non-fatal):", (cleanupErr as Error).message);
+        console.warn(
+          "[Startup] Cleanup warning (non-fatal):",
+          (cleanupErr as Error).message
+        );
       }
 
       await conn.end();
@@ -578,7 +629,6 @@ async function startServer() {
     }
   }
 
-  // Initialize WebSocket server
   wsManager.initialize(server);
 
   server.listen(port, () => {
