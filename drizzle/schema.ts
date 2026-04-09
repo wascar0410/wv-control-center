@@ -1225,24 +1225,55 @@ export type InsertLoadEvidence = typeof loadEvidence.$inferInsert;
  * Driver Wallets - Track driver earnings and available balance
  * Supports both company drivers and independent contractors
  */
-export const wallets = mysqlTable(
+export const walletsexport const wallets = mysqlTable(
   "wallets",
   {
     id: int("id").autoincrement().primaryKey(),
-    driverId: int("driverId").notNull().references(() => users.id, { onDelete: "cascade" }),
-    totalEarnings: decimal("totalEarnings", { precision: 12, scale: 2 }).default("0.00").notNull(),
-    availableBalance: decimal("availableBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
-    pendingBalance: decimal("pendingBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
-    blockedBalance: decimal("blockedBalance", { precision: 12, scale: 2 }).default("0.00").notNull(),
+    driverId: int("driverId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+
+    totalEarnings: decimal("totalEarnings", { precision: 12, scale: 2 })
+      .default("0.00")
+      .notNull(),
+
+    availableBalance: decimal("availableBalance", { precision: 12, scale: 2 })
+      .default("0.00")
+      .notNull(),
+
+    pendingBalance: decimal("pendingBalance", { precision: 12, scale: 2 })
+      .default("0.00")
+      .notNull(),
+
+    blockedBalance: decimal("blockedBalance", { precision: 12, scale: 2 })
+      .default("0.00")
+      .notNull(),
+
     bankAccountId: varchar("bankAccountId", { length: 255 }),
     bankAccountLast4: varchar("bankAccountLast4", { length: 4 }),
     bankAccountName: varchar("bankAccountName", { length: 255 }),
-    minimumWithdrawalAmount: decimal("minimumWithdrawalAmount", { precision: 10, scale: 2 }).default("50.00"),
-    withdrawalFeePercent: decimal("withdrawalFeePercent", { precision: 5, scale: 2 }).default("0.00"),
-    status: mysqlEnum("status", ["active", "suspended", "closed"]).default("active").notNull(),
+
+    minimumWithdrawalAmount: decimal("minimumWithdrawalAmount", {
+      precision: 10,
+      scale: 2,
+    }).default("50.00"),
+
+    withdrawalFeePercent: decimal("withdrawalFeePercent", {
+      precision: 5,
+      scale: 2,
+    }).default("0.00"),
+
+    status: mysqlEnum("status", ["active", "suspended", "closed"])
+      .default("active")
+      .notNull(),
+
     suspensionReason: text("suspensionReason"),
+
     createdAt: timestamp("createdAt").defaultNow().notNull(),
-    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+    updatedAt: timestamp("updatedAt")
+      .defaultNow()
+      .onUpdateNow()
+      .notNull(),
   },
   (table) => ({
     driverIdUnique: uniqueIndex("wallets_driver_id_unique").on(table.driverId),
