@@ -274,7 +274,6 @@ export default function UserProfile() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
             <h1 className="text-3xl font-bold text-foreground">Mi Perfil</h1>
             <p className="mt-1 text-muted-foreground">
               Gestiona tu información personal, preferencias y visibilidad dentro del sistema.
