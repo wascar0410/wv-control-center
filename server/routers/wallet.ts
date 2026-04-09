@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { router, protectedProcedure } from "../_core/trpc";
+import { wallets } from "../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
@@ -122,9 +124,30 @@ export const walletRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        const walletRaw = await getWalletByDriverId(ctx.user.id);
+        let walletRaw = await getWalletByDriverId(ctx.user.id);
+        
+        // Auto-create wallet if not exists
         if (!walletRaw) {
-          throw new Error("Wallet not found");
+          const db = await getDb();
+          if (!db) throw new Error("Database connection failed");
+          
+          const result = await db.insert(wallets).values({
+            driverId: ctx.user.id,
+            totalEarnings: 0,
+            availableBalance: 0,
+            pendingBalance: 0,
+            blockedBalance: 0,
+            minimumWithdrawalAmount: 50,
+            withdrawalFeePercent: 2,
+            lastWithdrawalDate: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          
+          walletRaw = await getWalletByDriverId(ctx.user.id);
+          if (!walletRaw) {
+            throw new Error("Failed to create wallet");
+          }
         }
 
         const wallet = safeWallet(walletRaw);
@@ -192,6 +215,132 @@ export const walletRouter = router({
         throw err;
       }
     }),
+
+  /**
+   * Create Plaid link token
+   */
+  createPlaidLinkToken: protectedProcedure.mutation(async ({ ctx }) => {
+    try {
+      if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
+        throw new Error("Plaid not configured");
+      }
+
+      const response = await fetch("https://sandbox.plaid.com/link/token/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user: { client_user_id: String(ctx.user.id) },
+          client_name: "WV Control Center",
+          language: "es",
+          country_codes: ["US"],
+          products: ["auth"],
+          client_id: process.env.PLAID_CLIENT_ID,
+          secret: process.env.PLAID_SECRET,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create Plaid link token");
+      }
+
+      const data = await response.json();
+      return { linkToken: data.link_token };
+    } catch (err) {
+      console.error("[wallet.createPlaidLinkToken]", err);
+      throw err;
+    }
+  }),
+
+  /**
+   * Exchange Plaid public token
+   */
+  exchangePlaidPublicToken: protectedProcedure
+    .input(
+      z.object({
+        publicToken: z.string(),
+        accountId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
+          throw new Error("Plaid not configured");
+        }
+
+        // Exchange public token for access token
+        const response = await fetch("https://sandbox.plaid.com/item/public_token/exchange", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            client_id: process.env.PLAID_CLIENT_ID,
+            secret: process.env.PLAID_SECRET,
+            public_token: input.publicToken,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to exchange Plaid token");
+        }
+
+        const data = await response.json();
+        const accessToken = data.access_token;
+        const itemId = data.item_id;
+
+        // Save bank account to database
+        const db = await getDb();
+        if (!db) throw new Error("Database connection failed");
+
+        const { bankAccounts } = await import("../drizzle/schema");
+        await db.insert(bankAccounts).values({
+          userId: ctx.user.id,
+          plaidItemId: itemId,
+          plaidAccessToken: accessToken,
+          accountId: input.accountId,
+          accountName: "Connected Bank Account",
+          accountMask: "",
+          bankName: "",
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        return { success: true, message: "Bank account connected" };
+      } catch (err) {
+        console.error("[wallet.exchangePlaidPublicToken]", err);
+        throw err;
+      }
+    }),
+
+  /**
+   * Get linked bank accounts
+   */
+  getLinkedBankAccounts: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+
+      const { bankAccounts } = await import("../drizzle/schema");
+      const accounts = await db
+        .select()
+        .from(bankAccounts)
+        .where(eq(bankAccounts.userId, ctx.user.id));
+
+      return accounts.map((acc) => ({
+        id: acc.id,
+        name: acc.accountName,
+        mask: acc.accountMask,
+        institutionName: acc.bankName,
+        isActive: acc.isActive,
+      }));
+    } catch (err) {
+      console.error("[wallet.getLinkedBankAccounts]", err);
+      return [];
+    }
+  }),
 
   /**
    * Withdrawals list

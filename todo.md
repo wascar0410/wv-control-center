@@ -1425,3 +1425,40 @@
 - [x] Confirmar que Dispatch Board filtra por rentabilidad
 - [x] Confirmar que KPI strip es visible y estable
 - [x] Validar que no se rompió funcionalidad existente
+
+
+### TAREA 7: Resolver Errores y Conectar Pantallas
+
+#### Fase 1: Resolver Errores 500
+- [x] Diagnosticar error en settlement.create (500 en producción) - Faltaba import de zod
+- [x] Diagnosticar error en wallet.requestWithdrawal (500 en producción, "Wallet not found") - Auto-crear wallet
+- [x] Verificar que wallet existe para usuario logueado
+- [x] Validar que settlement data es completa antes de crear
+- [x] Confirmar que errores no ocurren en desarrollo
+
+#### Fase 2: Real-time Sync entre Pantallas
+- [x] Crear useFinancialSync hook para invalidar queries relacionadas
+- [x] Conectar Wallet ↔ Settlement (invalidate settlement cuando wallet cambia)
+- [x] Conectar Settlement ↔ Invoicing (invalidate invoicing cuando settlement cambia)
+- [x] Conectar Invoicing ↔ Financial Dashboard (invalidate alerts cuando invoicing cambia)
+- [x] Hook listo para usar en mutations
+
+#### Fase 3: Password Recovery
+- [x] Backend ya tiene endpoints: requestPasswordReset, validateResetToken, resetPassword
+- [x] Crear PasswordRecovery.tsx component
+- [x] Listo para integrar en login page
+
+#### Fase 4: Plaid Integration
+- [x] Verificar que PLAID_CLIENT_ID y PLAID_SECRET están configurados
+- [x] Crear PlaidLink.tsx component
+- [x] Implementar wallet.createPlaidLinkToken endpoint
+- [x] Implementar wallet.exchangePlaidPublicToken endpoint
+- [x] Implementar wallet.getLinkedBankAccounts endpoint
+- [x] PlaidLink component maneja todo el flujo
+
+#### Fase 5: Validación End-to-End
+- [ ] Confirmar que settlement.create funciona sin errores
+- [ ] Confirmar que wallet.requestWithdrawal funciona sin errores
+- [ ] Confirmar que cambios en una pantalla se reflejan en otras
+- [ ] Confirmar que password recovery funciona
+- [ ] Confirmar que Plaid integration funciona
