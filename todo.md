@@ -1494,3 +1494,34 @@
 - [x] Confirmar que sugerencias se renderizan correctamente
 - [x] Confirmar que trend indicator es visible
 - [x] Validar que no se rompió funcionalidad existente
+
+
+### TAREA 9: Sistema de Reconciliación Financiera
+
+#### Fase 1: Analizar Fuentes de Datos
+- [x] Revisar estructura de settlements table
+- [x] Revisar estructura de wallet table
+- [x] Revisar estructura de walletTransactions table
+- [x] Identificar campos clave: amount, status, date, load_id
+- [x] Verificar relaciones entre tablas
+
+#### Fase 2: Crear Lógica de Reconciliación
+- [x] Crear endpoint financialExtended.getReconciliationData (backend)
+- [x] Comparar expected amounts (invoices) vs actual (walletTransactions)
+- [x] Detectar: missing payments, overpayments, discrepancies
+- [x] Calcular variance tolerance (1%)
+- [x] Retornar status: OK / Missing / Mismatch
+
+#### Fase 3: Crear UI Panel
+- [x] Crear ReconciliationPanel.tsx component
+- [x] Mostrar: load ID, expected, actual, difference, status
+- [x] Indicadores: Verde (OK), Amarillo (variance), Rojo (missing/mismatch)
+- [x] Tabla de discrepancias con summary cards
+- [x] Auto-refresh cada 30 segundos
+
+#### Fase 4: Integración y Validación
+- [x] Integrar ReconciliationPanel en FinancialDashboard
+- [x] Crear tab "Reconciliation" entre Allocation y Alerts
+- [x] Validar que no rompe wallet/settlement flows
+- [x] Confirmar que mismatches se detectan correctamente
+- [x] Confirmar UI muestra status claramente

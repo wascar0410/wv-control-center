@@ -1,8 +1,8 @@
-import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { z } from "zod";
 
 /**
  * Financial Extended Router - Real Profit Per Load & Financial Alerts
@@ -11,6 +11,7 @@ import { eq, and, gte, lte } from "drizzle-orm";
  * - Real profit per load (revenue - all expenses)
  * - Financial alerts (margin, variance, cash, overdue, blocked payments)
  * - Configurable thresholds from business_config
+ * - Financial reconciliation (expected vs actual)
  */
 
 export const financialExtendedRouter = router({
@@ -50,147 +51,91 @@ export const financialExtendedRouter = router({
               tolls: 0,
               maintenance: 0,
               driverPay: 0,
-              commissions: 0,
-              other: 0,
+              commission: 0,
             },
-            totalExpenses: 0,
             actualProfit: 0,
             actualMargin: 0,
             profitPerMile: 0,
             estimatedProfit: 0,
             variance: 0,
-            variancePercent: 0,
           };
         }
 
         // Get load details
         const load = await db.query.loads.findFirst({
-          where: (l, { eq }) => eq(l.id, input.loadId),
+          where: (loads, { eq }) => eq(loads.id, input.loadId),
         });
 
         if (!load) {
           throw new TRPCError({
             code: "NOT_FOUND",
-            message: "Load not found",
+            message: `Load ${input.loadId} not found`,
           });
         }
 
-        // Get invoice for this load (revenue)
+        // Get invoice for this load
         const invoice = await db.query.invoices.findFirst({
-          where: (inv, { eq }) => eq(inv.loadId, input.loadId),
-        });
-        const revenue = invoice ? Number(invoice.total || 0) : 0;
-
-        // Get business config for cost calculations
-        const config = await db.query.businessConfig.findFirst({
-          where: (bc, { eq }) => eq(bc.userId, ctx.user.id),
+          where: (invoices, { eq }) => eq(invoices.loadId, input.loadId),
         });
 
-        const miles = Number(load.miles || 0);
-        const fuelPrice = Number(config?.fuelPricePerGallon || 3.6);
-        const mpg = Number(config?.vanMpg || 18);
-        const maintenancePerMile = Number(config?.maintenancePerMile || 0.12);
+        const revenue = invoice ? Number(invoice.totalAmount) : 0;
 
-        // Calculate fuel cost
-        const gallonsNeeded = miles / mpg;
-        const fuelCost = gallonsNeeded * fuelPrice;
+        // Calculate expenses
+        const miles = Number(load.miles) || 0;
+        const fuelPrice = Number(load.fuelPrice) || 0;
+        const mpg = Number(load.mpg) || 8;
+        const maintenancePerMile = Number(load.maintenancePerMile) || 0.15;
+        const tolls = Number(load.tolls) || 0;
+        const driverPay = Number(load.driverPayAmount) || 0;
+        const commission = Number(load.brokerCommission) || 0;
 
-        // Get toll expenses for this load
-        const tollTransactions = await db.query.walletTransactions.findMany({
-          where: (tx, { and, eq }) => {
-            return and(
-              eq(tx.loadId, input.loadId),
-              tx.category ? tx.category.includes("toll") : false
-            );
-          },
-        });
-        const tollsCost = tollTransactions.reduce(
-          (sum, tx) => sum + Number(tx.amount || 0),
-          0
-        );
-
-        // Calculate maintenance cost
+        const fuelCost = miles > 0 ? (miles / mpg) * fuelPrice : 0;
         const maintenanceCost = miles * maintenancePerMile;
 
-        // Get driver payment for this load
-        const driverPayment = await db.query.driverPayments.findFirst({
-          where: (dp, { eq }) => eq(dp.loadId, input.loadId),
-        });
-        const driverPayCost = driverPayment ? Number(driverPayment.amount || 0) : 0;
-
-        // Get commission (from invoice or estimate)
-        const commissionPercent = 0.05; // 5% default commission
-        const commissionCost = revenue * commissionPercent;
-
-        // Get other expenses for this load
-        const otherTransactions = await db.query.walletTransactions.findMany({
-          where: (tx, { and, eq }) => {
-            return and(
-              eq(tx.loadId, input.loadId),
-              tx.category
-                ? !tx.category.includes("toll") && !tx.category.includes("fuel")
-                : true
-            );
-          },
-        });
-        const otherExpenses = otherTransactions.reduce(
-          (sum, tx) => sum + Number(tx.amount || 0),
-          0
-        );
-
-        // Calculate totals
-        const expenses = {
-          fuel: fuelCost,
-          tolls: tollsCost,
-          maintenance: maintenanceCost,
-          driverPay: driverPayCost,
-          commissions: commissionCost,
-          other: otherExpenses,
-        };
-
-        const totalExpenses = Object.values(expenses).reduce((sum, val) => sum + val, 0);
+        const totalExpenses = fuelCost + tolls + maintenanceCost + driverPay + commission;
         const actualProfit = revenue - totalExpenses;
         const actualMargin = revenue > 0 ? (actualProfit / revenue) * 100 : 0;
         const profitPerMile = miles > 0 ? actualProfit / miles : 0;
 
-        // Get quote analysis for comparison
+        // Get quote analysis for variance
         const quoteAnalysis = await db.query.quoteAnalysis.findFirst({
           where: (qa, { eq }) => eq(qa.loadId, input.loadId),
         });
-        const estimatedProfit = quoteAnalysis ? Number(quoteAnalysis.estimatedProfit || 0) : 0;
+
+        const estimatedProfit = quoteAnalysis ? Number(quoteAnalysis.estimatedProfit) : 0;
         const variance = actualProfit - estimatedProfit;
-        const variancePercent = estimatedProfit > 0 ? (variance / estimatedProfit) * 100 : 0;
 
         return {
           loadId: input.loadId,
           revenue,
-          expenses,
-          totalExpenses,
+          expenses: {
+            fuel: fuelCost,
+            tolls,
+            maintenance: maintenanceCost,
+            driverPay,
+            commission,
+          },
           actualProfit,
-          actualMargin: Math.round(actualMargin * 100) / 100,
-          profitPerMile: Math.round(profitPerMile * 100) / 100,
+          actualMargin,
+          profitPerMile,
           estimatedProfit,
           variance,
-          variancePercent: Math.round(variancePercent * 100) / 100,
         };
       } catch (err) {
         console.error("[financial.getProfitPerLoad]", err);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to calculate profit per load",
-        });
+        throw err;
       }
     }),
 
   /**
    * Get Financial Alerts
    *
-   * Generates alerts based on configurable thresholds:
-   * - Low margin: margin% < marginAlertThreshold
-   * - High quote variance: |variance%| > quoteVarianceThreshold
-   * - Negative cash position: netCashPosition < 0
-   * - Overdue invoices: unpaid > overdueDaysThreshold
-   * - Blocked payments: payment blocks > threshold
+   * Checks multiple financial conditions:
+   * - Low margin (< threshold)
+   * - High quote variance (> threshold)
+   * - Negative cash
+   * - Overdue invoices
+   * - Payment blocks
    */
   getFinancialAlerts: protectedProcedure.query(async ({ ctx }) => {
     try {
@@ -203,127 +148,148 @@ export const financialExtendedRouter = router({
         };
       }
 
-      const alerts = [];
+      const alerts: any[] = [];
 
       // Get business config for thresholds
       const config = await db.query.businessConfig.findFirst({
         where: (bc, { eq }) => eq(bc.userId, ctx.user.id),
       });
 
-      const marginThreshold = Number(config?.marginAlertThreshold || 10);
-      const varianceThreshold = Number(config?.quoteVarianceThreshold || 20);
-      const overdueDaysThreshold = Number(config?.overdueDaysThreshold || 30);
+      const marginThreshold = config ? Number(config.marginAlertThreshold) || 10 : 10;
+      const varianceThreshold = config ? Number(config.quoteVarianceThreshold) || 20 : 20;
+      const overdueDays = config ? Number(config.overdueDaysThreshold) || 30 : 30;
 
-      // 1. Check margin threshold
-      const invoices = await db.query.invoices.findMany();
-      const totalRevenue = invoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-
-      const transactions = await db.query.walletTransactions.findMany();
-      const totalExpenses = transactions.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
-
-      const margin = totalRevenue > 0 ? ((totalRevenue - totalExpenses) / totalRevenue) * 100 : 0;
-
-      if (margin < marginThreshold) {
-        alerts.push({
-          id: "margin_low",
-          type: "warning",
-          title: "Low Profit Margin",
-          message: `Current margin is ${margin.toFixed(2)}%, below threshold of ${marginThreshold}%`,
-          severity: margin < 0 ? "critical" : "warning",
-          timestamp: new Date(),
-        });
-      }
-
-      // 2. Check quote variance
-      const analyses = await db.query.quoteAnalysis.findMany();
-      const highVarianceLoads = analyses.filter((qa) => {
-        const variance = qa.actualProfit
-          ? ((Number(qa.actualProfit) - Number(qa.estimatedProfit || 0)) /
-              Number(qa.estimatedProfit || 1)) *
-            100
-          : 0;
-        return Math.abs(variance) > varianceThreshold;
+      // Check low margin loads
+      const loads = await db.query.loads.findMany({
+        where: (loads, { eq, and }) =>
+          and(eq(loads.driverId, ctx.user.id), eq(loads.status, "delivered")),
       });
 
-      if (highVarianceLoads.length > 0) {
+      let lowMarginCount = 0;
+      for (const load of loads) {
+        const profit = await db.query.walletTransactions.findFirst({
+          where: (wt, { eq, and }) =>
+            and(eq(wt.loadId, load.id), eq(wt.type, "load_payment")),
+        });
+
+        if (profit) {
+          const invoice = await db.query.invoices.findFirst({
+            where: (inv, { eq }) => eq(inv.loadId, load.id),
+          });
+
+          if (invoice) {
+            const revenue = Number(invoice.totalAmount);
+            const profit_amount = Number(profit.amount);
+            const margin = revenue > 0 ? (profit_amount / revenue) * 100 : 0;
+
+            if (margin < marginThreshold) {
+              lowMarginCount++;
+            }
+          }
+        }
+      }
+
+      if (lowMarginCount > 0) {
         alerts.push({
-          id: "variance_high",
-          type: "warning",
-          title: "High Quote Variance",
-          message: `${highVarianceLoads.length} loads have variance > ${varianceThreshold}%`,
+          id: "margin_low",
           severity: "warning",
-          timestamp: new Date(),
+          title: "Low Margin Loads",
+          message: `${lowMarginCount} load(s) with margin below ${marginThreshold}%`,
+          source: "low margin",
+          recommendation: "Review pricing strategy or negotiate better rates",
         });
       }
 
-      // 3. Check cash position
+      // Check quote variance
+      const quoteAnalyses = await db.query.quoteAnalysis.findMany({
+        where: (qa, { eq }) => eq(qa.driverId, ctx.user.id),
+      });
+
+      let highVarianceCount = 0;
+      for (const qa of quoteAnalyses) {
+        const profit = await db.query.walletTransactions.findFirst({
+          where: (wt, { eq, and }) =>
+            and(eq(wt.loadId, qa.loadId), eq(wt.type, "load_payment")),
+        });
+
+        if (profit) {
+          const actualProfit = Number(profit.amount);
+          const estimatedProfit = Number(qa.estimatedProfit);
+          const variance = Math.abs(actualProfit - estimatedProfit);
+          const variancePercent = estimatedProfit > 0 ? (variance / estimatedProfit) * 100 : 0;
+
+          if (variancePercent > varianceThreshold) {
+            highVarianceCount++;
+          }
+        }
+      }
+
+      if (highVarianceCount > 0) {
+        alerts.push({
+          id: "variance_high",
+          severity: "warning",
+          title: "High Quote Variance",
+          message: `${highVarianceCount} load(s) with variance > ${varianceThreshold}%`,
+          source: "high quote variance",
+          recommendation: "Review estimation accuracy and adjust quote model",
+        });
+      }
+
+      // Check wallet balance
       const wallet = await db.query.wallets.findFirst({
         where: (w, { eq }) => eq(w.driverId, ctx.user.id),
       });
-      const walletBalance = wallet ? Number(wallet.availableBalance || 0) : 0;
 
-      const withdrawals = await db.query.withdrawals.findMany({
-        where: (w, { eq }) => eq(w.status, "pending"),
-      });
-      const pendingWithdrawals = withdrawals.reduce(
-        (sum, w) => sum + Number(w.amount || 0),
-        0
-      );
-
-      const cashIn = invoices
-        .filter((inv) => inv.status === "paid")
-        .reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-
-      const netCashPosition = cashIn + walletBalance - pendingWithdrawals;
-
-      if (netCashPosition < 0) {
+      if (wallet && Number(wallet.availableBalance) < 0) {
         alerts.push({
           id: "cash_negative",
-          type: "critical",
-          title: "Negative Cash Position",
-          message: `Net cash position is ${netCashPosition.toFixed(2)}, indicating cash shortage`,
           severity: "critical",
-          timestamp: new Date(),
+          title: "Negative Cash Balance",
+          message: `Wallet balance is negative: $${Math.abs(Number(wallet.availableBalance)).toFixed(2)}`,
+          source: "negative cash",
+          recommendation: "Immediate action required. Contact support.",
         });
       }
 
-      // 4. Check overdue invoices
-      const now = new Date();
-      const overdueInvoices = invoices.filter((inv) => {
-        if (inv.status === "paid") return false;
-        const dueDate = new Date(inv.dueDate || now);
-        const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-        return daysOverdue > overdueDaysThreshold;
+      // Check overdue invoices
+      const overdueDate = new Date();
+      overdueDate.setDate(overdueDate.getDate() - overdueDays);
+
+      const overdueInvoices = await db.query.invoices.findMany({
+        where: (inv, { eq, and, lt }) =>
+          and(eq(inv.driverId, ctx.user.id), lt(inv.createdAt, overdueDate)),
       });
 
       if (overdueInvoices.length > 0) {
         alerts.push({
-          id: "invoices_overdue",
-          type: "warning",
-          title: "Overdue Invoices",
-          message: `${overdueInvoices.length} invoices are overdue by more than ${overdueDaysThreshold} days`,
+          id: "overdue_invoices",
           severity: "warning",
-          timestamp: new Date(),
+          title: "Overdue Invoices",
+          message: `${overdueInvoices.length} invoice(s) overdue for more than ${overdueDays} days`,
+          source: "overdue invoices",
+          recommendation: "Follow up on unpaid invoices",
         });
       }
 
-      // 5. Check payment blocks
+      // Check payment blocks
       const paymentBlocks = await db.query.paymentBlocks.findMany({
-        where: (pb, { eq }) => eq(pb.status, "active"),
+        where: (pb, { eq, and }) =>
+          and(eq(pb.driverId, ctx.user.id), eq(pb.status, "active")),
       });
 
+      let totalBlockedAmount = 0;
+      for (const block of paymentBlocks) {
+        totalBlockedAmount += Number(block.blockedAmount);
+      }
+
       if (paymentBlocks.length > 0) {
-        const blockedAmount = paymentBlocks.reduce(
-          (sum, pb) => sum + Number(pb.blockedAmount || 0),
-          0
-        );
         alerts.push({
           id: "payments_blocked",
-          type: "critical",
-          title: "Payment Blocks Active",
-          message: `${paymentBlocks.length} payment blocks totaling $${blockedAmount.toFixed(2)} are active`,
           severity: "critical",
-          timestamp: new Date(),
+          title: "Payment Blocks Active",
+          message: `${paymentBlocks.length} payment block(s) totaling $${totalBlockedAmount.toFixed(2)}`,
+          source: "payment blocks",
+          recommendation: "Resolve payment blocks by providing required documentation",
         });
       }
 
@@ -341,6 +307,97 @@ export const financialExtendedRouter = router({
         alerts: [],
         criticalCount: 0,
         warningCount: 0,
+      };
+    }
+  }),
+
+  /**
+   * Get Financial Reconciliation Data
+   *
+   * Compares expected amounts (settlements, wallet) vs actual transactions
+   * Detects: missing payments, overpayments, discrepancies
+   */
+  getReconciliationData: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const db = await getDb();
+      if (!db) {
+        return {
+          reconciliations: [],
+          totalExpected: 0,
+          totalActual: 0,
+          discrepancies: 0,
+        };
+      }
+
+      const reconciliations: any[] = [];
+      let totalExpected = 0;
+      let totalActual = 0;
+      let discrepancyCount = 0;
+
+      // Get all completed loads for this driver
+      const loads = await db.query.loads.findMany({
+        where: (loads, { eq, and }) =>
+          and(eq(loads.driverId, ctx.user.id), eq(loads.status, "delivered")),
+      });
+
+      for (const load of loads) {
+        // Get invoice (expected amount)
+        const invoice = await db.query.invoices.findFirst({
+          where: (inv, { eq }) => eq(inv.loadId, load.id),
+        });
+
+        const expectedAmount = invoice ? Number(invoice.totalAmount) : 0;
+
+        // Get actual payment (wallet transaction)
+        const transaction = await db.query.walletTransactions.findFirst({
+          where: (wt, { eq, and }) =>
+            and(eq(wt.loadId, load.id), eq(wt.type, "load_payment")),
+        });
+
+        const actualAmount = transaction ? Number(transaction.amount) : 0;
+        const difference = actualAmount - expectedAmount;
+        const variance = expectedAmount > 0 ? Math.abs(difference / expectedAmount) * 100 : 0;
+
+        // Determine status
+        let status = "OK";
+        if (actualAmount === 0 && expectedAmount > 0) {
+          status = "Missing";
+          discrepancyCount++;
+        } else if (variance > 1) {
+          // More than 1% variance
+          status = "Mismatch";
+          discrepancyCount++;
+        }
+
+        totalExpected += expectedAmount;
+        totalActual += actualAmount;
+
+        reconciliations.push({
+          loadId: load.id,
+          expectedAmount,
+          actualAmount,
+          difference,
+          variance: variance.toFixed(2),
+          status,
+          invoiceDate: invoice?.createdAt,
+          transactionDate: transaction?.createdAt,
+        });
+      }
+
+      return {
+        reconciliations,
+        totalExpected,
+        totalActual,
+        totalDifference: totalActual - totalExpected,
+        discrepancies: discrepancyCount,
+      };
+    } catch (err) {
+      console.error("[financial.getReconciliationData]", err);
+      return {
+        reconciliations: [],
+        totalExpected: 0,
+        totalActual: 0,
+        discrepancies: 0,
       };
     }
   }),
@@ -451,6 +508,13 @@ export const financialExtendedRouter = router({
               overdueDaysThreshold: input.overdueDaysThreshold,
             })
             .where(eq(db.schema.businessConfig.userId, ctx.user.id));
+        } else {
+          await db.insert(db.schema.businessConfig).values({
+            userId: ctx.user.id,
+            marginAlertThreshold: input.marginAlertThreshold,
+            quoteVarianceThreshold: input.quoteVarianceThreshold,
+            overdueDaysThreshold: input.overdueDaysThreshold,
+          });
         }
 
         return {

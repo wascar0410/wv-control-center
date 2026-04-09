@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AllocationSettings } from "./AllocationSettings";
 import { FinancialAlerts } from "./FinancialAlerts";
 import { PaymentBlocksPanel } from "./PaymentBlocksPanel";
+import { ReconciliationPanel } from "./ReconciliationPanel";
 import {
   LineChart,
   Line,
@@ -113,12 +114,13 @@ export function FinancialDashboard() {
   return (
     <div className="w-full space-y-6">
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="invoicing">Invoicing</TabsTrigger>
           <TabsTrigger value="wallet">Wallet</TabsTrigger>
           <TabsTrigger value="pl">P&L</TabsTrigger>
           <TabsTrigger value="allocation">Allocation</TabsTrigger>
+          <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -601,6 +603,11 @@ export function FinancialDashboard() {
         <TabsContent value="alerts" className="space-y-4">
           <PaymentBlocksPanel />
           <FinancialAlerts />
+        </TabsContent>
+
+        {/* Reconciliation Tab */}
+        <TabsContent value="reconciliation" className="space-y-4">
+          <ReconciliationPanel />
         </TabsContent>
 
         {/* Settings Tab */}
