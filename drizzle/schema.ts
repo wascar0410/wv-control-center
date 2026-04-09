@@ -1225,7 +1225,7 @@ export type InsertLoadEvidence = typeof loadEvidence.$inferInsert;
  * Driver Wallets - Track driver earnings and available balance
  * Supports both company drivers and independent contractors
  */
-export const walletsexport const wallets = mysqlTable(
+export const wallets = mysqlTable(
   "wallets",
   {
     id: int("id").autoincrement().primaryKey(),
