@@ -1184,8 +1184,6 @@ export const businessPlanEvents = mysqlTable("business_plan_events", {
 export type BusinessPlanEvent = typeof businessPlanEvents.$inferSelect;
 export type InsertBusinessPlanEvent = typeof businessPlanEvents.$inferInsert;
 
-export type InsertBusinessPlanEvent = typeof businessPlanEvents.$inferInsert;
-
 /**
  * Load Evidence - Driver photo/document evidence collection for dispute protection
  * Covers: pickup confirmation, delivery confirmation, BOL scans, damage reports, etc.
@@ -1227,8 +1225,7 @@ export type InsertLoadEvidence = typeof loadEvidence.$inferInsert;
  * Driver Wallets - Track driver earnings and available balance
  * Supports both company drivers and independent contractors
  */
-export const wallets = mysqlTable("wallets", {
-  id: iexport const wallets = mysqlTable(
+export const wallets = mysqlTable(
   "wallets",
   {
     id: int("id").autoincrement().primaryKey(),
@@ -1658,10 +1655,7 @@ export type InsertAlert = typeof alerts.$inferInsert;
  * Tasks - Team tasks and action items
  * States: pending → in_progress → completed / cancelled
  */
-export const tasks = mysqlTable("tasks", {
-  id: int("id").autoincrement().primaryKey(),
-  
-  // Task detailexport const tasks = mysqlTable(
+export const tasks = mysqlTable(
   "tasks",
   {
     id: int("id").autoincrement().primaryKey(),
