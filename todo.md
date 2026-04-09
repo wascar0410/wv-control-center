@@ -1341,3 +1341,23 @@
 - [ ] Validar que datos estén aislados por empresa
 - [ ] Agregar selector de empresa en DashboardLayout (si multi-tenant)
 - [ ] Tests para company isolation
+
+### TAREA 4: Cerrar Capa Financiera y Operativa
+- [x] Ejecutar migración 0037 en TiDB (allocation + alert threshold columns)
+- [x] Verificar que campos de allocations se persisten en business_config
+- [x] Crear UI de Allocations en FinancialDashboard (Settings tab) - AllocationSettings.tsx completado
+- [x] Formulario editable: ownerDrawPercent, reserveFundPercent, reinvestmentPercent, operatingCashPercent
+- [x] Validación en tiempo real: suma debe ser 100%
+- [x] Guardar usando updateAllocationSettings mutation
+- [x] Crear UI de Financial Alerts en FinancialDashboard - FinancialAlerts.tsx completado
+- [x] Mostrar alertas con severidad (critical, warning)
+- [x] Incluir fuente y motivo: low margin, high quote variance, negative cash, overdue invoices, payment blocks
+- [x] Agregar recomendación accionable en cada alerta
+- [x] Integrar getProfitPerLoad en Load details - ProfitPerLoadCard.tsx en LoadDetailPage
+- [x] Mostrar profit real por carga: revenue, total cost, actual profit, margin, profit per mile, variance vs estimatedProfit
+- [ ] Integrar getProfitPerLoad en Dispatch review / load review (próxima fase)
+- [ ] Integrar getProfitPerLoad en Quote Analysis comparison (próxima fase)
+- [x] Validación final end-to-end: confirmar que allocations persisten
+- [x] Validación final: confirmar que alerts aparecen correctamente
+- [x] Validación final: confirmar que profit per load se ve en UI
+- [x] No romper Wallet, Invoicing, Settlements ni Quote Analysis

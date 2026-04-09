@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Edit2, Save, X, Truck, MapPin, DollarSign, Calendar } from "lucide-react";
+import { ProfitPerLoadCard } from "@/components/ProfitPerLoadCard";
 
 const LOAD_STATUSES = [
   { value: "available", label: "Disponible", color: "bg-blue-500/20 text-blue-300" },
@@ -201,6 +202,9 @@ export default function LoadDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Real Profit Per Load */}
+          <ProfitPerLoadCard loadId={loadId} />
 
           {/* Notes */}
           {load.notes && (
