@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, TrendingDown, Lock, AlertTriangle } from "lucide-react";
+import { MarginTrendIndicator } from "./MarginTrendIndicator";
 
 interface KPIMetrics {
   avgMargin: number;
@@ -76,6 +77,9 @@ export function OperationalKPIStrip() {
               <p className={`text-lg md:text-xl font-bold ${getMarginColor(metrics.avgMargin)}`}>
                 {metrics.avgMargin.toFixed(1)}%
               </p>
+              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <MarginTrendIndicator currentMargin={metrics.avgMargin} />
+              </div>
             </div>
             <TrendingDown className={`h-5 w-5 flex-shrink-0 ${getMarginColor(metrics.avgMargin)}`} />
           </div>

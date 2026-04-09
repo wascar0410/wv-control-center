@@ -28,6 +28,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { OperationalKPIStrip } from "@/components/OperationalKPIStrip";
+import { ProfitabilitySuggestion } from "@/components/ProfitabilitySuggestion";
+import { MarginTrendIndicator } from "@/components/MarginTrendIndicator";
 
 const LOAD_STATUSES = [
   { value: "available", label: "Disponible", color: "bg-blue-500/20 text-blue-300", icon: Package },
@@ -108,6 +110,9 @@ function ProfitMarginCell({ loadId, onProfitDataChange }: { loadId: number; onPr
       <p className="text-xs text-muted-foreground">
         {formatCurrency(profitData.actualProfit || 0)}
       </p>
+      <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <ProfitabilitySuggestion margin={margin} />
+      </div>
     </div>
   );
 }

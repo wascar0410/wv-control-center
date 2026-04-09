@@ -1462,3 +1462,35 @@
 - [ ] Confirmar que cambios en una pantalla se reflejan en otras
 - [ ] Confirmar que password recovery funciona
 - [ ] Confirmar que Plaid integration funciona
+
+
+### TAREA 8: Mejorar Eficiencia Operativa
+
+#### Prioridad 1: Bulk Actions en Payment Blocks
+- [x] Agregar checkbox por fila en PaymentBlocksPanel
+- [x] Agregar "Select All" checkbox en header
+- [x] Implementar bulk action: "Mark as Reviewed"
+- [x] Implementar bulk action: "Mark as Resolved" (UI-level)
+- [x] Validar que no rompe comportamiento actual del panel
+- [x] Mostrar contador de items seleccionados
+
+#### Prioridad 2: Smart Profitability Suggestions
+- [x] Crear componente ProfitabilitySuggestion.tsx
+- [x] Regla: margin < 8% → "Consider renegotiating rate"
+- [x] Regla: margin < 8% → "Review fuel/toll costs"
+- [x] Regla: margin > 15% → "High profitability load"
+- [x] Integrar en Dispatch Board (ProfitMarginCell)
+- [x] Mantener UI ligera (badge + sugerencias)
+
+#### Prioridad 3: Margin Trend Indicator
+- [x] Crear componente MarginTrendIndicator.tsx
+- [x] Calcular trend: up / down / stable
+- [x] Mostrar trend badge con iconos
+- [x] Integrar en OperationalKPIStrip (Average Margin card)
+- [x] Mantener minimal (sin gráficos pesados)
+
+#### Validación End-to-End
+- [x] Confirmar que bulk actions funcionan sin errores
+- [x] Confirmar que sugerencias se renderizan correctamente
+- [x] Confirmar que trend indicator es visible
+- [x] Validar que no se rompió funcionalidad existente

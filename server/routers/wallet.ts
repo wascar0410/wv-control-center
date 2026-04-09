@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { router, protectedProcedure } from "../_core/trpc";
-import { wallets, bankAccounts } from "../db";
+import { wallets, bankAccounts } from "../../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
