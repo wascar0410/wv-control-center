@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
 import { brand, colors } from "@/lib/brand";
+import { AlertsBadge } from "@/components/AlertsBadge";
 import {
   LayoutDashboard,
   LogOut,
@@ -433,6 +434,7 @@ function DashboardLayoutContent({
             </div>
 
             <div className="flex items-center gap-2">
+              <AlertsBadge />
               <div
                 className="flex h-8 w-8 items-center justify-center rounded-lg"
                 style={{ backgroundColor: colors.soft }}

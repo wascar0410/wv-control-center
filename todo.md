@@ -1361,3 +1361,36 @@
 - [x] Validación final: confirmar que alerts aparecen correctamente
 - [x] Validación final: confirmar que profit per load se ve en UI
 - [x] No romper Wallet, Invoicing, Settlements ni Quote Analysis
+
+
+### TAREA 5: Mejorar Visibilidad Operativa y Toma de Decisiones Financieras
+
+#### Prioridad 1: Integrar Profit/Margin en Dispatch Board
+- [x] Identificar componente Dispatch Board / Loads list view
+- [x] Agregar columnas: profit (USD), margin (%)
+- [x] Implementar color coding: Verde (>15%), Amarillo (8-15%), Rojo (<8%)
+- [x] Usar datos existentes de getProfitPerLoad (sin nuevos cálculos)
+- [x] Agregar fallbacks seguros (valores 0 si faltan datos)
+- [x] Validar que no rompa rendering ni paginación existente
+
+#### Prioridad 2: Crear UI de Payment Blocks
+- [x] Crear componente PaymentBlocksPanel.tsx
+- [x] Mostrar: load ID, driver, block reason, status (desde getFinancialAlerts)
+- [x] Usar lógica existente de payment blocks en wallet/requestWithdrawal
+- [x] Agregar botón placeholder "Resolver bloqueo"
+- [x] No modificar backend logic, solo consumir datos
+- [x] Integrado en FinancialDashboard tab "Alerts"
+
+#### Prioridad 3: Alertas Financieras en Tiempo Real
+- [x] Agregar badge de alertas (indicador rojo) en dashboard/header
+- [x] Implementar toasts para: negative cash, low margin, high variance, payment blocks
+- [x] Reutilizar endpoint getFinancialAlerts existente
+- [x] No cambiar thresholds ni lógica
+- [x] AlertsBadge.tsx - Auto-refetch cada 30 segundos
+- [x] Integrado en DashboardLayout (visible en todas las páginas)
+
+#### Validación End-to-End
+- [x] Confirmar que Dispatch Board muestra profit/margin
+- [x] Confirmar que Payment Block UI es visible
+- [x] Confirmar que alertas se disparan en UI
+- [x] Validar que no se rompió funcionalidad existente

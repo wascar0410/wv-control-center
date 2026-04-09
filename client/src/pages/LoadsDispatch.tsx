@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   ArrowRight,
   ClipboardCheck,
+  TrendingUp,
 } from "lucide-react";
 
 const LOAD_STATUSES = [
@@ -58,6 +59,49 @@ function formatCurrency(value: number | string | null | undefined) {
     currency: "USD",
     minimumFractionDigits: 2,
   }).format(Number.isFinite(num) ? num : 0);
+}
+
+function ProfitMarginCell({ loadId }: { loadId: number }) {
+  const { data: profitData } = trpc.financial.getProfitPerLoad.useQuery(
+    { loadId },
+    { retry: false }
+  );
+
+  if (!profitData) {
+    return (
+      <div>
+        <p className="text-xs">Rentabilidad</p>
+        <p className="font-medium text-muted-foreground">—</p>
+      </div>
+    );
+  }
+
+  const margin = profitData.actualMargin || 0;
+  let marginColor = "text-red-600"; // < 8%
+  let bgColor = "bg-red-50 dark:bg-red-950/30";
+
+  if (margin >= 15) {
+    marginColor = "text-green-600";
+    bgColor = "bg-green-50 dark:bg-green-950/30";
+  } else if (margin >= 8) {
+    marginColor = "text-yellow-600";
+    bgColor = "bg-yellow-50 dark:bg-yellow-950/30";
+  }
+
+  return (
+    <div className={`rounded-md p-2 ${bgColor}`}>
+      <p className="text-xs font-medium">Rentabilidad</p>
+      <div className="flex items-center gap-1">
+        <TrendingUp className="h-3 w-3" />
+        <p className={`font-semibold ${marginColor}`}>
+          {margin.toFixed(1)}%
+        </p>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {formatCurrency(profitData.actualProfit || 0)}
+      </p>
+    </div>
+  );
 }
 
 function CreatedLoadBanner({
@@ -348,7 +392,7 @@ function LoadBoardTab() {
                       ) : null}
                     </div>
 
-                    <div className="mb-2 grid grid-cols-2 gap-2 text-sm text-muted-foreground md:grid-cols-4">
+                    <div className="mb-2 grid grid-cols-2 gap-2 text-sm text-muted-foreground md:grid-cols-5">
                       <div>
                         <p className="text-xs">Origen</p>
                         <p className="font-medium text-foreground">{load.pickupAddress || "—"}</p>
@@ -367,6 +411,7 @@ function LoadBoardTab() {
                           {formatCurrency(load.estimatedIncome || 0)}
                         </p>
                       </div>
+                      <ProfitMarginCell loadId={load.id} />
                     </div>
                   </div>
 

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AllocationSettings } from "./AllocationSettings";
 import { FinancialAlerts } from "./FinancialAlerts";
+import { PaymentBlocksPanel } from "./PaymentBlocksPanel";
 import {
   LineChart,
   Line,
@@ -598,6 +599,7 @@ export function FinancialDashboard() {
 
         {/* Alerts Tab */}
         <TabsContent value="alerts" className="space-y-4">
+          <PaymentBlocksPanel />
           <FinancialAlerts />
         </TabsContent>
 
