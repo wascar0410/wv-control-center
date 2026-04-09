@@ -363,7 +363,6 @@ export default function UserProfile() {
     </div>
   </CardContent>
 
-
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="profile" className="flex items-center gap-2">
