@@ -86,6 +86,10 @@ export default function UserProfile() {
 
   const [activeTab, setActiveTab] = useState("profile");
 
+  const { data: wallet } = trpc.wallet.getWalletSummary.useQuery(undefined, {
+  retry: false,
+});
+
   const { data: profileData, isLoading, error } = trpc.profile.getProfile.useQuery(undefined, {
     retry: false,
   });
@@ -327,6 +331,38 @@ export default function UserProfile() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+  <CardHeader>
+    <CardTitle>Mi Wallet</CardTitle>
+    <CardDescription>
+      Resumen financiero personal
+    </CardDescription>
+  </CardHeader>
+
+  <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="p-4 rounded-lg border">
+      <p className="text-xs text-muted-foreground">Disponible</p>
+      <p className="text-xl font-bold">
+        ${Number(wallet?.availableBalance ?? 0).toFixed(2)}
+      </p>
+    </div>
+
+    <div className="p-4 rounded-lg border">
+      <p className="text-xs text-muted-foreground">Pendiente</p>
+      <p className="text-xl font-bold">
+        ${Number(wallet?.pendingBalance ?? 0).toFixed(2)}
+      </p>
+    </div>
+
+    <div className="p-4 rounded-lg border">
+      <p className="text-xs text-muted-foreground">Total Ganado</p>
+      <p className="text-xl font-bold">
+        ${Number(wallet?.totalEarnings ?? 0).toFixed(2)}
+      </p>
+    </div>
+  </CardContent>
+<
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-6">
@@ -695,41 +731,40 @@ export default function UserProfile() {
             </div>
           </TabsContent>
 
-          <TabsContent value="security" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Seguridad</CardTitle>
-                <CardDescription>Estado actual de la cuenta y acceso.</CardDescription>
-              </CardHeader>
+         <TabsContent value="security">
+  <Card>
+    <CardHeader>
+      <CardTitle>Seguridad</CardTitle>
+      <CardDescription>
+        Controla el acceso a tu cuenta
+      </CardDescription>
+    </CardHeader>
 
-              <CardContent className="space-y-4">
-                <div className="rounded-lg bg-muted p-4">
-                  <div className="space-y-2 text-sm">
-                    <p>
-                      <strong>Correo:</strong> {user?.email || "No disponible"}
-                    </p>
-                    <p>
-                      <strong>Rol:</strong>{" "}
-                      {user?.role === "owner"
-                        ? "Propietario"
-                        : user?.role === "admin"
-                        ? "Administrador"
-                        : user?.role === "driver"
-                        ? "Chofer"
-                        : "Usuario"}
-                    </p>
-                    <p>
-                      <strong>Método de acceso:</strong> Sesión autenticada del sistema
-                    </p>
-                  </div>
-                </div>
+    <CardContent className="space-y-6">
+      <div className="rounded-lg border p-4">
+        <p className="text-sm font-medium">Correo</p>
+        <p className="text-muted-foreground">{user?.email}</p>
+      </div>
 
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-100">
-                  El cambio de contraseña real no lo conectaría todavía aquí porque en el router actual del perfil se ve `getProfile`, `updateProfile` y `updatePreferences`, pero no un `changePassword` del módulo profile. Cuando quieras, te monto ese flujo bien hecho con endpoint dedicado. 
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+      <div className="rounded-lg border p-4">
+        <p className="text-sm font-medium">Rol</p>
+        <p className="text-muted-foreground capitalize">{user?.role}</p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <Button
+          onClick={() => (window.location.href = "/forgot-password")}
+        >
+          Cambiar contraseña
+        </Button>
+
+        <p className="text-xs text-muted-foreground">
+          Se enviará un enlace seguro a tu correo para actualizar tu contraseña.
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
         </Tabs>
       </div>
     </div>
