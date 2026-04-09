@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { router, protectedProcedure } from "../_core/trpc";
-import { wallets } from "../drizzle/schema";
+import { wallets, bankAccounts } from "../db";
 import {
   getDb,
   getOrCreateWallet,
@@ -294,7 +294,6 @@ export const walletRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database connection failed");
 
-        const { bankAccounts } = await import("../drizzle/schema");
         await db.insert(bankAccounts).values({
           userId: ctx.user.id,
           plaidItemId: itemId,
@@ -323,7 +322,6 @@ export const walletRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
 
-      const { bankAccounts } = await import("../drizzle/schema");
       const accounts = await db
         .select()
         .from(bankAccounts)
