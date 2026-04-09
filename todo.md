@@ -1394,3 +1394,34 @@
 - [x] Confirmar que Payment Block UI es visible
 - [x] Confirmar que alertas se disparan en UI
 - [x] Validar que no se rompió funcionalidad existente
+
+
+### TAREA 6: Cerrar Loop Operativo - Acciones y Filtros
+
+#### Prioridad 1: Hacer Payment Blocks Accionables
+- [x] Extender PaymentBlocksPanel para mostrar detalles por bloqueo
+- [x] Mostrar: load ID, driver, block reason, required document, status
+- [x] Agregar acciones: "Ver Load", "Marcar para Revisión"
+- [x] Entry point para upload de documentos (si ya existe en sistema)
+- [x] Usar datos existentes sin cambios de backend
+- [x] Validar que no rompa FinancialDashboard Alerts tab
+
+#### Prioridad 2: Filtros de Rentabilidad en Dispatch Board
+- [x] Agregar filtros: Profitable (>15%), Watchlist (8-15%), Risk (<8%)
+- [x] Integrar con tabla existente sin romper paginación/sorting/search
+- [x] Safe fallbacks para valores faltantes
+- [x] Validar que filtros funcionen con otros filtros existentes (status, search)
+- [x] No cambiar estructura de LoadsDispatch
+
+#### Prioridad 3: KPI Strip Compacto
+- [x] Crear OperationalKPIStrip.tsx con métricas ligeras
+- [x] Mostrar: average margin, loads at risk, blocked amount, critical alerts
+- [x] Integrar sobre Dispatch Board (antes del filtro/search)
+- [x] Mantener lightweight y operacional
+- [x] Auto-actualizar con datos existentes
+
+#### Validación End-to-End
+- [x] Confirmar que Payment Blocks son accionables
+- [x] Confirmar que Dispatch Board filtra por rentabilidad
+- [x] Confirmar que KPI strip es visible y estable
+- [x] Validar que no se rompió funcionalidad existente

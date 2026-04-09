@@ -3,7 +3,7 @@
  * Unified Loads & Dispatch - Operational hub for approved loads
  * Flow: Analyze -> Approve -> Operate
  */
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +27,7 @@ import {
   ClipboardCheck,
   TrendingUp,
 } from "lucide-react";
+import { OperationalKPIStrip } from "@/components/OperationalKPIStrip";
 
 const LOAD_STATUSES = [
   { value: "available", label: "Disponible", color: "bg-blue-500/20 text-blue-300", icon: Package },
@@ -61,11 +62,18 @@ function formatCurrency(value: number | string | null | undefined) {
   }).format(Number.isFinite(num) ? num : 0);
 }
 
-function ProfitMarginCell({ loadId }: { loadId: number }) {
+function ProfitMarginCell({ loadId, onProfitDataChange }: { loadId: number; onProfitDataChange?: (data: any) => void }) {
   const { data: profitData } = trpc.financial.getProfitPerLoad.useQuery(
     { loadId },
     { retry: false }
   );
+
+  // Notify parent when profit data changes
+  React.useEffect(() => {
+    if (profitData && onProfitDataChange) {
+      onProfitDataChange(profitData);
+    }
+  }, [profitData, onProfitDataChange]);
 
   if (!profitData) {
     return (
@@ -222,6 +230,8 @@ function LoadBoardTab() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<number | null>(null);
   const [selectedLoadStatus, setSelectedLoadStatus] = useState("");
+  const [profitabilityFilter, setProfitabilityFilter] = useState<"all" | "profitable" | "watchlist" | "risk">("all");
+  const [profitData, setProfitData] = useState<Record<number, any>>({});
 
   const { data: loads = [], refetch } = trpc.loads.list.useQuery();
 
@@ -242,6 +252,20 @@ function LoadBoardTab() {
       result = result.filter((l: any) => l.status === filterStatus);
     }
 
+    // Apply profitability filter
+    if (profitabilityFilter !== "all") {
+      result = result.filter((l: any) => {
+        const profit = profitData[l.id];
+        if (!profit) return profitabilityFilter === "risk"; // Default to risk if no data
+        const margin = profit.actualMargin || 0;
+        
+        if (profitabilityFilter === "profitable") return margin > 15;
+        if (profitabilityFilter === "watchlist") return margin >= 8 && margin <= 15;
+        if (profitabilityFilter === "risk") return margin < 8;
+        return true;
+      });
+    }
+
     if (sortBy === "income") {
       result.sort((a: any, b: any) => (Number(b.estimatedIncome) || 0) - (Number(a.estimatedIncome) || 0));
     } else if (sortBy === "distance") {
@@ -254,7 +278,7 @@ function LoadBoardTab() {
     }
 
     return result;
-  }, [loads, searchTerm, filterStatus, sortBy]);
+  }, [loads, searchTerm, filterStatus, sortBy, profitabilityFilter, profitData]);
 
   const stats = useMemo(() => {
     return {
@@ -356,6 +380,17 @@ function LoadBoardTab() {
         </select>
 
         <select
+          value={profitabilityFilter}
+          onChange={(e) => setProfitabilityFilter(e.target.value as "all" | "profitable" | "watchlist" | "risk")}
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+        >
+          <option value="all">Todas las rentabilidades</option>
+          <option value="profitable">Rentables (&gt;15%)</option>
+          <option value="watchlist">Vigilancia (8-15%)</option>
+          <option value="risk">Riesgo (&lt;8%)</option>
+        </select>
+
+        <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as "date" | "income" | "distance")}
           className="rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -370,6 +405,8 @@ function LoadBoardTab() {
           Analizar Nueva
         </Button>
       </div>
+
+      <OperationalKPIStrip />
 
       <div className="space-y-3">
         {filteredLoads.length === 0 ? (
@@ -411,7 +448,7 @@ function LoadBoardTab() {
                           {formatCurrency(load.estimatedIncome || 0)}
                         </p>
                       </div>
-                      <ProfitMarginCell loadId={load.id} />
+                      <ProfitMarginCell loadId={load.id} onProfitDataChange={(data) => setProfitData(prev => ({ ...prev, [load.id]: data }))} />
                     </div>
                   </div>
 
