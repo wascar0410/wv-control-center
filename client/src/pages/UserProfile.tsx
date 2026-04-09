@@ -7,9 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Loader2,
@@ -22,6 +34,7 @@ import {
   MapPin,
   Image as ImageIcon,
   ShieldCheck,
+  Wallet,
 } from "lucide-react";
 
 type ThemeMode = "dark" | "light" | "auto";
@@ -86,16 +99,24 @@ export default function UserProfile() {
 
   const [activeTab, setActiveTab] = useState("profile");
 
-  const { data: wallet } = trpc.wallet.getWalletSummary.useQuery(undefined, {
-  retry: false,
-});
+  const {
+    data: wallet,
+    isLoading: walletLoading,
+  } = trpc.wallet.getWalletSummary.useQuery(undefined, {
+    retry: false,
+  });
 
-  const { data: profileData, isLoading, error } = trpc.profile.getProfile.useQuery(undefined, {
+  const {
+    data: profileData,
+    isLoading,
+    error,
+  } = trpc.profile.getProfile.useQuery(undefined, {
     retry: false,
   });
 
   const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_PROFILE);
-  const [preferencesForm, setPreferencesForm] = useState<PreferencesForm>(DEFAULT_PREFERENCES);
+  const [preferencesForm, setPreferencesForm] =
+    useState<PreferencesForm>(DEFAULT_PREFERENCES);
 
   const updateProfileMutation = trpc.profile.updateProfile.useMutation({
     onSuccess: async () => {
@@ -149,7 +170,8 @@ export default function UserProfile() {
         emailNotifications: profileData.preferences.emailNotifications ?? true,
         smsNotifications: profileData.preferences.smsNotifications ?? true,
         pushNotifications: profileData.preferences.pushNotifications ?? true,
-        notifyOnLoadAssignment: profileData.preferences.notifyOnLoadAssignment ?? true,
+        notifyOnLoadAssignment:
+          profileData.preferences.notifyOnLoadAssignment ?? true,
         notifyOnLoadStatus: profileData.preferences.notifyOnLoadStatus ?? true,
         notifyOnPayment: profileData.preferences.notifyOnPayment ?? true,
         notifyOnMessage: profileData.preferences.notifyOnMessage ?? true,
@@ -158,7 +180,8 @@ export default function UserProfile() {
         language: profileData.preferences.language ?? "es",
         timezone: profileData.preferences.timezone ?? "America/New_York",
         showOnlineStatus: profileData.preferences.showOnlineStatus ?? true,
-        allowLocationTracking: profileData.preferences.allowLocationTracking ?? false,
+        allowLocationTracking:
+          profileData.preferences.allowLocationTracking ?? false,
       });
     }
   }, [profileData, user]);
@@ -183,7 +206,8 @@ export default function UserProfile() {
       emailNotifications: profileData?.preferences?.emailNotifications ?? true,
       smsNotifications: profileData?.preferences?.smsNotifications ?? true,
       pushNotifications: profileData?.preferences?.pushNotifications ?? true,
-      notifyOnLoadAssignment: profileData?.preferences?.notifyOnLoadAssignment ?? true,
+      notifyOnLoadAssignment:
+        profileData?.preferences?.notifyOnLoadAssignment ?? true,
       notifyOnLoadStatus: profileData?.preferences?.notifyOnLoadStatus ?? true,
       notifyOnPayment: profileData?.preferences?.notifyOnPayment ?? true,
       notifyOnMessage: profileData?.preferences?.notifyOnMessage ?? true,
@@ -192,13 +216,16 @@ export default function UserProfile() {
       language: profileData?.preferences?.language ?? "es",
       timezone: profileData?.preferences?.timezone ?? "America/New_York",
       showOnlineStatus: profileData?.preferences?.showOnlineStatus ?? true,
-      allowLocationTracking: profileData?.preferences?.allowLocationTracking ?? false,
+      allowLocationTracking:
+        profileData?.preferences?.allowLocationTracking ?? false,
     };
 
     return JSON.stringify(current) !== JSON.stringify(preferencesForm);
   }, [profileData, preferencesForm]);
 
-  const avatarFallback = (profileForm.name || user?.name || "U").charAt(0).toUpperCase();
+  const avatarFallback = (profileForm.name || user?.name || "U")
+    .charAt(0)
+    .toUpperCase();
 
   const handleProfileChange = (field: keyof ProfileForm, value: string) => {
     setProfileForm((prev) => ({ ...prev, [field]: value }));
@@ -246,7 +273,8 @@ export default function UserProfile() {
       emailNotifications: profileData?.preferences?.emailNotifications ?? true,
       smsNotifications: profileData?.preferences?.smsNotifications ?? true,
       pushNotifications: profileData?.preferences?.pushNotifications ?? true,
-      notifyOnLoadAssignment: profileData?.preferences?.notifyOnLoadAssignment ?? true,
+      notifyOnLoadAssignment:
+        profileData?.preferences?.notifyOnLoadAssignment ?? true,
       notifyOnLoadStatus: profileData?.preferences?.notifyOnLoadStatus ?? true,
       notifyOnPayment: profileData?.preferences?.notifyOnPayment ?? true,
       notifyOnMessage: profileData?.preferences?.notifyOnMessage ?? true,
@@ -255,9 +283,14 @@ export default function UserProfile() {
       language: profileData?.preferences?.language ?? "es",
       timezone: profileData?.preferences?.timezone ?? "America/New_York",
       showOnlineStatus: profileData?.preferences?.showOnlineStatus ?? true,
-      allowLocationTracking: profileData?.preferences?.allowLocationTracking ?? false,
+      allowLocationTracking:
+        profileData?.preferences?.allowLocationTracking ?? false,
     });
   };
+
+  const availableBalance = Number(wallet?.availableBalance ?? 0);
+  const pendingBalance = Number(wallet?.pendingBalance ?? 0);
+  const totalEarnings = Number(wallet?.totalEarnings ?? 0);
 
   if (isLoading) {
     return (
@@ -274,9 +307,11 @@ export default function UserProfile() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
             <h1 className="text-3xl font-bold text-foreground">Mi Perfil</h1>
             <p className="mt-1 text-muted-foreground">
-              Gestiona tu información personal, preferencias y visibilidad dentro del sistema.
+              Gestiona tu información personal, preferencias y visibilidad dentro
+              del sistema.
             </p>
           </div>
         </div>
@@ -284,7 +319,8 @@ export default function UserProfile() {
         {error && (
           <Card className="border-amber-500/30 bg-amber-500/5">
             <CardContent className="p-4 text-sm text-amber-700 dark:text-amber-300">
-              No se pudo cargar todo el perfil correctamente. Puedes seguir editando, pero si notas datos raros revisamos auth/profile router.
+              No se pudo cargar todo el perfil correctamente. Puedes seguir
+              editando, pero si notas datos raros revisamos auth/profile router.
             </CardContent>
           </Card>
         )}
@@ -294,8 +330,12 @@ export default function UserProfile() {
             <CardContent className="flex items-center gap-3 p-5">
               <User className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Nombre</p>
-                <p className="font-semibold text-foreground">{profileForm.name || "Sin nombre"}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Nombre
+                </p>
+                <p className="font-semibold text-foreground">
+                  {profileForm.name || "Sin nombre"}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -304,8 +344,12 @@ export default function UserProfile() {
             <CardContent className="flex items-center gap-3 p-5">
               <Mail className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Correo</p>
-                <p className="font-semibold text-foreground">{user?.email || "No disponible"}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Correo
+                </p>
+                <p className="font-semibold text-foreground">
+                  {user?.email || "No disponible"}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -314,8 +358,12 @@ export default function UserProfile() {
             <CardContent className="flex items-center gap-3 p-5">
               <Phone className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Teléfono</p>
-                <p className="font-semibold text-foreground">{profileForm.phone || "Sin teléfono"}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Teléfono
+                </p>
+                <p className="font-semibold text-foreground">
+                  {profileForm.phone || "Sin teléfono"}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -324,52 +372,64 @@ export default function UserProfile() {
             <CardContent className="flex items-center gap-3 p-5">
               <ShieldCheck className="h-5 w-5 text-primary" />
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Rol</p>
-                <p className="font-semibold capitalize text-foreground">{user?.role || "No disponible"}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Rol
+                </p>
+                <p className="font-semibold capitalize text-foreground">
+                  {user?.role || "No disponible"}
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
         <Card>
-  <CardHeader>
-    <CardTitle>Mi Wallet</CardTitle>
-    <CardDescription>
-      Resumen financiero personal
-    </CardDescription>
-  </CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              Mi Wallet
+            </CardTitle>
+            <CardDescription>Resumen financiero personal</CardDescription>
+          </CardHeader>
 
-  <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div className="p-4 rounded-lg border">
-      <p className="text-xs text-muted-foreground">Disponible</p>
-      <p className="text-xl font-bold">
-        ${Number(wallet?.availableBalance ?? 0).toFixed(2)}
-      </p>
-    </div>
+          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">Disponible</p>
+              <p className="text-xl font-bold">
+                {walletLoading ? "..." : `$${availableBalance.toFixed(2)}`}
+              </p>
+            </div>
 
-    <div className="p-4 rounded-lg border">
-      <p className="text-xs text-muted-foreground">Pendiente</p>
-      <p className="text-xl font-bold">
-        ${Number(wallet?.pendingBalance ?? 0).toFixed(2)}
-      </p>
-    </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">Pendiente</p>
+              <p className="text-xl font-bold">
+                {walletLoading ? "..." : `$${pendingBalance.toFixed(2)}`}
+              </p>
+            </div>
 
-    <div className="p-4 rounded-lg border">
-      <p className="text-xs text-muted-foreground">Total Ganado</p>
-      <p className="text-xl font-bold">
-        ${Number(wallet?.totalEarnings ?? 0).toFixed(2)}
-      </p>
-    </div>
-  </CardContent>
-   </Card>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">Total Ganado</p>
+              <p className="text-xl font-bold">
+                {walletLoading ? "..." : `$${totalEarnings.toFixed(2)}`}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="w-full"
+        >
+          <TabsList className="mb-6 grid w-full grid-cols-3">
             <TabsTrigger value="profile" className="flex items-center gap-2">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Perfil</span>
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-2">
+            <TabsTrigger
+              value="preferences"
+              className="flex items-center gap-2"
+            >
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Preferencias</span>
             </TabsTrigger>
@@ -395,9 +455,10 @@ export default function UserProfile() {
                       <img
                         src={profileForm.profileImageUrl}
                         alt="Foto de perfil"
-                        className="h-24 w-24 rounded-full object-cover border"
+                        className="h-24 w-24 rounded-full border object-cover"
                         onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = "none";
+                          (e.currentTarget as HTMLImageElement).style.display =
+                            "none";
                         }}
                       />
                     ) : (
@@ -418,13 +479,16 @@ export default function UserProfile() {
                       <Input
                         id="profileImageUrl"
                         value={profileForm.profileImageUrl}
-                        onChange={(e) => handleProfileChange("profileImageUrl", e.target.value)}
+                        onChange={(e) =>
+                          handleProfileChange("profileImageUrl", e.target.value)
+                        }
                         placeholder="https://..."
                         className="pl-9"
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Más adelante te puedo conectar upload real; por ahora esto guarda la URL usando `profileImageUrl`.
+                      Más adelante podemos conectar upload real; por ahora esto
+                      guarda la URL usando `profileImageUrl`.
                     </p>
                   </div>
                 </div>
@@ -435,7 +499,9 @@ export default function UserProfile() {
                     <Input
                       id="name"
                       value={profileForm.name}
-                      onChange={(e) => handleProfileChange("name", e.target.value)}
+                      onChange={(e) =>
+                        handleProfileChange("name", e.target.value)
+                      }
                       placeholder="Tu nombre completo"
                     />
                   </div>
@@ -445,7 +511,9 @@ export default function UserProfile() {
                     <Input
                       id="phone"
                       value={profileForm.phone}
-                      onChange={(e) => handleProfileChange("phone", e.target.value)}
+                      onChange={(e) =>
+                        handleProfileChange("phone", e.target.value)
+                      }
                       placeholder="+1 (555) 000-0000"
                       type="tel"
                     />
@@ -456,7 +524,9 @@ export default function UserProfile() {
                     <textarea
                       id="bio"
                       value={profileForm.bio}
-                      onChange={(e) => handleProfileChange("bio", e.target.value)}
+                      onChange={(e) =>
+                        handleProfileChange("bio", e.target.value)
+                      }
                       placeholder="Cuéntanos sobre ti..."
                       className="w-full rounded-md border border-input bg-background px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       rows={4}
@@ -470,7 +540,9 @@ export default function UserProfile() {
                       <Input
                         id="address"
                         value={profileForm.address}
-                        onChange={(e) => handleProfileChange("address", e.target.value)}
+                        onChange={(e) =>
+                          handleProfileChange("address", e.target.value)
+                        }
                         placeholder="Tu dirección completa"
                         className="pl-9"
                       />
@@ -482,7 +554,9 @@ export default function UserProfile() {
                     <Input
                       id="city"
                       value={profileForm.city}
-                      onChange={(e) => handleProfileChange("city", e.target.value)}
+                      onChange={(e) =>
+                        handleProfileChange("city", e.target.value)
+                      }
                       placeholder="Ciudad"
                     />
                   </div>
@@ -492,7 +566,9 @@ export default function UserProfile() {
                     <Input
                       id="state"
                       value={profileForm.state}
-                      onChange={(e) => handleProfileChange("state", e.target.value)}
+                      onChange={(e) =>
+                        handleProfileChange("state", e.target.value)
+                      }
                       placeholder="Estado"
                     />
                   </div>
@@ -502,7 +578,9 @@ export default function UserProfile() {
                     <Input
                       id="zipCode"
                       value={profileForm.zipCode}
-                      onChange={(e) => handleProfileChange("zipCode", e.target.value)}
+                      onChange={(e) =>
+                        handleProfileChange("zipCode", e.target.value)
+                      }
                       placeholder="Código postal"
                     />
                   </div>
@@ -511,7 +589,9 @@ export default function UserProfile() {
                 <div className="flex flex-wrap gap-2 pt-2">
                   <Button
                     onClick={handleSaveProfile}
-                    disabled={updateProfileMutation.isPending || !hasProfileChanges}
+                    disabled={
+                      updateProfileMutation.isPending || !hasProfileChanges
+                    }
                   >
                     {updateProfileMutation.isPending ? (
                       <>
@@ -529,7 +609,9 @@ export default function UserProfile() {
                   <Button
                     variant="outline"
                     onClick={handleResetProfile}
-                    disabled={updateProfileMutation.isPending || !hasProfileChanges}
+                    disabled={
+                      updateProfileMutation.isPending || !hasProfileChanges
+                    }
                   >
                     Restablecer
                   </Button>
@@ -542,22 +624,32 @@ export default function UserProfile() {
             <Card>
               <CardHeader>
                 <CardTitle>Notificaciones</CardTitle>
-                <CardDescription>Controla cómo y cuándo deseas recibir avisos.</CardDescription>
+                <CardDescription>
+                  Controla cómo y cuándo deseas recibir avisos.
+                </CardDescription>
               </CardHeader>
 
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-foreground">Canales</h3>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Canales
+                  </h3>
 
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="emailNotifications"
                       checked={preferencesForm.emailNotifications}
                       onCheckedChange={(checked) =>
-                        handlePreferenceChange("emailNotifications", Boolean(checked))
+                        handlePreferenceChange(
+                          "emailNotifications",
+                          Boolean(checked)
+                        )
                       }
                     />
-                    <Label htmlFor="emailNotifications" className="font-normal cursor-pointer">
+                    <Label
+                      htmlFor="emailNotifications"
+                      className="cursor-pointer font-normal"
+                    >
                       Notificaciones por correo electrónico
                     </Label>
                   </div>
@@ -567,10 +659,16 @@ export default function UserProfile() {
                       id="smsNotifications"
                       checked={preferencesForm.smsNotifications}
                       onCheckedChange={(checked) =>
-                        handlePreferenceChange("smsNotifications", Boolean(checked))
+                        handlePreferenceChange(
+                          "smsNotifications",
+                          Boolean(checked)
+                        )
                       }
                     />
-                    <Label htmlFor="smsNotifications" className="font-normal cursor-pointer">
+                    <Label
+                      htmlFor="smsNotifications"
+                      className="cursor-pointer font-normal"
+                    >
                       Notificaciones por SMS
                     </Label>
                   </div>
@@ -580,17 +678,25 @@ export default function UserProfile() {
                       id="pushNotifications"
                       checked={preferencesForm.pushNotifications}
                       onCheckedChange={(checked) =>
-                        handlePreferenceChange("pushNotifications", Boolean(checked))
+                        handlePreferenceChange(
+                          "pushNotifications",
+                          Boolean(checked)
+                        )
                       }
                     />
-                    <Label htmlFor="pushNotifications" className="font-normal cursor-pointer">
+                    <Label
+                      htmlFor="pushNotifications"
+                      className="cursor-pointer font-normal"
+                    >
                       Notificaciones push del navegador
                     </Label>
                   </div>
                 </div>
 
                 <div className="space-y-4 border-t border-border pt-4">
-                  <h3 className="text-sm font-semibold text-foreground">Tipos</h3>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Tipos
+                  </h3>
 
                   {[
                     ["notifyOnLoadAssignment", "Nuevas asignaciones de cargas"],
@@ -602,12 +708,20 @@ export default function UserProfile() {
                     <div key={field} className="flex items-center space-x-2">
                       <Checkbox
                         id={field}
-                        checked={Boolean(preferencesForm[field as keyof PreferencesForm])}
+                        checked={Boolean(
+                          preferencesForm[field as keyof PreferencesForm]
+                        )}
                         onCheckedChange={(checked) =>
-                          handlePreferenceChange(field as keyof PreferencesForm, Boolean(checked) as never)
+                          handlePreferenceChange(
+                            field as keyof PreferencesForm,
+                            Boolean(checked) as never
+                          )
                         }
                       />
-                      <Label htmlFor={field} className="font-normal cursor-pointer">
+                      <Label
+                        htmlFor={field}
+                        className="cursor-pointer font-normal"
+                      >
                         {label}
                       </Label>
                     </div>
@@ -627,7 +741,9 @@ export default function UserProfile() {
                   <Label htmlFor="theme">Tema</Label>
                   <Select
                     value={preferencesForm.theme}
-                    onValueChange={(value: ThemeMode) => handlePreferenceChange("theme", value)}
+                    onValueChange={(value: ThemeMode) =>
+                      handlePreferenceChange("theme", value)
+                    }
                   >
                     <SelectTrigger id="theme">
                       <SelectValue />
@@ -644,7 +760,9 @@ export default function UserProfile() {
                   <Label htmlFor="language">Idioma</Label>
                   <Select
                     value={preferencesForm.language}
-                    onValueChange={(value) => handlePreferenceChange("language", value)}
+                    onValueChange={(value) =>
+                      handlePreferenceChange("language", value)
+                    }
                   >
                     <SelectTrigger id="language">
                       <SelectValue />
@@ -660,16 +778,26 @@ export default function UserProfile() {
                   <Label htmlFor="timezone">Zona horaria</Label>
                   <Select
                     value={preferencesForm.timezone}
-                    onValueChange={(value) => handlePreferenceChange("timezone", value)}
+                    onValueChange={(value) =>
+                      handlePreferenceChange("timezone", value)
+                    }
                   >
                     <SelectTrigger id="timezone">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="America/New_York">America/New_York</SelectItem>
-                      <SelectItem value="America/Chicago">America/Chicago</SelectItem>
-                      <SelectItem value="America/Denver">America/Denver</SelectItem>
-                      <SelectItem value="America/Los_Angeles">America/Los_Angeles</SelectItem>
+                      <SelectItem value="America/New_York">
+                        America/New_York
+                      </SelectItem>
+                      <SelectItem value="America/Chicago">
+                        America/Chicago
+                      </SelectItem>
+                      <SelectItem value="America/Denver">
+                        America/Denver
+                      </SelectItem>
+                      <SelectItem value="America/Los_Angeles">
+                        America/Los_Angeles
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -679,10 +807,16 @@ export default function UserProfile() {
                     id="showOnlineStatus"
                     checked={preferencesForm.showOnlineStatus}
                     onCheckedChange={(checked) =>
-                      handlePreferenceChange("showOnlineStatus", Boolean(checked))
+                      handlePreferenceChange(
+                        "showOnlineStatus",
+                        Boolean(checked)
+                      )
                     }
                   />
-                  <Label htmlFor="showOnlineStatus" className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor="showOnlineStatus"
+                    className="cursor-pointer font-normal"
+                  >
                     Mostrar mi estado en línea
                   </Label>
                 </div>
@@ -692,10 +826,16 @@ export default function UserProfile() {
                     id="allowLocationTracking"
                     checked={preferencesForm.allowLocationTracking}
                     onCheckedChange={(checked) =>
-                      handlePreferenceChange("allowLocationTracking", Boolean(checked))
+                      handlePreferenceChange(
+                        "allowLocationTracking",
+                        Boolean(checked)
+                      )
                     }
                   />
-                  <Label htmlFor="allowLocationTracking" className="font-normal cursor-pointer">
+                  <Label
+                    htmlFor="allowLocationTracking"
+                    className="cursor-pointer font-normal"
+                  >
                     Permitir rastreo de ubicación en tiempo real
                   </Label>
                 </div>
@@ -705,7 +845,9 @@ export default function UserProfile() {
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={handleSavePreferences}
-                disabled={updatePreferencesMutation.isPending || !hasPreferenceChanges}
+                disabled={
+                  updatePreferencesMutation.isPending || !hasPreferenceChanges
+                }
               >
                 {updatePreferencesMutation.isPending ? (
                   <>
@@ -723,47 +865,54 @@ export default function UserProfile() {
               <Button
                 variant="outline"
                 onClick={handleResetPreferences}
-                disabled={updatePreferencesMutation.isPending || !hasPreferenceChanges}
+                disabled={
+                  updatePreferencesMutation.isPending || !hasPreferenceChanges
+                }
               >
                 Restablecer
               </Button>
             </div>
           </TabsContent>
 
-         <TabsContent value="security">
-  <Card>
-    <CardHeader>
-      <CardTitle>Seguridad</CardTitle>
-      <CardDescription>
-        Controla el acceso a tu cuenta
-      </CardDescription>
-    </CardHeader>
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Seguridad</CardTitle>
+                <CardDescription>
+                  Controla el acceso a tu cuenta
+                </CardDescription>
+              </CardHeader>
 
-    <CardContent className="space-y-6">
-      <div className="rounded-lg border p-4">
-        <p className="text-sm font-medium">Correo</p>
-        <p className="text-muted-foreground">{user?.email}</p>
-      </div>
+              <CardContent className="space-y-6">
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium">Correo</p>
+                  <p className="text-muted-foreground">{user?.email}</p>
+                </div>
 
-      <div className="rounded-lg border p-4">
-        <p className="text-sm font-medium">Rol</p>
-        <p className="text-muted-foreground capitalize">{user?.role}</p>
-      </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium">Rol</p>
+                  <p className="text-muted-foreground capitalize">
+                    {user?.role}
+                  </p>
+                </div>
 
-      <div className="flex flex-col gap-3">
-        <Button
-          onClick={() => (window.location.href = "/forgot-password")}
-        >
-          Cambiar contraseña
-        </Button>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    onClick={() => {
+                      window.location.href = "/forgot-password";
+                    }}
+                  >
+                    Cambiar contraseña
+                  </Button>
 
-        <p className="text-xs text-muted-foreground">
-          Se enviará un enlace seguro a tu correo para actualizar tu contraseña.
-        </p>
-      </div>
-    </CardContent>
-  </Card>
-</TabsContent>
+                  <p className="text-xs text-muted-foreground">
+                    Se enviará un enlace seguro a tu correo para actualizar tu
+                    contraseña.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </div>
