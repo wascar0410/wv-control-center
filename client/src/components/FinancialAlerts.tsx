@@ -72,9 +72,9 @@ export function FinancialAlerts() {
     if (alertId === "overdue_invoices") {
       return <Clock className="h-4 w-4" />;
     }
-    if (alertId === "payment_blocks") {
-      return <Lock className="h-4 w-4" />;
-    }
+    if (alertId === "payments_blocked") {
+  return <Lock className="h-4 w-4" />;
+}
     return <AlertCircle className="h-4 w-4" />;
   };
 
