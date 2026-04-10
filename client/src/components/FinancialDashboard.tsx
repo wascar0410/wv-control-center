@@ -2,13 +2,12 @@ import React, { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { AllocationSettings } from "./AllocationSettings";
 import { FinancialAlerts } from "./FinancialAlerts";
 import { PaymentBlocksPanel } from "./PaymentBlocksPanel";
 import { ReconciliationPanel } from "./ReconciliationPanel";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
   PieChart,
@@ -18,7 +17,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -599,14 +597,72 @@ export function FinancialDashboard() {
           </Card>
         </TabsContent>
 
-        {/* Alerts Tab */}
+       {/* Alerts Tab */}
         <TabsContent value="alerts" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                Financial Control Center
+                <Badge variant="outline">Alerts + Blocks</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Focus</p>
+                <p className="mt-1 text-sm font-medium">
+                  Review active alerts and payment blockers before releasing cash.
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Recommended Order</p>
+                <p className="mt-1 text-sm font-medium">
+                  1) Blocks, 2) Alerts, 3) Reconciliation
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Refresh</p>
+                <p className="mt-1 text-sm font-medium">
+                  Data updates automatically across financial views.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <PaymentBlocksPanel />
           <FinancialAlerts />
         </TabsContent>
 
         {/* Reconciliation Tab */}
         <TabsContent value="reconciliation" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                Cash Reconciliation
+                <Badge variant="outline">Expected vs Actual</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">What this shows</p>
+                <p className="mt-1 text-sm font-medium">
+                  Compares invoice expectations against actual wallet-linked cash activity.
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">What to review first</p>
+                <p className="mt-1 text-sm font-medium">
+                  Missing payments, then mismatches, then clean OK rows.
+                </p>
+              </div>
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Operational use</p>
+                <p className="mt-1 text-sm font-medium">
+                  Use this before settlements, withdrawals, or payment release decisions.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <ReconciliationPanel />
         </TabsContent>
 
