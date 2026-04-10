@@ -2839,6 +2839,8 @@ export async function createSettlement(data: {
     partner2Id: data.partner2Id,
     partner1Share: String(data.partner1Share ?? 50),
     partner2Share: String(data.partner2Share ?? 50),
+    partner1Amount: "0.00",
+    partner2Amount: "0.00",
     status: "draft",
     totalLoadsCompleted: 0,
     totalIncome: "0.00",
