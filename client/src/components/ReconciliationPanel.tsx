@@ -12,6 +12,7 @@ import {
   Filter,
   ArrowDownCircle,
   ArrowUpCircle,
+  Siren,
 } from "lucide-react";
 
 type ReconciliationStatus =
@@ -115,6 +116,39 @@ export function ReconciliationPanel() {
     );
   }, [rows]);
 
+  const prioritySummary = useMemo(() => {
+    const urgent = counts.missing;
+    const high = counts.underpaid;
+    const medium = counts.overpaid + counts.mismatch;
+
+    let headline = "Reconciliation is in good shape";
+    let toneClass = "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20";
+    let textClass = "text-green-800 dark:text-green-300";
+
+    if (urgent > 0) {
+      headline = "Urgent review required: missing payments detected";
+      toneClass = "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20";
+      textClass = "text-red-800 dark:text-red-300";
+    } else if (high > 0) {
+      headline = "High priority review: underpaid loads detected";
+      toneClass = "border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/20";
+      textClass = "text-orange-800 dark:text-orange-300";
+    } else if (medium > 0) {
+      headline = "Medium priority review: overpaid or mismatched loads detected";
+      toneClass = "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20";
+      textClass = "text-yellow-800 dark:text-yellow-300";
+    }
+
+    return {
+      urgent,
+      high,
+      medium,
+      headline,
+      toneClass,
+      textClass,
+    };
+  }, [counts]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "OK":
@@ -183,8 +217,7 @@ export function ReconciliationPanel() {
     return "text-muted-foreground";
   };
 
-  const getRowClassName = (status: string, isSelectedView: boolean) => {
-    if (isSelectedView) return "";
+  const getRowClassName = (status: string) => {
     if (status === "Missing") {
       return "bg-red-50/60 dark:bg-red-950/10";
     }
@@ -204,6 +237,7 @@ export function ReconciliationPanel() {
     return (
       <div className="space-y-4">
         <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-72 w-full" />
       </div>
@@ -261,6 +295,39 @@ export function ReconciliationPanel() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className={prioritySummary.toneClass}>
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Siren className={`mt-0.5 h-5 w-5 ${prioritySummary.textClass}`} />
+            <div className="space-y-2">
+              <p className={`font-semibold ${prioritySummary.textClass}`}>
+                {prioritySummary.headline}
+              </p>
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="rounded-md border bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">Priority 1</p>
+                  <p className="mt-1 text-sm font-medium">Missing payments</p>
+                  <p className="text-lg font-bold text-red-600">{prioritySummary.urgent}</p>
+                </div>
+                <div className="rounded-md border bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">Priority 2</p>
+                  <p className="mt-1 text-sm font-medium">Underpaid loads</p>
+                  <p className="text-lg font-bold text-orange-600">{prioritySummary.high}</p>
+                </div>
+                <div className="rounded-md border bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">Priority 3</p>
+                  <p className="mt-1 text-sm font-medium">Overpaid + mismatch</p>
+                  <p className="text-lg font-bold text-yellow-600">{prioritySummary.medium}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Recommended review order: Missing → Underpaid → Overpaid / Mismatch → OK.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         <Card>
@@ -399,8 +466,7 @@ export function ReconciliationPanel() {
                     <tr
                       key={`${rec.loadId}-${idx}`}
                       className={`border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50 ${getRowClassName(
-                        rec.status,
-                        false
+                        rec.status
                       )}`}
                     >
                       <td className="px-2 py-3 font-medium">#{rec.loadId}</td>
