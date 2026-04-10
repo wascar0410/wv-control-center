@@ -1,4 +1,5 @@
 import React from "react";
+import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +8,26 @@ import { FinancialAlerts } from "./FinancialAlerts";
 import { PaymentBlocksPanel } from "./PaymentBlocksPanel";
 import { ReconciliationPanel } from "./ReconciliationPanel";
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(value || 0);
+
 export function FinancialDashboard() {
+  const { data: dashboardData, isLoading } =
+    trpc.financial.getDashboardSummary.useQuery({});
+
+  if (isLoading) {
+    return <div className="p-4">Loading financial data...</div>;
+  }
+
+  const plSummary = dashboardData?.plSummary;
+  const metrics = dashboardData?.metrics;
+  const variance = dashboardData?.variance;
+  const allocations = dashboardData?.allocations;
+  const cashFlow = dashboardData?.cashFlow;
+
   return (
     <div className="w-full space-y-6">
       <Tabs defaultValue="overview" className="w-full">
@@ -15,7 +35,7 @@ export function FinancialDashboard() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="invoicing">Invoicing</TabsTrigger>
           <TabsTrigger value="wallet">Wallet</TabsTrigger>
-          <TabsTrigger value="pl">P&L</TabsTrigger>
+          <TabsTrigger value="pl">P&amp;L</TabsTrigger>
           <TabsTrigger value="allocation">Allocation</TabsTrigger>
           <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
@@ -23,37 +43,91 @@ export function FinancialDashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(plSummary?.totalRevenue || 0)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Expenses
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">
+                  {formatCurrency(plSummary?.totalExpenses || 0)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Net Profit
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(plSummary?.netProfit || 0)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Margin %
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">
+                  {(plSummary?.marginPercent || 0).toFixed(2)}%
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                Financial Overview
-                <Badge variant="outline">Hotfix Mode</Badge>
+                Overview Summary
+                <Badge variant="outline">Hotfix Stable</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Some aggregated financial metrics are temporarily disabled while the
-                production database schema is aligned with the current backend model.
-              </p>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Working now</p>
-                  <p className="mt-1 text-sm font-medium">
-                    Alerts, payment blocks, reconciliation, and settings.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Temporarily limited</p>
-                  <p className="mt-1 text-sm font-medium">
-                    P&L summary, quote variance, cash flow, and aggregated dashboard metrics.
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Next backend fix</p>
-                  <p className="mt-1 text-sm font-medium">
-                    Align invoices and quote_analysis schema, then re-enable financial router queries.
-                  </p>
-                </div>
+            <CardContent className="grid gap-4 md:grid-cols-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Profit per Load</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency(metrics?.profitPerLoad || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Profit per Mile</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency(metrics?.profitPerMile || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Profit per Driver</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency(metrics?.profitPerDriver || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Net Cash Position</p>
+                <p className="text-lg font-semibold">
+                  {formatCurrency(cashFlow?.netCashPosition || 0)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -62,41 +136,118 @@ export function FinancialDashboard() {
         <TabsContent value="invoicing" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Invoicing</CardTitle>
+              <CardTitle>Invoicing Snapshot</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                This section is temporarily disabled in production until the invoices schema
-                is updated to match the current backend model.
-              </p>
+            <CardContent className="grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Cash In</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(cashFlow?.cashIn || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Cash Pending</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {formatCurrency(cashFlow?.cashPending || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Quote Variance</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(variance?.variance || 0)}
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="wallet" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Wallet</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Wallet summary metrics are temporarily disabled here while the financial
-                aggregate routes are stabilized.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Wallet Balance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(cashFlow?.walletBalance || 0)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Pending Withdrawals
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  {formatCurrency(cashFlow?.pendingWithdrawals || 0)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Net Cash Position</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(cashFlow?.netCashPosition || 0)}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="pl" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>P&amp;L</CardTitle>
+              <CardTitle>P&amp;L Summary</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                P&amp;L calculations are temporarily hidden because the current production
-                database is missing fields required by the financial router.
-              </p>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span>Total Revenue</span>
+                <span className="font-semibold text-green-600">
+                  {formatCurrency(plSummary?.totalRevenue || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Fuel</span>
+                <span>{formatCurrency(plSummary?.breakdown?.fuel || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Tolls</span>
+                <span>{formatCurrency(plSummary?.breakdown?.tolls || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Maintenance</span>
+                <span>{formatCurrency(plSummary?.breakdown?.maintenance || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Insurance</span>
+                <span>{formatCurrency(plSummary?.breakdown?.insurance || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Driver Payouts</span>
+                <span>{formatCurrency(plSummary?.breakdown?.driverPayouts || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Commissions</span>
+                <span>{formatCurrency(plSummary?.breakdown?.commissions || 0)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-3 font-semibold">
+                <span>Total Expenses</span>
+                <span className="text-red-600">
+                  {formatCurrency(plSummary?.totalExpenses || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between font-bold text-lg">
+                <span>Net Profit</span>
+                <span className="text-blue-600">
+                  {formatCurrency(plSummary?.netProfit || 0)}
+                </span>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -104,13 +255,37 @@ export function FinancialDashboard() {
         <TabsContent value="allocation" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Allocation Overview</CardTitle>
+              <CardTitle>Allocation Summary</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Allocation calculations that depend on the broken financial aggregate routes
-                are temporarily disabled. Configuration remains available in Settings.
-              </p>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between font-semibold">
+                <span>Net Profit</span>
+                <span>{formatCurrency(allocations?.netProfit || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Owner Draw</span>
+                <span className="text-green-600">
+                  {formatCurrency(allocations?.ownerDraw || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Reserve Fund</span>
+                <span className="text-yellow-600">
+                  {formatCurrency(allocations?.reserveFund || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Reinvestment</span>
+                <span className="text-blue-600">
+                  {formatCurrency(allocations?.reinvestment || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Operating Cash</span>
+                <span className="text-purple-600">
+                  {formatCurrency(allocations?.operatingCash || 0)}
+                </span>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
