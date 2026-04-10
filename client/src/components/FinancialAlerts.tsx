@@ -56,7 +56,7 @@ export function FinancialAlerts() {
     if (alertId === "overdue_invoices") {
       return "Send payment reminders to clients. Consider early payment discounts or collection actions.";
     }
-    if (alertId === "payment_blocks") {
+    if (alertId === "payments_blocked") {
       return "Ensure BOL and POD documents are uploaded for all loads. Blocks prevent driver withdrawals.";
     }
     return "Take corrective action to address this financial issue.";
@@ -181,7 +181,7 @@ export function FinancialAlerts() {
                   {alert.id === "variance_high" && "Quote Variance"}
                   {alert.id === "cash_negative" && "Cash Position"}
                   {alert.id === "overdue_invoices" && "Overdue Invoices"}
-                  {alert.id === "payment_blocks" && "Payment Blocks"}
+                  {alert.id === "payments_blocked" && "Payment Blocks"}
                 </span>
               </div>
             </div>
