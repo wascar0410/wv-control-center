@@ -15,7 +15,7 @@ export function useFinancialSync() {
     utils.settlement.getById.invalidate();
     
     // Invalidate financial dashboard
-    utils.financial.getFinancialAlerts.invalidate();
+    utils.financialExtended.getFinancialAlerts.invalidate();
     utils.financial.getAllocationSettings.invalidate();
     utils.financial.getProfitPerLoad.invalidate();
     
@@ -36,7 +36,7 @@ export function useFinancialSync() {
     utils.invoicing.getById.invalidate();
     
     // Invalidate financial dashboard
-    utils.financial.getFinancialAlerts.invalidate();
+    utils.financialExtended.getFinancialAlerts.invalidate();
   };
 
   // When invoicing changes, invalidate related queries
@@ -50,7 +50,7 @@ export function useFinancialSync() {
     utils.settlement.getById.invalidate();
     
     // Invalidate financial dashboard
-    utils.financial.getFinancialAlerts.invalidate();
+    utils.financialExtended.getFinancialAlerts.invalidate();
     utils.financial.getProfitPerLoad.invalidate();
   };
 

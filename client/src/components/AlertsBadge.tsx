@@ -6,7 +6,7 @@ import { AlertCircle, Bell } from "lucide-react";
 import { toast } from "sonner";
 
 export function AlertsBadge() {
-  const { data: alerts, refetch } = trpc.financial.getFinancialAlerts.useQuery();
+  const { data: alerts, refetch } = trpc.financialExtended.getFinancialAlerts.useQuery();
   const [lastAlertCount, setLastAlertCount] = useState(0);
   const [showToasts, setShowToasts] = useState(false);
 

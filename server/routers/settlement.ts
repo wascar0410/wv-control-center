@@ -106,6 +106,17 @@ export const settlementRouter = router({
           });
         }
 
+        // Log the exact payload before creating settlement
+        console.log("[settlement.create] Payload before insert:", {
+          settlementPeriod: input.settlementPeriod,
+          startDate: input.startDate,
+          endDate: input.endDate,
+          partner1Id: input.partner1Id,
+          partner2Id: input.partner2Id,
+          partner1Share: input.partner1Share,
+          partner2Share: input.partner2Share,
+        });
+
         return await createSettlement({
           settlementPeriod: input.settlementPeriod,
           startDate: input.startDate,

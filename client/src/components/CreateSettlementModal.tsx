@@ -25,6 +25,8 @@ export default function CreateSettlementModal({
 }: CreateSettlementModalProps) {
   const { toast } = useToast();
   const [settlementPeriod, setSettlementPeriod] = useState("");
+  const [partner1Id, setPartner1Id] = useState("1");
+  const [partner2Id, setPartner2Id] = useState("1860001");
   const [partner1Share, setPartner1Share] = useState("50");
   const [partner2Share, setPartner2Share] = useState("50");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,8 +74,8 @@ export default function CreateSettlementModal({
         settlementPeriod,
         startDate,
         endDate,
-        partner1Id: 1, // TODO: Get from user selection
-        partner2Id: 2, // TODO: Get from user selection
+        partner1Id: parseInt(partner1Id),
+        partner2Id: parseInt(partner2Id),
         partner1Share: p1Share,
         partner2Share: p2Share,
       });
@@ -85,6 +87,8 @@ export default function CreateSettlementModal({
 
       // Reset form
       setSettlementPeriod("");
+      setPartner1Id("1");
+      setPartner2Id("1860001");
       setPartner1Share("50");
       setPartner2Share("50");
 

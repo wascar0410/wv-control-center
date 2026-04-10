@@ -13,7 +13,7 @@ interface KPIMetrics {
 
 export function OperationalKPIStrip() {
   const { data: loads } = trpc.loads.list.useQuery();
-  const { data: alerts } = trpc.financial.getFinancialAlerts.useQuery();
+  const { data: alerts } = trpc.financialExtended.getFinancialAlerts.useQuery();
 
   const metrics = useMemo<KPIMetrics>(() => {
     let totalMargin = 0;
