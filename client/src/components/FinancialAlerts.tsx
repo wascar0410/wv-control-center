@@ -1,8 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, AlertTriangle, CheckCircle2, Loader2, TrendingDown, DollarSign, Clock, Lock } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  TrendingDown,
+  DollarSign,
+  Clock,
+  Lock,
+  GitBranch,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface FinancialAlert {
@@ -11,7 +21,7 @@ interface FinancialAlert {
   title: string;
   message: string;
   severity: "critical" | "warning";
-  timestamp: Date;
+  timestamp?: Date;
   recommendation?: string;
   source?: string;
 }
@@ -19,14 +29,21 @@ interface FinancialAlert {
 export function FinancialAlerts() {
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
 
-  // Fetch financial alerts
-  const { data: alertsData, isLoading } = trpc.financialExtended.getFinancialAlerts.useQuery();
+  const { data: alertsData, isLoading } =
+    trpc.financialExtended.getFinancialAlerts.useQuery();
 
-  const alerts = alertsData?.alerts || [];
+  const alerts = (alertsData?.alerts || []) as FinancialAlert[];
   const visibleAlerts = alerts.filter((alert) => !dismissedAlerts.has(alert.id));
 
   const criticalCount = visibleAlerts.filter((a) => a.severity === "critical").length;
   const warningCount = visibleAlerts.filter((a) => a.severity === "warning").length;
+
+  const hasPaymentBlocks = visibleAlerts.some((a) => a.id === "payments_blocked");
+  const hasOperationalRisk =
+    visibleAlerts.some((a) => a.id === "cash_negative") ||
+    visibleAlerts.some((a) => a.id === "overdue_invoices") ||
+    visibleAlerts.some((a) => a.id === "variance_high") ||
+    visibleAlerts.some((a) => a.id === "margin_low");
 
   const handleDismiss = (alertId: string) => {
     setDismissedAlerts((prev) => new Set([...prev, alertId]));
@@ -39,11 +56,7 @@ export function FinancialAlerts() {
     return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
   };
 
-  const getAlertBadgeVariant = (severity: "critical" | "warning") => {
-    return severity === "critical" ? "destructive" : "secondary";
-  };
-
-  const getRecommendation = (alertId: string, message: string): string => {
+  const getRecommendation = (alertId: string): string => {
     if (alertId === "margin_low") {
       return "Review pricing strategy, reduce operational costs, or negotiate better rates with brokers.";
     }
@@ -73,17 +86,48 @@ export function FinancialAlerts() {
       return <Clock className="h-4 w-4" />;
     }
     if (alertId === "payments_blocked") {
-  return <Lock className="h-4 w-4" />;
-}
+      return <Lock className="h-4 w-4" />;
+    }
     return <AlertCircle className="h-4 w-4" />;
   };
+
+  const getFlowHeadline = () => {
+    if (hasPaymentBlocks) {
+      return "Start with payment blocks, then review reconciliation, then resolve remaining financial alerts.";
+    }
+    if (hasOperationalRisk) {
+      return "Review financial alerts first, then confirm whether reconciliation discrepancies explain the issue.";
+    }
+    return "No urgent blockers detected. Continue monitoring alerts and reconciliation regularly.";
+  };
+
+  const getFlowTone = () => {
+    if (hasPaymentBlocks) {
+      return {
+        box: "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20",
+        text: "text-red-800 dark:text-red-300",
+      };
+    }
+    if (hasOperationalRisk) {
+      return {
+        box: "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20",
+        text: "text-yellow-800 dark:text-yellow-300",
+      };
+    }
+    return {
+      box: "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20",
+      text: "text-green-800 dark:text-green-300",
+    };
+  };
+
+  const flowTone = getFlowTone();
 
   if (isLoading) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
-          <Loader2 className="w-6 h-6 mx-auto animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground mt-2">Loading financial alerts...</p>
+          <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="mt-2 text-sm text-muted-foreground">Loading financial alerts...</p>
         </CardContent>
       </Card>
     );
@@ -91,7 +135,7 @@ export function FinancialAlerts() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Financial Alerts</CardTitle>
@@ -101,6 +145,7 @@ export function FinancialAlerts() {
                 : `${criticalCount} critical, ${warningCount} warning`}
             </CardDescription>
           </div>
+
           <div className="flex gap-2">
             {criticalCount > 0 && (
               <Badge variant="destructive" className="text-xs">
@@ -112,6 +157,40 @@ export function FinancialAlerts() {
                 {warningCount} Warning
               </Badge>
             )}
+          </div>
+        </div>
+
+        <div className={`rounded-lg border p-4 ${flowTone.box}`}>
+          <div className="flex items-start gap-3">
+            <GitBranch className={`mt-0.5 h-5 w-5 ${flowTone.text}`} />
+            <div className="space-y-2">
+              <p className={`font-semibold ${flowTone.text}`}>Operational review flow</p>
+              <p className="text-sm text-muted-foreground">{getFlowHeadline()}</p>
+
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="rounded-md border bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">Step 1</p>
+                  <p className="mt-1 text-sm font-medium">Payment Blocks</p>
+                  <p className="text-xs text-muted-foreground">
+                    Release blockers before cash decisions.
+                  </p>
+                </div>
+                <div className="rounded-md border bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">Step 2</p>
+                  <p className="mt-1 text-sm font-medium">Reconciliation</p>
+                  <p className="text-xs text-muted-foreground">
+                    Confirm missing, underpaid, or mismatched payments.
+                  </p>
+                </div>
+                <div className="rounded-md border bg-background/70 p-3">
+                  <p className="text-xs text-muted-foreground">Step 3</p>
+                  <p className="mt-1 text-sm font-medium">Financial Alerts</p>
+                  <p className="text-xs text-muted-foreground">
+                    Resolve margin, cash, variance, and overdue risks.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -128,26 +207,25 @@ export function FinancialAlerts() {
           visibleAlerts.map((alert) => (
             <div
               key={alert.id}
-              className={`border rounded-lg p-4 space-y-3 ${
+              className={`space-y-3 rounded-lg border p-4 ${
                 alert.severity === "critical"
                   ? "border-red-200 bg-red-50"
                   : "border-yellow-200 bg-yellow-50"
               }`}
             >
-              {/* Alert Header */}
               <div className="flex items-start justify-between">
-                <div className="flex items-start gap-3 flex-1">
+                <div className="flex flex-1 items-start gap-3">
                   {getAlertIcon(alert.severity)}
                   <div className="flex-1">
                     <h4
-                      className={`font-semibold text-sm ${
+                      className={`text-sm font-semibold ${
                         alert.severity === "critical" ? "text-red-900" : "text-yellow-900"
                       }`}
                     >
                       {alert.title}
                     </h4>
                     <p
-                      className={`text-sm mt-1 ${
+                      className={`mt-1 text-sm ${
                         alert.severity === "critical" ? "text-red-800" : "text-yellow-800"
                       }`}
                     >
@@ -157,24 +235,22 @@ export function FinancialAlerts() {
                 </div>
                 <button
                   onClick={() => handleDismiss(alert.id)}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground ml-2"
+                  className="ml-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                 >
                   ✕
                 </button>
               </div>
 
-              {/* Recommendation */}
-              <div className="flex gap-2 ml-8 p-3 bg-white bg-opacity-60 rounded">
-                <span className="text-xs font-semibold text-muted-foreground flex-shrink-0">
+              <div className="ml-8 flex gap-2 rounded bg-white bg-opacity-60 p-3">
+                <span className="flex-shrink-0 text-xs font-semibold text-muted-foreground">
                   Recommendation:
                 </span>
                 <p className="text-xs text-muted-foreground">
-                  {getRecommendation(alert.id, alert.message)}
+                  {getRecommendation(alert.id)}
                 </p>
               </div>
 
-              {/* Source Badge */}
-              <div className="flex items-center gap-2 ml-8">
+              <div className="ml-8 flex items-center gap-2">
                 {getSourceIcon(alert.id)}
                 <span className="text-xs text-muted-foreground">
                   {alert.id === "margin_low" && "Profit Margin"}
