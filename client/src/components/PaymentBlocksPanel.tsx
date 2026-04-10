@@ -28,7 +28,7 @@ interface BlockedLoad {
 type BlockFilter = "all" | "active" | "reviewed" | "resolved";
 
 export function PaymentBlocksPanel() {
-  const { data: alerts } = trpc.financial.getFinancialAlerts.useQuery();
+  const { data: alerts } = trpc.financialExtended.getFinancialAlerts.useQuery();
   const { data: loads } = trpc.loads.list.useQuery();
   const [, navigate] = useLocation();
 
