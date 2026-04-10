@@ -18,6 +18,14 @@ export function FinancialDashboard() {
   const { data: dashboardData, isLoading } =
     trpc.financial.getDashboardSummary.useQuery({});
 
+  const { data: alertsData } =
+    trpc.financialExtended.getFinancialAlerts.useQuery();
+
+  const { data: reconciliationData } =
+    trpc.financialExtended.getReconciliationData.useQuery(undefined, {
+      refetchInterval: 30000,
+    });
+
   if (isLoading) {
     return <div className="p-4">Loading financial data...</div>;
   }
@@ -28,8 +36,67 @@ export function FinancialDashboard() {
   const allocations = dashboardData?.allocations;
   const cashFlow = dashboardData?.cashFlow;
 
+  const criticalAlerts = alertsData?.criticalCount || 0;
+  const warningAlerts = alertsData?.warningCount || 0;
+  const activeBlocks =
+    alertsData?.alerts?.find((a) => a.id === "payments_blocked") ? 1 : 0;
+  const reconciliationDiscrepancies = reconciliationData?.discrepancies || 0;
+
+  const executiveTone =
+    activeBlocks > 0 || criticalAlerts > 0 || reconciliationDiscrepancies > 0
+      ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20"
+      : warningAlerts > 0
+        ? "border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20"
+        : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20";
+
   return (
     <div className="w-full space-y-6">
+      <Card className={executiveTone}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            Executive Financial Snapshot
+            <Badge variant="outline">Live</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-4">
+          <div className="rounded-lg border bg-background/70 p-3">
+            <p className="text-xs text-muted-foreground">Active Blocks</p>
+            <p className="mt-1 text-2xl font-bold text-red-600">{activeBlocks}</p>
+            <p className="text-xs text-muted-foreground">
+              Review payment blockers before release decisions.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-background/70 p-3">
+            <p className="text-xs text-muted-foreground">Reconciliation Issues</p>
+            <p className="mt-1 text-2xl font-bold text-orange-600">
+              {reconciliationDiscrepancies}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Missing, underpaid, overpaid, or mismatched rows.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-background/70 p-3">
+            <p className="text-xs text-muted-foreground">Critical Alerts</p>
+            <p className="mt-1 text-2xl font-bold text-red-600">{criticalAlerts}</p>
+            <p className="text-xs text-muted-foreground">
+              Financial conditions needing immediate review.
+            </p>
+          </div>
+
+          <div className="rounded-lg border bg-background/70 p-3">
+            <p className="text-xs text-muted-foreground">Net Cash Position</p>
+            <p className="mt-1 text-2xl font-bold text-blue-600">
+              {formatCurrency(cashFlow?.netCashPosition || 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Current cash visibility after pending withdrawals.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
