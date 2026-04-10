@@ -10,9 +10,17 @@ import {
   CheckCircle2,
   Search,
   Filter,
+  ArrowDownCircle,
+  ArrowUpCircle,
 } from "lucide-react";
 
-type ReconciliationStatus = "OK" | "Missing" | "Mismatch" | string;
+type ReconciliationStatus =
+  | "OK"
+  | "Missing"
+  | "Mismatch"
+  | "Underpaid"
+  | "Overpaid"
+  | string;
 
 type ReconciliationRow = {
   loadId: number | string;
@@ -21,11 +29,17 @@ type ReconciliationRow = {
   difference: number;
   variance: number;
   status: ReconciliationStatus;
+  invoiceDate?: string | Date | null;
+  transactionDate?: string | Date | null;
+  hasInvoice?: boolean;
+  hasTransaction?: boolean;
 };
 
 export function ReconciliationPanel() {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "OK" | "Missing" | "Mismatch">("ALL");
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "OK" | "Missing" | "Mismatch" | "Underpaid" | "Overpaid"
+  >("ALL");
   const [showOnlyDiscrepancies, setShowOnlyDiscrepancies] = useState(false);
 
   const { data: reconciliation, isLoading } =
@@ -85,10 +99,19 @@ export function ReconciliationPanel() {
         if (row.status === "OK") acc.ok += 1;
         else if (row.status === "Missing") acc.missing += 1;
         else if (row.status === "Mismatch") acc.mismatch += 1;
+        else if (row.status === "Underpaid") acc.underpaid += 1;
+        else if (row.status === "Overpaid") acc.overpaid += 1;
         else acc.other += 1;
         return acc;
       },
-      { ok: 0, missing: 0, mismatch: 0, other: 0 }
+      {
+        ok: 0,
+        missing: 0,
+        mismatch: 0,
+        underpaid: 0,
+        overpaid: 0,
+        other: 0,
+      }
     );
   }, [rows]);
 
@@ -115,6 +138,20 @@ export function ReconciliationPanel() {
             Mismatch
           </Badge>
         );
+      case "Underpaid":
+        return (
+          <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 flex items-center gap-1">
+            <ArrowDownCircle className="h-3 w-3" />
+            Underpaid
+          </Badge>
+        );
+      case "Overpaid":
+        return (
+          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex items-center gap-1">
+            <ArrowUpCircle className="h-3 w-3" />
+            Overpaid
+          </Badge>
+        );
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -128,7 +165,7 @@ export function ReconciliationPanel() {
   };
 
   const formatVariance = (value: number) => {
-    return `${value.toFixed(2)}%`;
+    return `${Number(value || 0).toFixed(2)}%`;
   };
 
   const getDifferenceClassName = (value: number) => {
@@ -141,7 +178,26 @@ export function ReconciliationPanel() {
     if (status === "OK") return "text-green-600 dark:text-green-400";
     if (status === "Missing") return "text-red-600 dark:text-red-400";
     if (status === "Mismatch") return "text-yellow-600 dark:text-yellow-400";
+    if (status === "Underpaid") return "text-orange-600 dark:text-orange-400";
+    if (status === "Overpaid") return "text-blue-600 dark:text-blue-400";
     return "text-muted-foreground";
+  };
+
+  const getRowClassName = (status: string, isSelectedView: boolean) => {
+    if (isSelectedView) return "";
+    if (status === "Missing") {
+      return "bg-red-50/60 dark:bg-red-950/10";
+    }
+    if (status === "Underpaid") {
+      return "bg-orange-50/60 dark:bg-orange-950/10";
+    }
+    if (status === "Overpaid") {
+      return "bg-blue-50/60 dark:bg-blue-950/10";
+    }
+    if (status === "Mismatch") {
+      return "bg-yellow-50/60 dark:bg-yellow-950/10";
+    }
+    return "";
   };
 
   if (isLoading) {
@@ -206,7 +262,7 @@ export function ReconciliationPanel() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         <Card>
           <CardContent className="p-3">
             <p className="text-xs text-muted-foreground">OK</p>
@@ -216,13 +272,25 @@ export function ReconciliationPanel() {
         <Card>
           <CardContent className="p-3">
             <p className="text-xs text-muted-foreground">Missing</p>
-            <p className="text-xl font-bold text-red-600 dark:text-red-400">{counts.missing}</p>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">
+              {counts.missing}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3">
-            <p className="text-xs text-muted-foreground">Mismatch</p>
-            <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{counts.mismatch}</p>
+            <p className="text-xs text-muted-foreground">Underpaid</p>
+            <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+              {counts.underpaid}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Overpaid</p>
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              {counts.overpaid}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -267,13 +335,23 @@ export function ReconciliationPanel() {
             <select
               value={statusFilter}
               onChange={(e) =>
-                setStatusFilter(e.target.value as "ALL" | "OK" | "Missing" | "Mismatch")
+                setStatusFilter(
+                  e.target.value as
+                    | "ALL"
+                    | "OK"
+                    | "Missing"
+                    | "Mismatch"
+                    | "Underpaid"
+                    | "Overpaid"
+                )
               }
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             >
               <option value="ALL">All statuses</option>
               <option value="OK">OK</option>
               <option value="Missing">Missing</option>
+              <option value="Underpaid">Underpaid</option>
+              <option value="Overpaid">Overpaid</option>
               <option value="Mismatch">Mismatch</option>
             </select>
 
@@ -320,7 +398,10 @@ export function ReconciliationPanel() {
                   {filteredRows.map((rec, idx) => (
                     <tr
                       key={`${rec.loadId}-${idx}`}
-                      className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                      className={`border-b border-gray-100 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900/50 ${getRowClassName(
+                        rec.status,
+                        false
+                      )}`}
                     >
                       <td className="px-2 py-3 font-medium">#{rec.loadId}</td>
 
