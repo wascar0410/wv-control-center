@@ -314,8 +314,12 @@ export const financialExtendedRouter = router({
   /**
    * Get Financial Reconciliation Data
    *
-   * Compares expected amounts (settlements, wallet) vs actual transactions
-   * Detects: missing payments, overpayments, discrepancies
+   * Compares expected invoice amounts vs actual wallet-linked payments.
+   * Detects:
+   * - Missing payments
+   * - Underpayments
+   * - Overpayments
+   * - Mismatches above variance threshold
    */
   getReconciliationData: protectedProcedure.query(async ({ ctx }) => {
     try {
@@ -325,48 +329,90 @@ export const financialExtendedRouter = router({
           reconciliations: [],
           totalExpected: 0,
           totalActual: 0,
+          totalDifference: 0,
           discrepancies: 0,
+          summary: {
+            ok: 0,
+            missing: 0,
+            underpaid: 0,
+            overpaid: 0,
+            mismatch: 0,
+          },
         };
       }
 
-      const reconciliations: any[] = [];
+      const reconciliations: Array<{
+        loadId: number;
+        expectedAmount: number;
+        actualAmount: number;
+        difference: number;
+        variance: number;
+        status: string;
+        invoiceDate: Date | null;
+        transactionDate: Date | null;
+        hasInvoice: boolean;
+        hasTransaction: boolean;
+      }> = [];
+
       let totalExpected = 0;
       let totalActual = 0;
       let discrepancyCount = 0;
 
-      // Get all completed loads for this driver
+      let okCount = 0;
+      let missingCount = 0;
+      let underpaidCount = 0;
+      let overpaidCount = 0;
+      let mismatchCount = 0;
+
       const loads = await db.query.loads.findMany({
         where: (loads, { eq, and }) =>
           and(eq(loads.driverId, ctx.user.id), eq(loads.status, "delivered")),
       });
 
       for (const load of loads) {
-        // Get invoice (expected amount)
         const invoice = await db.query.invoices.findFirst({
           where: (inv, { eq }) => eq(inv.loadId, load.id),
         });
 
-        const expectedAmount = invoice ? Number(invoice.totalAmount) : 0;
-
-        // Get actual payment (wallet transaction)
         const transaction = await db.query.walletTransactions.findFirst({
           where: (wt, { eq, and }) =>
             and(eq(wt.loadId, load.id), eq(wt.type, "load_payment")),
         });
 
+        const expectedAmount = invoice ? Number(invoice.totalAmount) : 0;
         const actualAmount = transaction ? Number(transaction.amount) : 0;
         const difference = actualAmount - expectedAmount;
-        const variance = expectedAmount > 0 ? Math.abs(difference / expectedAmount) * 100 : 0;
+        const variance =
+          expectedAmount > 0 ? Math.abs((difference / expectedAmount) * 100) : 0;
 
-        // Determine status
         let status = "OK";
-        if (actualAmount === 0 && expectedAmount > 0) {
+
+        if (expectedAmount > 0 && actualAmount === 0) {
           status = "Missing";
           discrepancyCount++;
-        } else if (variance > 1) {
-          // More than 1% variance
+          missingCount++;
+        } else if (expectedAmount > 0 && actualAmount > 0 && actualAmount < expectedAmount) {
+          status = variance > 1 ? "Underpaid" : "OK";
+          if (status !== "OK") {
+            discrepancyCount++;
+            underpaidCount++;
+          } else {
+            okCount++;
+          }
+        } else if (expectedAmount > 0 && actualAmount > expectedAmount) {
+          status = variance > 1 ? "Overpaid" : "OK";
+          if (status !== "OK") {
+            discrepancyCount++;
+            overpaidCount++;
+          } else {
+            okCount++;
+          }
+        } else if (expectedAmount > 0 && variance > 1) {
           status = "Mismatch";
           discrepancyCount++;
+          mismatchCount++;
+        } else {
+          okCount++;
         }
 
         totalExpected += expectedAmount;
@@ -377,12 +423,38 @@ export const financialExtendedRouter = router({
           expectedAmount,
           actualAmount,
           difference,
-          variance: variance.toFixed(2),
+          variance: Number(variance.toFixed(2)),
           status,
-          invoiceDate: invoice?.createdAt,
-          transactionDate: transaction?.createdAt,
+          invoiceDate: invoice?.createdAt ?? null,
+          transactionDate: transaction?.createdAt ?? null,
+          hasInvoice: Boolean(invoice),
+          hasTransaction: Boolean(transaction),
         });
       }
+
+      reconciliations.sort((a, b) => {
+        const severityRank = (status: string) => {
+          switch (status) {
+            case "Missing":
+              return 0;
+            case "Underpaid":
+              return 1;
+            case "Overpaid":
+              return 2;
+            case "Mismatch":
+              return 3;
+            case "OK":
+              return 4;
+            default:
+              return 5;
+          }
+        };
+
+        const bySeverity = severityRank(a.status) - severityRank(b.status);
+        if (bySeverity !== 0) return bySeverity;
+
+        return Math.abs(b.difference) - Math.abs(a.difference);
+      });
 
       return {
         reconciliations,
@@ -390,6 +462,13 @@ export const financialExtendedRouter = router({
         totalActual,
         totalDifference: totalActual - totalExpected,
         discrepancies: discrepancyCount,
+        summary: {
+          ok: okCount,
+          missing: missingCount,
+          underpaid: underpaidCount,
+          overpaid: overpaidCount,
+          mismatch: mismatchCount,
+        },
       };
     } catch (err) {
       console.error("[financial.getReconciliationData]", err);
@@ -397,11 +476,18 @@ export const financialExtendedRouter = router({
         reconciliations: [],
         totalExpected: 0,
         totalActual: 0,
+        totalDifference: 0,
         discrepancies: 0,
+        summary: {
+          ok: 0,
+          missing: 0,
+          underpaid: 0,
+          overpaid: 0,
+          mismatch: 0,
+        },
       };
     }
   }),
-
   /**
    * Update Allocation Settings
    *
