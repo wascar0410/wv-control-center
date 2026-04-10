@@ -2,30 +2,74 @@ import { z } from "zod";
 import { router, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { and, gte, lte } from "drizzle-orm";
 
 /**
- * Financial Router - P&L, Metrics, Allocation, Cash Flow
+ * Financial Router - Production-safe hotfix version
  *
- * Provides comprehensive financial analysis for strategic decision-making:
- * - P&L calculation (revenue, expenses, profit, margin)
- * - Key metrics (profit per load, mile, driver, broker)
- * - Quote analysis variance (estimated vs actual profit)
- * - Allocation system (owner draw, reserve, reinvestment, operating cash)
- * - Cash flow tracking (cash in, pending, wallet, withdrawals)
+ * Temporary goal:
+ * - Avoid schema-mismatched tables in production (invoices / quoteAnalysis)
+ * - Avoid ctx.trpc self-calls that are failing in production
+ * - Keep finance endpoints alive with safe fallback calculations
  */
+
+type ExpenseBreakdown = {
+  fuel: number;
+  tolls: number;
+  maintenance: number;
+  insurance: number;
+  driverPayouts: number;
+  commissions: number;
+};
+
+function emptyBreakdown(): ExpenseBreakdown {
+  return {
+    fuel: 0,
+    tolls: 0,
+    maintenance: 0,
+    insurance: 0,
+    driverPayouts: 0,
+    commissions: 0,
+  };
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function categorizeExpenses(transactions: any[]): ExpenseBreakdown {
+  const expenses = emptyBreakdown();
+
+  for (const tx of transactions) {
+    const amount = Math.abs(Number(tx.amount || 0));
+    const category = String(tx.category || "").toLowerCase();
+    const type = String(tx.type || "").toLowerCase();
+    const label = `${category} ${type}`;
+
+    if (label.includes("fuel")) expenses.fuel += amount;
+    else if (label.includes("toll")) expenses.tolls += amount;
+    else if (label.includes("maintenance")) expenses.maintenance += amount;
+    else if (label.includes("insurance")) expenses.insurance += amount;
+    else if (label.includes("driver") || label.includes("payout"))
+      expenses.driverPayouts += amount;
+    else if (label.includes("commission")) expenses.commissions += amount;
+  }
+
+  return expenses;
+}
+
+function getTotalExpenses(expenses: ExpenseBreakdown) {
+  return Object.values(expenses).reduce((sum, val) => sum + val, 0);
+}
 
 export const financialRouter = router({
   /**
    * Get P&L Summary
    *
-   * Calculates:
-   * - totalRevenue: sum of all invoices
-   * - totalExpenses: fuel + tolls + maintenance + insurance + driver payouts + commissions
-   * - netProfit: totalRevenue - totalExpenses
-   * - margin%: (netProfit / totalRevenue) * 100
-   *
-   * Optional filters: dateRange, companyId, brokerId
+   * Production-safe version:
+   * - Revenue approximated from walletTransactions of type load_payment
+   * - Expenses approximated from walletTransactions categories
+   * - Avoids invoices table until schema is aligned
    */
   getPLSummary: protectedProcedure
     .input(
@@ -36,7 +80,7 @@ export const financialRouter = router({
         brokerId: z.number().optional(),
       })
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       try {
         const db = await getDb();
         if (!db) {
@@ -45,30 +89,10 @@ export const financialRouter = router({
             totalExpenses: 0,
             netProfit: 0,
             marginPercent: 0,
-            breakdown: {
-              fuel: 0,
-              tolls: 0,
-              maintenance: 0,
-              insurance: 0,
-              driverPayouts: 0,
-              commissions: 0,
-            },
+            breakdown: emptyBreakdown(),
           };
         }
 
-        // Get all invoices (revenue source)
-        const invoices = await db.query.invoices.findMany({
-          where: (inv, { and, gte, lte }) => {
-            const conditions = [];
-            if (input.startDate) conditions.push(gte(inv.issueDate, input.startDate));
-            if (input.endDate) conditions.push(lte(inv.issueDate, input.endDate));
-            return conditions.length > 0 ? and(...conditions) : undefined;
-          },
-        });
-
-        const totalRevenue = invoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
-
-        // Get all wallet transactions (expenses tracking)
         const transactions = await db.query.walletTransactions.findMany({
           where: (tx, { and, gte, lte }) => {
             const conditions = [];
@@ -78,57 +102,50 @@ export const financialRouter = router({
           },
         });
 
-        // Categorize expenses
-        const expenses = {
-          fuel: 0,
-          tolls: 0,
-          maintenance: 0,
-          insurance: 0,
-          driverPayouts: 0,
-          commissions: 0,
-        };
+        const totalRevenue = transactions
+          .filter((tx) => String(tx.type || "").toLowerCase() === "load_payment")
+          .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-        transactions.forEach((tx) => {
-          const amount = Number(tx.amount || 0);
-          const category = tx.category || "";
-
-          if (category.includes("fuel")) expenses.fuel += amount;
-          else if (category.includes("toll")) expenses.tolls += amount;
-          else if (category.includes("maintenance")) expenses.maintenance += amount;
-          else if (category.includes("insurance")) expenses.insurance += amount;
-          else if (category.includes("driver") || category.includes("payout"))
-            expenses.driverPayouts += amount;
-          else if (category.includes("commission")) expenses.commissions += amount;
+        const expenseTransactions = transactions.filter((tx) => {
+          const type = String(tx.type || "").toLowerCase();
+          return type !== "load_payment";
         });
 
-        const totalExpenses = Object.values(expenses).reduce((sum, val) => sum + val, 0);
+        const breakdown = categorizeExpenses(expenseTransactions);
+        const totalExpenses = getTotalExpenses(breakdown);
         const netProfit = totalRevenue - totalExpenses;
         const marginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
         return {
-          totalRevenue,
-          totalExpenses,
-          netProfit,
-          marginPercent: Math.round(marginPercent * 100) / 100,
-          breakdown: expenses,
+          totalRevenue: round2(totalRevenue),
+          totalExpenses: round2(totalExpenses),
+          netProfit: round2(netProfit),
+          marginPercent: round2(marginPercent),
+          breakdown: {
+            fuel: round2(breakdown.fuel),
+            tolls: round2(breakdown.tolls),
+            maintenance: round2(breakdown.maintenance),
+            insurance: round2(breakdown.insurance),
+            driverPayouts: round2(breakdown.driverPayouts),
+            commissions: round2(breakdown.commissions),
+          },
         };
       } catch (err) {
         console.error("[financial.getPLSummary]", err);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to calculate P&L summary",
-        });
+        return {
+          totalRevenue: 0,
+          totalExpenses: 0,
+          netProfit: 0,
+          marginPercent: 0,
+          breakdown: emptyBreakdown(),
+        };
       }
     }),
 
   /**
    * Get Profit Metrics
    *
-   * Calculates:
-   * - profitPerLoad: totalProfit / numberOfLoads
-   * - profitPerMile: totalProfit / totalMiles
-   * - profitPerDriver: totalProfit / numberOfDrivers
-   * - profitPerBroker: breakdown by broker
+   * Production-safe version with no ctx.trpc dependency.
    */
   getProfitMetrics: protectedProcedure
     .input(
@@ -137,7 +154,7 @@ export const financialRouter = router({
         endDate: z.date().optional(),
       })
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       try {
         const db = await getDb();
         if (!db) {
@@ -149,10 +166,15 @@ export const financialRouter = router({
           };
         }
 
-        // Get P&L summary
-        const plSummary = await ctx.trpc.financial.getPLSummary.query(input);
+        const transactions = await db.query.walletTransactions.findMany({
+          where: (tx, { and, gte, lte }) => {
+            const conditions = [];
+            if (input.startDate) conditions.push(gte(tx.createdAt, input.startDate));
+            if (input.endDate) conditions.push(lte(tx.createdAt, input.endDate));
+            return conditions.length > 0 ? and(...conditions) : undefined;
+          },
+        });
 
-        // Get loads with mileage
         const loads = await db.query.loads.findMany({
           where: (load, { and, gte, lte }) => {
             const conditions = [];
@@ -162,42 +184,30 @@ export const financialRouter = router({
           },
         });
 
-        const totalMiles = loads.reduce((sum, load) => sum + (Number(load.miles) || 0), 0);
-        const numberOfLoads = loads.length;
-
-        // Get unique drivers
         const drivers = await db.query.users.findMany({
           where: (user, { eq }) => eq(user.role, "driver"),
         });
 
-        // Get profit by broker
-        const invoices = await db.query.invoices.findMany();
-        const profitByBroker = invoices.reduce(
-          (acc, inv) => {
-            const broker = inv.brokerName || "Unknown";
-            const existing = acc.find((b) => b.broker === broker);
-            if (existing) {
-              existing.revenue += Number(inv.total || 0);
-            } else {
-              acc.push({
-                broker,
-                revenue: Number(inv.total || 0),
-                profit: 0, // TODO: Calculate per-broker expenses
-              });
-            }
-            return acc;
-          },
-          [] as Array<{ broker: string; revenue: number; profit: number }>
-        );
+        const totalRevenue = transactions
+          .filter((tx) => String(tx.type || "").toLowerCase() === "load_payment")
+          .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+        const expenseTransactions = transactions.filter((tx) => {
+          const type = String(tx.type || "").toLowerCase();
+          return type !== "load_payment";
+        });
+
+        const totalExpenses = getTotalExpenses(categorizeExpenses(expenseTransactions));
+        const netProfit = totalRevenue - totalExpenses;
+
+        const totalMiles = loads.reduce((sum, load) => sum + (Number(load.miles) || 0), 0);
+        const numberOfLoads = loads.length;
 
         return {
-          profitPerLoad: numberOfLoads > 0 ? plSummary.netProfit / numberOfLoads : 0,
-          profitPerMile: totalMiles > 0 ? plSummary.netProfit / totalMiles : 0,
-          profitPerDriver: drivers.length > 0 ? plSummary.netProfit / drivers.length : 0,
-          profitByBroker: profitByBroker.map((b) => ({
-            ...b,
-            profit: b.revenue * (plSummary.marginPercent / 100),
-          })),
+          profitPerLoad: numberOfLoads > 0 ? round2(netProfit / numberOfLoads) : 0,
+          profitPerMile: totalMiles > 0 ? round2(netProfit / totalMiles) : 0,
+          profitPerDriver: drivers.length > 0 ? round2(netProfit / drivers.length) : 0,
+          profitByBroker: [],
         };
       } catch (err) {
         console.error("[financial.getProfitMetrics]", err);
@@ -213,11 +223,8 @@ export const financialRouter = router({
   /**
    * Get Quote Analysis Variance
    *
-   * Compares estimated vs actual profit:
-   * - estimatedProfit: from quote_analysis
-   * - actualProfit: calculated from invoice - expenses
-   * - variance: actualProfit - estimatedProfit
-   * - variancePercent: (variance / estimatedProfit) * 100
+   * Production-safe fallback:
+   * - quoteAnalysis table disabled until schema is aligned
    */
   getQuoteVariance: protectedProcedure
     .input(
@@ -226,53 +233,14 @@ export const financialRouter = router({
         endDate: z.date().optional(),
       })
     )
-    .query(async ({ ctx, input }) => {
+    .query(async () => {
       try {
-        const db = await getDb();
-        if (!db) {
-          return {
-            totalEstimatedProfit: 0,
-            totalActualProfit: 0,
-            variance: 0,
-            variancePercent: 0,
-            byLoad: [],
-          };
-        }
-
-        // Get quote analyses
-        const analyses = await db.query.quoteAnalysis.findMany({
-          where: (qa, { and, gte, lte }) => {
-            const conditions = [];
-            if (input.startDate) conditions.push(gte(qa.createdAt, input.startDate));
-            if (input.endDate) conditions.push(lte(qa.createdAt, input.endDate));
-            return conditions.length > 0 ? and(...conditions) : undefined;
-          },
-        });
-
-        const totalEstimatedProfit = analyses.reduce(
-          (sum, qa) => sum + (Number(qa.estimatedProfit) || 0),
-          0
-        );
-
-        // Get actual profit from invoices
-        const plSummary = await ctx.trpc.financial.getPLSummary.query(input);
-        const totalActualProfit = plSummary.netProfit;
-
-        const variance = totalActualProfit - totalEstimatedProfit;
-        const variancePercent =
-          totalEstimatedProfit > 0 ? (variance / totalEstimatedProfit) * 100 : 0;
-
         return {
-          totalEstimatedProfit,
-          totalActualProfit,
-          variance,
-          variancePercent: Math.round(variancePercent * 100) / 100,
-          byLoad: analyses.map((qa) => ({
-            loadId: qa.loadId,
-            estimatedProfit: qa.estimatedProfit,
-            actualProfit: 0, // TODO: Calculate per-load actual profit
-            variance: 0,
-          })),
+          totalEstimatedProfit: 0,
+          totalActualProfit: 0,
+          variance: 0,
+          variancePercent: 0,
+          byLoad: [],
         };
       } catch (err) {
         console.error("[financial.getQuoteVariance]", err);
@@ -288,17 +256,9 @@ export const financialRouter = router({
 
   /**
    * Get Allocation Settings
-   *
-   * Returns configured allocation percentages:
-   * - ownerDraw%
-   * - reserveFund%
-   * - reinvestment%
-   * - operatingCash%
    */
-  getAllocationSettings: protectedProcedure.query(async ({ ctx }) => {
+  getAllocationSettings: protectedProcedure.query(async () => {
     try {
-      // TODO: Load from business_config or allocation_settings table
-      // For now, return default allocation
       return {
         ownerDrawPercent: 40,
         reserveFundPercent: 20,
@@ -319,11 +279,7 @@ export const financialRouter = router({
   /**
    * Calculate Allocations
    *
-   * Based on netProfit and allocation settings, calculates:
-   * - ownerDraw: netProfit * ownerDrawPercent
-   * - reserveFund: netProfit * reserveFundPercent
-   * - reinvestment: netProfit * reinvestmentPercent
-   * - operatingCash: netProfit * operatingCashPercent
+   * No ctx.trpc dependency.
    */
   calculateAllocations: protectedProcedure
     .input(
@@ -332,19 +288,53 @@ export const financialRouter = router({
         endDate: z.date().optional(),
       })
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       try {
-        const plSummary = await ctx.trpc.financial.getPLSummary.query(input);
-        const settings = await ctx.trpc.financial.getAllocationSettings.query();
+        const db = await getDb();
+        if (!db) {
+          return {
+            netProfit: 0,
+            ownerDraw: 0,
+            reserveFund: 0,
+            reinvestment: 0,
+            operatingCash: 0,
+          };
+        }
 
-        const netProfit = plSummary.netProfit;
+        const transactions = await db.query.walletTransactions.findMany({
+          where: (tx, { and, gte, lte }) => {
+            const conditions = [];
+            if (input.startDate) conditions.push(gte(tx.createdAt, input.startDate));
+            if (input.endDate) conditions.push(lte(tx.createdAt, input.endDate));
+            return conditions.length > 0 ? and(...conditions) : undefined;
+          },
+        });
+
+        const totalRevenue = transactions
+          .filter((tx) => String(tx.type || "").toLowerCase() === "load_payment")
+          .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+        const expenseTransactions = transactions.filter((tx) => {
+          const type = String(tx.type || "").toLowerCase();
+          return type !== "load_payment";
+        });
+
+        const totalExpenses = getTotalExpenses(categorizeExpenses(expenseTransactions));
+        const netProfit = totalRevenue - totalExpenses;
+
+        const settings = {
+          ownerDrawPercent: 40,
+          reserveFundPercent: 20,
+          reinvestmentPercent: 20,
+          operatingCashPercent: 20,
+        };
 
         return {
-          netProfit,
-          ownerDraw: (netProfit * settings.ownerDrawPercent) / 100,
-          reserveFund: (netProfit * settings.reserveFundPercent) / 100,
-          reinvestment: (netProfit * settings.reinvestmentPercent) / 100,
-          operatingCash: (netProfit * settings.operatingCashPercent) / 100,
+          netProfit: round2(netProfit),
+          ownerDraw: round2((netProfit * settings.ownerDrawPercent) / 100),
+          reserveFund: round2((netProfit * settings.reserveFundPercent) / 100),
+          reinvestment: round2((netProfit * settings.reinvestmentPercent) / 100),
+          operatingCash: round2((netProfit * settings.operatingCashPercent) / 100),
         };
       } catch (err) {
         console.error("[financial.calculateAllocations]", err);
@@ -361,12 +351,9 @@ export const financialRouter = router({
   /**
    * Get Cash Flow Summary
    *
-   * Tracks:
-   * - cashIn: paid invoices
-   * - cashPending: unpaid invoices
-   * - walletBalance: current wallet balance
-   * - pendingWithdrawals: requested but not processed
-   * - netCashPosition: cashIn + walletBalance - pendingWithdrawals
+   * Production-safe version:
+   * - cashIn approximated from walletTransactions load_payment
+   * - cashPending disabled until invoices schema is aligned
    */
   getCashFlow: protectedProcedure
     .input(
@@ -388,24 +375,26 @@ export const financialRouter = router({
           };
         }
 
-        // Get paid invoices (cash in)
-        const invoices = await db.query.invoices.findMany();
-        const cashIn = invoices
-          .filter((inv) => inv.status === "paid")
-          .reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+        const transactions = await db.query.walletTransactions.findMany({
+          where: (tx, { and, gte, lte }) => {
+            const conditions = [];
+            if (input.startDate) conditions.push(gte(tx.createdAt, input.startDate));
+            if (input.endDate) conditions.push(lte(tx.createdAt, input.endDate));
+            return conditions.length > 0 ? and(...conditions) : undefined;
+          },
+        });
 
-        // Get unpaid invoices (cash pending)
-        const cashPending = invoices
-          .filter((inv) => inv.status !== "paid")
-          .reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+        const cashIn = transactions
+          .filter((tx) => String(tx.type || "").toLowerCase() === "load_payment")
+          .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
-        // Get wallet balance
+        const cashPending = 0;
+
         const wallet = await db.query.wallets.findFirst({
           where: (w, { eq }) => eq(w.driverId, ctx.user.id),
         });
         const walletBalance = wallet ? Number(wallet.availableBalance || 0) : 0;
 
-        // Get pending withdrawals
         const withdrawals = await db.query.withdrawals.findMany({
           where: (w, { eq }) => eq(w.status, "pending"),
         });
@@ -417,11 +406,11 @@ export const financialRouter = router({
         const netCashPosition = cashIn + walletBalance - pendingWithdrawals;
 
         return {
-          cashIn,
-          cashPending,
-          walletBalance,
-          pendingWithdrawals,
-          netCashPosition,
+          cashIn: round2(cashIn),
+          cashPending: round2(cashPending),
+          walletBalance: round2(walletBalance),
+          pendingWithdrawals: round2(pendingWithdrawals),
+          netCashPosition: round2(netCashPosition),
         };
       } catch (err) {
         console.error("[financial.getCashFlow]", err);
@@ -438,12 +427,7 @@ export const financialRouter = router({
   /**
    * Get Financial Dashboard Summary
    *
-   * Combines all financial data for dashboard view:
-   * - P&L summary
-   * - Key metrics
-   * - Quote variance
-   * - Allocations
-   * - Cash flow
+   * No ctx.trpc self-calls.
    */
   getDashboardSummary: protectedProcedure
     .input(
@@ -454,27 +438,182 @@ export const financialRouter = router({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const [plSummary, metrics, variance, allocations, cashFlow] = await Promise.all([
-          ctx.trpc.financial.getPLSummary.query(input),
-          ctx.trpc.financial.getProfitMetrics.query(input),
-          ctx.trpc.financial.getQuoteVariance.query(input),
-          ctx.trpc.financial.calculateAllocations.query(input),
-          ctx.trpc.financial.getCashFlow.query(input),
-        ]);
+        const db = await getDb();
+        if (!db) {
+          return {
+            plSummary: {
+              totalRevenue: 0,
+              totalExpenses: 0,
+              netProfit: 0,
+              marginPercent: 0,
+              breakdown: emptyBreakdown(),
+            },
+            metrics: {
+              profitPerLoad: 0,
+              profitPerMile: 0,
+              profitPerDriver: 0,
+              profitByBroker: [],
+            },
+            variance: {
+              totalEstimatedProfit: 0,
+              totalActualProfit: 0,
+              variance: 0,
+              variancePercent: 0,
+              byLoad: [],
+            },
+            allocations: {
+              netProfit: 0,
+              ownerDraw: 0,
+              reserveFund: 0,
+              reinvestment: 0,
+              operatingCash: 0,
+            },
+            cashFlow: {
+              cashIn: 0,
+              cashPending: 0,
+              walletBalance: 0,
+              pendingWithdrawals: 0,
+              netCashPosition: 0,
+            },
+          };
+        }
+
+        const transactions = await db.query.walletTransactions.findMany({
+          where: (tx, { and, gte, lte }) => {
+            const conditions = [];
+            if (input.startDate) conditions.push(gte(tx.createdAt, input.startDate));
+            if (input.endDate) conditions.push(lte(tx.createdAt, input.endDate));
+            return conditions.length > 0 ? and(...conditions) : undefined;
+          },
+        });
+
+        const loads = await db.query.loads.findMany({
+          where: (load, { and, gte, lte }) => {
+            const conditions = [];
+            if (input.startDate) conditions.push(gte(load.createdAt, input.startDate));
+            if (input.endDate) conditions.push(lte(load.createdAt, input.endDate));
+            return conditions.length > 0 ? and(...conditions) : undefined;
+          },
+        });
+
+        const drivers = await db.query.users.findMany({
+          where: (user, { eq }) => eq(user.role, "driver"),
+        });
+
+        const wallet = await db.query.wallets.findFirst({
+          where: (w, { eq }) => eq(w.driverId, ctx.user.id),
+        });
+
+        const withdrawals = await db.query.withdrawals.findMany({
+          where: (w, { eq }) => eq(w.status, "pending"),
+        });
+
+        const totalRevenue = transactions
+          .filter((tx) => String(tx.type || "").toLowerCase() === "load_payment")
+          .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
+        const expenseTransactions = transactions.filter((tx) => {
+          const type = String(tx.type || "").toLowerCase();
+          return type !== "load_payment";
+        });
+
+        const breakdown = categorizeExpenses(expenseTransactions);
+        const totalExpenses = getTotalExpenses(breakdown);
+        const netProfit = totalRevenue - totalExpenses;
+        const marginPercent = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+
+        const totalMiles = loads.reduce((sum, load) => sum + (Number(load.miles) || 0), 0);
+        const numberOfLoads = loads.length;
+        const walletBalance = wallet ? Number(wallet.availableBalance || 0) : 0;
+        const pendingWithdrawals = withdrawals.reduce(
+          (sum, w) => sum + Number(w.amount || 0),
+          0
+        );
+        const cashIn = totalRevenue;
+        const cashPending = 0;
+        const netCashPosition = cashIn + walletBalance - pendingWithdrawals;
 
         return {
-          plSummary,
-          metrics,
-          variance,
-          allocations,
-          cashFlow,
+          plSummary: {
+            totalRevenue: round2(totalRevenue),
+            totalExpenses: round2(totalExpenses),
+            netProfit: round2(netProfit),
+            marginPercent: round2(marginPercent),
+            breakdown: {
+              fuel: round2(breakdown.fuel),
+              tolls: round2(breakdown.tolls),
+              maintenance: round2(breakdown.maintenance),
+              insurance: round2(breakdown.insurance),
+              driverPayouts: round2(breakdown.driverPayouts),
+              commissions: round2(breakdown.commissions),
+            },
+          },
+          metrics: {
+            profitPerLoad: numberOfLoads > 0 ? round2(netProfit / numberOfLoads) : 0,
+            profitPerMile: totalMiles > 0 ? round2(netProfit / totalMiles) : 0,
+            profitPerDriver: drivers.length > 0 ? round2(netProfit / drivers.length) : 0,
+            profitByBroker: [],
+          },
+          variance: {
+            totalEstimatedProfit: 0,
+            totalActualProfit: round2(netProfit),
+            variance: 0,
+            variancePercent: 0,
+            byLoad: [],
+          },
+          allocations: {
+            netProfit: round2(netProfit),
+            ownerDraw: round2(netProfit * 0.4),
+            reserveFund: round2(netProfit * 0.2),
+            reinvestment: round2(netProfit * 0.2),
+            operatingCash: round2(netProfit * 0.2),
+          },
+          cashFlow: {
+            cashIn: round2(cashIn),
+            cashPending: round2(cashPending),
+            walletBalance: round2(walletBalance),
+            pendingWithdrawals: round2(pendingWithdrawals),
+            netCashPosition: round2(netCashPosition),
+          },
         };
       } catch (err) {
         console.error("[financial.getDashboardSummary]", err);
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to get financial dashboard summary",
-        });
+        return {
+          plSummary: {
+            totalRevenue: 0,
+            totalExpenses: 0,
+            netProfit: 0,
+            marginPercent: 0,
+            breakdown: emptyBreakdown(),
+          },
+          metrics: {
+            profitPerLoad: 0,
+            profitPerMile: 0,
+            profitPerDriver: 0,
+            profitByBroker: [],
+          },
+          variance: {
+            totalEstimatedProfit: 0,
+            totalActualProfit: 0,
+            variance: 0,
+            variancePercent: 0,
+            byLoad: [],
+          },
+          allocations: {
+            netProfit: 0,
+            ownerDraw: 0,
+            reserveFund: 0,
+            reinvestment: 0,
+            operatingCash: 0,
+          },
+          cashFlow: {
+            cashIn: 0,
+            cashPending: 0,
+            walletBalance: 0,
+            pendingWithdrawals: 0,
+            netCashPosition: 0,
+          },
+        };
       }
     }),
 });
