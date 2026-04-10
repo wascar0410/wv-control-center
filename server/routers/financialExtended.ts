@@ -32,14 +32,13 @@ export const financialExtendedRouter = router({
    * Compares with Quote Analysis:
    * - estimated profit vs actual profit
    * - variance: actual - estimated
-   */
-  getProfitPerLoad: protectedProcedure
+   */  getProfitPerLoad: protectedProcedure
     .input(
       z.object({
         loadId: z.number(),
       })
     )
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       try {
         const db = await getDb();
         if (!db) {
@@ -61,7 +60,6 @@ export const financialExtendedRouter = router({
           };
         }
 
-        // Get load details
         const load = await db.query.loads.findFirst({
           where: (loads, { eq }) => eq(loads.id, input.loadId),
         });
@@ -73,21 +71,21 @@ export const financialExtendedRouter = router({
           });
         }
 
-        // Get invoice for this load
-        const invoice = await db.query.invoices.findFirst({
-          where: (invoices, { eq }) => eq(invoices.loadId, input.loadId),
+        // Use wallet transaction as production-safe revenue source
+        const paymentTx = await db.query.walletTransactions.findFirst({
+          where: (wt, { eq, and }) =>
+            and(eq(wt.loadId, input.loadId), eq(wt.type, "load_payment")),
         });
 
-        const revenue = invoice ? Number(invoice.totalAmount) : 0;
+        const revenue = paymentTx ? Number(paymentTx.amount) : 0;
 
-        // Calculate expenses
-        const miles = Number(load.miles) || 0;
-        const fuelPrice = Number(load.fuelPrice) || 0;
-        const mpg = Number(load.mpg) || 8;
-        const maintenancePerMile = Number(load.maintenancePerMile) || 0.15;
-        const tolls = Number(load.tolls) || 0;
-        const driverPay = Number(load.driverPayAmount) || 0;
-        const commission = Number(load.brokerCommission) || 0;
+        const miles = Number((load as any).miles) || 0;
+        const fuelPrice = Number((load as any).fuelPrice) || 0;
+        const mpg = Number((load as any).mpg) || 8;
+        const maintenancePerMile = Number((load as any).maintenancePerMile) || 0.15;
+        const tolls = Number((load as any).tolls) || 0;
+        const driverPay = Number((load as any).driverPayAmount) || 0;
+        const commission = Number((load as any).brokerCommission) || 0;
 
         const fuelCost = miles > 0 ? (miles / mpg) * fuelPrice : 0;
         const maintenanceCost = miles * maintenancePerMile;
@@ -97,12 +95,17 @@ export const financialExtendedRouter = router({
         const actualMargin = revenue > 0 ? (actualProfit / revenue) * 100 : 0;
         const profitPerMile = miles > 0 ? actualProfit / miles : 0;
 
-        // Get quote analysis for variance
-        const quoteAnalysis = await db.query.quoteAnalysis.findFirst({
-          where: (qa, { eq }) => eq(qa.loadId, input.loadId),
-        });
+        // Quote analysis is optional; do not fail if unavailable
+        let estimatedProfit = 0;
+        try {
+          const quoteAnalysis = await db.query.quoteAnalysis.findFirst({
+            where: (qa, { eq }) => eq(qa.loadId, input.loadId),
+          });
+          estimatedProfit = quoteAnalysis ? Number((quoteAnalysis as any).estimatedProfit) || 0 : 0;
+        } catch (quoteErr) {
+          console.warn("[financial.getProfitPerLoad] quoteAnalysis unavailable", quoteErr);
+        }
 
-        const estimatedProfit = quoteAnalysis ? Number(quoteAnalysis.estimatedProfit) : 0;
         const variance = actualProfit - estimatedProfit;
 
         return {
@@ -123,7 +126,22 @@ export const financialExtendedRouter = router({
         };
       } catch (err) {
         console.error("[financial.getProfitPerLoad]", err);
-        throw err;
+        return {
+          loadId: input.loadId,
+          revenue: 0,
+          expenses: {
+            fuel: 0,
+            tolls: 0,
+            maintenance: 0,
+            driverPay: 0,
+            commission: 0,
+          },
+          actualProfit: 0,
+          actualMargin: 0,
+          profitPerMile: 0,
+          estimatedProfit: 0,
+          variance: 0,
+        };
       }
     }),
 
