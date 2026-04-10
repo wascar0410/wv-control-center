@@ -98,7 +98,13 @@ export const settlementRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        assertCanManageSettlements(ctx.user.role);
+        // Validate user role
+        if (!canManageSettlements(ctx.user.role)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Only admins and owners can create settlements",
+          });
+        }
 
         return await createSettlement({
           settlementPeriod: input.settlementPeriod,
@@ -110,7 +116,12 @@ export const settlementRouter = router({
           partner2Share: input.partner2Share,
         });
       } catch (err) {
-        console.error("[settlement.create]", err);
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error("[settlement.create] Error:", {
+          message: errorMsg,
+          userRole: ctx.user.role,
+          period: input.settlementPeriod,
+        });
 
         if (err instanceof TRPCError) {
           throw err;
