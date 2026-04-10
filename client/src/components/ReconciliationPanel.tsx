@@ -1,14 +1,39 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import {
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Search,
+  Filter,
+} from "lucide-react";
+
+type ReconciliationStatus = "OK" | "Missing" | "Mismatch" | string;
+
+type ReconciliationRow = {
+  loadId: number | string;
+  expectedAmount: number;
+  actualAmount: number;
+  difference: number;
+  variance: number;
+  status: ReconciliationStatus;
+};
 
 export function ReconciliationPanel() {
-  const { data: reconciliation, isLoading } = trpc.financialExtended.getReconciliationData.useQuery(undefined, {
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "OK" | "Missing" | "Mismatch">("ALL");
+  const [showOnlyDiscrepancies, setShowOnlyDiscrepancies] = useState(false);
+
+  const { data: reconciliation, isLoading } =
+    trpc.financialExtended.getReconciliationData.useQuery(undefined, {
+      refetchInterval: 30000,
+    });
+
+  const rows: ReconciliationRow[] = reconciliation?.reconciliations ?? [];
 
   const summary = useMemo(() => {
     if (!reconciliation) {
@@ -36,6 +61,36 @@ export function ReconciliationPanel() {
       matchRate,
     };
   }, [reconciliation]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter((rec) => {
+      const matchesSearch =
+        search.trim() === "" ||
+        String(rec.loadId).toLowerCase().includes(search.trim().toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "ALL" ? true : rec.status === statusFilter;
+
+      const matchesDiscrepancyToggle = showOnlyDiscrepancies
+        ? rec.status !== "OK"
+        : true;
+
+      return matchesSearch && matchesStatus && matchesDiscrepancyToggle;
+    });
+  }, [rows, search, statusFilter, showOnlyDiscrepancies]);
+
+  const counts = useMemo(() => {
+    return rows.reduce(
+      (acc, row) => {
+        if (row.status === "OK") acc.ok += 1;
+        else if (row.status === "Missing") acc.missing += 1;
+        else if (row.status === "Mismatch") acc.mismatch += 1;
+        else acc.other += 1;
+        return acc;
+      },
+      { ok: 0, missing: 0, mismatch: 0, other: 0 }
+    );
+  }, [rows]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -72,20 +127,36 @@ export function ReconciliationPanel() {
     }).format(value);
   };
 
+  const formatVariance = (value: number) => {
+    return `${value.toFixed(2)}%`;
+  };
+
+  const getDifferenceClassName = (value: number) => {
+    if (value > 0) return "text-green-600 dark:text-green-400";
+    if (value < 0) return "text-red-600 dark:text-red-400";
+    return "text-muted-foreground";
+  };
+
+  const getVarianceClassName = (status: string) => {
+    if (status === "OK") return "text-green-600 dark:text-green-400";
+    if (status === "Missing") return "text-red-600 dark:text-red-400";
+    if (status === "Mismatch") return "text-yellow-600 dark:text-yellow-400";
+    return "text-muted-foreground";
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-72 w-full" />
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:gap-3">
-        {/* Total Expected */}
         <Card>
           <CardContent className="p-3 md:p-4">
             <p className="text-xs font-medium text-muted-foreground">Total Expected</p>
@@ -95,7 +166,6 @@ export function ReconciliationPanel() {
           </CardContent>
         </Card>
 
-        {/* Total Actual */}
         <Card>
           <CardContent className="p-3 md:p-4">
             <p className="text-xs font-medium text-muted-foreground">Total Actual</p>
@@ -105,23 +175,19 @@ export function ReconciliationPanel() {
           </CardContent>
         </Card>
 
-        {/* Difference */}
         <Card>
           <CardContent className="p-3 md:p-4">
             <p className="text-xs font-medium text-muted-foreground">Difference</p>
             <p
-              className={`text-lg md:text-xl font-bold ${
-                summary.totalDifference >= 0
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
-              }`}
+              className={`text-lg md:text-xl font-bold ${getDifferenceClassName(
+                summary.totalDifference
+              )}`}
             >
               {formatCurrency(summary.totalDifference)}
             </p>
           </CardContent>
         </Card>
 
-        {/* Match Rate */}
         <Card>
           <CardContent className="p-3 md:p-4">
             <p className="text-xs font-medium text-muted-foreground">Match Rate</p>
@@ -140,10 +206,36 @@ export function ReconciliationPanel() {
         </Card>
       </div>
 
-      {/* Discrepancies Table */}
-      {reconciliation && reconciliation.reconciliations.length > 0 ? (
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         <Card>
-          <CardHeader>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">OK</p>
+            <p className="text-xl font-bold">{counts.ok}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Missing</p>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{counts.missing}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Mismatch</p>
+            <p className="text-xl font-bold text-yellow-600 dark:text-yellow-400">{counts.mismatch}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Filtered Rows</p>
+            <p className="text-xl font-bold">{filteredRows.length}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <CardTitle className="text-base">
               Reconciliation Details
               {summary.discrepancies > 0 && (
@@ -152,51 +244,123 @@ export function ReconciliationPanel() {
                 </Badge>
               )}
             </CardTitle>
-          </CardHeader>
-          <CardContent>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className="flex items-center gap-1">
+                <Filter className="h-3 w-3" />
+                {rows.length} total rows
+              </Badge>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by Load ID"
+                className="pl-9"
+              />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as "ALL" | "OK" | "Missing" | "Mismatch")
+              }
+              className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+            >
+              <option value="ALL">All statuses</option>
+              <option value="OK">OK</option>
+              <option value="Missing">Missing</option>
+              <option value="Mismatch">Mismatch</option>
+            </select>
+
+            <label className="flex h-10 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm">
+              <input
+                type="checkbox"
+                checked={showOnlyDiscrepancies}
+                onChange={(e) => setShowOnlyDiscrepancies(e.target.checked)}
+              />
+              Show only discrepancies
+            </label>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {rows.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+              <p className="font-medium">No reconciliation data available</p>
+              <p className="mt-1 text-sm">
+                Once invoices and wallet transactions are available, results will appear here.
+              </p>
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+              <p className="font-medium">No rows match the current filters</p>
+              <p className="mt-1 text-sm">
+                Try clearing the search or changing the selected status.
+              </p>
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs md:text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="px-2 py-2 text-left font-semibold">Load ID</th>
-                    <th className="px-2 py-2 text-right font-semibold">Expected</th>
-                    <th className="px-2 py-2 text-right font-semibold">Actual</th>
-                    <th className="px-2 py-2 text-right font-semibold">Difference</th>
-                    <th className="px-2 py-2 text-center font-semibold">Variance</th>
-                    <th className="px-2 py-2 text-center font-semibold">Status</th>
+                    <th className="px-2 py-3 text-left font-semibold">Load ID</th>
+                    <th className="px-2 py-3 text-right font-semibold">Expected</th>
+                    <th className="px-2 py-3 text-right font-semibold">Actual</th>
+                    <th className="px-2 py-3 text-right font-semibold">Difference</th>
+                    <th className="px-2 py-3 text-center font-semibold">Variance</th>
+                    <th className="px-2 py-3 text-center font-semibold">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {reconciliation.reconciliations.map((rec, idx) => (
-                    <tr key={idx} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50">
-                      <td className="px-2 py-2 font-medium">#{rec.loadId}</td>
-                      <td className="px-2 py-2 text-right">{formatCurrency(rec.expectedAmount)}</td>
-                      <td className="px-2 py-2 text-right">{formatCurrency(rec.actualAmount)}</td>
+                  {filteredRows.map((rec, idx) => (
+                    <tr
+                      key={`${rec.loadId}-${idx}`}
+                      className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50"
+                    >
+                      <td className="px-2 py-3 font-medium">#{rec.loadId}</td>
+
+                      <td className="px-2 py-3 text-right">
+                        {formatCurrency(rec.expectedAmount)}
+                      </td>
+
+                      <td className="px-2 py-3 text-right">
+                        {formatCurrency(rec.actualAmount)}
+                      </td>
+
                       <td
-                        className={`px-2 py-2 text-right font-semibold ${
-                          rec.difference >= 0
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-600 dark:text-red-400"
-                        }`}
+                        className={`px-2 py-3 text-right font-semibold ${getDifferenceClassName(
+                          rec.difference
+                        )}`}
                       >
                         {formatCurrency(rec.difference)}
                       </td>
-                      <td className="px-2 py-2 text-center">{rec.variance}%</td>
-                      <td className="px-2 py-2 text-center">{getStatusBadge(rec.status)}</td>
+
+                      <td
+                        className={`px-2 py-3 text-center font-medium ${getVarianceClassName(
+                          rec.status
+                        )}`}
+                      >
+                        {formatVariance(rec.variance)}
+                      </td>
+
+                      <td className="px-2 py-3 text-center">
+                        <div className="flex justify-center">
+                          {getStatusBadge(rec.status)}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            <p>No reconciliation data available</p>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
