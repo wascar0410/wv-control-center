@@ -2831,28 +2831,42 @@ export async function createSettlement(data: {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [settlement] = await db
-    .insert(settlements)
-    .values({
-      settlementPeriod: data.settlementPeriod,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      partner1Id: data.partner1Id,
-      partner2Id: data.partner2Id,
-      partner1Share: String(data.partner1Share || "50.00"),
-      partner2Share: String(data.partner2Share || "50.00"),
-      status: "draft",
-      totalLoadsCompleted: 0,
-      totalIncome: "0.00",
-      totalExpenses: "0.00",
-      totalProfit: "0.00",
-      createdAt: new Date(),
-    })
-    .returning();
+  const result = await db.insert(settlements).values({
+    settlementPeriod: data.settlementPeriod,
+    startDate: data.startDate,
+    endDate: data.endDate,
+    partner1Id: data.partner1Id,
+    partner2Id: data.partner2Id,
+    partner1Share: String(data.partner1Share || "50.00"),
+    partner2Share: String(data.partner2Share || "50.00"),
+    status: "draft",
+    totalLoadsCompleted: 0,
+    totalIncome: "0.00",
+    totalExpenses: "0.00",
+    totalProfit: "0.00",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 
-  return settlement;
+  const insertId =
+    (result as any)?.[0]?.insertId ??
+    (result as any)?.insertId ??
+    null;
+
+  if (!insertId) {
+    throw new Error("Failed to create settlement record");
+  }
+
+  const created = await db.query.settlements.findFirst({
+    where: eq(settlements.id, Number(insertId)),
+  });
+
+  if (!created) {
+    throw new Error("Settlement was inserted but could not be reloaded");
+  }
+
+  return created;
 }
-
 /**
  * Get settlement by ID with loads
  */
