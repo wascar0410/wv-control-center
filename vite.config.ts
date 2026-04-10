@@ -201,9 +201,9 @@ export default defineConfig({
       "127.0.0.1",
     ],
     // Configure HMR to use the public URL
-    hmr: {
+    hmr: process.env.NODE_ENV === "production" ? false : {
       protocol: "wss",
-      host: process.env.VITE_HMR_HOST || "localhost",
+      host: process.env.VITE_HMR_HOST || undefined,
       port: 443,
     },
     fs: {
