@@ -70,7 +70,8 @@ export default function CreateSettlementModal({
       const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
       const endDate = new Date(parseInt(year), parseInt(month), 0);
 
-      await createSettlementMutation.mutateAsync({
+      // Log exact payload before sending
+      const payload = {
         settlementPeriod,
         startDate,
         endDate,
@@ -78,7 +79,10 @@ export default function CreateSettlementModal({
         partner2Id: parseInt(partner2Id),
         partner1Share: p1Share,
         partner2Share: p2Share,
-      });
+      };
+      console.log("[CreateSettlementModal] Payload before mutateAsync:", payload);
+
+      await createSettlementMutation.mutateAsync(payload);
 
       toast({
         title: "Éxito",
