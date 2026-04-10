@@ -2831,41 +2831,38 @@ export async function createSettlement(data: {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  // Use raw SQL to avoid Drizzle query generation issues
+  // Use raw SQL template to avoid Drizzle query generation issues
   const partner1Share = String(data.partner1Share ?? 50);
   const partner2Share = String(data.partner2Share ?? 50);
   const now = new Date();
 
-  const query = `
-    INSERT INTO settlements (
-      settlementPeriod, startDate, endDate, totalLoadsCompleted,
-      totalIncome, totalExpenses, totalProfit,
-      partner1Id, partner1Share, partner1Amount,
-      partner2Id, partner2Share, partner2Amount,
-      status, createdAt, updatedAt
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
   const result = await db.execute(
-    sql.raw(query),
-    [
-      data.settlementPeriod,
-      data.startDate,
-      data.endDate,
-      0,
-      "0.00",
-      "0.00",
-      "0.00",
-      data.partner1Id,
-      partner1Share,
-      "0.00",
-      data.partner2Id,
-      partner2Share,
-      "0.00",
-      "draft",
-      now,
-      now,
-    ]
+    sql`
+      INSERT INTO settlements (
+        settlementPeriod, startDate, endDate, totalLoadsCompleted,
+        totalIncome, totalExpenses, totalProfit,
+        partner1Id, partner1Share, partner1Amount,
+        partner2Id, partner2Share, partner2Amount,
+        status, createdAt, updatedAt
+      ) VALUES (
+        ${data.settlementPeriod},
+        ${data.startDate},
+        ${data.endDate},
+        ${0},
+        ${'0.00'},
+        ${'0.00'},
+        ${'0.00'},
+        ${data.partner1Id},
+        ${partner1Share},
+        ${'0.00'},
+        ${data.partner2Id},
+        ${partner2Share},
+        ${'0.00'},
+        ${'draft'},
+        ${now},
+        ${now}
+      )
+    `
   );
 
   const insertId = (result as any)?.[0]?.insertId ?? (result as any)?.insertId ?? null;
