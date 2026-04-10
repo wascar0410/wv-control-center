@@ -65,7 +65,7 @@ function formatCurrency(value: number | string | null | undefined) {
 }
 
 function ProfitMarginCell({ loadId, onProfitDataChange }: { loadId: number; onProfitDataChange?: (data: any) => void }) {
-  const { data: profitData } = trpc.financial.getProfitPerLoad.useQuery(
+  const { data: profitData } = trpc.financialExtended.getProfitPerLoad.useQuery(
     { loadId },
     { retry: false }
   );
