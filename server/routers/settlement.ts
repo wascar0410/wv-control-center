@@ -99,7 +99,6 @@ export const settlementRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        // Validate user role
         if (!canManageSettlements(ctx.user.role)) {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -107,7 +106,6 @@ export const settlementRouter = router({
           });
         }
 
-        // Log the exact payload before creating settlement
         console.log("[settlement.create] Payload before insert:", {
           settlementPeriod: input.settlementPeriod,
           startDate: input.startDate,
@@ -135,9 +133,7 @@ export const settlementRouter = router({
           period: input.settlementPeriod,
         });
 
-        if (err instanceof TRPCError) {
-          throw err;
-        }
+        if (err instanceof TRPCError) throw err;
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -154,7 +150,6 @@ export const settlementRouter = router({
     .query(async ({ ctx, input }) => {
       try {
         assertCanManageSettlements(ctx.user.role);
-
         const result = await getSettlementWithLoads(input.id);
         return result ?? null;
       } catch (err) {
@@ -203,9 +198,7 @@ export const settlementRouter = router({
       } catch (err) {
         console.error("[settlement.addLoad]", err);
 
-        if (err instanceof TRPCError) {
-          throw err;
-        }
+        if (err instanceof TRPCError) throw err;
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -226,9 +219,7 @@ export const settlementRouter = router({
       } catch (err) {
         console.error("[settlement.calculate]", err);
 
-        if (err instanceof TRPCError) {
-          throw err;
-        }
+        if (err instanceof TRPCError) throw err;
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -249,9 +240,7 @@ export const settlementRouter = router({
       } catch (err) {
         console.error("[settlement.approve]", err);
 
-        if (err instanceof TRPCError) {
-          throw err;
-        }
+        if (err instanceof TRPCError) throw err;
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -261,7 +250,7 @@ export const settlementRouter = router({
     }),
 
   /**
-   * Process settlement (distribute funds)
+   * Process settlement
    */
   process: protectedProcedure
     .input(z.object({ id: positiveIdSchema }))
@@ -272,9 +261,7 @@ export const settlementRouter = router({
       } catch (err) {
         console.error("[settlement.process]", err);
 
-        if (err instanceof TRPCError) {
-          throw err;
-        }
+        if (err instanceof TRPCError) throw err;
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -295,13 +282,32 @@ export const settlementRouter = router({
       } catch (err) {
         console.error("[settlement.complete]", err);
 
-        if (err instanceof TRPCError) {
-          throw err;
-        }
+        if (err instanceof TRPCError) throw err;
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to complete settlement",
+        });
+      }
+    }),
+
+  /**
+   * Delete draft settlement
+   */
+  delete: protectedProcedure
+    .input(z.object({ id: positiveIdSchema }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        assertCanManageSettlements(ctx.user.role);
+        return await deleteSettlement(input.id);
+      } catch (err) {
+        console.error("[settlement.delete]", err);
+
+        if (err instanceof TRPCError) throw err;
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to delete settlement",
         });
       }
     }),
@@ -314,7 +320,6 @@ export const settlementRouter = router({
     .query(async ({ ctx, input }) => {
       try {
         assertCanManageSettlements(ctx.user.role);
-
         const result = await getAllSettlements(input.limit, input.offset);
         return Array.isArray(result) ? result : [];
       } catch (err) {
