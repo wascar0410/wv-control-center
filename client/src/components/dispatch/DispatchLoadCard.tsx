@@ -108,7 +108,7 @@ export default function DispatchLoadCard({
       <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
         <div className="bg-secondary/50 rounded p-2">
           <div className="text-muted-foreground">Rate</div>
-          <div className="font-semibold">{formatRate(snapshot.ratePerMile)}</div>
+          <span className="font-semibold">${Number(load.price || 0).toFixed(2)}</span>
         </div>
         <div className="bg-secondary/50 rounded p-2">
           <div className="text-muted-foreground">Weight</div>
