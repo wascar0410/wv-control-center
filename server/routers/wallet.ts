@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
 import { wallets, bankAccounts } from "../../drizzle/schema";
 import {
@@ -18,8 +19,8 @@ import {
 /**
  * Helpers
  */
-function toNumber(value: any): number {
-  const n = typeof value === "number" ? value : parseFloat(value);
+function toNumber(value: unknown): number {
+  const n = typeof value === "number" ? value : parseFloat(String(value ?? 0));
   return Number.isFinite(n) ? n : 0;
 }
 
@@ -35,6 +36,15 @@ function safeWallet(wallet: any) {
     minimumWithdrawalAmount: toNumber(wallet.minimumWithdrawalAmount),
     withdrawalFeePercent: toNumber(wallet.withdrawalFeePercent),
   };
+}
+
+function ensureAdminOrOwner(role?: string) {
+  if (role !== "admin" && role !== "owner") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Unauthorized",
+    });
+  }
 }
 
 export const walletRouter = router({
@@ -125,94 +135,88 @@ export const walletRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         let walletRaw = await getWalletByDriverId(ctx.user.id);
-        
-        // Auto-create wallet if not exists
+
         if (!walletRaw) {
-          const db = await getDb();
-          if (!db) throw new Error("Database connection failed");
-          
-          const result = await db.insert(wallets).values({
-            driverId: ctx.user.id,
-            totalEarnings: 0,
-            availableBalance: 0,
-            pendingBalance: 0,
-            blockedBalance: 0,
-            minimumWithdrawalAmount: 50,
-            withdrawalFeePercent: 2,
-            lastWithdrawalDate: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
+          walletRaw = await getOrCreateWallet(ctx.user.id);
+        }
+
+        if (!walletRaw) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to initialize wallet",
           });
-          
-          walletRaw = await getWalletByDriverId(ctx.user.id);
-          if (!walletRaw) {
-            throw new Error("Failed to create wallet");
-          }
         }
 
         const wallet = safeWallet(walletRaw);
-
         const available = wallet.availableBalance;
-        const minimum = wallet.minimumWithdrawalAmount;
+        const minimum = wallet.minimumWithdrawalAmount || 50;
 
         if (available <= 0) {
-          throw new Error("No available balance");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No available balance",
+          });
         }
 
         if (input.amount > available) {
-          throw new Error("Insufficient balance");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Insufficient balance",
+          });
         }
 
         if (input.amount < minimum) {
-          throw new Error(`Minimum withdrawal is $${minimum}`);
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Minimum withdrawal is $${minimum}`,
+          });
         }
 
-        // ✅ Check for active payment blocks (BOL/POD enforcement)
         const db = await getDb();
         if (db) {
           const activeBlocks = await db.query.paymentBlocks.findMany({
             where: (pb, { eq, and }) =>
-              and(
-                eq(pb.driverId, ctx.user.id),
-                eq(pb.status, "active")
-              ),
+              and(eq(pb.driverId, ctx.user.id), eq(pb.status, "active")),
           });
 
           if (activeBlocks.length > 0) {
             const blockedAmount = activeBlocks.reduce(
-              (sum, b) => sum + Number(b.blockedAmount),
+              (sum, b) => sum + Number(b.blockedAmount || 0),
               0
             );
-            throw new Error(
-              `Cannot withdraw: $${blockedAmount} blocked due to missing BOL/POD or compliance holds`
-            );
+
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Cannot withdraw: $${blockedAmount} blocked due to missing BOL/POD or compliance holds`,
+            });
           }
         }
 
-        const fee =
-          (input.amount * wallet.withdrawalFeePercent) / 100;
+        const fee = (input.amount * wallet.withdrawalFeePercent) / 100;
 
-        const withdrawal = await requestWithdrawal(
-          wallet.id,
-          ctx.user.id,
-          {
-            amount: input.amount,
-            fee,
-            method: input.method,
-            bankAccountId: input.bankAccountId,
-            notes: input.notes,
-          }
-        );
-
-        await updateWalletBalance(wallet.id, {
-          availableBalance: String(available - input.amount),
-          pendingBalance: String(wallet.pendingBalance + input.amount),
+        // Important:
+        // requestWithdrawal() in db already creates the withdrawal,
+        // logs the wallet transaction, and updates wallet balances.
+        const withdrawal = await requestWithdrawal(wallet.id, ctx.user.id, {
+          amount: input.amount,
+          fee,
+          method: input.method,
+          bankAccountId: input.bankAccountId,
+          notes: input.notes,
         });
 
         return withdrawal;
       } catch (err) {
         console.error("[wallet.requestWithdrawal]", err);
-        throw err;
+
+        if (err instanceof TRPCError) {
+          throw err;
+        }
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: err instanceof Error ? err.message : "Failed to request withdrawal",
+        });
       }
     }),
 
@@ -222,7 +226,10 @@ export const walletRouter = router({
   createPlaidLinkToken: protectedProcedure.mutation(async ({ ctx }) => {
     try {
       if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
-        throw new Error("Plaid not configured");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Plaid not configured",
+        });
       }
 
       const response = await fetch("https://sandbox.plaid.com/link/token/create", {
@@ -242,14 +249,23 @@ export const walletRouter = router({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create Plaid link token");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create Plaid link token",
+        });
       }
 
       const data = await response.json();
       return { linkToken: data.link_token };
     } catch (err) {
       console.error("[wallet.createPlaidLinkToken]", err);
-      throw err;
+
+      if (err instanceof TRPCError) throw err;
+
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to create Plaid link token",
+      });
     }
   }),
 
@@ -266,10 +282,12 @@ export const walletRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         if (!process.env.PLAID_CLIENT_ID || !process.env.PLAID_SECRET) {
-          throw new Error("Plaid not configured");
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Plaid not configured",
+          });
         }
 
-        // Exchange public token for access token
         const response = await fetch("https://sandbox.plaid.com/item/public_token/exchange", {
           method: "POST",
           headers: {
@@ -283,16 +301,23 @@ export const walletRouter = router({
         });
 
         if (!response.ok) {
-          throw new Error("Failed to exchange Plaid token");
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to exchange Plaid token",
+          });
         }
 
         const data = await response.json();
         const accessToken = data.access_token;
         const itemId = data.item_id;
 
-        // Save bank account to database
         const db = await getDb();
-        if (!db) throw new Error("Database connection failed");
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database connection failed",
+          });
+        }
 
         await db.insert(bankAccounts).values({
           userId: ctx.user.id,
@@ -310,7 +335,13 @@ export const walletRouter = router({
         return { success: true, message: "Bank account connected" };
       } catch (err) {
         console.error("[wallet.exchangePlaidPublicToken]", err);
-        throw err;
+
+        if (err instanceof TRPCError) throw err;
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to exchange Plaid token",
+        });
       }
     }),
 
@@ -352,11 +383,7 @@ export const walletRouter = router({
     )
     .query(async ({ ctx, input }) => {
       try {
-        return await getWithdrawals(
-          ctx.user.id,
-          input.limit,
-          input.offset
-        );
+        return await getWithdrawals(ctx.user.id, input.limit, input.offset);
       } catch (err) {
         console.error("[wallet.getWithdrawals]", err);
         return [];
@@ -374,19 +401,12 @@ export const walletRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        if (ctx.user.role !== "admin" && ctx.user.role !== "owner") {
-          throw new Error("Unauthorized");
-        }
+        ensureAdminOrOwner(ctx.user.role);
 
-        const withdrawal = await failWithdrawal(
-          input.withdrawalId,
-          "Cancelled by admin"
-        );
+        const withdrawal = await failWithdrawal(input.withdrawalId, "Cancelled by admin");
 
         if (withdrawal) {
-          const walletRaw = await getWalletByDriverId(
-            withdrawal.driverId
-          );
+          const walletRaw = await getWalletByDriverId(withdrawal.driverId);
 
           if (walletRaw) {
             const wallet = safeWallet(walletRaw);
@@ -396,10 +416,7 @@ export const walletRouter = router({
                 wallet.availableBalance + toNumber(withdrawal.amount)
               ),
               pendingBalance: String(
-                Math.max(
-                  0,
-                  wallet.pendingBalance - toNumber(withdrawal.amount)
-                )
+                Math.max(0, wallet.pendingBalance - toNumber(withdrawal.amount))
               ),
             });
           }
@@ -408,7 +425,13 @@ export const walletRouter = router({
         return withdrawal;
       } catch (err) {
         console.error("[wallet.cancelWithdrawal]", err);
-        throw err;
+
+        if (err instanceof TRPCError) throw err;
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to cancel withdrawal",
+        });
       }
     }),
 
@@ -426,16 +449,21 @@ export const walletRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         if (ctx.user.role !== "admin") {
-          throw new Error("Unauthorized");
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Unauthorized",
+          });
         }
 
         const walletRaw = await getWalletByDriverId(input.driverId);
         if (!walletRaw) {
-          throw new Error("Wallet not found");
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Wallet not found",
+          });
         }
 
         const wallet = safeWallet(walletRaw);
-
         const newAvailable = wallet.availableBalance + input.amount;
 
         await updateWalletBalance(wallet.id, {
@@ -451,7 +479,13 @@ export const walletRouter = router({
         });
       } catch (err) {
         console.error("[wallet.addAdjustment]", err);
-        throw err;
+
+        if (err instanceof TRPCError) throw err;
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add adjustment",
+        });
       }
     }),
 
