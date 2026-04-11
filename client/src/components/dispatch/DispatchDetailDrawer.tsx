@@ -53,7 +53,12 @@ export default function DispatchDetailDrawer({
   const financialStatusColor = getFinancialStatusColor(snapshot.status);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+  open={isOpen}
+  onOpenChange={(open) => {
+    if (!open) onClose();
+  }}
+>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Load #{load.id}</DialogTitle>
@@ -99,7 +104,7 @@ export default function DispatchDetailDrawer({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Price:</span>
-                <span className="font-semibold">${load.totalPrice?.toFixed(2)}</span>
+                <span className="font-semibold">${Number(load.price || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Margin:</span>
