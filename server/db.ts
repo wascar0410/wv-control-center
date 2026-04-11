@@ -3124,6 +3124,30 @@ export async function completeSettlement(settlementId: number) {
   return updated;
 }
 
+export async function deleteSettlement(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  const existing = await db.query.settlements.findFirst({
+    where: eq(settlements.id, id),
+  });
+
+  if (!existing) {
+    throw new Error("Settlement not found");
+  }
+
+  if (existing.status !== "draft") {
+    throw new Error("Only draft settlements can be deleted");
+  }
+
+  // Delete child rows first if they exist
+  await db.delete(settlementLoads).where(eq(settlementLoads.settlementId, id));
+
+  // Delete parent settlement
+  await db.delete(settlements).where(eq(settlements.id, id));
+
+  return { success: true };
+}
 /**
  * Get all settlements
  */
