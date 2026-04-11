@@ -227,15 +227,9 @@ export const financialExtendedRouter = router({
       }
 
       // Check quote variance
-<<<<<<< Updated upstream
       const quoteAnalyses = await db.query.quoteAnalysis.findMany({
         where: (qa, { eq }) => eq(qa.analyzedBy, ctx.user.id),
       });
-=======
-      const quoteAnalyses = await db.execute(
-        sql`SELECT * FROM \`quote_analysis\` WHERE \`analyzedBy\` = ${ctx.user.id}`
-      );
->>>>>>> Stashed changes
 
       let highVarianceCount = 0;
       for (const qa of (quoteAnalyses as any[])) {

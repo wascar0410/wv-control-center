@@ -148,25 +148,18 @@ export const walletRouter = router({
         }
 
         const wallet = safeWallet(walletRaw);
-<<<<<<< Updated upstream
-        const available = wallet.availableBalance;
-        const minimum = wallet.minimumWithdrawalAmount || 50;
-
-        if (available <= 0) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "No available balance",
-          });
-=======
         
         // Validate wallet has required fields
         if (!wallet || !wallet.id) {
           console.error("[wallet.requestWithdrawal] Invalid wallet object:", wallet);
-          throw new Error("Wallet configuration error");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Failed to validate wallet",
+          });
         }
 
         const available = wallet.availableBalance;
-        const minimum = wallet.minimumWithdrawalAmount;
+        const minimum = wallet.minimumWithdrawalAmount || 50;
         
         console.log("[wallet.requestWithdrawal] Wallet state:", {
           walletId: wallet.id,
@@ -177,8 +170,10 @@ export const walletRouter = router({
 
         if (available <= 0) {
           console.warn("[wallet.requestWithdrawal] No available balance", { available });
-          throw new Error("No available balance");
->>>>>>> Stashed changes
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "No available balance",
+          });
         }
 
         if (input.amount > available) {
