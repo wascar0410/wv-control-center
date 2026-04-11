@@ -130,7 +130,7 @@ export default function DispatchLoadCard({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Price:</span>
-              <span className="font-semibold">${load.totalPrice?.toFixed(2)}</span>
+              <span className="font-semibold">${Number(load.price || 0).toFixed(2)}</span>
             </div>
             {load.assignedDriverId && (
               <div className="flex justify-between">
