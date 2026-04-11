@@ -22,14 +22,24 @@ export default function DispatchBoard() {
   const [selectedLoadId, setSelectedLoadId] = useState<number | null>(null);
   const [showDetailDrawer, setShowDetailDrawer] = useState(false);
 
-  // Hooks
   const { filters, setFilters, applyQuickView } = useDispatchFilters();
-  const { data: loads = [], isLoading, error } = trpc.loads.list.useQuery(
+
+  const query = trpc.loads.list.useQuery(
     { status: filters.status.length > 0 ? filters.status[0] : undefined },
     { refetchInterval: 30000 }
   );
 
-  // Mutations
+  const rawData = query.data;
+
+  const loads = useMemo(() => {
+    if (Array.isArray(rawData)) return rawData;
+    if (rawData && Array.isArray((rawData as any).loads)) return (rawData as any).loads;
+    if (rawData && Array.isArray((rawData as any).items)) return (rawData as any).items;
+
+    console.error("[DispatchBoard] Unexpected loads.list response shape:", rawData);
+    return [];
+  }, [rawData]);
+
   const assignMutation = trpc.assignment.assign.useMutation({
     onSuccess: () => {
       toast.success("Load assigned successfully");
@@ -39,23 +49,21 @@ export default function DispatchBoard() {
     },
   });
 
-  const reassignMutation = trpc.assignment.reassign.useMutation({
-    onSuccess: () => {
-      toast.success("Load reassigned successfully");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Failed to reassign load");
-    },
-  });
+  const filteredLoads = useMemo(() => {
+    try {
+      return filterLoads(loads, filters);
+    } catch (err) {
+      console.error("[DispatchBoard] filterLoads failed:", err, { loads, filters });
+      return [];
+    }
+  }, [loads, filters]);
 
-  // Computed
-  const filteredLoads = useMemo(() => filterLoads(loads, filters), [loads, filters]);
-  const selectedLoad = loads.find((l) => l.id === selectedLoadId) || null;
+  const selectedLoad = useMemo(() => {
+    return loads.find((l: any) => l.id === selectedLoadId) || null;
+  }, [loads, selectedLoadId]);
 
-  // Handlers
   const handleAssign = (loadId: number, driverId?: number) => {
     if (!driverId) {
-      // TODO: Open driver selection modal
       toast.info("Driver selection modal coming soon");
       return;
     }
@@ -63,7 +71,6 @@ export default function DispatchBoard() {
   };
 
   const handleReassign = (loadId: number) => {
-    // TODO: Open reassign modal
     toast.info("Reassign modal coming soon");
   };
 
@@ -72,12 +79,12 @@ export default function DispatchBoard() {
     setShowDetailDrawer(true);
   };
 
-  if (error) {
+  if (query.error) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Error loading loads</h2>
-          <p className="text-muted-foreground">{error.message}</p>
+          <p className="text-muted-foreground">{query.error.message}</p>
         </div>
       </div>
     );
@@ -85,7 +92,6 @@ export default function DispatchBoard() {
 
   return (
     <div className="h-full flex flex-col gap-4 p-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Dispatch Board</h1>
         <div className="flex gap-2">
@@ -106,21 +112,17 @@ export default function DispatchBoard() {
         </div>
       </div>
 
-      {/* KPI Strip */}
       <DispatchKPIStrip loads={filteredLoads} />
 
-      {/* Main Content */}
       <div className="flex gap-4 flex-1 min-h-0">
-        {/* Filter Panel */}
         <DispatchFilterPanel
           filters={filters}
           onFilterChange={(newFilters) => setFilters(newFilters)}
           onApplyQuickView={applyQuickView}
         />
 
-        {/* Board */}
         <div className="flex-1 min-w-0">
-          {isLoading ? (
+          {query.isLoading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
@@ -142,7 +144,6 @@ export default function DispatchBoard() {
         </div>
       </div>
 
-      {/* Detail Drawer */}
       <DispatchDetailDrawer
         load={selectedLoad}
         isOpen={showDetailDrawer}
