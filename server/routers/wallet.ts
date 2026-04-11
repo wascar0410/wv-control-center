@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
-import { wallets, bankAccounts } from "../../drizzle/schema";
+import { bankAccounts } from "../../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
@@ -102,8 +102,8 @@ export const walletRouter = router({
   getTransactions: protectedProcedure
     .input(
       z.object({
-        limit: z.number().default(50),
-        offset: z.number().default(0),
+        limit: z.number().min(1).max(200).default(50),
+        offset: z.number().min(0).default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -129,7 +129,7 @@ export const walletRouter = router({
           .enum(["bank_transfer", "check", "paypal", "venmo", "other"])
           .default("bank_transfer"),
         bankAccountId: z.string().optional(),
-        notes: z.string().optional(),
+        notes: z.string().max(500).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -148,8 +148,7 @@ export const walletRouter = router({
         }
 
         const wallet = safeWallet(walletRaw);
-        
-        // Validate wallet has required fields
+
         if (!wallet || !wallet.id) {
           console.error("[wallet.requestWithdrawal] Invalid wallet object:", wallet);
           throw new TRPCError({
@@ -158,18 +157,25 @@ export const walletRouter = router({
           });
         }
 
+        if (input.method === "bank_transfer" && !input.bankAccountId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Bank account is required for bank transfer withdrawals",
+          });
+        }
+
         const available = wallet.availableBalance;
         const minimum = wallet.minimumWithdrawalAmount || 50;
-        
+
         console.log("[wallet.requestWithdrawal] Wallet state:", {
           walletId: wallet.id,
           available,
           minimum,
           requestAmount: input.amount,
+          method: input.method,
         });
 
         if (available <= 0) {
-          console.warn("[wallet.requestWithdrawal] No available balance", { available });
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: "No available balance",
@@ -179,7 +185,7 @@ export const walletRouter = router({
         if (input.amount > available) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Insufficient balance",
+            message: "Insufficient available balance",
           });
         }
 
@@ -212,9 +218,6 @@ export const walletRouter = router({
 
         const fee = (input.amount * wallet.withdrawalFeePercent) / 100;
 
-        // Important:
-        // requestWithdrawal() in db already creates the withdrawal,
-        // logs the wallet transaction, and updates wallet balances.
         const withdrawal = await requestWithdrawal(wallet.id, ctx.user.id, {
           amount: input.amount,
           fee,
@@ -376,13 +379,15 @@ export const walletRouter = router({
         .from(bankAccounts)
         .where(eq(bankAccounts.userId, ctx.user.id));
 
-      return accounts.map((acc) => ({
-        id: acc.id,
-        name: acc.accountName,
-        mask: acc.accountMask,
-        institutionName: acc.bankName,
-        isActive: acc.isActive,
-      }));
+      return accounts
+        .filter((acc) => acc.isActive)
+        .map((acc) => ({
+          id: acc.id,
+          name: acc.accountName,
+          mask: acc.accountMask,
+          institutionName: acc.bankName,
+          isActive: acc.isActive,
+        }));
     } catch (err) {
       console.error("[wallet.getLinkedBankAccounts]", err);
       return [];
@@ -395,8 +400,8 @@ export const walletRouter = router({
   getWithdrawals: protectedProcedure
     .input(
       z.object({
-        limit: z.number().default(50),
-        offset: z.number().default(0),
+        limit: z.number().min(1).max(200).default(50),
+        offset: z.number().min(0).default(0),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -421,6 +426,32 @@ export const walletRouter = router({
       try {
         ensureAdminOrOwner(ctx.user.role);
 
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database connection failed",
+          });
+        }
+
+        const existing = await db.query.withdrawals.findFirst({
+          where: (w, { eq }) => eq(w.id, input.withdrawalId),
+        });
+
+        if (!existing) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Withdrawal not found",
+          });
+        }
+
+        if (existing.status !== "requested" && existing.status !== "approved") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Withdrawal cannot be cancelled in its current status",
+          });
+        }
+
         const withdrawal = await failWithdrawal(input.withdrawalId, "Cancelled by admin");
 
         if (withdrawal) {
@@ -436,6 +467,14 @@ export const walletRouter = router({
               pendingBalance: String(
                 Math.max(0, wallet.pendingBalance - toNumber(withdrawal.amount))
               ),
+            });
+
+            await addWalletTransaction(wallet.id, withdrawal.driverId, {
+              type: "adjustment",
+              amount: toNumber(withdrawal.amount),
+              withdrawalId: withdrawal.id,
+              description: "Withdrawal cancelled and funds returned",
+              status: "completed",
             });
           }
         }
@@ -461,17 +500,12 @@ export const walletRouter = router({
       z.object({
         driverId: z.number(),
         amount: z.number(),
-        reason: z.string(),
+        reason: z.string().min(1).max(500),
       })
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        if (ctx.user.role !== "admin") {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Unauthorized",
-          });
-        }
+        ensureAdminOrOwner(ctx.user.role);
 
         const walletRaw = await getWalletByDriverId(input.driverId);
         if (!walletRaw) {
@@ -483,10 +517,14 @@ export const walletRouter = router({
 
         const wallet = safeWallet(walletRaw);
         const newAvailable = wallet.availableBalance + input.amount;
+        const newTotalEarnings =
+          input.amount >= 0
+            ? wallet.totalEarnings + input.amount
+            : wallet.totalEarnings;
 
         await updateWalletBalance(wallet.id, {
           availableBalance: String(newAvailable),
-          totalEarnings: String(wallet.totalEarnings + input.amount),
+          totalEarnings: String(newTotalEarnings),
         });
 
         return await addWalletTransaction(wallet.id, input.driverId, {
