@@ -5,6 +5,7 @@ import DashboardLayout from "./components/DashboardLayout";
 
 // Lazy load pages
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
+const DispatchBoard = lazy(() => import("./pages/DispatchBoard"));
 const LoadsDispatch = lazy(() => import("./pages/LoadsDispatch"));
 const LoadDetailPage = lazy(() => import("./pages/LoadDetailPage"));
 const FleetTracking = lazy(() => import("./pages/FleetTracking"));
@@ -63,6 +64,7 @@ export default function App() {
 
         {/* ===== ROUTES WITH LAYOUT ===== */}
         <Route path="/command-center" component={withLayout(CommandCenter)} />
+        <Route path="/dispatch-board" component={withLayout(DispatchBoard)} />
 
         {/* Operations */}
         <Route path="/loads-dispatch" component={withLayout(LoadsDispatch)} />

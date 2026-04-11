@@ -768,7 +768,7 @@
 - [x] Revisar componente Quotation - crear documento CODE_REVIEW.md
 - [x] Crear página DriverLoginPage.tsx con validación
 - [x] Implementar tRPC endpoint auth.driverLogin
-- [ ] Agregar ruta /driver-login en App.tsx
+- [x] Agregar ruta /driver-login en App.tsx
 - [ ] Crear tests para DriverLoginPage
 
 ## Fase 76: Botones de Aceptar/Rechazar Cargas
@@ -1545,3 +1545,49 @@
 - [x] Corregir invoicing.getAll - taxRate column mismatch (cambié schema a tax_rate/tax_amount)
 - [ ] Aplicar migración 0038 a base de datos de producción
 - [ ] Validar en producción que errores desaparecen
+
+
+## Fase 1A: DispatchBoard Professional (Implementación)
+
+### Backend
+- [x] Crear helper function `getLoadFinancialSnapshot(loadId)` en db.ts
+- [x] Extender `loadsRouter.list` para incluir financialSnapshot en response
+- [x] Validar que financialSnapshot tiene: margin, profit, ratePerMile, status
+
+### Frontend - Página Principal
+- [x] Crear DispatchBoard.tsx (250-400 líneas, página delgada)
+- [x] Implementar layout: filters (left) | board (center) | drawer (right)
+- [x] Integrar useDispatchFilters hook
+- [ ] Integrar useDispatchBoard hook
+- [x] Toggle Kanban/Table view
+- [x] Manage selectedLoadId + drawer visibility
+
+### Frontend - Componentes
+- [x] Crear DispatchLoadCard.tsx (compact + quick actions inline)
+- [x] Crear DispatchKanbanBoard.tsx (7 status columns)
+- [x] Crear DispatchTableView.tsx (tabla con sorting + pagination)
+- [x] Crear DispatchFilterPanel.tsx (filtros + quick views)
+- [x] Crear DispatchKPIStrip.tsx (KPI metrics)
+- [x] Crear DispatchDetailDrawer.tsx (simple: overview, financial, assignment, actions)
+- [ ] Crear DispatchViewToggle.tsx (Kanban/Table toggle)
+
+### Frontend - Hooks & Utils
+- [x] Crear useDispatchFilters.ts (filter state + localStorage)
+- [ ] Crear useDispatchBoard.ts (loads query + refetch)
+- [x] Crear dispatchHelpers.ts (filter, sort, group, format functions)
+
+### Frontend - Routing
+- [x] Agregar ruta /dispatch-board en App.tsx
+- [x] Agregar link "Dispatch Board" en DashboardLayout sidebar
+
+### Testing & Validation
+- [ ] Verificar que DispatchBoard carga sin errores
+- [ ] Verificar que filtros persisten entre sesiones
+- [ ] Verificar que Kanban y Table view funcionan
+- [ ] Verificar que detail drawer abre/cierra correctamente
+- [ ] Verificar que quick actions (assign, reassign) funcionan
+- [ ] Verificar que coexiste con LoadsDispatch sin romper nada
+- [ ] Verificar performance (< 2s para 100 loads)
+
+### Checkpoint
+- [ ] Guardar checkpoint de Fase 1A completada

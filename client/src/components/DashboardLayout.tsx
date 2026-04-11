@@ -61,6 +61,7 @@ import { AddDriverModal } from "./AddDriverModal";
 const adminMenuItems = [
   // ===== 1. COMMAND CENTER =====
   { icon: LayoutDashboard, label: "Command Center", path: "/command-center", description: "Control total del negocio" },
+  { icon: Truck, label: "Dispatch Board", path: "/dispatch-board", description: "Centro operacional de dispatch" },
 
   // ===== OPERATIONS =====
   { icon: Package, label: "Loads & Dispatch", path: "/loads-dispatch", description: "Cargas, cotización y dispatch" },

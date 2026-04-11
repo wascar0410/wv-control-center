@@ -2650,12 +2650,25 @@ export async function requestWithdrawal(
   if (!wallet) {
     wallet = await getOrCreateWallet(driverId);
   }
+  
+  if (!wallet) {
+    throw new Error("Failed to get or create wallet");
+  }
 
   const amount = Number(data.amount);
   const fee = Number(data.fee || 0);
   const netAmount = amount - fee;
   const availableBalance = Number(wallet.availableBalance || 0);
   const minimumWithdrawal = Number(wallet.minimumWithdrawalAmount || 50);
+  
+  console.log("[requestWithdrawal] Processing withdrawal:", {
+    walletId: wallet.id,
+    driverId,
+    amount,
+    fee,
+    availableBalance,
+    minimumWithdrawal,
+  });
 
   if (amount <= 0) {
     throw new Error("Withdrawal amount must be greater than 0");

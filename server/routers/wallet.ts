@@ -148,6 +148,7 @@ export const walletRouter = router({
         }
 
         const wallet = safeWallet(walletRaw);
+<<<<<<< Updated upstream
         const available = wallet.availableBalance;
         const minimum = wallet.minimumWithdrawalAmount || 50;
 
@@ -156,6 +157,28 @@ export const walletRouter = router({
             code: "BAD_REQUEST",
             message: "No available balance",
           });
+=======
+        
+        // Validate wallet has required fields
+        if (!wallet || !wallet.id) {
+          console.error("[wallet.requestWithdrawal] Invalid wallet object:", wallet);
+          throw new Error("Wallet configuration error");
+        }
+
+        const available = wallet.availableBalance;
+        const minimum = wallet.minimumWithdrawalAmount;
+        
+        console.log("[wallet.requestWithdrawal] Wallet state:", {
+          walletId: wallet.id,
+          available,
+          minimum,
+          requestAmount: input.amount,
+        });
+
+        if (available <= 0) {
+          console.warn("[wallet.requestWithdrawal] No available balance", { available });
+          throw new Error("No available balance");
+>>>>>>> Stashed changes
         }
 
         if (input.amount > available) {

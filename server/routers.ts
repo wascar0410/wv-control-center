@@ -32,6 +32,7 @@ import { notifyOwner } from "./_core/notification";
 import { wsManager } from "./_core/websocket";
 import { storagePut } from "./storage";
 import { aiRouter } from "./_core/aiRouter";
+import { getLoadsFinancialSnapshots } from "./db-dispatch-helpers";
 import { walletRouter } from "./routers/wallet";
 import { settlementRouter } from "./routers/settlement";
 import { quoteAnalysisRouter } from "./routers/quoteAnalysis";
@@ -295,7 +296,22 @@ const loadsRouter = router({
     )
     .query(async ({ input }) => {
       try {
-        return await getLoads(input);
+        const loads = await getLoads(input);
+        
+        // Fetch financial snapshots for all loads in parallel
+        const loadIds = loads.map(l => l.id);
+        const snapshotMap = await getLoadsFinancialSnapshots(loadIds);
+        
+        // Attach financial snapshot to each load
+        return loads.map(load => ({
+          ...load,
+          financialSnapshot: snapshotMap.get(load.id) || {
+            margin: 0,
+            profit: 0,
+            ratePerMile: 0,
+            status: 'loss' as const,
+          },
+        }));
       } catch (error) {
         console.error("[loads.list] error:", error);
         return [];
