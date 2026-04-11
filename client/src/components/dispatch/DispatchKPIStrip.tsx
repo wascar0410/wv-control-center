@@ -5,7 +5,7 @@
 
 import { Card } from "@/components/ui/card";
 import { calculateKPIs, formatMargin } from "@/utils/dispatchHelpers";
-import { TrendingUp, AlertCircle, Clock, Lock } from "lucide-react";
+
 
 interface DispatchKPIStripProps {
   loads: any[];
