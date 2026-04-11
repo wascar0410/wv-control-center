@@ -10,6 +10,7 @@ import {
   processSettlement,
   completeSettlement,
   getAllSettlements,
+  deleteSettlement,
 } from "../db";
 
 /**
