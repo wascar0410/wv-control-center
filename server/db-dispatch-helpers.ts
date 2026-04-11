@@ -18,12 +18,10 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
   const estimatedFuel = Number(load.estimatedFuel || 0);
   const estimatedTolls = Number(load.estimatedTolls || 0);
 
-  // Prefer netMargin if already calculated/stored in DB
   const storedNetMargin = Number(load.netMargin || 0);
   const computedProfit = revenue - estimatedFuel - estimatedTolls;
   const profit = load.netMargin != null ? storedNetMargin : computedProfit;
 
-  // Try best available miles field if it exists in schema/runtime
   const miles =
     Number((load as any).estimatedMiles || 0) ||
     Number((load as any).miles || 0) ||
