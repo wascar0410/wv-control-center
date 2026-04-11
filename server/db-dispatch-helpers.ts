@@ -1,128 +1,53 @@
-/**
- * db-dispatch-helpers.ts
- * Backend helpers for DispatchBoard - financial snapshot calculation
- * Keeps business logic separate from routers
- */
-
-import { getDb } from "./db";
+import type { getLoads } from "./db";
 
 export interface FinancialSnapshot {
-  margin: number;           // percentage (0-100)
-  profit: number;           // dollars
-  ratePerMile: number;      // dollars per mile
-  status: "healthy" | "at_risk" | "loss";  // based on margin
+  margin: number;
+  profit: number;
+  ratePerMile: number;
+  status: "healthy" | "at_risk" | "loss";
 }
 
-/**
- * Calculate financial snapshot for a single load
- * Used by dispatch board to show inline financial metrics without N+1 queries
- * Inline calculation to avoid circular dependencies
- */
-export async function getLoadFinancialSnapshot(loadId: number): Promise<FinancialSnapshot> {
-  try {
-    const db = await getDb();
-    if (!db) {
-      return {
-        margin: 0,
-        profit: 0,
-        ratePerMile: 0,
-        status: "loss",
-      };
-    }
+type LoadItem = Awaited<ReturnType<typeof getLoads>>[number];
 
-    const load = await db.query.loads.findFirst({
-      where: (loads, { eq: eqOp }) => eqOp(loads.id, loadId),
-    });
-
-    if (!load) {
-      return {
-        margin: 0,
-        profit: 0,
-        ratePerMile: 0,
-        status: "loss",
-      };
-    }
-
-    // Get revenue from wallet transaction
-    const paymentTx = await db.query.walletTransactions.findFirst({
-      where: (wt, { eq: eqOp, and: andOp }) =>
-        andOp(eqOp(wt.loadId, loadId), eqOp(wt.type, "load_payment")),
-    });
-
-    const revenue = paymentTx ? Number(paymentTx.amount) : 0;
-
-    // Calculate expenses
-    const miles = Number((load as any).miles) || 0;
-    const fuelPrice = Number((load as any).fuelPrice) || 0;
-    const mpg = Number((load as any).mpg) || 8;
-    const maintenancePerMile = Number((load as any).maintenancePerMile) || 0.15;
-    const tolls = Number((load as any).tolls) || 0;
-    const driverPay = Number((load as any).driverPayAmount) || 0;
-    const commission = Number((load as any).brokerCommission) || 0;
-
-    const fuelCost = miles > 0 ? (miles / mpg) * fuelPrice : 0;
-    const maintenanceCost = miles * maintenancePerMile;
-    const totalExpenses = fuelCost + tolls + maintenanceCost + driverPay + commission;
-
-    // Calculate profit metrics
-    const profitAmount = revenue - totalExpenses;
-    const margin = revenue > 0 ? (profitAmount / revenue) * 100 : 0;
-    const ratePerMile = miles > 0 ? profitAmount / miles : 0;
-
-    // Determine status based on margin
-    let status: "healthy" | "at_risk" | "loss";
-    if (margin >= 15) {
-      status = "healthy";
-    } else if (margin >= 8) {
-      status = "at_risk";
-    } else {
-      status = "loss";
-    }
-
-    return {
-      margin: Math.round(margin * 100) / 100, // Round to 2 decimals
-      profit: Math.round(profitAmount * 100) / 100,
-      ratePerMile: Math.round(ratePerMile * 100) / 100,
-      status,
-    };
-  } catch (error) {
-    console.error(`[getLoadFinancialSnapshot] Error for load ${loadId}:`, error);
-    return {
-      margin: 0,
-      profit: 0,
-      ratePerMile: 0,
-      status: "loss",
-    };
-  }
+function round2(value: number): number {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
-/**
- * Calculate financial snapshots for multiple loads in parallel
- * Used by dispatch board list query
- */
-export async function getLoadsFinancialSnapshots(
-  loadIds: number[]
-): Promise<Map<number, FinancialSnapshot>> {
-  if (!loadIds || loadIds.length === 0) {
-    return new Map();
-  }
+export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
+  const revenue = Number(load.price || 0);
+  const estimatedFuel = Number(load.estimatedFuel || 0);
+  const estimatedTolls = Number(load.estimatedTolls || 0);
 
-  try {
-    const snapshots = await Promise.all(
-      loadIds.map(async (id) => ({
-        loadId: id,
-        snapshot: await getLoadFinancialSnapshot(id),
-      }))
-    );
+  // Prefer netMargin if already calculated/stored in DB
+  const storedNetMargin = Number(load.netMargin || 0);
+  const computedProfit = revenue - estimatedFuel - estimatedTolls;
+  const profit = load.netMargin != null ? storedNetMargin : computedProfit;
 
-    const map = new Map<number, FinancialSnapshot>();
-    snapshots.forEach(({ loadId, snapshot }) => {
-      map.set(loadId, snapshot);
-    });
+  // Try best available miles field if it exists in schema/runtime
+  const miles =
+    Number((load as any).estimatedMiles || 0) ||
+    Number((load as any).miles || 0) ||
+    0;
 
-    return map;
-  } catch (error) {
-    console.error("[getLoadsFinancialSnapshots] Error:", error);
-    return new Map();
-  }
+  const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+  const ratePerMile = miles > 0 ? revenue / miles : 0;
+
+  let status: "healthy" | "at_risk" | "loss";
+  if (margin >= 15) status = "healthy";
+  else if (margin >= 8) status = "at_risk";
+  else status = "loss";
+
+  return {
+    margin: round2(margin),
+    profit: round2(profit),
+    ratePerMile: round2(ratePerMile),
+    status,
+  };
+}
+
+export function attachFinancialSnapshots<T extends LoadItem>(loads: T[]) {
+  return loads.map((load) => ({
+    ...load,
+    financialSnapshot: buildLoadFinancialSnapshot(load),
+  }));
 }
