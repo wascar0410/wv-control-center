@@ -32,7 +32,7 @@ import { notifyOwner } from "./_core/notification";
 import { wsManager } from "./_core/websocket";
 import { storagePut } from "./storage";
 import { aiRouter } from "./_core/aiRouter";
-import { getLoadsFinancialSnapshots } from "./db-dispatch-helpers";
+import { attachFinancialSnapshots } from "./db-dispatch-helpers";
 import { walletRouter } from "./routers/wallet";
 import { settlementRouter } from "./routers/settlement";
 import { quoteAnalysisRouter } from "./routers/quoteAnalysis";
@@ -299,8 +299,8 @@ const loadsRouter = router({
         const loads = await getLoads(input);
         
         // Fetch financial snapshots for all loads in parallel
-        const loadIds = loads.map(l => l.id);
-        const snapshotMap = await getLoadsFinancialSnapshots(loadIds);
+        const loads = await getLoads(input);
+return attachFinancialSnapshots(loads);
         
         // Attach financial snapshot to each load
         return loads.map(load => ({
