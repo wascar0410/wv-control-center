@@ -296,22 +296,8 @@ const loadsRouter = router({
     )
     .query(async ({ input }) => {
       try {
-        const loads = await getLoads(input);
-        
-        // Fetch financial snapshots for all loads in parallel
-        const loads = await getLoads(input);
+       const loads = await getLoads(input);
 return attachFinancialSnapshots(loads);
-        
-        // Attach financial snapshot to each load
-        return loads.map(load => ({
-          ...load,
-          financialSnapshot: snapshotMap.get(load.id) || {
-            margin: 0,
-            profit: 0,
-            ratePerMile: 0,
-            status: 'loss' as const,
-          },
-        }));
       } catch (error) {
         console.error("[loads.list] error:", error);
         return [];
