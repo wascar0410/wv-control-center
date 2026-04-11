@@ -111,15 +111,25 @@ export default function WithdrawalRequestModal({
     }
   };
 
+  const isBalanceInsufficient = availableBalance <= 0;
+  const canSubmit = !isSubmitting && amount && parseFloat(amount) > 0 && !isBalanceInsufficient;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Solicitar Retiro</DialogTitle>
           <DialogDescription>
-            Saldo disponible: <span className="font-bold text-foreground">{formatCurrency(availableBalance)}</span>
+            Saldo disponible: <span className={`font-bold ${isBalanceInsufficient ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(availableBalance)}</span>
           </DialogDescription>
         </DialogHeader>
+
+        {isBalanceInsufficient && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 text-sm text-destructive">
+            <p className="font-medium">No tienes balance disponible para retirar</p>
+            <p className="text-xs mt-1 opacity-90">Completa más cargas para generar ingresos</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Amount */}
@@ -205,7 +215,7 @@ export default function WithdrawalRequestModal({
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || !amount}>
+            <Button type="submit" disabled={!canSubmit} title={isBalanceInsufficient ? "No tienes balance disponible" : ""}>
               {isSubmitting ? "Procesando..." : "Solicitar Retiro"}
             </Button>
           </div>
