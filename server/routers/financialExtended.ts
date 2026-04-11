@@ -220,7 +220,7 @@ export const financialExtendedRouter = router({
 
       // Check quote variance
       const quoteAnalyses = await db.query.quoteAnalysis.findMany({
-        where: (qa, { eq }) => eq(qa.assignedDriverId, ctx.user.id),
+        where: (qa, { eq }) => eq(qa.analyzedBy, ctx.user.id),
       });
 
       let highVarianceCount = 0;
