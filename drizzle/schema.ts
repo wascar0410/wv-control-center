@@ -1550,8 +1550,8 @@ export const invoices = mysqlTable("invoices", {
   
   // Amounts
   subtotal: decimal("subtotal", { precision: 12, scale: 2 }).notNull(),
-  taxRate: decimal("taxRate", { precision: 5, scale: 2 }).default("0.00"),
-  taxAmount: decimal("taxAmount", { precision: 12, scale: 2 }).default("0.00"),
+  taxRate: decimal("tax_rate", { precision: 5, scale: 2 }).default("0.00"),
+  taxAmount: decimal("tax_amount", { precision: 12, scale: 2 }).default("0.00"),
   total: decimal("total", { precision: 12, scale: 2 }).notNull(),
   
   // Payment tracking

@@ -1525,3 +1525,23 @@
 - [x] Validar que no rompe wallet/settlement flows
 - [x] Confirmar que mismatches se detectan correctamente
 - [x] Confirmar UI muestra status claramente
+
+
+### CICLO COMPLETADO: Debugging y UX Improvements
+- [x] Resolver error 500 en settlement.create (partner2Id inválido → 1860001)
+- [x] Cambiar financial.getFinancialAlerts a financialExtended.getFinancialAlerts en 3 archivos
+- [x] Validar que Railway está corriendo código más reciente (confirmado en logs)
+- [x] Mejorar UX de withdrawal: deshabilitar botón si availableBalance <= 0
+- [x] Mostrar balance en rojo cuando es insuficiente
+- [x] Mensaje claro: "No tienes balance disponible para retirar"
+- [x] Hint adicional: "Completa más cargas para generar ingresos"
+- [ ] PENDIENTE: Validar visualmente en producción que cambios de withdrawal se ven correctamente
+- [ ] PENDIENTE: Revisar siguiente bloque del proyecto
+
+
+### TAREA 10: Corregir Errores SQL en Producción
+- [x] Corregir financial.getFinancialAlerts - WHERE clause incompleto (cambié driverId → assignedDriverId)
+- [x] Corregir financial.getReconciliationData - WHERE clause incompleto (cambié driverId → assignedDriverId)
+- [x] Corregir invoicing.getAll - taxRate column mismatch (cambié schema a tax_rate/tax_amount)
+- [ ] Aplicar migración 0038 a base de datos de producción
+- [ ] Validar en producción que errores desaparecen

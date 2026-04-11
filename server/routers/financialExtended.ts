@@ -180,7 +180,7 @@ export const financialExtendedRouter = router({
       // Check low margin loads
       const loads = await db.query.loads.findMany({
         where: (loads, { eq, and }) =>
-          and(eq(loads.driverId, ctx.user.id), eq(loads.status, "delivered")),
+          and(eq(loads.assignedDriverId, ctx.user.id), eq(loads.status, "delivered")),
       });
 
       let lowMarginCount = 0;
@@ -220,7 +220,7 @@ export const financialExtendedRouter = router({
 
       // Check quote variance
       const quoteAnalyses = await db.query.quoteAnalysis.findMany({
-        where: (qa, { eq }) => eq(qa.driverId, ctx.user.id),
+        where: (qa, { eq }) => eq(qa.assignedDriverId, ctx.user.id),
       });
 
       let highVarianceCount = 0;
@@ -275,7 +275,7 @@ export const financialExtendedRouter = router({
 
       const overdueInvoices = await db.query.invoices.findMany({
         where: (inv, { eq, and, lt }) =>
-          and(eq(inv.driverId, ctx.user.id), lt(inv.createdAt, overdueDate)),
+          and(eq(inv.createdBy, ctx.user.id), lt(inv.createdAt, overdueDate)),
       });
 
       if (overdueInvoices.length > 0) {
@@ -292,7 +292,7 @@ export const financialExtendedRouter = router({
       // Check payment blocks
       const paymentBlocks = await db.query.paymentBlocks.findMany({
         where: (pb, { eq, and }) =>
-          and(eq(pb.driverId, ctx.user.id), eq(pb.status, "active")),
+          and(eq(pb.assignedDriverId, ctx.user.id), eq(pb.status, "active")),
       });
 
       let totalBlockedAmount = 0;
@@ -384,7 +384,7 @@ export const financialExtendedRouter = router({
 
       const loads = await db.query.loads.findMany({
         where: (loads, { eq, and }) =>
-          and(eq(loads.driverId, ctx.user.id), eq(loads.status, "delivered")),
+          and(eq(loads.assignedDriverId, ctx.user.id), eq(loads.status, "delivered")),
       });
 
       for (const load of loads) {
