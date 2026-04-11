@@ -2485,8 +2485,6 @@ export function autoCategorize(name: string): { category: string; isTaxDeductibl
 
 // ─── Wallets ─────────────────────────────────────────────────────────────────
 
-import { wallets, walletTransactions, withdrawals, settlements, settlementLoads } from "../drizzle/schema";
-
 /**
  * Get or create wallet for a driver
  */
@@ -2527,6 +2525,7 @@ export async function getOrCreateWallet(driverId: number) {
 
   return created[0];
 }
+
 /**
  * Get wallet by driver ID
  */
