@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import {
   Dialog,
@@ -31,6 +31,14 @@ interface WithdrawalRequestModalProps {
 
 const MIN_WITHDRAWAL = 50;
 
+const METHOD_LABELS: Record<WithdrawalMethod, string> = {
+  bank_transfer: "Transferencia Bancaria",
+  check: "Cheque",
+  paypal: "PayPal",
+  venmo: "Venmo",
+  other: "Otro",
+};
+
 export default function WithdrawalRequestModal({
   isOpen,
   onClose,
@@ -54,7 +62,9 @@ export default function WithdrawalRequestModal({
   const amountError = useMemo(() => {
     if (!amount) return "";
     if (amountNum <= 0) return "Ingresa un monto válido";
-    if (amountNum < MIN_WITHDRAWAL) return `El monto mínimo de retiro es ${formatCurrency(MIN_WITHDRAWAL)}`;
+    if (amountNum < MIN_WITHDRAWAL) {
+      return `El monto mínimo de retiro es ${formatCurrency(MIN_WITHDRAWAL)}`;
+    }
     if (amountNum > availableBalance) {
       return `Tu saldo disponible es ${formatCurrency(availableBalance)}`;
     }
@@ -68,18 +78,27 @@ export default function WithdrawalRequestModal({
     amountNum >= MIN_WITHDRAWAL &&
     amountNum <= availableBalance;
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setAmount("");
     setMethod("bank_transfer");
     setBankAccountId("");
     setNotes("");
-  };
+  }, []);
 
   useEffect(() => {
-  if (!isOpen) {
-    resetForm();
-  }
-}, [isOpen]);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [isOpen, resetForm]);
+
+  const handleDialogOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        onClose();
+      }
+    },
+    [onClose]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +165,7 @@ export default function WithdrawalRequestModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Solicitar Retiro</DialogTitle>
@@ -247,17 +266,7 @@ export default function WithdrawalRequestModal({
               </div>
               <div className="flex justify-between text-sm">
                 <span>Método:</span>
-                <span className="font-medium">
-                  {method === "bank_transfer"
-                    ? "Transferencia Bancaria"
-                    : method === "check"
-                    ? "Cheque"
-                    : method === "paypal"
-                    ? "PayPal"
-                    : method === "venmo"
-                    ? "Venmo"
-                    : "Otro"}
-                </span>
+                <span className="font-medium">{METHOD_LABELS[method]}</span>
               </div>
               <div className="flex justify-between text-sm border-t pt-2">
                 <span className="font-medium">Total a Retirar:</span>
