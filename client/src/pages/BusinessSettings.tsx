@@ -104,13 +104,19 @@ export default function BusinessSettings() {
         maintenancePerMile: Number(data.maintenancePerMile ?? DEFAULT_CONFIG.maintenancePerMile),
         tiresPerMile: Number(data.tiresPerMile ?? DEFAULT_CONFIG.tiresPerMile),
         insuranceMonthly: Number(data.insuranceMonthly ?? DEFAULT_CONFIG.insuranceMonthly),
-        phoneInternetMonthly: Number(data.phoneInternetMonthly ?? DEFAULT_CONFIG.phoneInternetMonthly),
-        loadBoardAppsMonthly: Number(data.loadBoardAppsMonthly ?? DEFAULT_CONFIG.loadBoardAppsMonthly),
+        phoneInternetMonthly: Number(
+          data.phoneInternetMonthly ?? DEFAULT_CONFIG.phoneInternetMonthly
+        ),
+        loadBoardAppsMonthly: Number(
+          data.loadBoardAppsMonthly ?? DEFAULT_CONFIG.loadBoardAppsMonthly
+        ),
         accountingSoftwareMonthly: Number(
           data.accountingSoftwareMonthly ?? DEFAULT_CONFIG.accountingSoftwareMonthly
         ),
         otherFixedMonthly: Number(data.otherFixedMonthly ?? DEFAULT_CONFIG.otherFixedMonthly),
-        targetMilesPerMonth: Number(data.targetMilesPerMonth ?? DEFAULT_CONFIG.targetMilesPerMonth),
+        targetMilesPerMonth: Number(
+          data.targetMilesPerMonth ?? DEFAULT_CONFIG.targetMilesPerMonth
+        ),
         minimumProfitPerMile: Number(
           data.minimumProfitPerMile ?? DEFAULT_CONFIG.minimumProfitPerMile
         ),
@@ -146,8 +152,11 @@ export default function BusinessSettings() {
       Number(form.accountingSoftwareMonthly || 0) +
       Number(form.otherFixedMonthly || 0);
 
+    const fuelPerMile =
+      Number(form.fuelPricePerGallon || 0) / Math.max(Number(form.vanMpg || 1), 1);
+
     const variablePerMile =
-      Number(form.fuelPricePerGallon || 0) / Math.max(Number(form.vanMpg || 1), 1) +
+      fuelPerMile +
       Number(form.maintenancePerMile || 0) +
       Number(form.tiresPerMile || 0);
 
@@ -156,6 +165,7 @@ export default function BusinessSettings() {
 
     return {
       fixedMonthly,
+      fuelPerMile,
       variablePerMile,
       estimatedMonthlyVariable,
       estimatedMonthlyOperating,
@@ -255,7 +265,7 @@ export default function BusinessSettings() {
             fromMiles: Number(row.fromMiles || 0),
             surchargePerMile: Number(row.surchargePerMile || 0),
           });
-        } else {
+        } else if (row.fromMiles > 0 || row.surchargePerMile > 0) {
           await createDistanceMutation.mutateAsync({
             fromMiles: Number(row.fromMiles || 0),
             surchargePerMile: Number(row.surchargePerMile || 0),
@@ -270,7 +280,7 @@ export default function BusinessSettings() {
             fromLbs: Number(row.fromLbs || 0),
             surchargePerMile: Number(row.surchargePerMile || 0),
           });
-        } else {
+        } else if (row.fromLbs > 0 || row.surchargePerMile > 0) {
           await createWeightMutation.mutateAsync({
             fromLbs: Number(row.fromLbs || 0),
             surchargePerMile: Number(row.surchargePerMile || 0),
@@ -322,7 +332,8 @@ export default function BusinessSettings() {
 
       {error && (
         <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950/20 dark:text-yellow-300">
-          No se pudo cargar el backend. Se están mostrando valores de respaldo para que la página siga siendo usable.
+          No se pudo cargar el backend. Se están mostrando valores de respaldo para que la
+          página siga siendo usable.
         </div>
       )}
 
@@ -338,6 +349,15 @@ export default function BusinessSettings() {
 
         <Card>
           <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Fuel por milla</p>
+            <p className="mt-1 text-2xl font-bold text-cyan-600">
+              {formatCurrency(derived.fuelPerMile, "/mi")}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Costo variable por milla</p>
             <p className="mt-1 text-2xl font-bold text-orange-600">
               {formatCurrency(derived.variablePerMile, "/mi")}
@@ -347,16 +367,7 @@ export default function BusinessSettings() {
 
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Costo variable mensual estimado</p>
-            <p className="mt-1 text-2xl font-bold text-purple-600">
-              {formatCurrency(derived.estimatedMonthlyVariable)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Costo operativo mensual estimado</p>
+            <p className="text-xs text-muted-foreground">Costo operativo mensual</p>
             <p className="mt-1 text-2xl font-bold text-green-600">
               {formatCurrency(derived.estimatedMonthlyOperating)}
             </p>
@@ -519,10 +530,14 @@ export default function BusinessSettings() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Distance Surcharges</CardTitle>
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={handleAddDistanceRow} disabled={isBusy}>
+          <CardTitle>Distance Surcharges</CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddDistanceRow}
+            disabled={isBusy}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Añadir regla
           </Button>
@@ -536,7 +551,10 @@ export default function BusinessSettings() {
             </div>
           ) : (
             distanceRows.map((row, index) => (
-              <div key={row.id ?? `distance-${index}`} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+              <div
+                key={row.id ?? `distance-${index}`}
+                className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+              >
                 <div className="space-y-2">
                   <Label>Desde millas</Label>
                   <Input
@@ -578,10 +596,14 @@ export default function BusinessSettings() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Weight Surcharges</CardTitle>
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={handleAddWeightRow} disabled={isBusy}>
+          <CardTitle>Weight Surcharges</CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAddWeightRow}
+            disabled={isBusy}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Añadir regla
           </Button>
@@ -595,7 +617,10 @@ export default function BusinessSettings() {
             </div>
           ) : (
             weightRows.map((row, index) => (
-              <div key={row.id ?? `weight-${index}`} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+              <div
+                key={row.id ?? `weight-${index}`}
+                className="grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+              >
                 <div className="space-y-2">
                   <Label>Desde lbs</Label>
                   <Input
@@ -647,7 +672,9 @@ export default function BusinessSettings() {
       {saveStatus === "error" && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{errorMessage || "No se pudo guardar la configuración."}</AlertDescription>
+          <AlertDescription>
+            {errorMessage || "No se pudo guardar la configuración."}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -684,6 +711,13 @@ export default function BusinessSettings() {
             , el costo operativo mensual estimado sería de{" "}
             <span className="font-semibold text-foreground">
               {formatCurrency(derived.estimatedMonthlyOperating)}
+            </span>
+            .
+          </p>
+          <p>
+            El costo estimado solo de combustible es de{" "}
+            <span className="font-semibold text-foreground">
+              {formatCurrency(derived.fuelPerMile, "/mi")}
             </span>
             .
           </p>
