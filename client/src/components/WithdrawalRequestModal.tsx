@@ -76,11 +76,10 @@ export default function WithdrawalRequestModal({
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      resetForm();
-      requestWithdrawalMutation.reset();
-    }
-  }, [isOpen, requestWithdrawalMutation]);
+  if (!isOpen) {
+    resetForm();
+  }
+}, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
