@@ -4,19 +4,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Clock, DollarSign } from "lucide-react";
+import { AlertCircle, DollarSign, Trash2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { toast } from "sonner";
 import CreateSettlementModal from "@/components/CreateSettlementModal";
 
 export default function SettlementsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("all");
 
-  // Fetch settlements with error handling
   const { data: settlements, isLoading, error, refetch } = trpc.settlement.getAll.useQuery(
     { limit: 50, offset: 0 },
     { retry: 1 }
   );
+
+  const deleteSettlementMutation = trpc.settlement.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Borrador eliminado correctamente");
+      refetch();
+    },
+    onError: (error) => {
+      toast.error(error.message || "No se pudo eliminar el borrador");
+    },
+  });
+
+  const handleDeleteDraft = (id: number) => {
+    const confirmed = window.confirm("¿Seguro que quieres eliminar este settlement en borrador?");
+    if (!confirmed) return;
+    deleteSettlementMutation.mutate({ id });
+  };
 
   if (isLoading) {
     return (
@@ -29,7 +45,6 @@ export default function SettlementsPage() {
     );
   }
 
-  // Filter settlements by status
   const draftSettlements = settlements?.filter((s) => s.status === "draft") || [];
   const calculatedSettlements = settlements?.filter((s) => s.status === "calculated") || [];
   const approvedSettlements = settlements?.filter((s) => s.status === "approved") || [];
@@ -58,7 +73,7 @@ export default function SettlementsPage() {
   const SettlementCard = ({ settlement }: { settlement: any }) => (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle className="text-lg">Período {settlement.settlementPeriod}</CardTitle>
             <CardDescription>
@@ -69,8 +84,8 @@ export default function SettlementsPage() {
           {getStatusBadge(settlement.status)}
         </div>
       </CardHeader>
+
       <CardContent className="space-y-4">
-        {/* Financial Summary */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-muted p-3 rounded">
             <p className="text-xs text-muted-foreground">Ingresos</p>
@@ -82,46 +97,72 @@ export default function SettlementsPage() {
           </div>
           <div className="bg-green-50 p-3 rounded">
             <p className="text-xs text-muted-foreground">Ganancia</p>
-            <p className="font-bold text-green-600">{formatCurrency(settlement.totalProfit || 0)}</p>
+            <p className="font-bold text-green-600">
+              {formatCurrency(settlement.totalProfit || 0)}
+            </p>
           </div>
         </div>
 
-        {/* Partner Distribution */}
         <div className="space-y-2 border-t pt-3">
           <p className="text-sm font-medium">Distribución de Ganancias</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-blue-50 p-2 rounded">
-              <p className="text-xs text-muted-foreground">Socio 1 ({settlement.partner1Share || 50}%)</p>
-              <p className="font-bold text-blue-600">{formatCurrency(settlement.partner1Amount || 0)}</p>
+              <p className="text-xs text-muted-foreground">
+                Socio 1 ({settlement.partner1Share || 50}%)
+              </p>
+              <p className="font-bold text-blue-600">
+                {formatCurrency(settlement.partner1Amount || 0)}
+              </p>
             </div>
             <div className="bg-purple-50 p-2 rounded">
-              <p className="text-xs text-muted-foreground">Socio 2 ({settlement.partner2Share || 50}%)</p>
-              <p className="font-bold text-purple-600">{formatCurrency(settlement.partner2Amount || 0)}</p>
+              <p className="text-xs text-muted-foreground">
+                Socio 2 ({settlement.partner2Share || 50}%)
+              </p>
+              <p className="font-bold text-purple-600">
+                {formatCurrency(settlement.partner2Amount || 0)}
+              </p>
             </div>
           </div>
         </div>
+
+        {settlement.status === "draft" && (
+          <div className="border-t pt-3 flex justify-end">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDeleteDraft(settlement.id)}
+              disabled={deleteSettlementMutation.isPending}
+              className="gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              {deleteSettlementMutation.isPending ? "Eliminando..." : "Eliminar borrador"}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 
   return (
     <div className="space-y-6 p-6">
-      {/* Error Banner */}
       {error && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-yellow-900">Aviso</p>
-            <p className="text-sm text-yellow-800">No se pudieron cargar los settlements. Intenta recargar la página.</p>
+            <p className="text-sm text-yellow-800">
+              No se pudieron cargar los settlements. Intenta recargar la página.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Settlements</h1>
-          <p className="text-muted-foreground">Gestiona la distribución de ganancias entre socios</p>
+          <p className="text-muted-foreground">
+            Gestiona la distribución de ganancias entre socios
+          </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} size="lg" className="gap-2">
           <DollarSign className="w-4 h-4" />
@@ -129,7 +170,6 @@ export default function SettlementsPage() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-4">
@@ -163,7 +203,6 @@ export default function SettlementsPage() {
         </Card>
       </div>
 
-      {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="all">Todos ({settlements?.length || 0})</TabsTrigger>
@@ -216,7 +255,9 @@ export default function SettlementsPage() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No hay settlements calculados</p>
+                <p className="text-muted-foreground text-center">
+                  No hay settlements calculados
+                </p>
               </CardContent>
             </Card>
           )}
@@ -232,7 +273,9 @@ export default function SettlementsPage() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No hay settlements aprobados</p>
+                <p className="text-muted-foreground text-center">
+                  No hay settlements aprobados
+                </p>
               </CardContent>
             </Card>
           )}
@@ -248,7 +291,9 @@ export default function SettlementsPage() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No hay settlements procesados</p>
+                <p className="text-muted-foreground text-center">
+                  No hay settlements procesados
+                </p>
               </CardContent>
             </Card>
           )}
@@ -264,14 +309,15 @@ export default function SettlementsPage() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No hay settlements completados</p>
+                <p className="text-muted-foreground text-center">
+                  No hay settlements completados
+                </p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* Create Settlement Modal */}
       <CreateSettlementModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
