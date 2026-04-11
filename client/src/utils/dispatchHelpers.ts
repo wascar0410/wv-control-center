@@ -3,18 +3,17 @@
  * Utility functions for DispatchBoard
  * Filter, sort, group, and format operations
  */
-
 export interface DispatchLoad {
   id: number;
-  clientName: string;
-  pickupAddress: string;
-  deliveryAddress: string;
-  status: string;
+  clientName?: string | null;
+  pickupAddress?: string | null;
+  deliveryAddress?: string | null;
+  status?: string | null;
   assignedDriverId?: number | null;
-  weight: number;
-  merchandiseType: string;
-  totalPrice: number;
-  createdAt: Date;
+  weight?: number | string | null;
+  merchandiseType?: string | null;
+  price?: number | string | null;
+  createdAt?: Date | string | null;
   financialSnapshot?: {
     margin: number;
     profit: number;
@@ -35,42 +34,73 @@ export interface DispatchFilters {
   sortOrder?: "asc" | "desc";
 }
 
+function safeString(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function safeNumber(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function safeDateMs(value: unknown): number {
+  if (!value) return 0;
+  const ms = new Date(value as any).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
 /**
  * Filter loads based on dispatch filters
  */
-export function filterLoads(loads: DispatchLoad[], filters: Partial<DispatchFilters>): DispatchLoad[] {
+export function filterLoads(
+  loads: DispatchLoad[],
+  filters: Partial<DispatchFilters>
+): DispatchLoad[] {
+  if (!Array.isArray(loads)) return [];
+
   return loads.filter((load) => {
-    // Status filter
+    const status = safeString(load.status);
+
     if (filters.status && filters.status.length > 0) {
-      if (!filters.status.includes(load.status)) {
+      if (!filters.status.includes(status)) {
         return false;
       }
     }
 
-    // Margin range filter
     if (filters.marginRange) {
-      const margin = load.financialSnapshot?.margin ?? 0;
+      const margin = safeNumber(load.financialSnapshot?.margin);
       if (margin < filters.marginRange[0] || margin > filters.marginRange[1]) {
         return false;
       }
     }
 
-    // Date range filter
     if (filters.dateRange) {
-      const loadDate = new Date(load.createdAt);
-      if (loadDate < filters.dateRange[0] || loadDate > filters.dateRange[1]) {
+      const loadDateMs = safeDateMs(load.createdAt);
+      const startMs = filters.dateRange[0]?.getTime?.() ?? 0;
+      const endMs = filters.dateRange[1]?.getTime?.() ?? 0;
+
+      if (!loadDateMs || loadDateMs < startMs || loadDateMs > endMs) {
         return false;
       }
     }
 
-    // Search filter (load ID, client name, merchandise type)
     if (filters.search && filters.search.trim()) {
       const searchLower = filters.search.toLowerCase();
-      const matchesId = String(load.id).includes(searchLower);
-      const matchesClient = load.clientName.toLowerCase().includes(searchLower);
-      const matchesMerchandise = load.merchandiseType.toLowerCase().includes(searchLower);
+      const matchesId = String(load.id ?? "").includes(searchLower);
+      const matchesClient = safeString(load.clientName).toLowerCase().includes(searchLower);
+      const matchesMerchandise = safeString(load.merchandiseType)
+        .toLowerCase()
+        .includes(searchLower);
+      const matchesPickup = safeString(load.pickupAddress).toLowerCase().includes(searchLower);
+      const matchesDelivery = safeString(load.deliveryAddress).toLowerCase().includes(searchLower);
 
-      if (!matchesId && !matchesClient && !matchesMerchandise) {
+      if (
+        !matchesId &&
+        !matchesClient &&
+        !matchesMerchandise &&
+        !matchesPickup &&
+        !matchesDelivery
+      ) {
         return false;
       }
     }
@@ -87,27 +117,29 @@ export function sortLoads(
   sortBy: string = "date",
   sortOrder: "asc" | "desc" = "desc"
 ): DispatchLoad[] {
-  const sorted = [...loads].sort((a, b) => {
-    let aValue: any;
-    let bValue: any;
+  if (!Array.isArray(loads)) return [];
+
+  return [...loads].sort((a, b) => {
+    let aValue: number | string = 0;
+    let bValue: number | string = 0;
 
     switch (sortBy) {
       case "margin":
-        aValue = a.financialSnapshot?.margin ?? 0;
-        bValue = b.financialSnapshot?.margin ?? 0;
+        aValue = safeNumber(a.financialSnapshot?.margin);
+        bValue = safeNumber(b.financialSnapshot?.margin);
         break;
       case "profit":
-        aValue = a.financialSnapshot?.profit ?? 0;
-        bValue = b.financialSnapshot?.profit ?? 0;
+        aValue = safeNumber(a.financialSnapshot?.profit);
+        bValue = safeNumber(b.financialSnapshot?.profit);
         break;
       case "id":
-        aValue = a.id;
-        bValue = b.id;
+        aValue = safeNumber(a.id);
+        bValue = safeNumber(b.id);
         break;
       case "date":
       default:
-        aValue = new Date(a.createdAt).getTime();
-        bValue = new Date(b.createdAt).getTime();
+        aValue = safeDateMs(a.createdAt);
+        bValue = safeDateMs(b.createdAt);
         break;
     }
 
@@ -115,27 +147,31 @@ export function sortLoads(
     if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
     return 0;
   });
-
-  return sorted;
 }
 
 /**
  * Group loads by status
  */
-export function groupLoadsByStatus(
-  loads: DispatchLoad[]
-): Record<string, DispatchLoad[]> {
-  const statusOrder = ["available", "quoted", "assigned", "in_transit", "delivered", "invoiced", "paid"];
-  const grouped: Record<string, DispatchLoad[]> = {};
+export function groupLoadsByStatus(loads: DispatchLoad[]): Record<string, DispatchLoad[]> {
+  const statusOrder = [
+    "available",
+    "quoted",
+    "assigned",
+    "in_transit",
+    "delivered",
+    "invoiced",
+    "paid",
+  ];
 
-  // Initialize all status groups
+  const grouped: Record<string, DispatchLoad[]> = {};
   statusOrder.forEach((status) => {
     grouped[status] = [];
   });
 
-  // Group loads
+  if (!Array.isArray(loads)) return grouped;
+
   loads.forEach((load) => {
-    const status = load.status || "available";
+    const status = safeString(load.status) || "available";
     if (!grouped[status]) {
       grouped[status] = [];
     }
@@ -149,20 +185,32 @@ export function groupLoadsByStatus(
  * Calculate KPI metrics from loads
  */
 export function calculateKPIs(loads: DispatchLoad[]) {
+  if (!Array.isArray(loads)) {
+    return {
+      totalLoads: 0,
+      avgMargin: 0,
+      atRisk: 0,
+      blocked: 0,
+      pending: 0,
+      alerts: 0,
+    };
+  }
+
   const totalLoads = loads.length;
   const margins = loads
-    .map((l) => l.financialSnapshot?.margin ?? 0)
+    .map((l) => safeNumber(l.financialSnapshot?.margin))
     .filter((m) => m > 0);
-  const avgMargin = margins.length > 0 ? margins.reduce((a, b) => a + b, 0) / margins.length : 0;
+
+  const avgMargin =
+    margins.length > 0 ? margins.reduce((a, b) => a + b, 0) / margins.length : 0;
 
   const atRisk = loads.filter((l) => {
-    const margin = l.financialSnapshot?.margin ?? 0;
+    const margin = safeNumber(l.financialSnapshot?.margin);
     return margin < 8 && margin > 0;
   }).length;
 
   const blocked = loads.filter((l) => l.financialSnapshot?.status === "loss").length;
-
-  const pending = loads.filter((l) => l.status === "assigned").length;
+  const pending = loads.filter((l) => safeString(l.status) === "assigned").length;
 
   return {
     totalLoads,
@@ -174,39 +222,24 @@ export function calculateKPIs(loads: DispatchLoad[]) {
   };
 }
 
-/**
- * Get color for margin status
- */
 export function calculateMarginColor(margin: number): "green" | "yellow" | "red" {
-  if (margin >= 15) return "green";
-  if (margin >= 8) return "yellow";
+  if (safeNumber(margin) >= 15) return "green";
+  if (safeNumber(margin) >= 8) return "yellow";
   return "red";
 }
 
-/**
- * Format margin as percentage
- */
 export function formatMargin(margin: number): string {
-  return `${Math.round(margin * 100) / 100}%`;
+  return `${(Math.round(safeNumber(margin) * 100) / 100).toFixed(2)}%`;
 }
 
-/**
- * Format rate per mile
- */
 export function formatRate(rate: number): string {
-  return `$${(Math.round(rate * 100) / 100).toFixed(2)}/mi`;
+  return `$${(Math.round(safeNumber(rate) * 100) / 100).toFixed(2)}/mi`;
 }
 
-/**
- * Format profit as currency
- */
 export function formatProfit(profit: number): string {
-  return `$${(Math.round(profit * 100) / 100).toFixed(2)}`;
+  return `$${(Math.round(safeNumber(profit) * 100) / 100).toFixed(2)}`;
 }
 
-/**
- * Get status badge color
- */
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
     available: "bg-blue-500/15 text-blue-400",
@@ -217,19 +250,19 @@ export function getStatusColor(status: string): string {
     invoiced: "bg-cyan-500/15 text-cyan-400",
     paid: "bg-emerald-500/15 text-emerald-400",
   };
-  return colors[status] || "bg-gray-500/15 text-gray-400";
+  return colors[safeString(status)] || "bg-gray-500/15 text-gray-400";
 }
 
-/**
- * Get financial status badge color
- */
-export function getFinancialStatusColor(status: "healthy" | "at_risk" | "loss"): string {
+export function getFinancialStatusColor(
+  status: "healthy" | "at_risk" | "loss"
+): string {
   switch (status) {
     case "healthy":
       return "bg-green-500/15 text-green-400";
     case "at_risk":
       return "bg-yellow-500/15 text-yellow-400";
     case "loss":
+    default:
       return "bg-red-500/15 text-red-400";
   }
 }
