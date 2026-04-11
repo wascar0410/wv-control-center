@@ -48,6 +48,9 @@ const DEFAULT_CONFIG: BusinessConfigState = {
   minimumProfitPerMile: 1.5,
 };
 
+const EMPTY_DISTANCE_ROWS: DistanceSurchargeRow[] = [];
+const EMPTY_WEIGHT_ROWS: WeightSurchargeRow[] = [];
+
 function formatCurrency(value: number, suffix = "") {
   return `$${Number(value || 0).toFixed(2)}${suffix}`;
 }
@@ -56,25 +59,51 @@ function formatNumber(value: number, suffix = "") {
   return `${Number(value || 0).toLocaleString()}${suffix}`;
 }
 
+function mapDistanceRows(rows: any[] | undefined): DistanceSurchargeRow[] {
+  if (!rows?.length) return EMPTY_DISTANCE_ROWS;
+  return rows.map((row: any) => ({
+    id: row.id,
+    fromMiles: Number(row.fromMiles || 0),
+    surchargePerMile: Number(row.surchargePerMile || 0),
+  }));
+}
+
+function mapWeightRows(rows: any[] | undefined): WeightSurchargeRow[] {
+  if (!rows?.length) return EMPTY_WEIGHT_ROWS;
+  return rows.map((row: any) => ({
+    id: row.id,
+    fromLbs: Number(row.fromLbs || 0),
+    surchargePerMile: Number(row.surchargePerMile || 0),
+  }));
+}
+
 export default function BusinessSettings() {
   const utils = trpc.useUtils();
 
-  const { data, error, isLoading } = trpc.businessConfig.getConfig.useQuery(undefined, {
+  const {
+    data: configData,
+    error,
+    isLoading,
+  } = trpc.businessConfig.getConfig.useQuery(undefined, {
     retry: false,
     refetchOnWindowFocus: false,
   });
 
-  const { data: distanceSurcharges = [], isLoading: isLoadingDistance } =
-    trpc.businessConfig.getDistanceSurcharges.useQuery(undefined, {
-      retry: false,
-      refetchOnWindowFocus: false,
-    });
+  const {
+    data: distanceSurchargesData,
+    isLoading: isLoadingDistance,
+  } = trpc.businessConfig.getDistanceSurcharges.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
-  const { data: weightSurcharges = [], isLoading: isLoadingWeight } =
-    trpc.businessConfig.getWeightSurcharges.useQuery(undefined, {
-      retry: false,
-      refetchOnWindowFocus: false,
-    });
+  const {
+    data: weightSurchargesData,
+    isLoading: isLoadingWeight,
+  } = trpc.businessConfig.getWeightSurcharges.useQuery(undefined, {
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
   const [form, setForm] = useState<BusinessConfigState>(DEFAULT_CONFIG);
   const [distanceRows, setDistanceRows] = useState<DistanceSurchargeRow[]>([]);
@@ -97,52 +126,48 @@ export default function BusinessSettings() {
   const deleteWeightMutation = trpc.businessConfig.deleteWeightSurcharge.useMutation();
 
   useEffect(() => {
-    if (data) {
-      setForm({
-        fuelPricePerGallon: Number(data.fuelPricePerGallon ?? DEFAULT_CONFIG.fuelPricePerGallon),
-        vanMpg: Number(data.vanMpg ?? DEFAULT_CONFIG.vanMpg),
-        maintenancePerMile: Number(data.maintenancePerMile ?? DEFAULT_CONFIG.maintenancePerMile),
-        tiresPerMile: Number(data.tiresPerMile ?? DEFAULT_CONFIG.tiresPerMile),
-        insuranceMonthly: Number(data.insuranceMonthly ?? DEFAULT_CONFIG.insuranceMonthly),
-        phoneInternetMonthly: Number(
-          data.phoneInternetMonthly ?? DEFAULT_CONFIG.phoneInternetMonthly
-        ),
-        loadBoardAppsMonthly: Number(
-          data.loadBoardAppsMonthly ?? DEFAULT_CONFIG.loadBoardAppsMonthly
-        ),
-        accountingSoftwareMonthly: Number(
-          data.accountingSoftwareMonthly ?? DEFAULT_CONFIG.accountingSoftwareMonthly
-        ),
-        otherFixedMonthly: Number(data.otherFixedMonthly ?? DEFAULT_CONFIG.otherFixedMonthly),
-        targetMilesPerMonth: Number(
-          data.targetMilesPerMonth ?? DEFAULT_CONFIG.targetMilesPerMonth
-        ),
-        minimumProfitPerMile: Number(
-          data.minimumProfitPerMile ?? DEFAULT_CONFIG.minimumProfitPerMile
-        ),
-      });
-    }
-  }, [data]);
+    if (!configData) return;
+
+    setForm({
+      fuelPricePerGallon: Number(
+        configData.fuelPricePerGallon ?? DEFAULT_CONFIG.fuelPricePerGallon
+      ),
+      vanMpg: Number(configData.vanMpg ?? DEFAULT_CONFIG.vanMpg),
+      maintenancePerMile: Number(
+        configData.maintenancePerMile ?? DEFAULT_CONFIG.maintenancePerMile
+      ),
+      tiresPerMile: Number(configData.tiresPerMile ?? DEFAULT_CONFIG.tiresPerMile),
+      insuranceMonthly: Number(
+        configData.insuranceMonthly ?? DEFAULT_CONFIG.insuranceMonthly
+      ),
+      phoneInternetMonthly: Number(
+        configData.phoneInternetMonthly ?? DEFAULT_CONFIG.phoneInternetMonthly
+      ),
+      loadBoardAppsMonthly: Number(
+        configData.loadBoardAppsMonthly ?? DEFAULT_CONFIG.loadBoardAppsMonthly
+      ),
+      accountingSoftwareMonthly: Number(
+        configData.accountingSoftwareMonthly ?? DEFAULT_CONFIG.accountingSoftwareMonthly
+      ),
+      otherFixedMonthly: Number(
+        configData.otherFixedMonthly ?? DEFAULT_CONFIG.otherFixedMonthly
+      ),
+      targetMilesPerMonth: Number(
+        configData.targetMilesPerMonth ?? DEFAULT_CONFIG.targetMilesPerMonth
+      ),
+      minimumProfitPerMile: Number(
+        configData.minimumProfitPerMile ?? DEFAULT_CONFIG.minimumProfitPerMile
+      ),
+    });
+  }, [configData]);
 
   useEffect(() => {
-    setDistanceRows(
-      distanceSurcharges.map((row: any) => ({
-        id: row.id,
-        fromMiles: Number(row.fromMiles || 0),
-        surchargePerMile: Number(row.surchargePerMile || 0),
-      }))
-    );
-  }, [distanceSurcharges]);
+    setDistanceRows(mapDistanceRows(distanceSurchargesData));
+  }, [distanceSurchargesData]);
 
   useEffect(() => {
-    setWeightRows(
-      weightSurcharges.map((row: any) => ({
-        id: row.id,
-        fromLbs: Number(row.fromLbs || 0),
-        surchargePerMile: Number(row.surchargePerMile || 0),
-      }))
-    );
-  }, [weightSurcharges]);
+    setWeightRows(mapWeightRows(weightSurchargesData));
+  }, [weightSurchargesData]);
 
   const derived = useMemo(() => {
     const fixedMonthly =
@@ -160,8 +185,11 @@ export default function BusinessSettings() {
       Number(form.maintenancePerMile || 0) +
       Number(form.tiresPerMile || 0);
 
-    const estimatedMonthlyVariable = variablePerMile * Number(form.targetMilesPerMonth || 0);
-    const estimatedMonthlyOperating = fixedMonthly + estimatedMonthlyVariable;
+    const estimatedMonthlyVariable =
+      variablePerMile * Number(form.targetMilesPerMonth || 0);
+
+    const estimatedMonthlyOperating =
+      fixedMonthly + estimatedMonthlyVariable;
 
     return {
       fixedMonthly,
@@ -293,11 +321,11 @@ export default function BusinessSettings() {
       await utils.businessConfig.getWeightSurcharges.invalidate();
 
       setSaveStatus("success");
-      setTimeout(() => setSaveStatus("idle"), 3000);
+      window.setTimeout(() => setSaveStatus("idle"), 3000);
     } catch (err: any) {
       setSaveStatus("error");
       setErrorMessage(err.message || "No se pudo guardar la configuración");
-      setTimeout(() => setSaveStatus("idle"), 5000);
+      window.setTimeout(() => setSaveStatus("idle"), 5000);
     }
   };
 
