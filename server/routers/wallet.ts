@@ -591,6 +591,69 @@ export const walletRouter = router({
       }
     }),
 
+ /**
+   * Partner wallet summary
+   */
+  getPartnerSummary: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      ensureAdminOrOwner(ctx.user.role);
+
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database connection failed",
+        });
+      }
+
+      const users = await db.query.users.findMany({
+        where: (u, { or, eq }) =>
+          or(
+            eq(u.email, "wascar.ortiz0410@gmail.com"),
+            eq(u.email, "yisvel10@gmail.com")
+          ),
+      });
+
+      const partners = await Promise.all(
+        users.map(async (user) => {
+          let walletRaw = await getWalletByDriverId(user.id);
+          if (!walletRaw) {
+            walletRaw = await getOrCreateWallet(user.id);
+          }
+
+          const wallet = safeWallet(walletRaw);
+
+          const userWithdrawals = await getWithdrawals(user.id, 200, 0);
+
+          const totalWithdrawn = (userWithdrawals || [])
+            .filter((w: any) =>
+              ["requested", "approved", "completed"].includes(String(w.status || ""))
+            )
+            .reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
+
+          return {
+            id: user.id,
+            name: user.name || user.email || `User ${user.id}`,
+            totalAssigned: Number(wallet?.totalEarnings ?? 0),
+            totalWithdrawn,
+            availableToWithdraw: Number(wallet?.availableBalance ?? 0),
+            pendingWithdrawals: Number(wallet?.pendingBalance ?? 0),
+            walletStatus: (wallet?.status || "active") as
+              | "active"
+              | "suspended"
+              | "pending",
+          };
+        })
+      );
+
+      return partners;
+    } catch (err) {
+      console.error("[wallet.getPartnerSummary]", err);
+      return [];
+    }
+  }),
+
+  
   /**
    * Wallet stats
    */
