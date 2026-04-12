@@ -428,8 +428,7 @@ export type InsertLoadQuotation = typeof loadQuotations.$inferInsert;
 
 /**
  * Business Configuration - Costs and pricing parameters
- */
-export const businessConfig = mysqlTable(
+ */export const businessConfig = mysqlTable(
   "business_config",
   {
     id: int("id").autoincrement().primaryKey(),
@@ -447,13 +446,23 @@ export const businessConfig = mysqlTable(
     targetMilesPerMonth: int("targetMilesPerMonth").default(4000),
     minimumProfitPerMile: decimal("minimumProfitPerMile", { precision: 6, scale: 2 }).default("1.50"),
 
-    // New 5-bucket allocation model
+    // 5-bucket allocation model
     operatingExpensesPercent: decimal("operatingExpensesPercent", { precision: 5, scale: 2 }).default("35.00"),
     vanFundPercent: decimal("vanFundPercent", { precision: 5, scale: 2 }).default("30.00"),
     emergencyReservePercent: decimal("emergencyReservePercent", { precision: 5, scale: 2 }).default("10.00"),
     wascarDrawPercent: decimal("wascarDrawPercent", { precision: 5, scale: 2 }).default("12.50"),
     yisvelDrawPercent: decimal("yisvelDrawPercent", { precision: 5, scale: 2 }).default("12.50"),
 
+    // Tax settings
+    estimatedTaxPercent: decimal("estimatedTaxPercent", { precision: 5, scale: 2 }).default("25.00"),
+    quarterlyTaxEnabled: boolean("quarterlyTaxEnabled").default(true).notNull(),
+    taxReserveMode: mysqlEnum("taxReserveMode", ["profit_based", "revenue_based", "manual"]).default("profit_based").notNull(),
+
+    // Goals
+    vanFundGoal: decimal("vanFundGoal", { precision: 12, scale: 2 }).default("15000.00"),
+    emergencyReserveGoal: decimal("emergencyReserveGoal", { precision: 12, scale: 2 }).default("5000.00"),
+
+    // Alert thresholds
     marginAlertThreshold: decimal("marginAlertThreshold", { precision: 5, scale: 2 }).default("10.00"),
     quoteVarianceThreshold: decimal("quoteVarianceThreshold", { precision: 5, scale: 2 }).default("20.00"),
     overdueDaysThreshold: int("overdueDaysThreshold").default(30),
