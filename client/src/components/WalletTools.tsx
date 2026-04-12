@@ -17,7 +17,7 @@ export default function WalletTools() {
   const utils = trpc.useUtils();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [amountInput, setAmountInput] = useState("500");
+  const [amountInput, setAmountInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<ToolMessage | null>(null);
 
