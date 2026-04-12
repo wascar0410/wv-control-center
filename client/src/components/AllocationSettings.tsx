@@ -14,17 +14,19 @@ import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AllocationState {
-  ownerDrawPercent: number;
-  reserveFundPercent: number;
-  reinvestmentPercent: number;
-  operatingCashPercent: number;
+  operatingExpensesPercent: number;
+  vanFundPercent: number;
+  emergencyReservePercent: number;
+  wascarDrawPercent: number;
+  yisvelDrawPercent: number;
 }
 
 const DEFAULT_ALLOCATIONS: AllocationState = {
-  ownerDrawPercent: 20,
-  reserveFundPercent: 15,
-  reinvestmentPercent: 50,
-  operatingCashPercent: 15,
+  operatingExpensesPercent: 35,
+  vanFundPercent: 30,
+  emergencyReservePercent: 10,
+  wascarDrawPercent: 12.5,
+  yisvelDrawPercent: 12.5,
 };
 
 export function AllocationSettings() {
@@ -51,19 +53,31 @@ export function AllocationSettings() {
   useEffect(() => {
     if (currentConfig) {
       setAllocations({
-        ownerDrawPercent: Number(currentConfig.ownerDrawPercent ?? DEFAULT_ALLOCATIONS.ownerDrawPercent),
-        reserveFundPercent: Number(currentConfig.reserveFundPercent ?? DEFAULT_ALLOCATIONS.reserveFundPercent),
-        reinvestmentPercent: Number(currentConfig.reinvestmentPercent ?? DEFAULT_ALLOCATIONS.reinvestmentPercent),
-        operatingCashPercent: Number(currentConfig.operatingCashPercent ?? DEFAULT_ALLOCATIONS.operatingCashPercent),
+        operatingExpensesPercent: Number(
+          currentConfig.operatingExpensesPercent ?? DEFAULT_ALLOCATIONS.operatingExpensesPercent
+        ),
+        vanFundPercent: Number(
+          currentConfig.vanFundPercent ?? DEFAULT_ALLOCATIONS.vanFundPercent
+        ),
+        emergencyReservePercent: Number(
+          currentConfig.emergencyReservePercent ?? DEFAULT_ALLOCATIONS.emergencyReservePercent
+        ),
+        wascarDrawPercent: Number(
+          currentConfig.wascarDrawPercent ?? DEFAULT_ALLOCATIONS.wascarDrawPercent
+        ),
+        yisvelDrawPercent: Number(
+          currentConfig.yisvelDrawPercent ?? DEFAULT_ALLOCATIONS.yisvelDrawPercent
+        ),
       });
     }
   }, [currentConfig]);
 
   const total =
-    allocations.ownerDrawPercent +
-    allocations.reserveFundPercent +
-    allocations.reinvestmentPercent +
-    allocations.operatingCashPercent;
+    allocations.operatingExpensesPercent +
+    allocations.vanFundPercent +
+    allocations.emergencyReservePercent +
+    allocations.wascarDrawPercent +
+    allocations.yisvelDrawPercent;
 
   const isValid = Math.abs(total - 100) < 0.01;
 
@@ -109,103 +123,125 @@ export function AllocationSettings() {
       <CardHeader>
         <CardTitle>Profit Allocation Settings</CardTitle>
         <CardDescription>
-          Define cómo se distribuye la utilidad neta del negocio después de gastos.
-          Esta configuración está adaptada a su etapa actual: operar, ahorrar para la van
-          y sacar una parte para gastos personales.
+          Define cómo se distribuye el 100% del dinero que entra a la empresa.
+          Así separan claramente operación, ahorro para la van, reserva y retiros personales.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="ownerDraw" className="text-sm font-medium">
-              Personal Draw
+            <Label htmlFor="operatingExpenses" className="text-sm font-medium">
+              Operating Expenses
             </Label>
             <div className="flex items-center gap-2">
               <Input
-                id="ownerDraw"
+                id="operatingExpenses"
                 type="number"
                 min="0"
                 max="100"
                 step="0.1"
-                value={allocations.ownerDrawPercent}
-                onChange={(e) => handleChange("ownerDrawPercent", e.target.value)}
+                value={allocations.operatingExpensesPercent}
+                onChange={(e) => handleChange("operatingExpensesPercent", e.target.value)}
                 className="flex-1"
                 disabled={isSaving}
               />
               <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Dinero que ustedes pueden sacar para casa y gastos personales.
+              Gasolina, apps, movimiento del negocio y gastos operativos actuales.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="reserveFund" className="text-sm font-medium">
-              Emergency Reserve
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="reserveFund"
-                type="number"
-                min="0"
-                max="100"
-                step="0.1"
-                value={allocations.reserveFundPercent}
-                onChange={(e) => handleChange("reserveFundPercent", e.target.value)}
-                className="flex-1"
-                disabled={isSaving}
-              />
-              <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Fondo de seguridad para imprevistos, semanas flojas y emergencias.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="reinvestment" className="text-sm font-medium">
+            <Label htmlFor="vanFund" className="text-sm font-medium">
               Van Fund
             </Label>
             <div className="flex items-center gap-2">
               <Input
-                id="reinvestment"
+                id="vanFund"
                 type="number"
                 min="0"
                 max="100"
                 step="0.1"
-                value={allocations.reinvestmentPercent}
-                onChange={(e) => handleChange("reinvestmentPercent", e.target.value)}
+                value={allocations.vanFundPercent}
+                onChange={(e) => handleChange("vanFundPercent", e.target.value)}
                 className="flex-1"
                 disabled={isSaving}
               />
               <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ahorro principal para comprar la van y fortalecer el negocio.
+              Ahorro principal para comprar la van.
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="operatingCash" className="text-sm font-medium">
-              Business Operating Cash
+            <Label htmlFor="emergencyReserve" className="text-sm font-medium">
+              Emergency Reserve
             </Label>
             <div className="flex items-center gap-2">
               <Input
-                id="operatingCash"
+                id="emergencyReserve"
                 type="number"
                 min="0"
                 max="100"
                 step="0.1"
-                value={allocations.operatingCashPercent}
-                onChange={(e) => handleChange("operatingCashPercent", e.target.value)}
+                value={allocations.emergencyReservePercent}
+                onChange={(e) => handleChange("emergencyReservePercent", e.target.value)}
                 className="flex-1"
                 disabled={isSaving}
               />
               <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Efectivo operativo para gasolina, apps, movimiento y operación actual.
+              Fondo de seguridad para imprevistos y semanas flojas.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="wascarDraw" className="text-sm font-medium">
+              Wascar Draw
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="wascarDraw"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={allocations.wascarDrawPercent}
+                onChange={(e) => handleChange("wascarDrawPercent", e.target.value)}
+                className="flex-1"
+                disabled={isSaving}
+              />
+              <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Retiro personal disponible para Wascar.
+            </p>
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="yisvelDraw" className="text-sm font-medium">
+              Yisvel Draw
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="yisvelDraw"
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={allocations.yisvelDrawPercent}
+                onChange={(e) => handleChange("yisvelDrawPercent", e.target.value)}
+                className="flex-1"
+                disabled={isSaving}
+              />
+              <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Retiro personal disponible para Yisvel.
             </p>
           </div>
         </div>
@@ -273,10 +309,10 @@ export function AllocationSettings() {
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-900">
-            <strong>Recommended setup for your current stage:</strong> 20% Personal Draw,
-            15% Emergency Reserve, 50% Van Fund, and 15% Business Operating Cash.
-            This reflects that the business is still building capital for the van while
-            also covering current operations and allowing limited personal withdrawals.
+            <strong>Recommended setup for your current stage:</strong> 35% Operating Expenses,
+            30% Van Fund, 10% Emergency Reserve, 12.5% Wascar Draw, and 12.5% Yisvel Draw.
+            This reflects that all income enters the business first, and from there you separate
+            business needs, van savings, protection, and personal withdrawals without mixing them.
           </p>
         </div>
       </CardContent>
