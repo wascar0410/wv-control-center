@@ -132,10 +132,10 @@ export default function WalletDashboard() {
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Wallet & Draws</h1>
+          <h1 className="text-3xl font-bold text-red-600">TEST WALLET NUEVO 999</h1>
           <p className="text-muted-foreground">
-            Controla saldo disponible, movimientos y retiros de forma clara.
-          </p>
+  ESTE ES EL WALLET NUEVO EN PRODUCCION
+</p>
         </div>
 
         <Button
