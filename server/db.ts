@@ -2888,23 +2888,59 @@ export async function normalizeLegacyPendingWithdrawals(driverId?: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const conditions = [eq(withdrawals.status, "requested" as any)];
-  if (driverId) {
-    conditions.push(eq(withdrawals.driverId, driverId));
+  if (!driverId) {
+    throw new Error("driverId is required");
   }
 
-  await db
-    .update(withdrawals)
-    .set({
-      status: "completed",
-      completedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(and(...conditions));
+  const wallet = await getWalletByDriverId(driverId);
+  if (!wallet) {
+    return { success: true, updatedWithdrawals: 0, repairedPendingBalance: 0 };
+  }
 
-  return { success: true };
+  const legacyWithdrawals = await db.query.withdrawals.findMany({
+    where: (w, { and, eq }) =>
+      and(eq(w.driverId, driverId), eq(w.status, "requested")),
+  });
+
+  if (legacyWithdrawals.length > 0) {
+    await db
+      .update(withdrawals)
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(withdrawals.driverId, driverId),
+          eq(withdrawals.status, "requested" as any)
+        )
+      );
+  }
+
+  const stillPending = await db.query.withdrawals.findMany({
+    where: (w, { and, eq, inArray }) =>
+      and(
+        eq(w.driverId, driverId),
+        inArray(w.status, ["requested", "approved"] as any)
+      ),
+  });
+
+  const realPendingBalance = stillPending.reduce(
+    (sum, w) => sum + Number(w.amount || 0),
+    0
+  );
+
+  await updateWalletBalance(wallet.id, {
+    pendingBalance: String(realPendingBalance),
+  });
+
+  return {
+    success: true,
+    updatedWithdrawals: legacyWithdrawals.length,
+    repairedPendingBalance: realPendingBalance,
+  };
 }
-
 /**
  * Get wallet summary for driver
  */
