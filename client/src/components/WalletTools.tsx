@@ -52,7 +52,7 @@ export default function WalletTools() {
     );
   };
 
-  const handleAddBalance = async () => {
+  const handleAdjustBalance = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
@@ -71,21 +71,21 @@ export default function WalletTools() {
 
       setMessage({
         type: "success",
-        text: `✅ Balance added successfully: ${formatCurrency(amount)}`,
+        text: `✅ Balance adjusted successfully: ${formatCurrency(amount)}`,
       });
 
-      setAmountInput("500");
+      setAmountInput("");
     } catch (error: any) {
       setMessage({
         type: "error",
-        text: `❌ Error: ${extractErrorMessage(error, "Failed to add balance")}`,
+        text: `❌ Error: ${extractErrorMessage(error, "Failed to adjust balance")}`,
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRecordIncome = async () => {
+  const handleAddIncomeEntry = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
@@ -97,19 +97,21 @@ export default function WalletTools() {
       await addAdjustmentMutation.mutateAsync({
         driverId: user.id,
         amount,
-        reason: "Recorded income entry",
+        reason: "Manual income entry",
       });
 
       await refreshWalletData();
 
       setMessage({
         type: "success",
-        text: `✅ Income recorded: ${formatCurrency(amount)}`,
+        text: `✅ Income entry added: ${formatCurrency(amount)}`,
       });
+
+      setAmountInput("");
     } catch (error: any) {
       setMessage({
         type: "error",
-        text: `❌ Error: ${extractErrorMessage(error, "Failed to record income")}`,
+        text: `❌ Error: ${extractErrorMessage(error, "Failed to add income entry")}`,
       });
     } finally {
       setIsLoading(false);
@@ -137,6 +139,8 @@ export default function WalletTools() {
         type: "success",
         text: `✅ Withdrawal recorded: ${formatCurrency(withdrawalAmount)}`,
       });
+
+      setAmountInput("");
     } catch (error: any) {
       setMessage({
         type: "error",
@@ -150,7 +154,7 @@ export default function WalletTools() {
     }
   };
 
-  const handleFixLegacyPending = async () => {
+  const handleCleanLegacyPending = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
@@ -165,14 +169,14 @@ export default function WalletTools() {
 
       setMessage({
         type: "success",
-        text: "✅ Legacy pending withdrawals were normalized successfully",
+        text: "✅ Legacy pending withdrawals cleaned successfully",
       });
     } catch (error: any) {
       setMessage({
         type: "error",
         text: `❌ Error: ${extractErrorMessage(
           error,
-          "Failed to normalize legacy pending withdrawals"
+          "Failed to clean legacy pending withdrawals"
         )}`,
       });
     } finally {
@@ -191,7 +195,7 @@ export default function WalletTools() {
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-blue-900">
               <Zap className="h-5 w-5" />
-              Wallet Tools (Admin Only)
+              Wallet Admin Tools
             </CardTitle>
 
             <Button
@@ -224,28 +228,28 @@ export default function WalletTools() {
               <div className="flex gap-2">
                 <Input
                   type="number"
-                  placeholder="Amount"
+                  placeholder="Enter amount"
                   value={amountInput}
                   onChange={(e) => setAmountInput(e.target.value)}
                   disabled={isLoading}
                   className="flex-1"
                 />
                 <Button
-                  onClick={handleAddBalance}
+                  onClick={handleAdjustBalance}
                   disabled={isLoading}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {isLoading ? "Loading..." : "Add Balance"}
+                  {isLoading ? "Loading..." : "Adjust Balance"}
                 </Button>
               </div>
 
               <Button
-                onClick={handleRecordIncome}
+                onClick={handleAddIncomeEntry}
                 disabled={isLoading}
                 variant="outline"
                 className="w-full"
               >
-                {isLoading ? "Loading..." : "Record Income"}
+                {isLoading ? "Loading..." : "Add Income Entry"}
               </Button>
 
               <Button
@@ -258,23 +262,23 @@ export default function WalletTools() {
               </Button>
 
               <Button
-                onClick={handleFixLegacyPending}
+                onClick={handleCleanLegacyPending}
                 disabled={isLoading}
                 variant="outline"
                 className="w-full"
               >
                 <RefreshCcw className="mr-2 h-4 w-4" />
-                {isLoading ? "Loading..." : "Fix Legacy Pending Withdrawals"}
+                {isLoading ? "Loading..." : "Clean Legacy Pending"}
               </Button>
             </div>
 
             <div className="rounded bg-blue-100 p-2 text-xs text-blue-700">
-              <p className="mb-1 font-semibold">ℹ️ How to use:</p>
+              <p className="mb-1 font-semibold">ℹ️ Admin actions:</p>
               <ul className="list-inside list-disc space-y-1">
-                <li>Add Balance: manually increase wallet balance</li>
-                <li>Record Income: add real income to wallet history</li>
+                <li>Adjust Balance: manually update available balance</li>
+                <li>Add Income Entry: register a real income movement</li>
                 <li>Record Withdrawal: register a completed withdrawal instantly</li>
-                <li>Fix Legacy Pending Withdrawals: clean old pending records from the previous flow</li>
+                <li>Clean Legacy Pending: fix old pending withdrawals from the previous workflow</li>
               </ul>
             </div>
           </CardContent>
