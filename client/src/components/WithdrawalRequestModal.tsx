@@ -46,6 +46,7 @@ export default function WithdrawalRequestModal({
   availableBalance,
 }: WithdrawalRequestModalProps) {
   const { toast } = useToast();
+  const utils = trpc.useUtils();
 
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<WithdrawalMethod>("bank_transfer");
@@ -53,6 +54,13 @@ export default function WithdrawalRequestModal({
   const [notes, setNotes] = useState("");
 
   const requestWithdrawalMutation = trpc.wallet.requestWithdrawal.useMutation();
+
+  const { data: linkedAccounts = [], isLoading: loadingAccounts } =
+    trpc.wallet.getLinkedBankAccounts.useQuery(undefined, {
+      enabled: isOpen,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    });
 
   const isSubmitting = requestWithdrawalMutation.isPending;
   const isBalanceInsufficient = availableBalance <= 0;
@@ -76,7 +84,7 @@ export default function WithdrawalRequestModal({
     if (!isBankTransfer) return "";
     if (!amount) return "";
     if (!bankAccountId.trim()) {
-      return "Debes indicar una cuenta bancaria para transferencia";
+      return "Debes seleccionar una cuenta bancaria para transferencia";
     }
     return "";
   }, [isBankTransfer, amount, bankAccountId]);
@@ -101,6 +109,12 @@ export default function WithdrawalRequestModal({
       resetForm();
     }
   }, [isOpen, resetForm]);
+
+  useEffect(() => {
+    if (isOpen && linkedAccounts.length === 1 && !bankAccountId) {
+      setBankAccountId(String(linkedAccounts[0].id));
+    }
+  }, [isOpen, linkedAccounts, bankAccountId]);
 
   const handleDialogOpenChange = useCallback(
     (open: boolean) => {
@@ -153,7 +167,7 @@ export default function WithdrawalRequestModal({
     if (isBankTransfer && !bankAccountId.trim()) {
       toast({
         title: "Cuenta bancaria requerida",
-        description: "Debes indicar una cuenta bancaria para transferencia",
+        description: "Debes seleccionar una cuenta bancaria para transferencia",
         variant: "destructive",
       });
       return;
@@ -166,6 +180,13 @@ export default function WithdrawalRequestModal({
         bankAccountId: bankAccountId.trim() || undefined,
         notes: notes.trim() || undefined,
       });
+
+      await Promise.all([
+        utils.wallet.getWalletSummary.invalidate(),
+        utils.wallet.getStats.invalidate(),
+        utils.wallet.getTransactions.invalidate(),
+        utils.wallet.getWithdrawals.invalidate(),
+      ]);
 
       toast({
         title: "Éxito",
@@ -257,13 +278,37 @@ export default function WithdrawalRequestModal({
           {isBankTransfer && (
             <div className="space-y-2">
               <Label htmlFor="bankAccountId">Cuenta Bancaria</Label>
-              <Input
-                id="bankAccountId"
-                placeholder="ID o referencia de la cuenta"
+              <Select
                 value={bankAccountId}
-                onChange={(e) => setBankAccountId(e.target.value)}
-                disabled={isSubmitting || isBalanceInsufficient}
-              />
+                onValueChange={setBankAccountId}
+                disabled={isSubmitting || isBalanceInsufficient || loadingAccounts}
+              >
+                <SelectTrigger id="bankAccountId">
+                  <SelectValue
+                    placeholder={
+                      loadingAccounts
+                        ? "Cargando cuentas..."
+                        : linkedAccounts.length > 0
+                          ? "Selecciona una cuenta"
+                          : "No hay cuentas conectadas"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {linkedAccounts.map((account: any) => (
+                    <SelectItem key={account.id} value={String(account.id)}>
+                      {account.name} {account.mask ? `••••${account.mask}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {linkedAccounts.length === 0 && !loadingAccounts && (
+                <p className="text-xs text-muted-foreground">
+                  No tienes cuentas bancarias conectadas. Conecta una cuenta antes de usar transferencia bancaria.
+                </p>
+              )}
+
               {bankAccountError && (
                 <p className="text-xs text-destructive">{bankAccountError}</p>
               )}
