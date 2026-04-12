@@ -9,6 +9,29 @@ import {
 } from "../drizzle/schema";
 import { getDb } from "./db";
 
+// ─── Defaults ─────────────────────────────────────────────────────────────────
+
+const DEFAULT_BUSINESS_CONFIG = {
+  fuelPricePerGallon: "3.60",
+  vanMpg: "18.0",
+  maintenancePerMile: "0.12",
+  tiresPerMile: "0.03",
+  insuranceMonthly: "450.00",
+  phoneInternetMonthly: "70.00",
+  loadBoardAppsMonthly: "45.00",
+  accountingSoftwareMonthly: "30.00",
+  otherFixedMonthly: "80.00",
+  targetMilesPerMonth: 4000,
+  minimumProfitPerMile: "1.50",
+
+  // New 5-bucket allocation model
+  operatingExpensesPercent: "35.00",
+  vanFundPercent: "30.00",
+  emergencyReservePercent: "10.00",
+  wascarDrawPercent: "12.50",
+  yisvelDrawPercent: "12.50",
+};
+
 // ─── Business Config ───────────────────────────────────────────────────────────
 
 export async function getBusinessConfig(userId: number) {
@@ -36,12 +59,19 @@ export async function updateBusinessConfig(
   if (existing) {
     await db
       .update(businessConfig)
-      .set(data)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
       .where(eq(businessConfig.userId, userId));
   } else {
-    await db
-      .insert(businessConfig)
-      .values({ userId, ...data } as InsertBusinessConfig);
+    await db.insert(businessConfig).values({
+      userId,
+      ...DEFAULT_BUSINESS_CONFIG,
+      ...data,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as InsertBusinessConfig);
   }
 
   return getBusinessConfig(userId);
@@ -68,17 +98,14 @@ export async function getDistanceSurcharges(userId: number) {
 }
 
 export async function createDistanceSurcharge(
-  userId: number,
-  data: Omit<InsertDistanceSurcharge, "userId">
+  data: InsertDistanceSurcharge
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db
-    .insert(distanceSurcharge)
-    .values({ userId, ...data } as InsertDistanceSurcharge);
+  await db.insert(distanceSurcharge).values(data);
 
-  return getDistanceSurcharges(userId);
+  return getDistanceSurcharges(data.userId);
 }
 
 export async function updateDistanceSurcharge(
@@ -90,7 +117,10 @@ export async function updateDistanceSurcharge(
 
   await db
     .update(distanceSurcharge)
-    .set(data)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
     .where(eq(distanceSurcharge.id, id));
 }
 
@@ -115,17 +145,14 @@ export async function getWeightSurcharges(userId: number) {
 }
 
 export async function createWeightSurcharge(
-  userId: number,
-  data: Omit<InsertWeightSurcharge, "userId">
+  data: InsertWeightSurcharge
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  await db
-    .insert(weightSurcharge)
-    .values({ userId, ...data } as InsertWeightSurcharge);
+  await db.insert(weightSurcharge).values(data);
 
-  return getWeightSurcharges(userId);
+  return getWeightSurcharges(data.userId);
 }
 
 export async function updateWeightSurcharge(
@@ -137,7 +164,10 @@ export async function updateWeightSurcharge(
 
   await db
     .update(weightSurcharge)
-    .set(data)
+    .set({
+      ...data,
+      updatedAt: new Date(),
+    })
     .where(eq(weightSurcharge.id, id));
 }
 
@@ -158,7 +188,7 @@ export async function getApplicableDistanceSurcharge(
 
   let applicable = surcharges[0];
   for (const surcharge of surcharges) {
-    if (surcharge.fromMiles <= loadedMiles) {
+    if (Number(surcharge.fromMiles) <= loadedMiles) {
       applicable = surcharge;
     }
   }
@@ -174,7 +204,7 @@ export async function getApplicableWeightSurcharge(
 
   let applicable = surcharges[0];
   for (const surcharge of surcharges) {
-    if (surcharge.fromLbs <= weight) {
+    if (Number(surcharge.fromLbs) <= weight) {
       applicable = surcharge;
     }
   }
