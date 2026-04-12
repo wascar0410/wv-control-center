@@ -107,9 +107,11 @@ export default function WalletTools() {
 
       // Then request withdrawal
       await requestWithdrawalMutation.mutateAsync({
-        amount: 500,
-        bankAccountId: 1, // Fallback to first account if exists
-      });
+  amount: 100,
+  method: "bank_transfer",
+  bankAccountId: "1",
+  notes: "Demo withdrawal",
+});
 
       setMessage({
         type: "success",
