@@ -3369,11 +3369,22 @@ export async function createQuoteAnalysis(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  const [result] = await db
-    .insert(quoteAnalysis)
-    .values(data)
-    .returning();
-  return result;
+
+  const result: any = await db.insert(quoteAnalysis).values(data);
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) throw new Error("Failed to create quote analysis");
+
+  const rows = await db
+    .select()
+    .from(quoteAnalysis)
+    .where(eq(quoteAnalysis.id, Number(insertId)))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -3417,15 +3428,22 @@ export async function updateQuoteAnalysisWithActuals(id: number, data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  const [updated] = await db
+
+  await db
     .update(quoteAnalysis)
     .set({
       ...data,
       updatedAt: new Date(),
     })
+    .where(eq(quoteAnalysis.id, id));
+
+  const rows = await db
+    .select()
+    .from(quoteAnalysis)
     .where(eq(quoteAnalysis.id, id))
-    .returning();
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -3593,23 +3611,35 @@ export async function createInvoice(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  // Generate invoice number
+
   const invoiceNumber = `INV-${Date.now()}`;
-  
-  const [result] = await db
+
+  const result: any = await db
     .insert(invoices)
     .values({
       ...data,
       invoiceNumber,
       remainingBalance: data.total,
-    })
-    .returning();
-  
-  // Create receivable record
-  if (result) {
+    });
+
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) throw new Error("Failed to create invoice");
+
+  const invoiceRows = await db
+    .select()
+    .from(invoices)
+    .where(eq(invoices.id, Number(insertId)))
+    .limit(1);
+
+  const invoice = invoiceRows[0] || null;
+
+  if (invoice) {
     await db.insert(receivables).values({
-      invoiceId: result.id,
+      invoiceId: invoice.id,
       brokerName: data.brokerName,
       brokerId: data.brokerId,
       invoiceAmount: data.total,
@@ -3618,8 +3648,8 @@ export async function createInvoice(data: {
       status: "current",
     });
   }
-  
-  return result;
+
+  return invoice;
 }
 
 /**
@@ -3677,20 +3707,32 @@ export async function recordInvoicePayment(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  // Add payment record
-  const [payment] = await db
+
+  const result: any = await db
     .insert(invoicePayments)
-    .values(data)
-    .returning();
-  
-  // Update invoice
+    .values(data);
+
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) throw new Error("Failed to create invoice payment");
+
+  const paymentRows = await db
+    .select()
+    .from(invoicePayments)
+    .where(eq(invoicePayments.id, Number(insertId)))
+    .limit(1);
+
+  const payment = paymentRows[0] || null;
+
   const invoice = await getInvoiceById(data.invoiceId);
   if (invoice) {
     const newPaidAmount = Number(invoice.paidAmount || 0) + data.amount;
     const newRemainingBalance = Number(invoice.total) - newPaidAmount;
     const newStatus = newRemainingBalance <= 0 ? "paid" : "partially_paid";
-    
+
     await db
       .update(invoices)
       .set({
@@ -3702,7 +3744,7 @@ export async function recordInvoicePayment(data: {
       })
       .where(eq(invoices.id, data.invoiceId));
   }
-  
+
   return payment;
 }
 
@@ -3778,23 +3820,23 @@ export async function getReceivablesByBroker(brokerName: string) {
 export async function updateReceivableAging(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
+
   const rec = await db.query.receivables.findFirst({
     where: eq(receivables.id, id),
   });
-  
+
   if (!rec) return null;
-  
+
   const invoice = await db.query.invoices.findFirst({
     where: eq(invoices.id, rec.invoiceId),
   });
-  
+
   if (!invoice) return null;
-  
+
   const now = new Date();
   const dueDate = new Date(invoice.dueDate);
   const daysOverdue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   let agingBucket = "current";
   if (daysOverdue > 0) {
     if (daysOverdue <= 30) agingBucket = "30_days";
@@ -3802,10 +3844,10 @@ export async function updateReceivableAging(id: number) {
     else if (daysOverdue <= 90) agingBucket = "90_days";
     else agingBucket = "120_plus";
   }
-  
+
   const status = daysOverdue > 0 ? "overdue" : "current";
-  
-  const [updated] = await db
+
+  await db
     .update(receivables)
     .set({
       daysOverdue: Math.max(0, daysOverdue),
@@ -3813,10 +3855,15 @@ export async function updateReceivableAging(id: number) {
       status: status as any,
       updatedAt: new Date(),
     })
+    .where(eq(receivables.id, id));
+
+  const rows = await db
+    .select()
+    .from(receivables)
     .where(eq(receivables.id, id))
-    .returning();
-  
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -3825,18 +3872,23 @@ export async function updateReceivableAging(id: number) {
 export async function issueInvoice(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [updated] = await db
+
+  await db
     .update(invoices)
     .set({
       status: "issued",
       issuedAt: new Date(),
       updatedAt: new Date(),
     })
+    .where(eq(invoices.id, id));
+
+  const rows = await db
+    .select()
+    .from(invoices)
     .where(eq(invoices.id, id))
-    .returning();
-  
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -3845,17 +3897,22 @@ export async function issueInvoice(id: number) {
 export async function cancelInvoice(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [updated] = await db
+
+  await db
     .update(invoices)
     .set({
       status: "cancelled",
       updatedAt: new Date(),
     })
+    .where(eq(invoices.id, id));
+
+  const rows = await db
+    .select()
+    .from(invoices)
     .where(eq(invoices.id, id))
-    .returning();
-  
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -3898,16 +3955,28 @@ export async function createAlert(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [result] = await db
+
+  const result: any = await db
     .insert(alerts)
     .values({
       ...data,
       severity: data.severity || "info",
-    })
-    .returning();
-  
-  return result;
+    });
+
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) throw new Error("Failed to create alert");
+
+  const rows = await db
+    .select()
+    .from(alerts)
+    .where(eq(alerts.id, Number(insertId)))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -3947,18 +4016,23 @@ export async function getAlertsForUser(userId: number, filters?: {
 export async function markAlertAsRead(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [updated] = await db
+
+  await db
     .update(alerts)
     .set({
       isRead: true,
       readAt: new Date(),
       updatedAt: new Date(),
     })
+    .where(eq(alerts.id, id));
+
+  const rows = await db
+    .select()
+    .from(alerts)
     .where(eq(alerts.id, id))
-    .returning();
-  
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -3967,18 +4041,23 @@ export async function markAlertAsRead(id: number) {
 export async function acknowledgeAlert(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [updated] = await db
+
+  await db
     .update(alerts)
     .set({
       isAcknowledged: true,
       acknowledgedAt: new Date(),
       updatedAt: new Date(),
     })
+    .where(eq(alerts.id, id));
+
+  const rows = await db
+    .select()
+    .from(alerts)
     .where(eq(alerts.id, id))
-    .returning();
-  
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -4014,16 +4093,28 @@ export async function createTask(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [result] = await db
+
+  const result: any = await db
     .insert(tasks)
     .values({
       ...data,
       priority: data.priority || "medium",
-    })
-    .returning();
-  
-  return result;
+    });
+
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) throw new Error("Failed to create task");
+
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(eq(tasks.id, Number(insertId)))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -4063,20 +4154,25 @@ export async function getTasksForUser(userId: number, filters?: {
 export async function updateTaskStatus(id: number, status: string) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
+
   const completedAt = status === "completed" ? new Date() : null;
-  
-  const [updated] = await db
+
+  await db
     .update(tasks)
     .set({
       status: status as any,
       completedAt,
       updatedAt: new Date(),
     })
+    .where(eq(tasks.id, id));
+
+  const rows = await db
+    .select()
+    .from(tasks)
     .where(eq(tasks.id, id))
-    .returning();
-  
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -4085,17 +4181,22 @@ export async function updateTaskStatus(id: number, status: string) {
 export async function updateTaskProgress(id: number, progress: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [updated] = await db
+
+  await db
     .update(tasks)
     .set({
       progress: Math.min(100, Math.max(0, progress)),
       updatedAt: new Date(),
     })
+    .where(eq(tasks.id, id));
+
+  const rows = await db
+    .select()
+    .from(tasks)
     .where(eq(tasks.id, id))
-    .returning();
-  
-  return updated;
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -4125,17 +4226,29 @@ export async function getTaskWithComments(id: number) {
 export async function addTaskComment(taskId: number, comment: string, authorId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
-  
-  const [result] = await db
+
+  const result: any = await db
     .insert(taskComments)
     .values({
       taskId,
       comment,
       authorId,
-    })
-    .returning();
-  
-  return result;
+    });
+
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) throw new Error("Failed to add task comment");
+
+  const rows = await db
+    .select()
+    .from(taskComments)
+    .where(eq(taskComments.id, Number(insertId)))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -4229,7 +4342,7 @@ export async function createCompany(data: {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [company] = await db
+  const result: any = await db
     .insert(companies)
     .values({
       name: data.name,
@@ -4252,10 +4365,22 @@ export async function createCompany(data: {
       ownerId: data.ownerId,
       createdAt: new Date(),
       updatedAt: new Date(),
-    })
-    .returning();
+    });
 
-  return company;
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) throw new Error("Failed to create company");
+
+  const rows = await db
+    .select()
+    .from(companies)
+    .where(eq(companies.id, Number(insertId)))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -4290,16 +4415,21 @@ export async function updateCompany(companyId: number, data: Partial<typeof comp
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [updated] = await db
+  await db
     .update(companies)
     .set({
       ...data,
       updatedAt: new Date(),
     })
-    .where(eq(companies.id, companyId))
-    .returning();
+    .where(eq(companies.id, companyId));
 
-  return updated;
+  const rows = await db
+    .select()
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
