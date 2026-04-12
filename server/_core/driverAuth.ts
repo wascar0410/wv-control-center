@@ -30,12 +30,12 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
   if (!db) throw new Error("Database connection failed");
 
   // Find user by email
-  const user = await db
+  const rows = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.email, payload.email))
-    .limit(1)
-    .then((rows) => rows[0]);
+    .limit(1);
+  const user = rows[0];
 
   if (!user) {
     throw new Error("Email o contraseña incorrectos");
@@ -155,10 +155,11 @@ export async function getPasswordAuditHistory(userId: number, limit = 10) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
+  const rows = await db
     .select()
     .from(passwordAuditLog)
     .where(eq(passwordAuditLog.userId, userId))
     .orderBy((table) => table.createdAt)
     .limit(limit);
+  return rows;
 }
