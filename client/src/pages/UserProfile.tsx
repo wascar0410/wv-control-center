@@ -66,7 +66,7 @@ type PreferencesForm = {
   allowLocationTracking: boolean;
 };
 
- DEFAULT_PROFILE: ProfileForm = {
+const DEFAULT_PROFILE: ProfileForm = {
   name: "",
   phone: "",
   address: "",
@@ -77,7 +77,7 @@ type PreferencesForm = {
   profileImageUrl: "",
 };
 
- DEFAULT_PREFERENCES: PreferencesForm = {
+const DEFAULT_PREFERENCES: PreferencesForm = {
   emailNotifications: true,
   smsNotifications: true,
   pushNotifications: true,
