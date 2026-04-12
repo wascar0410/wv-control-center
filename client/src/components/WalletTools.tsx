@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Zap } from "lucide-react";
+import { AlertCircle, Zap, RefreshCcw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatCurrency } from "@/lib/utils";
 
@@ -17,12 +17,14 @@ export default function WalletTools() {
   const utils = trpc.useUtils();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [demoAmount, setDemoAmount] = useState("500");
+  const [amountInput, setAmountInput] = useState("500");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<ToolMessage | null>(null);
 
   const addAdjustmentMutation = trpc.wallet.addAdjustment.useMutation();
   const requestWithdrawalMutation = trpc.wallet.requestWithdrawal.useMutation();
+  const normalizeLegacyPendingMutation =
+    trpc.wallet.normalizeLegacyPendingWithdrawals.useMutation();
 
   const isAdminOrOwner = user?.role === "admin" || user?.role === "owner";
 
@@ -41,95 +43,137 @@ export default function WalletTools() {
     return Number.isFinite(amount) && amount > 0 ? amount : fallback;
   };
 
-  const handleAddDemoBalance = async () => {
+  const extractErrorMessage = (error: any, fallback: string) => {
+    return (
+      error?.message ||
+      error?.data?.message ||
+      error?.shape?.message ||
+      fallback
+    );
+  };
+
+  const handleAddBalance = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
     setMessage(null);
 
     try {
-      const amount = parseAmount(demoAmount, 500);
+      const amount = parseAmount(amountInput, 500);
 
       await addAdjustmentMutation.mutateAsync({
         driverId: user.id,
         amount,
-        reason: `Demo balance seed - ${new Date().toISOString()}`,
+        reason: `Manual wallet balance adjustment - ${new Date().toISOString()}`,
       });
 
       await refreshWalletData();
 
       setMessage({
         type: "success",
-        text: `✅ Demo balance added: ${formatCurrency(amount)}`,
+        text: `✅ Balance added successfully: ${formatCurrency(amount)}`,
       });
 
-      setDemoAmount("500");
+      setAmountInput("500");
     } catch (error: any) {
       setMessage({
         type: "error",
-        text: `❌ Error: ${error?.message || "Failed to add demo balance"}`,
+        text: `❌ Error: ${extractErrorMessage(error, "Failed to add balance")}`,
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddDemoTransaction = async () => {
+  const handleRecordIncome = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
     setMessage(null);
 
     try {
-      const amount = 150;
+      const amount = parseAmount(amountInput, 150);
 
       await addAdjustmentMutation.mutateAsync({
         driverId: user.id,
         amount,
-        reason: "Demo transaction - Amazon Flex / Instacart income",
+        reason: "Recorded income entry",
       });
 
       await refreshWalletData();
 
       setMessage({
         type: "success",
-        text: `✅ Demo transaction added: ${formatCurrency(amount)}`,
+        text: `✅ Income recorded: ${formatCurrency(amount)}`,
       });
     } catch (error: any) {
       setMessage({
         type: "error",
-        text: `❌ Error: ${error?.message || "Failed to add demo transaction"}`,
+        text: `❌ Error: ${extractErrorMessage(error, "Failed to record income")}`,
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddDemoWithdrawal = async () => {
+  const handleRecordWithdrawal = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
     setMessage(null);
 
     try {
-      const withdrawalAmount = 100;
+      const withdrawalAmount = parseAmount(amountInput, 100);
 
       await requestWithdrawalMutation.mutateAsync({
         amount: withdrawalAmount,
         method: "other",
-        notes: "Demo instant withdrawal",
+        notes: `Manual wallet withdrawal - ${new Date().toISOString()}`,
       });
 
       await refreshWalletData();
 
       setMessage({
         type: "success",
-        text: `✅ Demo withdrawal recorded: ${formatCurrency(withdrawalAmount)}`,
+        text: `✅ Withdrawal recorded: ${formatCurrency(withdrawalAmount)}`,
       });
     } catch (error: any) {
       setMessage({
         type: "error",
-        text: `❌ Error: ${error?.message || "Failed to record demo withdrawal"}`,
+        text: `❌ Error: ${extractErrorMessage(
+          error,
+          "Failed to record withdrawal"
+        )}`,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFixLegacyPending = async () => {
+    if (!user?.id) return;
+
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      await normalizeLegacyPendingMutation.mutateAsync({
+        driverId: user.id,
+      });
+
+      await refreshWalletData();
+
+      setMessage({
+        type: "success",
+        text: "✅ Legacy pending withdrawals were normalized successfully",
+      });
+    } catch (error: any) {
+      setMessage({
+        type: "error",
+        text: `❌ Error: ${extractErrorMessage(
+          error,
+          "Failed to normalize legacy pending withdrawals"
+        )}`,
       });
     } finally {
       setIsLoading(false);
@@ -180,14 +224,14 @@ export default function WalletTools() {
               <div className="flex gap-2">
                 <Input
                   type="number"
-                  placeholder="Amount (default: 500)"
-                  value={demoAmount}
-                  onChange={(e) => setDemoAmount(e.target.value)}
+                  placeholder="Amount"
+                  value={amountInput}
+                  onChange={(e) => setAmountInput(e.target.value)}
                   disabled={isLoading}
                   className="flex-1"
                 />
                 <Button
-                  onClick={handleAddDemoBalance}
+                  onClick={handleAddBalance}
                   disabled={isLoading}
                   className="bg-green-600 hover:bg-green-700"
                 >
@@ -196,30 +240,41 @@ export default function WalletTools() {
               </div>
 
               <Button
-                onClick={handleAddDemoTransaction}
+                onClick={handleRecordIncome}
                 disabled={isLoading}
                 variant="outline"
                 className="w-full"
               >
-                {isLoading ? "Loading..." : "Add Demo Transaction"}
+                {isLoading ? "Loading..." : "Record Income"}
               </Button>
 
               <Button
-                onClick={handleAddDemoWithdrawal}
+                onClick={handleRecordWithdrawal}
                 disabled={isLoading}
                 variant="outline"
                 className="w-full"
               >
-                {isLoading ? "Loading..." : "Add Demo Withdrawal"}
+                {isLoading ? "Loading..." : "Record Withdrawal"}
+              </Button>
+
+              <Button
+                onClick={handleFixLegacyPending}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full"
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                {isLoading ? "Loading..." : "Fix Legacy Pending Withdrawals"}
               </Button>
             </div>
 
             <div className="rounded bg-blue-100 p-2 text-xs text-blue-700">
               <p className="mb-1 font-semibold">ℹ️ How to use:</p>
               <ul className="list-inside list-disc space-y-1">
-                <li>Add Balance: seed your wallet with demo money</li>
-                <li>Add Transaction: create income history in the wallet</li>
-                <li>Add Withdrawal: record an instant completed withdrawal</li>
+                <li>Add Balance: manually increase wallet balance</li>
+                <li>Record Income: add real income to wallet history</li>
+                <li>Record Withdrawal: register a completed withdrawal instantly</li>
+                <li>Fix Legacy Pending Withdrawals: clean old pending records from the previous flow</li>
               </ul>
             </div>
           </CardContent>
