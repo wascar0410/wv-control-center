@@ -434,6 +434,7 @@ export const businessConfig = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+
     fuelPricePerGallon: decimal("fuelPricePerGallon", { precision: 6, scale: 2 }).default("3.60"),
     vanMpg: decimal("vanMpg", { precision: 5, scale: 1 }).default("18.0"),
     maintenancePerMile: decimal("maintenancePerMile", { precision: 6, scale: 3 }).default("0.12"),
@@ -445,13 +446,18 @@ export const businessConfig = mysqlTable(
     otherFixedMonthly: decimal("otherFixedMonthly", { precision: 8, scale: 2 }).default("80.00"),
     targetMilesPerMonth: int("targetMilesPerMonth").default(4000),
     minimumProfitPerMile: decimal("minimumProfitPerMile", { precision: 6, scale: 2 }).default("1.50"),
-    ownerDrawPercent: decimal("ownerDrawPercent", { precision: 5, scale: 2 }).default("40.00"),
-    reserveFundPercent: decimal("reserveFundPercent", { precision: 5, scale: 2 }).default("20.00"),
-    reinvestmentPercent: decimal("reinvestmentPercent", { precision: 5, scale: 2 }).default("20.00"),
-    operatingCashPercent: decimal("operatingCashPercent", { precision: 5, scale: 2 }).default("20.00"),
+
+    // New 5-bucket allocation model
+    operatingExpensesPercent: decimal("operatingExpensesPercent", { precision: 5, scale: 2 }).default("35.00"),
+    vanFundPercent: decimal("vanFundPercent", { precision: 5, scale: 2 }).default("30.00"),
+    emergencyReservePercent: decimal("emergencyReservePercent", { precision: 5, scale: 2 }).default("10.00"),
+    wascarDrawPercent: decimal("wascarDrawPercent", { precision: 5, scale: 2 }).default("12.50"),
+    yisvelDrawPercent: decimal("yisvelDrawPercent", { precision: 5, scale: 2 }).default("12.50"),
+
     marginAlertThreshold: decimal("marginAlertThreshold", { precision: 5, scale: 2 }).default("10.00"),
     quoteVarianceThreshold: decimal("quoteVarianceThreshold", { precision: 5, scale: 2 }).default("20.00"),
     overdueDaysThreshold: int("overdueDaysThreshold").default(30),
+
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
