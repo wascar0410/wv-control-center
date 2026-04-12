@@ -788,20 +788,33 @@ const financeRouter = router({
       }
     }),
   updateAllocationSettings: protectedProcedure
-    .input(z.object({
-      operatingPct: z.number().min(0).max(100),
-      ownerPayPct: z.number().min(0).max(100),
-      reservePct: z.number().min(0).max(100),
-      growthPct: z.number().min(0).max(100),
-    }))
-    .mutation(async ({ input }) => {
-      const total = input.operatingPct + input.ownerPayPct + input.reservePct + input.growthPct;
-      if (Math.abs(total - 100) > 0.01) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Los porcentajes deben sumar 100%" });
-      }
-      await updateAllocationSettings(input);
-      return { success: true };
-    }),
+  .input(
+    z.object({
+      operatingExpensesPercent: z.number().min(0).max(100),
+      vanFundPercent: z.number().min(0).max(100),
+      emergencyReservePercent: z.number().min(0).max(100),
+      wascarDrawPercent: z.number().min(0).max(100),
+      yisvelDrawPercent: z.number().min(0).max(100),
+    })
+  )
+  .mutation(async ({ input, ctx }) => {
+    const total =
+      input.operatingExpensesPercent +
+      input.vanFundPercent +
+      input.emergencyReservePercent +
+      input.wascarDrawPercent +
+      input.yisvelDrawPercent;
+
+    if (Math.abs(total - 100) > 0.01) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Los porcentajes deben sumar 100%",
+      });
+    }
+
+    await updateAllocationSettings(ctx.user.id, input);
+    return { success: true };
+  }),
   autoCategorize: publicProcedure
     .input(z.object({ name: z.string() }))
     .query(({ input }) => autoCategorize(input.name)),
@@ -1957,45 +1970,45 @@ const podRouter = router({
 // ─── Profile Router ──────────────────────────────────────────────────────────
 
 const profileRouter = router({
- getProfile: protectedProcedure.query(async ({ ctx }) => {
-  try {
-    const { getUserProfile, getOrCreateUserPreferences } = await import("./db");
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const { getUserProfile, getOrCreateUserPreferences } = await import("./db");
 
-    const profile = await getUserProfile(ctx.user.id);
-    const preferences = await getOrCreateUserPreferences(ctx.user.id);
+      const profile = await getUserProfile(ctx.user.id);
+      const preferences = await getOrCreateUserPreferences(ctx.user.id);
 
-    return { profile, preferences };
-  } catch (error) {
-    console.error("[profile.getProfile] error:", error);
-    return {
-      profile: {
-        name: ctx.user.name || "Usuario",
-        phone: "",
-        address: "",
-        city: "",
-        state: "",
-        zipCode: "",
-        bio: "",
-        profileImageUrl: "",
-      },
-      preferences: {
-        emailNotifications: true,
-        smsNotifications: true,
-        pushNotifications: true,
-        notifyOnLoadAssignment: true,
-        notifyOnLoadStatus: true,
-        notifyOnPayment: true,
-        notifyOnMessage: true,
-        notifyOnBonus: true,
-        theme: "dark",
-        language: "es",
-        timezone: "America/New_York",
-        showOnlineStatus: true,
-        allowLocationTracking: false,
-      },
-    };
-  }
-}),
+      return { profile, preferences };
+    } catch (error) {
+      console.error("[profile.getProfile] error:", error);
+      return {
+        profile: {
+          name: ctx.user.name || "Usuario",
+          phone: "",
+          address: "",
+          city: "",
+          state: "",
+          zipCode: "",
+          bio: "",
+          profileImageUrl: "",
+        },
+        preferences: {
+          emailNotifications: true,
+          smsNotifications: true,
+          pushNotifications: true,
+          notifyOnLoadAssignment: true,
+          notifyOnLoadStatus: true,
+          notifyOnPayment: true,
+          notifyOnMessage: true,
+          notifyOnBonus: true,
+          theme: "dark",
+          language: "es",
+          timezone: "America/New_York",
+          showOnlineStatus: true,
+          allowLocationTracking: false,
+        },
+      };
+    }
+  }),
 
   updateProfile: protectedProcedure
     .input(z.object({
