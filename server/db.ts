@@ -2292,11 +2292,12 @@ export async function getFinancialPnL(year: number, month: number) {
       totalDraws, drawsByPartner,
       retainedEarnings: netProfit - totalDraws,
       allocation: {
-        operating: netProfit * 0.50,
-        ownerPay: netProfit * 0.20,
-        reserve: netProfit * 0.20,
-        growth: netProfit * 0.10,
-      },
+  operatingExpenses: netProfit * 0.35,
+  vanFund: netProfit * 0.30,
+  emergencyReserve: netProfit * 0.10,
+  wascarDraw: netProfit * 0.125,
+  yisvelDraw: netProfit * 0.125,
+},
       taxReserve: totalRevenue * 0.20,
     };
   } catch (error) {
@@ -2309,10 +2310,11 @@ export async function getAllocationSettings(userId?: number) {
   const db = await getDb();
 
   const DEFAULTS = {
-    ownerDrawPercent: 40,
-    reserveFundPercent: 20,
-    reinvestmentPercent: 20,
-    operatingCashPercent: 20,
+    operatingExpensesPercent: 35,
+    vanFundPercent: 30,
+    emergencyReservePercent: 10,
+    wascarDrawPercent: 12.5,
+    yisvelDrawPercent: 12.5,
     marginAlertThreshold: 10,
     quoteVarianceThreshold: 20,
     overdueDaysThreshold: 30,
@@ -2334,10 +2336,11 @@ export async function getAllocationSettings(userId?: number) {
     if (!config) return DEFAULTS;
 
     return {
-      ownerDrawPercent: Number(config.ownerDrawPercent ?? 40),
-      reserveFundPercent: Number(config.reserveFundPercent ?? 20),
-      reinvestmentPercent: Number(config.reinvestmentPercent ?? 20),
-      operatingCashPercent: Number(config.operatingCashPercent ?? 20),
+      operatingExpensesPercent: Number(config.operatingExpensesPercent ?? 35),
+      vanFundPercent: Number(config.vanFundPercent ?? 30),
+      emergencyReservePercent: Number(config.emergencyReservePercent ?? 10),
+      wascarDrawPercent: Number(config.wascarDrawPercent ?? 12.5),
+      yisvelDrawPercent: Number(config.yisvelDrawPercent ?? 12.5),
       marginAlertThreshold: Number(config.marginAlertThreshold ?? 10),
       quoteVarianceThreshold: Number(config.quoteVarianceThreshold ?? 20),
       overdueDaysThreshold: Number(config.overdueDaysThreshold ?? 30),
@@ -2351,20 +2354,22 @@ export async function getAllocationSettings(userId?: number) {
 export async function updateAllocationSettings(
   userId: number,
   data: {
-    ownerDrawPercent: number;
-    reserveFundPercent: number;
-    reinvestmentPercent: number;
-    operatingCashPercent: number;
+    operatingExpensesPercent: number;
+    vanFundPercent: number;
+    emergencyReservePercent: number;
+    wascarDrawPercent: number;
+    yisvelDrawPercent: number;
   }
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const total =
-    data.ownerDrawPercent +
-    data.reserveFundPercent +
-    data.reinvestmentPercent +
-    data.operatingCashPercent;
+    data.operatingExpensesPercent +
+    data.vanFundPercent +
+    data.emergencyReservePercent +
+    data.wascarDrawPercent +
+    data.yisvelDrawPercent;
 
   if (Math.abs(total - 100) > 0.001) {
     throw new Error("Allocation percentages must sum to 100");
@@ -2379,10 +2384,11 @@ export async function updateAllocationSettings(
   if (!existing.length) {
     await db.insert(businessConfig).values({
       userId,
-      ownerDrawPercent: String(data.ownerDrawPercent),
-      reserveFundPercent: String(data.reserveFundPercent),
-      reinvestmentPercent: String(data.reinvestmentPercent),
-      operatingCashPercent: String(data.operatingCashPercent),
+      operatingExpensesPercent: String(data.operatingExpensesPercent),
+      vanFundPercent: String(data.vanFundPercent),
+      emergencyReservePercent: String(data.emergencyReservePercent),
+      wascarDrawPercent: String(data.wascarDrawPercent),
+      yisvelDrawPercent: String(data.yisvelDrawPercent),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -2390,10 +2396,11 @@ export async function updateAllocationSettings(
     await db
       .update(businessConfig)
       .set({
-        ownerDrawPercent: String(data.ownerDrawPercent),
-        reserveFundPercent: String(data.reserveFundPercent),
-        reinvestmentPercent: String(data.reinvestmentPercent),
-        operatingCashPercent: String(data.operatingCashPercent),
+        operatingExpensesPercent: String(data.operatingExpensesPercent),
+        vanFundPercent: String(data.vanFundPercent),
+        emergencyReservePercent: String(data.emergencyReservePercent),
+        wascarDrawPercent: String(data.wascarDrawPercent),
+        yisvelDrawPercent: String(data.yisvelDrawPercent),
         updatedAt: new Date(),
       })
       .where(eq(businessConfig.userId, userId));
