@@ -2564,16 +2564,21 @@ export async function updateWalletBalance(
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [updated] = await db
+  await db
     .update(wallets)
     .set({
       ...updates,
       updatedAt: new Date(),
     })
-    .where(eq(wallets.id, walletId))
-    .returning();
+    .where(eq(wallets.id, walletId));
 
-  return updated;
+  const result = await db
+    .select()
+    .from(wallets)
+    .where(eq(wallets.id, walletId))
+    .limit(1);
+
+  return result[0] || null;
 }
 
 /**
@@ -2596,7 +2601,7 @@ export async function addWalletTransaction(
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [newTx] = await db
+  const result: any = await db
     .insert(walletTransactions)
     .values({
       walletId,
@@ -2610,10 +2615,30 @@ export async function addWalletTransaction(
       notes: transaction.notes,
       status: (transaction.status || "pending") as any,
       createdAt: new Date(),
-    })
-    .returning();
+    });
 
-  return newTx;
+  const insertId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!insertId) {
+    const fallback = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.walletId, walletId))
+      .limit(1);
+
+    return fallback[0] || null;
+  }
+
+  const rows = await db
+    .select()
+    .from(walletTransactions)
+    .where(eq(walletTransactions.id, Number(insertId)))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
