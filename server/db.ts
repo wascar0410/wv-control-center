@@ -3057,7 +3057,7 @@ export async function processSettlement(settlementId: number) {
     await db.insert(walletTransactions).values({
       walletId: partner1Wallet.id,
       driverId: sett.partner1Id,
-      type: "settlement",
+      type: "adjustment",
       amount: String(sett.partner1Amount),
       settlementId,
       description: `Settlement for period ${sett.settlementPeriod}`,
