@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DollarSign, TrendingUp, Clock, AlertCircle, Wallet, ShieldCheck } from "lucide-react";
 import WithdrawalRequestModal from "@/components/WithdrawalRequestModal";
+import WalletTools from "@/components/WalletTools";
+import BankConnectionPanel from "@/components/BankConnectionPanel";
+import PartnerWalletSummary from "@/components/PartnerWalletSummary";
 import { formatCurrency } from "@/lib/utils";
 
 export default function WalletDashboard() {
@@ -149,6 +152,10 @@ export default function WalletDashboard() {
         </Button>
       </div>
 
+      <WalletTools />
+
+      <PartnerWalletSummary />
+
       {!canWithdraw && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-6">
@@ -241,10 +248,11 @@ export default function WalletDashboard() {
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
           <TabsTrigger value="history">Historial</TabsTrigger>
           <TabsTrigger value="withdrawals">Retiros</TabsTrigger>
+          <TabsTrigger value="bank">Banco</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -384,6 +392,10 @@ export default function WalletDashboard() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="bank" className="space-y-4">
+          <BankConnectionPanel />
         </TabsContent>
       </Tabs>
 
