@@ -373,6 +373,7 @@ export default function WalletDashboard() {
       <WithdrawalRequestModal
         isOpen={showWithdrawalModal}
         onClose={() => setShowWithdrawalModal(false)}
+        availableBalance={displayStats.availableBalance || 0}
       />
     </div>
   );
