@@ -94,17 +94,17 @@ type PreferencesForm = {
 };
 
 export default function UserProfile() {
-   { user } = useAuth();
-   utils = trpc.useUtils();
+  const { user } = useAuth();
+  const utils = trpc.useUtils();
 
-   [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("profile");
 
   const {
-  data: walletSummary,
-  isLoading: walletLoading,
-} = trpc.wallet.getWalletSummary.useQuery(undefined, {
-  retry: false,
-});
+    data: walletSummary,
+    isLoading: walletLoading,
+  } = trpc.wallet.getWalletSummary.useQuery(undefined, {
+    retry: false,
+  });
 
   const {
     data: profileData,
@@ -113,7 +113,6 @@ export default function UserProfile() {
   } = trpc.profile.getProfile.useQuery(undefined, {
     retry: false,
   });
-
   const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_PROFILE);
   const [preferencesForm, setPreferencesForm] =
     useState<PreferencesForm>(DEFAULT_PREFERENCES);
@@ -288,10 +287,9 @@ export default function UserProfile() {
     });
   };
 
-  const availableBalance = Number(walletSummary?.wallet?.availableBalance ?? 0);
+const availableBalance = Number(walletSummary?.wallet?.availableBalance ?? 0);
 const pendingBalance = Number(walletSummary?.wallet?.pendingBalance ?? 0);
 const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
-
   if (isLoading) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
