@@ -16,6 +16,10 @@ const formatCurrency = (value: number) =>
 
 const DEFAULT_ESTIMATED_TAX_RATE = 0.25;
 
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, value));
+}
+
 export function FinancialDashboard() {
   const { data: dashboardData, isLoading } =
     trpc.financial.getDashboardSummary.useQuery({});
@@ -26,6 +30,12 @@ export function FinancialDashboard() {
   const { data: reconciliationData } =
     trpc.financialExtended.getReconciliationData.useQuery(undefined, {
       refetchInterval: 30000,
+    });
+
+  const { data: businessConfig } =
+    trpc.businessConfig.getConfig.useQuery(undefined, {
+      retry: false,
+      refetchOnWindowFocus: false,
     });
 
   if (isLoading) {
@@ -39,10 +49,28 @@ export function FinancialDashboard() {
   const cashFlow = dashboardData?.cashFlow;
 
   const netProfit = Number(plSummary?.netProfit || 0);
+
+  const estimatedTaxPercent =
+    Number(businessConfig?.estimatedTaxPercent ?? DEFAULT_ESTIMATED_TAX_RATE * 100) / 100;
+
   const taxableProfit = Math.max(netProfit, 0);
-  const estimatedTaxReserve = taxableProfit * DEFAULT_ESTIMATED_TAX_RATE;
+  const estimatedTaxReserve = taxableProfit * estimatedTaxPercent;
   const netAfterTaxReserve = netProfit - estimatedTaxReserve;
   const quarterlyTaxSetAside = estimatedTaxReserve / 4;
+
+  const vanFundGoal = Number(businessConfig?.vanFundGoal || 15000);
+  const emergencyReserveGoal = Number(businessConfig?.emergencyReserveGoal || 5000);
+
+  const currentVanFund = Number(allocations?.vanFund || 0);
+  const currentEmergencyReserve = Number(allocations?.emergencyReserve || 0);
+
+  const vanFundProgress =
+    vanFundGoal > 0 ? clampPercent((currentVanFund / vanFundGoal) * 100) : 0;
+
+  const emergencyReserveProgress =
+    emergencyReserveGoal > 0
+      ? clampPercent((currentEmergencyReserve / emergencyReserveGoal) * 100)
+      : 0;
 
   const criticalAlerts = alertsData?.criticalCount || 0;
   const warningAlerts = alertsData?.warningCount || 0;
@@ -109,7 +137,7 @@ export function FinancialDashboard() {
               {formatCurrency(estimatedTaxReserve)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Estimated at {(DEFAULT_ESTIMATED_TAX_RATE * 100).toFixed(0)}% of positive net profit.
+              Estimated at {(estimatedTaxPercent * 100).toFixed(0)}% of positive net profit.
             </p>
           </div>
         </CardContent>
@@ -195,6 +223,56 @@ export function FinancialDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                Goal Progress
+                <Badge variant="outline">Targets</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Van Fund</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(currentVanFund)} of {formatCurrency(vanFundGoal)}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-blue-600">
+                    {vanFundProgress.toFixed(1)}%
+                  </p>
+                </div>
+                <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-blue-600"
+                    style={{ width: `${vanFundProgress}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3 rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Emergency Reserve</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(currentEmergencyReserve)} of {formatCurrency(emergencyReserveGoal)}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-yellow-600">
+                    {emergencyReserveProgress.toFixed(1)}%
+                  </p>
+                </div>
+                <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-yellow-500"
+                    style={{ width: `${emergencyReserveProgress}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
@@ -416,7 +494,7 @@ export function FinancialDashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Estimated Tax Rate</p>
                 <p className="text-2xl font-bold text-amber-600">
-                  {(DEFAULT_ESTIMATED_TAX_RATE * 100).toFixed(0)}%
+                  {(estimatedTaxPercent * 100).toFixed(0)}%
                 </p>
               </div>
               <div>
