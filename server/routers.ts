@@ -1957,45 +1957,45 @@ const podRouter = router({
 // ─── Profile Router ──────────────────────────────────────────────────────────
 
 const profileRouter = router({
-  getProfile: publicProcedure.query(async () => {
-    try {
-      const { getUserProfile, getOrCreateUserPreferences } = await import("./db");
+ getProfile: protectedProcedure.query(async ({ ctx }) => {
+  try {
+    const { getUserProfile, getOrCreateUserPreferences } = await import("./db");
 
-      const fallbackUserId = 1;
-      const profile = await getUserProfile(fallbackUserId);
-      const preferences = await getOrCreateUserPreferences(fallbackUserId);
+    const profile = await getUserProfile(ctx.user.id);
+    const preferences = await getOrCreateUserPreferences(ctx.user.id);
 
-      return { profile, preferences };
-    } catch (error) {
-      console.error("[profile.getProfile] error:", error);
-      return {
-        profile: {
-          name: "WV Admin",
-          phone: "",
-          address: "",
-          city: "",
-          state: "",
-          zipCode: "",
-          bio: "",
-        },
-        preferences: {
-          emailNotifications: true,
-          smsNotifications: true,
-          pushNotifications: true,
-          notifyOnLoadAssignment: true,
-          notifyOnLoadStatus: true,
-          notifyOnPayment: true,
-          notifyOnMessage: true,
-          notifyOnBonus: true,
-          theme: "dark",
-          language: "es",
-          timezone: "America/New_York",
-          showOnlineStatus: true,
-          allowLocationTracking: false,
-        },
-      };
-    }
-  }),
+    return { profile, preferences };
+  } catch (error) {
+    console.error("[profile.getProfile] error:", error);
+    return {
+      profile: {
+        name: ctx.user.name || "Usuario",
+        phone: "",
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        bio: "",
+        profileImageUrl: "",
+      },
+      preferences: {
+        emailNotifications: true,
+        smsNotifications: true,
+        pushNotifications: true,
+        notifyOnLoadAssignment: true,
+        notifyOnLoadStatus: true,
+        notifyOnPayment: true,
+        notifyOnMessage: true,
+        notifyOnBonus: true,
+        theme: "dark",
+        language: "es",
+        timezone: "America/New_York",
+        showOnlineStatus: true,
+        allowLocationTracking: false,
+      },
+    };
+  }
+}),
 
   updateProfile: protectedProcedure
     .input(z.object({
