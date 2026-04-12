@@ -2908,12 +2908,15 @@ export async function normalizeLegacyPendingWithdrawals(driverId?: number) {
     }
     if (!wallet) continue;
 
-    const legacyRequested = await db.query.withdrawals.findMany({
-      where: (w, { and, eq }) =>
-        and(eq(w.driverId, currentDriverId), eq(w.status, "requested")),
+    const legacyPending = await db.query.withdrawals.findMany({
+      where: (w, { and, eq, inArray }) =>
+        and(
+          eq(w.driverId, currentDriverId),
+          inArray(w.status, ["requested", "approved"] as any)
+        ),
     });
 
-    if (legacyRequested.length > 0) {
+    if (legacyPending.length > 0) {
       await db
         .update(withdrawals)
         .set({
@@ -2924,11 +2927,11 @@ export async function normalizeLegacyPendingWithdrawals(driverId?: number) {
         .where(
           and(
             eq(withdrawals.driverId, currentDriverId),
-            eq(withdrawals.status, "requested" as any)
+            inArray(withdrawals.status, ["requested", "approved"] as any)
           )
         );
 
-      totalUpdatedWithdrawals += legacyRequested.length;
+      totalUpdatedWithdrawals += legacyPending.length;
     }
 
     const stillPending = await db.query.withdrawals.findMany({
