@@ -2692,15 +2692,6 @@ export async function requestWithdrawal(
   const availableBalance = Number(wallet.availableBalance || 0);
   const minimumWithdrawal = Number(wallet.minimumWithdrawalAmount || 50);
 
-  console.log("[requestWithdrawal] Processing withdrawal:", {
-    walletId: wallet.id,
-    driverId,
-    amount,
-    fee,
-    availableBalance,
-    minimumWithdrawal,
-  });
-
   if (amount <= 0) {
     throw new Error("Withdrawal amount must be greater than 0");
   }
@@ -2721,11 +2712,12 @@ export async function requestWithdrawal(
       amount: String(amount),
       fee: String(fee),
       netAmount: String(netAmount),
-      method: (data.method || "bank_transfer") as any,
+      method: (data.method || "other") as any,
       bankAccountId: data.bankAccountId,
-      status: "requested",
+      status: "completed",
       notes: data.notes,
       requestedAt: new Date(),
+      completedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -2754,13 +2746,14 @@ export async function requestWithdrawal(
     type: "withdrawal",
     amount: String(amount),
     withdrawalId: withdrawal.id,
-    description: `Withdrawal request: ${data.method || "bank_transfer"}`,
-    status: "pending",
+    description: `Withdrawal completed: ${data.method || "other"}`,
+    notes: data.notes,
+    status: "completed",
   });
 
   await updateWalletBalance(wallet.id, {
     availableBalance: String(availableBalance - amount),
-    pendingBalance: String(Number(wallet.pendingBalance || 0) + amount),
+    pendingBalance: String(Number(wallet.pendingBalance || 0)),
   });
 
   return withdrawal;
