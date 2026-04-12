@@ -159,7 +159,7 @@ export async function getPasswordAuditHistory(userId: number, limit = 10) {
     .select()
     .from(passwordAuditLog)
     .where(eq(passwordAuditLog.userId, userId))
-    .orderBy((table) => table.createdAt)
+    .orderBy(desc(passwordAuditLog.createdAt))
     .limit(limit);
   return rows;
 }
