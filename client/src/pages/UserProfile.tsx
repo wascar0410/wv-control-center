@@ -66,7 +66,7 @@ type PreferencesForm = {
   allowLocationTracking: boolean;
 };
 
-const DEFAULT_PROFILE: ProfileForm = {
+ DEFAULT_PROFILE: ProfileForm = {
   name: "",
   phone: "",
   address: "",
@@ -77,7 +77,7 @@ const DEFAULT_PROFILE: ProfileForm = {
   profileImageUrl: "",
 };
 
-const DEFAULT_PREFERENCES: PreferencesForm = {
+ DEFAULT_PREFERENCES: PreferencesForm = {
   emailNotifications: true,
   smsNotifications: true,
   pushNotifications: true,
@@ -94,17 +94,17 @@ const DEFAULT_PREFERENCES: PreferencesForm = {
 };
 
 export default function UserProfile() {
-  const { user } = useAuth();
-  const utils = trpc.useUtils();
+   { user } = useAuth();
+   utils = trpc.useUtils();
 
-  const [activeTab, setActiveTab] = useState("profile");
+   [activeTab, setActiveTab] = useState("profile");
 
   const {
-    data: wallet,
-    isLoading: walletLoading,
-  } = trpc.wallet.getWalletSummary.useQuery(undefined, {
-    retry: false,
-  });
+  data: walletSummary,
+  isLoading: walletLoading,
+} = trpc.wallet.getWalletSummary.useQuery(undefined, {
+  retry: false,
+});
 
   const {
     data: profileData,
@@ -288,9 +288,9 @@ export default function UserProfile() {
     });
   };
 
-  const availableBalance = Number(wallet?.availableBalance ?? 0);
-  const pendingBalance = Number(wallet?.pendingBalance ?? 0);
-  const totalEarnings = Number(wallet?.totalEarnings ?? 0);
+  const availableBalance = Number(walletSummary?.wallet?.availableBalance ?? 0);
+const pendingBalance = Number(walletSummary?.wallet?.pendingBalance ?? 0);
+const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
 
   if (isLoading) {
     return (
