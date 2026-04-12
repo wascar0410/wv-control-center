@@ -13,56 +13,92 @@ import {
   deleteWeightSurcharge,
 } from "../db-business-config";
 
+const DEFAULT_BUSINESS_CONFIG = {
+  fuelPricePerGallon: 3.6,
+  vanMpg: 18,
+  maintenancePerMile: 0.12,
+  tiresPerMile: 0.03,
+  insuranceMonthly: 450,
+  phoneInternetMonthly: 70,
+  loadBoardAppsMonthly: 45,
+  accountingSoftwareMonthly: 30,
+  otherFixedMonthly: 80,
+  targetMilesPerMonth: 4000,
+  minimumProfitPerMile: 1.5,
+
+  // Allocation buckets - current stage
+  operatingExpensesPercent: 35,
+  vanFundPercent: 30,
+  emergencyReservePercent: 10,
+  wascarDrawPercent: 12.5,
+  yisvelDrawPercent: 12.5,
+};
+
+const allocationConfigSchema = z
+  .object({
+    fuelPricePerGallon: z.number().optional(),
+    vanMpg: z.number().optional(),
+    maintenancePerMile: z.number().optional(),
+    tiresPerMile: z.number().optional(),
+    insuranceMonthly: z.number().optional(),
+    phoneInternetMonthly: z.number().optional(),
+    loadBoardAppsMonthly: z.number().optional(),
+    accountingSoftwareMonthly: z.number().optional(),
+    otherFixedMonthly: z.number().optional(),
+    targetMilesPerMonth: z.number().optional(),
+    minimumProfitPerMile: z.number().optional(),
+
+    operatingExpensesPercent: z.number().min(0).max(100).optional(),
+    vanFundPercent: z.number().min(0).max(100).optional(),
+    emergencyReservePercent: z.number().min(0).max(100).optional(),
+    wascarDrawPercent: z.number().min(0).max(100).optional(),
+    yisvelDrawPercent: z.number().min(0).max(100).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const allocationFields = [
+      data.operatingExpensesPercent,
+      data.vanFundPercent,
+      data.emergencyReservePercent,
+      data.wascarDrawPercent,
+      data.yisvelDrawPercent,
+    ];
+
+    const provided = allocationFields.filter((v) => typeof v === "number");
+
+    // Only validate total if all 5 allocation fields are being sent together
+    if (provided.length === 5) {
+      const total =
+        (data.operatingExpensesPercent || 0) +
+        (data.vanFundPercent || 0) +
+        (data.emergencyReservePercent || 0) +
+        (data.wascarDrawPercent || 0) +
+        (data.yisvelDrawPercent || 0);
+
+      if (Math.abs(total - 100) > 0.01) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Allocation percentages must sum to 100%. Current total: ${total.toFixed(2)}%`,
+        });
+      }
+    }
+  });
+
 export const businessConfigRouter = router({
   getConfig: publicProcedure.query(async ({ ctx }) => {
     try {
       if (!ctx.user) {
-        return {
-          fuelPricePerGallon: 3.6,
-          vanMpg: 18,
-          maintenancePerMile: 0.12,
-          tiresPerMile: 0.03,
-          insuranceMonthly: 450,
-          phoneInternetMonthly: 70,
-          loadBoardAppsMonthly: 45,
-          accountingSoftwareMonthly: 30,
-          otherFixedMonthly: 80,
-          targetMilesPerMonth: 4000,
-          minimumProfitPerMile: 1.5,
-        };
+        return DEFAULT_BUSINESS_CONFIG;
       }
 
       const config = await getBusinessConfig(ctx.user.id);
-      return (
-        config || {
-          fuelPricePerGallon: 3.6,
-          vanMpg: 18,
-          maintenancePerMile: 0.12,
-          tiresPerMile: 0.03,
-          insuranceMonthly: 450,
-          phoneInternetMonthly: 70,
-          loadBoardAppsMonthly: 45,
-          accountingSoftwareMonthly: 30,
-          otherFixedMonthly: 80,
-          targetMilesPerMonth: 4000,
-          minimumProfitPerMile: 1.5,
-        }
-      );
+
+      return {
+        ...DEFAULT_BUSINESS_CONFIG,
+        ...(config || {}),
+      };
     } catch (error) {
       console.error("[businessConfig.getConfig] error:", error);
-      return {
-        fuelPricePerGallon: 3.6,
-        vanMpg: 18,
-        maintenancePerMile: 0.12,
-        tiresPerMile: 0.03,
-        insuranceMonthly: 450,
-        phoneInternetMonthly: 70,
-        loadBoardAppsMonthly: 45,
-        accountingSoftwareMonthly: 30,
-        otherFixedMonthly: 80,
-        targetMilesPerMonth: 4000,
-        minimumProfitPerMile: 1.5,
-      };
+      return DEFAULT_BUSINESS_CONFIG;
     }
   }),
 
@@ -87,7 +123,7 @@ export const businessConfigRouter = router({
   }),
 
   updateConfig: protectedProcedure
-    .input(z.any())
+    .input(allocationConfigSchema)
     .mutation(async ({ ctx, input }) => {
       await updateBusinessConfig(ctx.user.id, input);
       return { success: true };
@@ -171,4 +207,3 @@ export const businessConfigRouter = router({
       return { success: true };
     }),
 });
-
