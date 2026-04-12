@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DollarSign, TrendingUp, Clock, AlertCircle } from "lucide-react";
@@ -11,24 +11,54 @@ export default function WalletDashboard() {
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [selectedTab, setSelectedTab] = useState("overview");
 
-  // Fetch wallet data with error handling
-  const { data: walletSummary, isLoading: loadingWallet, error: walletError } = trpc.wallet.getWalletSummary.useQuery(undefined, {
+  const {
+    data: walletSummary,
+    isLoading: loadingWallet,
+    error: walletError,
+  } = trpc.wallet.getWalletSummary.useQuery(undefined, {
     retry: 1,
-  });
-  const { data: stats, isLoading: loadingStats, error: statsError } = trpc.wallet.getStats.useQuery(undefined, {
-    retry: 1,
-  });
-  const { data: transactions, isLoading: loadingTransactions, error: transError } = trpc.wallet.getTransactions.useQuery({ limit: 20, offset: 0 }, {
-    retry: 1,
-  });
-  const { data: withdrawals, isLoading: loadingWithdrawals, error: withdrawError } = trpc.wallet.getWithdrawals.useQuery({ limit: 10, offset: 0 }, {
-    retry: 1,
+    refetchOnWindowFocus: false,
   });
 
-  const isLoading = loadingWallet || loadingStats || loadingTransactions || loadingWithdrawals;
-  const hasError = walletError || statsError || transError || withdrawError;
+  const {
+    data: stats,
+    isLoading: loadingStats,
+    error: statsError,
+  } = trpc.wallet.getStats.useQuery(undefined, {
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
 
-  // Fallback values
+  const {
+    data: transactions,
+    isLoading: loadingTransactions,
+    error: transError,
+  } = trpc.wallet.getTransactions.useQuery(
+    { limit: 20, offset: 0 },
+    {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  const {
+    data: withdrawals,
+    isLoading: loadingWithdrawals,
+    error: withdrawError,
+  } = trpc.wallet.getWithdrawals.useQuery(
+    { limit: 10, offset: 0 },
+    {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    }
+  );
+
+  const isLoading =
+    loadingWallet || loadingStats || loadingTransactions || loadingWithdrawals;
+
+  const hasError =
+    !!walletError || !!statsError || !!transError || !!withdrawError;
+
   const fallbackStats = {
     totalEarnings: 0,
     availableBalance: 0,
@@ -37,12 +67,43 @@ export default function WalletDashboard() {
   };
 
   const displayStats = stats || fallbackStats;
+  const wallet = walletSummary?.wallet ?? null;
+  const recentTransactions = walletSummary?.recentTransactions ?? transactions ?? [];
+  const pendingWithdrawals = walletSummary?.pendingWithdrawals ?? [];
+  const canWithdraw = (displayStats.availableBalance || 0) > 0;
+
+  const pendingWithdrawalsTotal = useMemo(() => {
+    return pendingWithdrawals.reduce(
+      (sum: number, w: any) => sum + Number(w.amount || 0),
+      0
+    );
+  }, [pendingWithdrawals]);
+
+  const recentTransactionsNormalized = useMemo(() => {
+    return (recentTransactions || []).map((tx: any) => {
+      const amount = Number(tx.amount || 0);
+      const type = String(tx.type || "").toLowerCase();
+
+      const isPositive =
+        type === "settlement" ||
+        type === "load_payment" ||
+        type === "adjustment"
+          ? amount >= 0
+          : amount > 0;
+
+      return {
+        ...tx,
+        amount,
+        isPositive,
+      };
+    });
+  }, [recentTransactions]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Cargando billetera...</p>
         </div>
       </div>
@@ -51,38 +112,69 @@ export default function WalletDashboard() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Error Banner */}
       {hasError && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-yellow-900">Aviso</p>
-            <p className="text-sm text-yellow-800">Algunos datos pueden no estar actualizados. Intenta recargar la página.</p>
+            <p className="text-sm text-yellow-800">
+              Algunos datos pueden no estar actualizados. Intenta recargar la página.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Mi Billetera</h1>
-          <p className="text-muted-foreground">Gestiona tus ganancias y retiros</p>
+          <p className="text-muted-foreground">
+            Gestiona tus ganancias, transacciones y retiros
+          </p>
         </div>
-        <Button onClick={() => setShowWithdrawalModal(true)} size="lg" className="gap-2">
+
+        <Button
+          onClick={() => setShowWithdrawalModal(true)}
+          size="lg"
+          className="gap-2"
+          disabled={!canWithdraw}
+        >
           <DollarSign className="w-4 h-4" />
-          Solicitar Retiro
+          {canWithdraw ? "Solicitar Retiro" : "Sin saldo disponible"}
         </Button>
       </div>
 
-      {/* KPI Cards */}
+      {!canWithdraw && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-900">
+                  No tienes saldo disponible para retirar
+                </p>
+                <p className="text-sm text-amber-800 mt-1">
+                  Completa más cargas o espera a que se procese tu próximo settlement.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ganancias Totales</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ganancias Totales
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(displayStats.totalEarnings || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Todas las ganancias</p>
+            <div className="text-2xl font-bold">
+              {formatCurrency(displayStats.totalEarnings || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Todas las ganancias registradas
+            </p>
           </CardContent>
         </Card>
 
@@ -94,8 +186,16 @@ export default function WalletDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(displayStats.availableBalance || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Listo para retirar</p>
+            <div
+              className={`text-2xl font-bold ${
+                canWithdraw ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {formatCurrency(displayStats.availableBalance || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Listo para retirar
+            </p>
           </CardContent>
         </Card>
 
@@ -107,8 +207,12 @@ export default function WalletDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(displayStats.pendingBalance || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">En proceso de retiro</p>
+            <div className="text-2xl font-bold text-yellow-600">
+              {formatCurrency(displayStats.pendingBalance || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              En proceso de retiro
+            </p>
           </CardContent>
         </Card>
 
@@ -120,62 +224,89 @@ export default function WalletDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(displayStats.blockedBalance || 0)}</div>
-            <p className="text-xs text-muted-foreground mt-1">En disputa/verificación</p>
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(displayStats.blockedBalance || 0)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              En disputa o verificación
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
           <TabsTrigger value="history">Historial</TabsTrigger>
+          <TabsTrigger value="withdrawals">Retiros</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          {walletSummary ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Resumen de Billetera</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Saldo Actual</p>
-                    <p className="text-2xl font-bold">{formatCurrency(walletSummary.balance || 0)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Últimas 24h</p>
-                    <p className="text-2xl font-bold text-green-600">+{formatCurrency(walletSummary.last24h || 0)}</p>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Resumen de Billetera</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Saldo disponible</p>
+                  <p className="text-2xl font-bold">
+                    {formatCurrency(wallet?.availableBalance ?? displayStats.availableBalance)}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No hay datos de billetera disponibles</p>
-              </CardContent>
-            </Card>
-          )}
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Retiros pendientes</p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {pendingWithdrawals.length}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Total pendiente</p>
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {formatCurrency(pendingWithdrawalsTotal)}
+                  </p>
+                </div>
+              </div>
+
+              {!canWithdraw && (
+                <div className="rounded-lg border border-dashed p-4">
+                  <p className="font-medium">Retiro no disponible</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Tu saldo disponible actual es {formatCurrency(displayStats.availableBalance)}.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          {transactions && transactions.length > 0 ? (
+          {recentTransactionsNormalized.length > 0 ? (
             <div className="space-y-2">
-              {transactions.map((tx: any) => (
+              {recentTransactionsNormalized.map((tx: any) => (
                 <Card key={tx.id}>
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-sm">{tx.description}</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm">
+                          {tx.description || tx.type || "Transacción"}
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(tx.createdAt).toLocaleDateString("es-ES")}
+                          {tx.createdAt
+                            ? new Date(tx.createdAt).toLocaleDateString("es-ES")
+                            : "Sin fecha"}
                         </p>
                       </div>
-                      <p className={`font-bold ${tx.amount > 0 ? "text-green-600" : "text-red-600"}`}>
-                        {tx.amount > 0 ? "+" : ""}{formatCurrency(tx.amount)}
+
+                      <p
+                        className={`font-bold ${
+                          tx.isPositive ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {tx.isPositive ? "+" : "-"}
+                        {formatCurrency(Math.abs(tx.amount))}
                       </p>
                     </div>
                   </CardContent>
@@ -185,14 +316,60 @@ export default function WalletDashboard() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">No hay transacciones</p>
+                <p className="text-muted-foreground text-center">
+                  No hay transacciones
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="withdrawals" className="space-y-4">
+          {withdrawals && withdrawals.length > 0 ? (
+            <div className="space-y-2">
+              {withdrawals.map((withdrawal: any) => (
+                <Card key={withdrawal.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm">
+                          Retiro #{withdrawal.id}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {withdrawal.requestedAt
+                            ? new Date(withdrawal.requestedAt).toLocaleDateString("es-ES")
+                            : "Sin fecha"}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Método: {withdrawal.method || "N/A"}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="font-bold">
+                          {formatCurrency(Number(withdrawal.amount || 0))}
+                        </p>
+                        <p className="text-xs capitalize text-muted-foreground">
+                          {withdrawal.status || "unknown"}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">
+                  No hay retiros registrados
+                </p>
               </CardContent>
             </Card>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* Withdrawal Modal */}
       <WithdrawalRequestModal
         isOpen={showWithdrawalModal}
         onClose={() => setShowWithdrawalModal(false)}
