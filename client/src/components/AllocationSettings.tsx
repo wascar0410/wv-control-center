@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,22 +20,21 @@ interface AllocationState {
   operatingCashPercent: number;
 }
 
-export function AllocationSettings() {
-  const [allocations, setAllocations] = useState<AllocationState>({
-    ownerDrawPercent: 40,
-    reserveFundPercent: 20,
-    reinvestmentPercent: 20,
-    operatingCashPercent: 20,
-  });
+const DEFAULT_ALLOCATIONS: AllocationState = {
+  ownerDrawPercent: 20,
+  reserveFundPercent: 15,
+  reinvestmentPercent: 50,
+  operatingCashPercent: 15,
+};
 
+export function AllocationSettings() {
+  const [allocations, setAllocations] = useState<AllocationState>(DEFAULT_ALLOCATIONS);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // Load current allocations from database
   const { data: currentConfig, isLoading } = trpc.financial.getAllocationSettings.useQuery();
 
-  // Update mutation
   const updateMutation = trpc.financialExtended.updateAllocationSettings.useMutation({
     onSuccess: () => {
       setSaveStatus("success");
@@ -38,19 +43,18 @@ export function AllocationSettings() {
     },
     onError: (error) => {
       setSaveStatus("error");
-      setErrorMessage(error.message || "Failed to update allocations");
+      setErrorMessage(error.message || "No se pudieron guardar los porcentajes");
       setTimeout(() => setSaveStatus("idle"), 5000);
     },
   });
 
-  // Load saved allocations on mount
   useEffect(() => {
     if (currentConfig) {
       setAllocations({
-        ownerDrawPercent: Number(currentConfig.ownerDrawPercent || 40),
-        reserveFundPercent: Number(currentConfig.reserveFundPercent || 20),
-        reinvestmentPercent: Number(currentConfig.reinvestmentPercent || 20),
-        operatingCashPercent: Number(currentConfig.operatingCashPercent || 20),
+        ownerDrawPercent: Number(currentConfig.ownerDrawPercent ?? DEFAULT_ALLOCATIONS.ownerDrawPercent),
+        reserveFundPercent: Number(currentConfig.reserveFundPercent ?? DEFAULT_ALLOCATIONS.reserveFundPercent),
+        reinvestmentPercent: Number(currentConfig.reinvestmentPercent ?? DEFAULT_ALLOCATIONS.reinvestmentPercent),
+        operatingCashPercent: Number(currentConfig.operatingCashPercent ?? DEFAULT_ALLOCATIONS.operatingCashPercent),
       });
     }
   }, [currentConfig]);
@@ -63,16 +67,18 @@ export function AllocationSettings() {
 
   const isValid = Math.abs(total - 100) < 0.01;
 
-  const handleChange = (field: keyof AllocationState, value: number) => {
+  const handleChange = (field: keyof AllocationState, rawValue: string) => {
+    const parsed = Number(rawValue);
+
     setAllocations((prev) => ({
       ...prev,
-      [field]: Math.max(0, Math.min(100, value)),
+      [field]: Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0,
     }));
   };
 
   const handleSave = async () => {
     if (!isValid) {
-      setErrorMessage(`Allocations must sum to 100%, currently ${total.toFixed(2)}%`);
+      setErrorMessage(`Los porcentajes deben sumar 100%. Actualmente suman ${total.toFixed(2)}%`);
       setSaveStatus("error");
       return;
     }
@@ -90,7 +96,9 @@ export function AllocationSettings() {
       <Card>
         <CardContent className="p-8 text-center">
           <Loader2 className="w-6 h-6 mx-auto animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground mt-2">Loading allocation settings...</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Cargando configuración de porcentajes...
+          </p>
         </CardContent>
       </Card>
     );
@@ -101,17 +109,17 @@ export function AllocationSettings() {
       <CardHeader>
         <CardTitle>Profit Allocation Settings</CardTitle>
         <CardDescription>
-          Configure how net profit is allocated across owner draw, reserves, reinvestment, and operating cash
+          Define cómo se distribuye la utilidad neta del negocio después de gastos.
+          Esta configuración está adaptada a su etapa actual: operar, ahorrar para la van
+          y sacar una parte para gastos personales.
         </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Allocation Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Owner Draw */}
           <div className="space-y-2">
             <Label htmlFor="ownerDraw" className="text-sm font-medium">
-              Owner Draw
+              Personal Draw
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -121,19 +129,20 @@ export function AllocationSettings() {
                 max="100"
                 step="0.1"
                 value={allocations.ownerDrawPercent}
-                onChange={(e) => handleChange("ownerDrawPercent", parseFloat(e.target.value))}
+                onChange={(e) => handleChange("ownerDrawPercent", e.target.value)}
                 className="flex-1"
                 disabled={isSaving}
               />
               <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
             </div>
-            <p className="text-xs text-muted-foreground">Personal income for owner</p>
+            <p className="text-xs text-muted-foreground">
+              Dinero que ustedes pueden sacar para casa y gastos personales.
+            </p>
           </div>
 
-          {/* Reserve Fund */}
           <div className="space-y-2">
             <Label htmlFor="reserveFund" className="text-sm font-medium">
-              Reserve Fund
+              Emergency Reserve
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -143,19 +152,20 @@ export function AllocationSettings() {
                 max="100"
                 step="0.1"
                 value={allocations.reserveFundPercent}
-                onChange={(e) => handleChange("reserveFundPercent", parseFloat(e.target.value))}
+                onChange={(e) => handleChange("reserveFundPercent", e.target.value)}
                 className="flex-1"
                 disabled={isSaving}
               />
               <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
             </div>
-            <p className="text-xs text-muted-foreground">Emergency & contingency fund</p>
+            <p className="text-xs text-muted-foreground">
+              Fondo de seguridad para imprevistos, semanas flojas y emergencias.
+            </p>
           </div>
 
-          {/* Reinvestment */}
           <div className="space-y-2">
             <Label htmlFor="reinvestment" className="text-sm font-medium">
-              Reinvestment
+              Van Fund
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -165,19 +175,20 @@ export function AllocationSettings() {
                 max="100"
                 step="0.1"
                 value={allocations.reinvestmentPercent}
-                onChange={(e) => handleChange("reinvestmentPercent", parseFloat(e.target.value))}
+                onChange={(e) => handleChange("reinvestmentPercent", e.target.value)}
                 className="flex-1"
                 disabled={isSaving}
               />
               <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
             </div>
-            <p className="text-xs text-muted-foreground">Fleet expansion & equipment</p>
+            <p className="text-xs text-muted-foreground">
+              Ahorro principal para comprar la van y fortalecer el negocio.
+            </p>
           </div>
 
-          {/* Operating Cash */}
           <div className="space-y-2">
             <Label htmlFor="operatingCash" className="text-sm font-medium">
-              Operating Cash
+              Business Operating Cash
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -187,17 +198,18 @@ export function AllocationSettings() {
                 max="100"
                 step="0.1"
                 value={allocations.operatingCashPercent}
-                onChange={(e) => handleChange("operatingCashPercent", parseFloat(e.target.value))}
+                onChange={(e) => handleChange("operatingCashPercent", e.target.value)}
                 className="flex-1"
                 disabled={isSaving}
               />
               <span className="text-sm font-semibold text-muted-foreground w-12">%</span>
             </div>
-            <p className="text-xs text-muted-foreground">Working capital & operations</p>
+            <p className="text-xs text-muted-foreground">
+              Efectivo operativo para gasolina, apps, movimiento y operación actual.
+            </p>
           </div>
         </div>
 
-        {/* Total Validation */}
         <div className="border-t pt-4">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium">Total Allocation</span>
@@ -210,7 +222,7 @@ export function AllocationSettings() {
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Allocations must sum to exactly 100%. Currently {total.toFixed(2)}%. Adjust values to continue.
+                Los porcentajes deben sumar exactamente 100%. Ahora mismo suman {total.toFixed(2)}%.
               </AlertDescription>
             </Alert>
           )}
@@ -219,18 +231,17 @@ export function AllocationSettings() {
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
-                Allocations are valid and sum to 100%
+                La distribución es válida y suma 100%.
               </AlertDescription>
             </Alert>
           )}
         </div>
 
-        {/* Status Messages */}
         {saveStatus === "success" && (
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              Allocation settings saved successfully. P&L calculations will use these percentages.
+              Los porcentajes se guardaron correctamente.
             </AlertDescription>
           </Alert>
         )}
@@ -242,7 +253,6 @@ export function AllocationSettings() {
           </Alert>
         )}
 
-        {/* Save Button */}
         <div className="flex gap-2 pt-4 border-t">
           <Button
             onClick={handleSave}
@@ -261,12 +271,12 @@ export function AllocationSettings() {
           </Button>
         </div>
 
-        {/* Info Box */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-900">
-            <strong>How allocations work:</strong> After calculating net profit from all loads, these percentages
-            determine how profit is distributed. For example, with 40% owner draw on $10,000 profit, $4,000 goes to
-            owner, $2,000 to reserves, $2,000 to reinvestment, and $2,000 to operating cash.
+            <strong>Recommended setup for your current stage:</strong> 20% Personal Draw,
+            15% Emergency Reserve, 50% Van Fund, and 15% Business Operating Cash.
+            This reflects that the business is still building capital for the van while
+            also covering current operations and allowing limited personal withdrawals.
           </p>
         </div>
       </CardContent>
