@@ -341,17 +341,16 @@ export const walletRouter = router({
         }
 
         await db.insert(bankAccounts).values({
-          userId: ctx.user.id,
-          plaidItemId: itemId,
-          plaidAccessToken: accessToken,
-          accountId: input.accountId,
-          accountName: "Connected Bank Account",
-          accountMask: "",
-          bankName: "",
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
+  userId: ctx.user.id,
+  bankName: "Connected Bank Account",
+  accountType: "checking",
+  accountLast4: input.accountId.slice(-4) || "0000",
+  plaidAccountId: input.accountId,
+  plaidAccessToken: accessToken,
+  isActive: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
 
         return { success: true, message: "Bank account connected" };
       } catch (err) {
@@ -380,14 +379,14 @@ export const walletRouter = router({
         .where(eq(bankAccounts.userId, ctx.user.id));
 
       return accounts
-        .filter((acc) => acc.isActive)
-        .map((acc) => ({
-          id: acc.id,
-          name: acc.accountName,
-          mask: acc.accountMask,
-          institutionName: acc.bankName,
-          isActive: acc.isActive,
-        }));
+  .filter((acc) => acc.isActive)
+  .map((acc) => ({
+    id: acc.id,
+    name: `${acc.bankName || "Bank Account"} (${acc.accountType || "checking"})`,
+    mask: acc.accountLast4,
+    institutionName: acc.bankName,
+    isActive: acc.isActive,
+  }));
     } catch (err) {
       console.error("[wallet.getLinkedBankAccounts]", err);
       return [];
