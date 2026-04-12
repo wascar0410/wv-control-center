@@ -20,6 +20,12 @@ type BusinessConfigState = {
   otherFixedMonthly: number;
   targetMilesPerMonth: number;
   minimumProfitPerMile: number;
+
+  estimatedTaxPercent: number;
+  quarterlyTaxEnabled: boolean;
+  taxReserveMode: "profit_based" | "revenue_based" | "manual";
+  vanFundGoal: number;
+  emergencyReserveGoal: number;
 };
 
 type DistanceSurchargeRow = {
@@ -46,6 +52,12 @@ const DEFAULT_CONFIG: BusinessConfigState = {
   otherFixedMonthly: 80,
   targetMilesPerMonth: 4000,
   minimumProfitPerMile: 1.5,
+
+  estimatedTaxPercent: 25,
+  quarterlyTaxEnabled: true,
+  taxReserveMode: "profit_based",
+  vanFundGoal: 15000,
+  emergencyReserveGoal: 5000,
 };
 
 const EMPTY_DISTANCE_ROWS: DistanceSurchargeRow[] = [];
@@ -158,6 +170,20 @@ export default function BusinessSettings() {
       minimumProfitPerMile: Number(
         configData.minimumProfitPerMile ?? DEFAULT_CONFIG.minimumProfitPerMile
       ),
+
+      estimatedTaxPercent: Number(
+        configData.estimatedTaxPercent ?? DEFAULT_CONFIG.estimatedTaxPercent
+      ),
+      quarterlyTaxEnabled: Boolean(
+        configData.quarterlyTaxEnabled ?? DEFAULT_CONFIG.quarterlyTaxEnabled
+      ),
+      taxReserveMode:
+        (configData.taxReserveMode as "profit_based" | "revenue_based" | "manual") ??
+        DEFAULT_CONFIG.taxReserveMode,
+      vanFundGoal: Number(configData.vanFundGoal ?? DEFAULT_CONFIG.vanFundGoal),
+      emergencyReserveGoal: Number(
+        configData.emergencyReserveGoal ?? DEFAULT_CONFIG.emergencyReserveGoal
+      ),
     });
   }, [configData]);
 
@@ -188,8 +214,12 @@ export default function BusinessSettings() {
     const estimatedMonthlyVariable =
       variablePerMile * Number(form.targetMilesPerMonth || 0);
 
-    const estimatedMonthlyOperating =
-      fixedMonthly + estimatedMonthlyVariable;
+    const estimatedMonthlyOperating = fixedMonthly + estimatedMonthlyVariable;
+
+    const estimatedMonthlyTaxReserve =
+      form.taxReserveMode === "manual"
+        ? 0
+        : estimatedMonthlyOperating * (Number(form.estimatedTaxPercent || 0) / 100);
 
     return {
       fixedMonthly,
@@ -197,6 +227,7 @@ export default function BusinessSettings() {
       variablePerMile,
       estimatedMonthlyVariable,
       estimatedMonthlyOperating,
+      estimatedMonthlyTaxReserve,
     };
   }, [form]);
 
@@ -343,7 +374,7 @@ export default function BusinessSettings() {
         <div>
           <h1 className="text-3xl font-bold">Configuración del Negocio</h1>
           <p className="text-sm text-muted-foreground">
-            Ajusta costos base, costos fijos, objetivos y reglas de surcharge.
+            Ajusta costos base, impuestos, metas y reglas de surcharge.
           </p>
         </div>
 
@@ -365,7 +396,7 @@ export default function BusinessSettings() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Costo fijo mensual</p>
@@ -398,6 +429,15 @@ export default function BusinessSettings() {
             <p className="text-xs text-muted-foreground">Costo operativo mensual</p>
             <p className="mt-1 text-2xl font-bold text-green-600">
               {formatCurrency(derived.estimatedMonthlyOperating)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-muted-foreground">Reserva taxes estimada</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">
+              {formatCurrency(derived.estimatedMonthlyTaxReserve)}
             </p>
           </CardContent>
         </Card>
@@ -552,6 +592,87 @@ export default function BusinessSettings() {
               onChange={(e) => handleChange("minimumProfitPerMile", e.target.value)}
               disabled={isBusy}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Taxes y Metas Financieras</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="estimatedTaxPercent">Estimated Tax %</Label>
+            <Input
+              id="estimatedTaxPercent"
+              type="number"
+              step="0.01"
+              value={form.estimatedTaxPercent}
+              onChange={(e) => handleChange("estimatedTaxPercent", e.target.value)}
+              disabled={isBusy}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="taxReserveMode">Tax Reserve Mode</Label>
+            <select
+              id="taxReserveMode"
+              value={form.taxReserveMode}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  taxReserveMode: e.target.value as "profit_based" | "revenue_based" | "manual",
+                }))
+              }
+              disabled={isBusy}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="profit_based">Profit Based</option>
+              <option value="revenue_based">Revenue Based</option>
+              <option value="manual">Manual</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="vanFundGoal">Van Fund Goal</Label>
+            <Input
+              id="vanFundGoal"
+              type="number"
+              step="0.01"
+              value={form.vanFundGoal}
+              onChange={(e) => handleChange("vanFundGoal", e.target.value)}
+              disabled={isBusy}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="emergencyReserveGoal">Emergency Reserve Goal</Label>
+            <Input
+              id="emergencyReserveGoal"
+              type="number"
+              step="0.01"
+              value={form.emergencyReserveGoal}
+              onChange={(e) => handleChange("emergencyReserveGoal", e.target.value)}
+              disabled={isBusy}
+            />
+          </div>
+
+          <div className="flex items-center gap-3 md:col-span-2">
+            <input
+              id="quarterlyTaxEnabled"
+              type="checkbox"
+              checked={form.quarterlyTaxEnabled}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  quarterlyTaxEnabled: e.target.checked,
+                }))
+              }
+              disabled={isBusy}
+            />
+            <Label htmlFor="quarterlyTaxEnabled">
+              Enable quarterly tax planning
+            </Label>
           </div>
         </CardContent>
       </Card>
@@ -743,9 +864,24 @@ export default function BusinessSettings() {
             .
           </p>
           <p>
-            El costo estimado solo de combustible es de{" "}
+            La reserva estimada de taxes está usando{" "}
             <span className="font-semibold text-foreground">
-              {formatCurrency(derived.fuelPerMile, "/mi")}
+              {form.estimatedTaxPercent.toFixed(2)}%
+            </span>{" "}
+            en modo{" "}
+            <span className="font-semibold text-foreground">
+              {form.taxReserveMode}
+            </span>
+            .
+          </p>
+          <p>
+            La meta de fondo para la van está en{" "}
+            <span className="font-semibold text-foreground">
+              {formatCurrency(form.vanFundGoal)}
+            </span>{" "}
+            y la reserva de emergencia en{" "}
+            <span className="font-semibold text-foreground">
+              {formatCurrency(form.emergencyReserveGoal)}
             </span>
             .
           </p>
