@@ -13,7 +13,7 @@ import {
   requestWithdrawal,
   getWithdrawals,
   failWithdrawal,
-  getWalletSummary,
+  getWalletSummary as getWalletSummaryFromDb,
 } from "../db";
 
 /**
@@ -71,11 +71,12 @@ export const walletRouter = router({
    */
   getWalletSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const result = await getWalletSummary(ctx.user.id);
+      let result = await getWalletSummaryFromDb(ctx.user.id);
 
       if (!result) {
+        const wallet = await getOrCreateWallet(ctx.user.id);
         return {
-          wallet: null,
+          wallet: safeWallet(wallet),
           recentTransactions: [],
           pendingWithdrawals: [],
         };
@@ -108,7 +109,12 @@ export const walletRouter = router({
     )
     .query(async ({ ctx, input }) => {
       try {
-        const wallet = await getWalletByDriverId(ctx.user.id);
+        let wallet = await getWalletByDriverId(ctx.user.id);
+
+        if (!wallet) {
+          wallet = await getOrCreateWallet(ctx.user.id);
+        }
+
         if (!wallet) return [];
 
         return await getWalletTransactions(wallet.id, input.limit, input.offset);
@@ -330,7 +336,6 @@ export const walletRouter = router({
 
         const data = await response.json();
         const accessToken = data.access_token;
-        const itemId = data.item_id;
 
         const db = await getDb();
         if (!db) {
@@ -340,17 +345,37 @@ export const walletRouter = router({
           });
         }
 
-        await db.insert(bankAccounts).values({
-  userId: ctx.user.id,
-  bankName: "Connected Bank Account",
-  accountType: "checking",
-  accountLast4: input.accountId.slice(-4) || "0000",
-  plaidAccountId: input.accountId,
-  plaidAccessToken: accessToken,
-  isActive: true,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-});
+        const existing = await db
+          .select()
+          .from(bankAccounts)
+          .where(eq(bankAccounts.plaidAccountId, input.accountId));
+
+        if (existing.length > 0) {
+          await db
+            .update(bankAccounts)
+            .set({
+              userId: ctx.user.id,
+              bankName: "Connected Bank Account",
+              accountType: "checking",
+              accountLast4: input.accountId.slice(-4) || "0000",
+              plaidAccessToken: accessToken,
+              isActive: true,
+              updatedAt: new Date(),
+            })
+            .where(eq(bankAccounts.id, existing[0].id));
+        } else {
+          await db.insert(bankAccounts).values({
+            userId: ctx.user.id,
+            bankName: "Connected Bank Account",
+            accountType: "checking",
+            accountLast4: input.accountId.slice(-4) || "0000",
+            plaidAccountId: input.accountId,
+            plaidAccessToken: accessToken,
+            isActive: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
 
         return { success: true, message: "Bank account connected" };
       } catch (err) {
@@ -379,14 +404,14 @@ export const walletRouter = router({
         .where(eq(bankAccounts.userId, ctx.user.id));
 
       return accounts
-  .filter((acc) => acc.isActive)
-  .map((acc) => ({
-    id: acc.id,
-    name: `${acc.bankName || "Bank Account"} (${acc.accountType || "checking"})`,
-    mask: acc.accountLast4,
-    institutionName: acc.bankName,
-    isActive: acc.isActive,
-  }));
+        .filter((acc) => acc.isActive)
+        .map((acc) => ({
+          id: acc.id,
+          name: `${acc.bankName || "Bank Account"} (${acc.accountType || "checking"})`,
+          mask: acc.accountLast4,
+          institutionName: acc.bankName,
+          isActive: acc.isActive,
+        }));
     } catch (err) {
       console.error("[wallet.getLinkedBankAccounts]", err);
       return [];
@@ -497,7 +522,7 @@ export const walletRouter = router({
   addAdjustment: protectedProcedure
     .input(
       z.object({
-        driverId: z.number(),
+        driverId: z.number().optional(),
         amount: z.number(),
         reason: z.string().min(1).max(500),
       })
@@ -506,16 +531,30 @@ export const walletRouter = router({
       try {
         ensureAdminOrOwner(ctx.user.role);
 
-        const walletRaw = await getWalletByDriverId(input.driverId);
+        const targetDriverId = input.driverId ?? ctx.user.id;
+
+        let walletRaw = await getWalletByDriverId(targetDriverId);
+        if (!walletRaw) {
+          walletRaw = await getOrCreateWallet(targetDriverId);
+        }
+
         if (!walletRaw) {
           throw new TRPCError({
-            code: "NOT_FOUND",
-            message: "Wallet not found",
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to initialize wallet",
           });
         }
 
         const wallet = safeWallet(walletRaw);
         const newAvailable = wallet.availableBalance + input.amount;
+
+        if (newAvailable < 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Adjustment would make available balance negative",
+          });
+        }
+
         const newTotalEarnings =
           input.amount >= 0
             ? wallet.totalEarnings + input.amount
@@ -526,12 +565,20 @@ export const walletRouter = router({
           totalEarnings: String(newTotalEarnings),
         });
 
-        return await addWalletTransaction(wallet.id, input.driverId, {
+        const transaction = await addWalletTransaction(wallet.id, targetDriverId, {
           type: "adjustment",
           amount: input.amount,
           description: input.reason,
           status: "completed",
         });
+
+        const updatedWalletRaw = await getWalletByDriverId(targetDriverId);
+
+        return {
+          success: true,
+          transaction,
+          wallet: safeWallet(updatedWalletRaw),
+        };
       } catch (err) {
         console.error("[wallet.addAdjustment]", err);
 
@@ -539,7 +586,7 @@ export const walletRouter = router({
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to add adjustment",
+          message: err instanceof Error ? err.message : "Failed to add adjustment",
         });
       }
     }),
@@ -549,7 +596,11 @@ export const walletRouter = router({
    */
   getStats: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const walletRaw = await getWalletByDriverId(ctx.user.id);
+      let walletRaw = await getWalletByDriverId(ctx.user.id);
+
+      if (!walletRaw) {
+        walletRaw = await getOrCreateWallet(ctx.user.id);
+      }
 
       if (!walletRaw) {
         return {
