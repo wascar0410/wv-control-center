@@ -39,12 +39,13 @@ describe("Admin Email Validation", () => {
       throw new Error("Database connection failed");
     }
 
-    const existingUser = await database
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, testEmail))
-      .limit(1)
-      .then((rows) => rows[0]);
+    const rows = await database
+  .select()
+  .from(usersTable)
+  .where(eq(usersTable.email, testEmail))
+  .limit(1);
+
+const existingUser = rows[0];
 
     expect(existingUser).toBeDefined();
     expect(existingUser?.email).toBe(testEmail);
