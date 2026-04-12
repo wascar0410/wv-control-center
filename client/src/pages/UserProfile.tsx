@@ -1,7 +1,5 @@
-"use client";
-
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +34,7 @@ import {
   ShieldCheck,
   Wallet,
 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 type ThemeMode = "dark" | "light" | "auto";
 
@@ -98,6 +97,10 @@ export default function UserProfile() {
   const utils = trpc.useUtils();
 
   const [activeTab, setActiveTab] = useState("profile");
+  const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_PROFILE);
+  const [preferencesForm, setPreferencesForm] =
+    useState<PreferencesForm>(DEFAULT_PREFERENCES);
+  const [avatarImageError, setAvatarImageError] = useState(false);
 
   const {
     data: walletSummary,
@@ -113,9 +116,6 @@ export default function UserProfile() {
   } = trpc.profile.getProfile.useQuery(undefined, {
     retry: false,
   });
-  const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_PROFILE);
-  const [preferencesForm, setPreferencesForm] =
-    useState<PreferencesForm>(DEFAULT_PREFERENCES);
 
   const updateProfileMutation = trpc.profile.updateProfile.useMutation({
     onSuccess: async () => {
@@ -140,7 +140,8 @@ export default function UserProfile() {
     },
     onError: (err) => {
       toast.error("Error al guardar preferencias", {
-        description: err.message || "No se pudieron actualizar las preferencias.",
+        description:
+          err.message || "No se pudieron actualizar las preferencias.",
       });
     },
   });
@@ -157,6 +158,7 @@ export default function UserProfile() {
         bio: profileData.profile.bio || "",
         profileImageUrl: profileData.profile.profileImageUrl || "",
       });
+      setAvatarImageError(false);
     } else if (user) {
       setProfileForm((prev) => ({
         ...prev,
@@ -228,6 +230,9 @@ export default function UserProfile() {
 
   const handleProfileChange = (field: keyof ProfileForm, value: string) => {
     setProfileForm((prev) => ({ ...prev, [field]: value }));
+    if (field === "profileImageUrl") {
+      setAvatarImageError(false);
+    }
   };
 
   const handlePreferenceChange = <K extends keyof PreferencesForm>(
@@ -265,6 +270,7 @@ export default function UserProfile() {
       bio: profileData?.profile?.bio || "",
       profileImageUrl: profileData?.profile?.profileImageUrl || "",
     });
+    setAvatarImageError(false);
   };
 
   const handleResetPreferences = () => {
@@ -287,9 +293,10 @@ export default function UserProfile() {
     });
   };
 
-const availableBalance = Number(walletSummary?.wallet?.availableBalance ?? 0);
-const pendingBalance = Number(walletSummary?.wallet?.pendingBalance ?? 0);
-const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
+  const availableBalance = Number(walletSummary?.wallet?.availableBalance ?? 0);
+  const pendingBalance = Number(walletSummary?.wallet?.pendingBalance ?? 0);
+  const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
+
   if (isLoading) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
@@ -318,7 +325,8 @@ const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
           <Card className="border-amber-500/30 bg-amber-500/5">
             <CardContent className="p-4 text-sm text-amber-700 dark:text-amber-300">
               No se pudo cargar todo el perfil correctamente. Puedes seguir
-              editando, pero si notas datos raros revisamos auth/profile router.
+              editando, pero si notas datos inconsistentes revisamos el router de
+              auth/profile.
             </CardContent>
           </Card>
         )}
@@ -394,21 +402,21 @@ const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
             <div className="rounded-lg border p-4">
               <p className="text-xs text-muted-foreground">Disponible</p>
               <p className="text-xl font-bold">
-                {walletLoading ? "..." : `$${availableBalance.toFixed(2)}`}
+                {walletLoading ? "..." : formatCurrency(availableBalance)}
               </p>
             </div>
 
             <div className="rounded-lg border p-4">
               <p className="text-xs text-muted-foreground">Pendiente</p>
               <p className="text-xl font-bold">
-                {walletLoading ? "..." : `$${pendingBalance.toFixed(2)}`}
+                {walletLoading ? "..." : formatCurrency(pendingBalance)}
               </p>
             </div>
 
             <div className="rounded-lg border p-4">
               <p className="text-xs text-muted-foreground">Total Ganado</p>
               <p className="text-xl font-bold">
-                {walletLoading ? "..." : `$${totalEarnings.toFixed(2)}`}
+                {walletLoading ? "..." : formatCurrency(totalEarnings)}
               </p>
             </div>
           </CardContent>
@@ -449,15 +457,12 @@ const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
               <CardContent className="space-y-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start">
                   <div className="flex flex-col items-center gap-3">
-                    {profileForm.profileImageUrl ? (
+                    {profileForm.profileImageUrl && !avatarImageError ? (
                       <img
                         src={profileForm.profileImageUrl}
                         alt="Foto de perfil"
                         className="h-24 w-24 rounded-full border object-cover"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display =
-                            "none";
-                        }}
+                        onError={() => setAvatarImageError(true)}
                       />
                     ) : (
                       <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary">
@@ -485,8 +490,8 @@ const totalEarnings = Number(walletSummary?.wallet?.totalEarnings ?? 0);
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Más adelante podemos conectar upload real; por ahora esto
-                      guarda la URL usando `profileImageUrl`.
+                      Puedes pegar una URL pública de imagen. Más adelante se puede
+                      conectar una subida real de archivos.
                     </p>
                   </div>
                 </div>
