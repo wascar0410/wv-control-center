@@ -517,22 +517,24 @@ export const financialExtendedRouter = router({
    *
    * Validates that percentages sum to 100 before saving
    */
-  updateAllocationSettings: protectedProcedure
+ updateAllocationSettings: protectedProcedure
     .input(
       z.object({
-        ownerDrawPercent: z.number().min(0).max(100),
-        reserveFundPercent: z.number().min(0).max(100),
-        reinvestmentPercent: z.number().min(0).max(100),
-        operatingCashPercent: z.number().min(0).max(100),
+        operatingExpensesPercent: z.number().min(0).max(100),
+        vanFundPercent: z.number().min(0).max(100),
+        emergencyReservePercent: z.number().min(0).max(100),
+        wascarDrawPercent: z.number().min(0).max(100),
+        yisvelDrawPercent: z.number().min(0).max(100),
       })
     )
     .mutation(async ({ ctx, input }) => {
       try {
         const total =
-          input.ownerDrawPercent +
-          input.reserveFundPercent +
-          input.reinvestmentPercent +
-          input.operatingCashPercent;
+          input.operatingExpensesPercent +
+          input.vanFundPercent +
+          input.emergencyReservePercent +
+          input.wascarDrawPercent +
+          input.yisvelDrawPercent;
 
         if (Math.abs(total - 100) > 0.01) {
           throw new TRPCError({
@@ -549,7 +551,6 @@ export const financialExtendedRouter = router({
           });
         }
 
-        // Update or create business config
         const existing = await db.query.businessConfig.findFirst({
           where: (bc, { eq }) => eq(bc.userId, ctx.user.id),
         });
@@ -558,19 +559,21 @@ export const financialExtendedRouter = router({
           await db
             .update(db.schema.businessConfig)
             .set({
-              ownerDrawPercent: input.ownerDrawPercent,
-              reserveFundPercent: input.reserveFundPercent,
-              reinvestmentPercent: input.reinvestmentPercent,
-              operatingCashPercent: input.operatingCashPercent,
+              operatingExpensesPercent: String(input.operatingExpensesPercent),
+              vanFundPercent: String(input.vanFundPercent),
+              emergencyReservePercent: String(input.emergencyReservePercent),
+              wascarDrawPercent: String(input.wascarDrawPercent),
+              yisvelDrawPercent: String(input.yisvelDrawPercent),
             })
             .where(eq(db.schema.businessConfig.userId, ctx.user.id));
         } else {
           await db.insert(db.schema.businessConfig).values({
             userId: ctx.user.id,
-            ownerDrawPercent: input.ownerDrawPercent,
-            reserveFundPercent: input.reserveFundPercent,
-            reinvestmentPercent: input.reinvestmentPercent,
-            operatingCashPercent: input.operatingCashPercent,
+            operatingExpensesPercent: String(input.operatingExpensesPercent),
+            vanFundPercent: String(input.vanFundPercent),
+            emergencyReservePercent: String(input.emergencyReservePercent),
+            wascarDrawPercent: String(input.wascarDrawPercent),
+            yisvelDrawPercent: String(input.yisvelDrawPercent),
           });
         }
 
