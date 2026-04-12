@@ -2681,7 +2681,7 @@ export async function requestWithdrawal(
   if (!wallet) {
     wallet = await getOrCreateWallet(driverId);
   }
-  
+
   if (!wallet) {
     throw new Error("Failed to get or create wallet");
   }
@@ -2691,7 +2691,7 @@ export async function requestWithdrawal(
   const netAmount = amount - fee;
   const availableBalance = Number(wallet.availableBalance || 0);
   const minimumWithdrawal = Number(wallet.minimumWithdrawalAmount || 50);
-  
+
   console.log("[requestWithdrawal] Processing withdrawal:", {
     walletId: wallet.id,
     driverId,
@@ -2713,7 +2713,7 @@ export async function requestWithdrawal(
     throw new Error("Insufficient available balance");
   }
 
-  const [withdrawal] = await db
+  const result: any = await db
     .insert(withdrawals)
     .values({
       walletId: wallet.id,
@@ -2728,8 +2728,27 @@ export async function requestWithdrawal(
       requestedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
-    })
-    .returning();
+    });
+
+  const withdrawalId =
+    result?.insertId ??
+    result?.[0]?.insertId ??
+    result?.[0]?.insertedId;
+
+  if (!withdrawalId) {
+    throw new Error("Failed to create withdrawal");
+  }
+
+  const rows = await db
+    .select()
+    .from(withdrawals)
+    .where(eq(withdrawals.id, Number(withdrawalId)))
+    .limit(1);
+
+  const withdrawal = rows[0];
+  if (!withdrawal) {
+    throw new Error("Withdrawal created but could not be reloaded");
+  }
 
   await addWalletTransaction(wallet.id, driverId, {
     type: "withdrawal",
@@ -2776,7 +2795,7 @@ export async function approveWithdrawal(
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [updated] = await db
+  await db
     .update(withdrawals)
     .set({
       status: "approved",
@@ -2784,10 +2803,15 @@ export async function approveWithdrawal(
       approvedBy,
       updatedAt: new Date(),
     })
-    .where(eq(withdrawals.id, withdrawalId))
-    .returning();
+    .where(eq(withdrawals.id, withdrawalId));
 
-  return updated;
+  const rows = await db
+    .select()
+    .from(withdrawals)
+    .where(eq(withdrawals.id, withdrawalId))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -2797,17 +2821,22 @@ export async function completeWithdrawal(withdrawalId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [updated] = await db
+  await db
     .update(withdrawals)
     .set({
       status: "completed",
       completedAt: new Date(),
       updatedAt: new Date(),
     })
-    .where(eq(withdrawals.id, withdrawalId))
-    .returning();
+    .where(eq(withdrawals.id, withdrawalId));
 
-  return updated;
+  const rows = await db
+    .select()
+    .from(withdrawals)
+    .where(eq(withdrawals.id, withdrawalId))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
@@ -2820,17 +2849,22 @@ export async function failWithdrawal(
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  const [updated] = await db
+  await db
     .update(withdrawals)
     .set({
       status: "failed",
       failureReason: reason,
       updatedAt: new Date(),
     })
-    .where(eq(withdrawals.id, withdrawalId))
-    .returning();
+    .where(eq(withdrawals.id, withdrawalId));
 
-  return updated;
+  const rows = await db
+    .select()
+    .from(withdrawals)
+    .where(eq(withdrawals.id, withdrawalId))
+    .limit(1);
+
+  return rows[0] || null;
 }
 
 /**
