@@ -14,6 +14,7 @@ import {
   getWithdrawals,
   failWithdrawal,
   getWalletSummary as getWalletSummaryFromDb,
+  normalizeLegacyPendingWithdrawals,
 } from "../db";
 
 /**
@@ -650,6 +651,40 @@ export const walletRouter = router({
     }
   }),
 
+
+  normalizeLegacyPendingWithdrawals: protectedProcedure
+    .input(
+      z.object({
+        driverId: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        ensureAdminOrOwner(ctx.user.role);
+
+        const targetDriverId = input.driverId ?? ctx.user.id;
+
+        const result = await normalizeLegacyPendingWithdrawals(targetDriverId);
+
+        return {
+          success: true,
+          driverId: targetDriverId,
+          ...result,
+        };
+      } catch (err) {
+        console.error("[wallet.normalizeLegacyPendingWithdrawals]", err);
+
+        if (err instanceof TRPCError) throw err;
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to normalize legacy pending withdrawals",
+        });
+      }
+    }),
   
   /**
    * Wallet stats
