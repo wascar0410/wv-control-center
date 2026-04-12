@@ -56,6 +56,7 @@ export default function WithdrawalRequestModal({
 
   const isSubmitting = requestWithdrawalMutation.isPending;
   const isBalanceInsufficient = availableBalance <= 0;
+  const isBankTransfer = method === "bank_transfer";
 
   const amountNum = useMemo(() => parseFloat(amount) || 0, [amount]);
 
@@ -71,12 +72,22 @@ export default function WithdrawalRequestModal({
     return "";
   }, [amount, amountNum, availableBalance]);
 
+  const bankAccountError = useMemo(() => {
+    if (!isBankTransfer) return "";
+    if (!amount) return "";
+    if (!bankAccountId.trim()) {
+      return "Debes indicar una cuenta bancaria para transferencia";
+    }
+    return "";
+  }, [isBankTransfer, amount, bankAccountId]);
+
   const canSubmit =
     !isSubmitting &&
     !isBalanceInsufficient &&
     !!amount &&
     amountNum >= MIN_WITHDRAWAL &&
-    amountNum <= availableBalance;
+    amountNum <= availableBalance &&
+    (!isBankTransfer || !!bankAccountId.trim());
 
   const resetForm = useCallback(() => {
     setAmount("");
@@ -134,6 +145,15 @@ export default function WithdrawalRequestModal({
       toast({
         title: "Monto mínimo",
         description: `El monto mínimo de retiro es ${formatCurrency(MIN_WITHDRAWAL)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isBankTransfer && !bankAccountId.trim()) {
+      toast({
+        title: "Cuenta bancaria requerida",
+        description: "Debes indicar una cuenta bancaria para transferencia",
         variant: "destructive",
       });
       return;
@@ -219,7 +239,7 @@ export default function WithdrawalRequestModal({
             <Select
               value={method}
               onValueChange={(val: WithdrawalMethod) => setMethod(val)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isBalanceInsufficient}
             >
               <SelectTrigger id="method">
                 <SelectValue />
@@ -234,16 +254,19 @@ export default function WithdrawalRequestModal({
             </Select>
           </div>
 
-          {method === "bank_transfer" && (
+          {isBankTransfer && (
             <div className="space-y-2">
-              <Label htmlFor="bankAccountId">Número de Cuenta (Opcional)</Label>
+              <Label htmlFor="bankAccountId">Cuenta Bancaria</Label>
               <Input
                 id="bankAccountId"
-                placeholder="Últimos 4 dígitos o ID de cuenta"
+                placeholder="ID o referencia de la cuenta"
                 value={bankAccountId}
                 onChange={(e) => setBankAccountId(e.target.value)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isBalanceInsufficient}
               />
+              {bankAccountError && (
+                <p className="text-xs text-destructive">{bankAccountError}</p>
+              )}
             </div>
           )}
 
@@ -254,7 +277,7 @@ export default function WithdrawalRequestModal({
               placeholder="Agrega cualquier nota adicional"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isBalanceInsufficient}
             />
           </div>
 
