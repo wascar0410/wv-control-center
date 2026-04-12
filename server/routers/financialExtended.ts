@@ -204,7 +204,7 @@ export const financialExtendedRouter = router({
           });
 
           if (invoice) {
-            const revenue = Number(invoice.totalAmount);
+            const revenue = Number(invoice.total);
             const profit_amount = Number(profit.amount);
             const margin = revenue > 0 ? (profit_amount / revenue) * 100 : 0;
 
@@ -403,7 +403,7 @@ export const financialExtendedRouter = router({
             and(eq(wt.loadId, load.id), eq(wt.type, "load_payment")),
         });
 
-        const expectedAmount = invoice ? Number(invoice.totalAmount) : 0;
+        const expectedAmount = invoice ? Number(invoice.total) : 0;
         const actualAmount = transaction ? Number(transaction.amount) : 0;
         const difference = actualAmount - expectedAmount;
         const variance =
