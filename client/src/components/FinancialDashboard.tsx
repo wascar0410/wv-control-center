@@ -14,6 +14,8 @@ const formatCurrency = (value: number) =>
     currency: "USD",
   }).format(value || 0);
 
+const DEFAULT_ESTIMATED_TAX_RATE = 0.25;
+
 export function FinancialDashboard() {
   const { data: dashboardData, isLoading } =
     trpc.financial.getDashboardSummary.useQuery({});
@@ -35,6 +37,12 @@ export function FinancialDashboard() {
   const variance = dashboardData?.variance;
   const allocations = dashboardData?.allocations;
   const cashFlow = dashboardData?.cashFlow;
+
+  const netProfit = Number(plSummary?.netProfit || 0);
+  const taxableProfit = Math.max(netProfit, 0);
+  const estimatedTaxReserve = taxableProfit * DEFAULT_ESTIMATED_TAX_RATE;
+  const netAfterTaxReserve = netProfit - estimatedTaxReserve;
+  const quarterlyTaxSetAside = estimatedTaxReserve / 4;
 
   const criticalAlerts = alertsData?.criticalCount || 0;
   const warningAlerts = alertsData?.warningCount || 0;
@@ -58,7 +66,7 @@ export function FinancialDashboard() {
             <Badge variant="outline">Live</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-4">
+        <CardContent className="grid gap-3 md:grid-cols-5">
           <div className="rounded-lg border bg-background/70 p-3">
             <p className="text-xs text-muted-foreground">Active Blocks</p>
             <p className="mt-1 text-2xl font-bold text-red-600">{activeBlocks}</p>
@@ -94,23 +102,34 @@ export function FinancialDashboard() {
               Current cash visibility after pending withdrawals.
             </p>
           </div>
+
+          <div className="rounded-lg border bg-background/70 p-3">
+            <p className="text-xs text-muted-foreground">Estimated Tax Reserve</p>
+            <p className="mt-1 text-2xl font-bold text-amber-600">
+              {formatCurrency(estimatedTaxReserve)}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Estimated at {(DEFAULT_ESTIMATED_TAX_RATE * 100).toFixed(0)}% of positive net profit.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
+        <TabsList className="grid w-full grid-cols-9">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="invoicing">Invoicing</TabsTrigger>
           <TabsTrigger value="wallet">Wallet</TabsTrigger>
           <TabsTrigger value="pl">P&amp;L</TabsTrigger>
           <TabsTrigger value="allocation">Allocation</TabsTrigger>
+          <TabsTrigger value="taxes">Taxes</TabsTrigger>
           <TabsTrigger value="reconciliation">Reconciliation</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -145,7 +164,20 @@ export function FinancialDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(plSummary?.netProfit || 0)}
+                  {formatCurrency(netProfit)}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Estimated Tax Reserve
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-600">
+                  {formatCurrency(estimatedTaxReserve)}
                 </div>
               </CardContent>
             </Card>
@@ -171,7 +203,7 @@ export function FinancialDashboard() {
                 <Badge variant="outline">Hotfix Stable</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-4">
+            <CardContent className="grid gap-4 md:grid-cols-5">
               <div>
                 <p className="text-sm text-muted-foreground">Profit per Load</p>
                 <p className="text-lg font-semibold">
@@ -194,6 +226,12 @@ export function FinancialDashboard() {
                 <p className="text-sm text-muted-foreground">Net Cash Position</p>
                 <p className="text-lg font-semibold">
                   {formatCurrency(cashFlow?.netCashPosition || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">After Tax Reserve</p>
+                <p className="text-lg font-semibold text-amber-700">
+                  {formatCurrency(netAfterTaxReserve)}
                 </p>
               </div>
             </CardContent>
@@ -312,7 +350,7 @@ export function FinancialDashboard() {
               <div className="flex justify-between font-bold text-lg">
                 <span>Net Profit</span>
                 <span className="text-blue-600">
-                  {formatCurrency(plSummary?.netProfit || 0)}
+                  {formatCurrency(netProfit)}
                 </span>
               </div>
             </CardContent>
@@ -330,29 +368,90 @@ export function FinancialDashboard() {
                 <span>{formatCurrency(allocations?.netProfit || 0)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Owner Draw</span>
-                <span className="text-green-600">
-                  {formatCurrency(allocations?.ownerDraw || 0)}
+                <span>Operating Expenses</span>
+                <span className="text-red-600">
+                  {formatCurrency(allocations?.operatingExpenses || 0)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Reserve Fund</span>
-                <span className="text-yellow-600">
-                  {formatCurrency(allocations?.reserveFund || 0)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>Reinvestment</span>
+                <span>Van Fund</span>
                 <span className="text-blue-600">
-                  {formatCurrency(allocations?.reinvestment || 0)}
+                  {formatCurrency(allocations?.vanFund || 0)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Operating Cash</span>
-                <span className="text-purple-600">
-                  {formatCurrency(allocations?.operatingCash || 0)}
+                <span>Emergency Reserve</span>
+                <span className="text-yellow-600">
+                  {formatCurrency(allocations?.emergencyReserve || 0)}
                 </span>
               </div>
+              <div className="flex justify-between">
+                <span>Wascar Draw</span>
+                <span className="text-green-600">
+                  {formatCurrency(allocations?.wascarDraw || 0)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Yisvel Draw</span>
+                <span className="text-emerald-600">
+                  {formatCurrency(allocations?.yisvelDraw || 0)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="taxes" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax Tracking</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Taxable Profit Base</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(taxableProfit)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Estimated Tax Rate</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {(DEFAULT_ESTIMATED_TAX_RATE * 100).toFixed(0)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Estimated Tax Reserve</p>
+                <p className="text-2xl font-bold text-amber-600">
+                  {formatCurrency(estimatedTaxReserve)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Quarterly Set-Aside</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {formatCurrency(quarterlyTaxSetAside)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax Control Notes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                This tax view is currently an operational estimate based on positive net
+                profit. It helps you reserve cash for taxes without mixing it into personal
+                draws.
+              </p>
+              <p>
+                Recommended workflow: all income enters the business, taxes are reserved
+                first, then the remaining profit is reviewed for allocations and personal draws.
+              </p>
+              <p>
+                Next step later: connect this panel to real tax categories, deductible
+                expenses, quarterly estimates, and tax-compliance reports.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
