@@ -166,10 +166,10 @@ export default function WalletDashboard() {
 
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-red-600">TEST WALLET NUEVO 999</h1>
-          <p className="text-muted-foreground">
-            ESTE ES EL WALLET NUEVO EN PRODUCCION
-          </p>
+          <h1 className="text-3xl font-bold">Wallet</h1>
+<p className="text-muted-foreground">
+  Resumen financiero personal y movimientos registrados.
+</p>
         </div>
 
         <Button
