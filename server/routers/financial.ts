@@ -257,31 +257,31 @@ export const financialRouter = router({
   /**
    * Get Allocation Settings
    */
-  getAllocationSettings: protectedProcedure.query(async () => {
+getAllocationSettings: protectedProcedure.query(async () => {
     try {
       return {
-        ownerDrawPercent: 40,
-        reserveFundPercent: 20,
-        reinvestmentPercent: 20,
-        operatingCashPercent: 20,
+        operatingExpensesPercent: 35,
+        vanFundPercent: 30,
+        emergencyReservePercent: 10,
+        wascarDrawPercent: 12.5,
+        yisvelDrawPercent: 12.5,
       };
     } catch (err) {
       console.error("[financial.getAllocationSettings]", err);
       return {
-        ownerDrawPercent: 40,
-        reserveFundPercent: 20,
-        reinvestmentPercent: 20,
-        operatingCashPercent: 20,
+        operatingExpensesPercent: 35,
+        vanFundPercent: 30,
+        emergencyReservePercent: 10,
+        wascarDrawPercent: 12.5,
+        yisvelDrawPercent: 12.5,
       };
     }
   }),
-
   /**
    * Calculate Allocations
    *
    * No ctx.trpc dependency.
-   */
-  calculateAllocations: protectedProcedure
+   */  calculateAllocations: protectedProcedure
     .input(
       z.object({
         startDate: z.date().optional(),
@@ -294,10 +294,11 @@ export const financialRouter = router({
         if (!db) {
           return {
             netProfit: 0,
-            ownerDraw: 0,
-            reserveFund: 0,
-            reinvestment: 0,
-            operatingCash: 0,
+            operatingExpenses: 0,
+            vanFund: 0,
+            emergencyReserve: 0,
+            wascarDraw: 0,
+            yisvelDraw: 0,
           };
         }
 
@@ -323,27 +324,30 @@ export const financialRouter = router({
         const netProfit = totalRevenue - totalExpenses;
 
         const settings = {
-          ownerDrawPercent: 40,
-          reserveFundPercent: 20,
-          reinvestmentPercent: 20,
-          operatingCashPercent: 20,
+          operatingExpensesPercent: 35,
+          vanFundPercent: 30,
+          emergencyReservePercent: 10,
+          wascarDrawPercent: 12.5,
+          yisvelDrawPercent: 12.5,
         };
 
         return {
           netProfit: round2(netProfit),
-          ownerDraw: round2((netProfit * settings.ownerDrawPercent) / 100),
-          reserveFund: round2((netProfit * settings.reserveFundPercent) / 100),
-          reinvestment: round2((netProfit * settings.reinvestmentPercent) / 100),
-          operatingCash: round2((netProfit * settings.operatingCashPercent) / 100),
+          operatingExpenses: round2((netProfit * settings.operatingExpensesPercent) / 100),
+          vanFund: round2((netProfit * settings.vanFundPercent) / 100),
+          emergencyReserve: round2((netProfit * settings.emergencyReservePercent) / 100),
+          wascarDraw: round2((netProfit * settings.wascarDrawPercent) / 100),
+          yisvelDraw: round2((netProfit * settings.yisvelDrawPercent) / 100),
         };
       } catch (err) {
         console.error("[financial.calculateAllocations]", err);
         return {
           netProfit: 0,
-          ownerDraw: 0,
-          reserveFund: 0,
-          reinvestment: 0,
-          operatingCash: 0,
+          operatingExpenses: 0,
+          vanFund: 0,
+          emergencyReserve: 0,
+          wascarDraw: 0,
+          yisvelDraw: 0,
         };
       }
     }),
@@ -561,13 +565,14 @@ export const financialRouter = router({
             variancePercent: 0,
             byLoad: [],
           },
-          allocations: {
-            netProfit: round2(netProfit),
-            ownerDraw: round2(netProfit * 0.4),
-            reserveFund: round2(netProfit * 0.2),
-            reinvestment: round2(netProfit * 0.2),
-            operatingCash: round2(netProfit * 0.2),
-          },
+         allocations: {
+  netProfit: round2(netProfit),
+  operatingExpenses: round2(netProfit * 0.35),
+  vanFund: round2(netProfit * 0.30),
+  emergencyReserve: round2(netProfit * 0.10),
+  wascarDraw: round2(netProfit * 0.125),
+  yisvelDraw: round2(netProfit * 0.125),
+},
           cashFlow: {
             cashIn: round2(cashIn),
             cashPending: round2(cashPending),
@@ -599,13 +604,14 @@ export const financialRouter = router({
             variancePercent: 0,
             byLoad: [],
           },
-          allocations: {
-            netProfit: 0,
-            ownerDraw: 0,
-            reserveFund: 0,
-            reinvestment: 0,
-            operatingCash: 0,
-          },
+         allocations: {
+  netProfit: 0,
+  operatingExpenses: 0,
+  vanFund: 0,
+  emergencyReserve: 0,
+  wascarDraw: 0,
+  yisvelDraw: 0,
+},
           cashFlow: {
             cashIn: 0,
             cashPending: 0,
