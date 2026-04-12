@@ -623,26 +623,25 @@ export const walletRouter = router({
 
           const wallet = safeWallet(walletRaw);
 
-          const userWithdrawals = await getWithdrawals(user.id, 200, 0);
+         const userWithdrawals = await getWithdrawals(user.id, 200, 0);
 
-          const totalWithdrawn = (userWithdrawals || [])
-            .filter((w: any) =>
-              ["requested", "approved", "completed"].includes(String(w.status || ""))
-            )
-            .reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
+const totalWithdrawn = (userWithdrawals || [])
+  .filter((w: any) => String(w.status || "") === "completed")
+  )
+  .reduce((sum: number, w: any) => sum + Number(w.amount || 0), 0);
 
-          return {
-            id: user.id,
-            name: user.name || user.email || `User ${user.id}`,
-            totalAssigned: Number(wallet?.totalEarnings ?? 0),
-            totalWithdrawn,
-            availableToWithdraw: Number(wallet?.availableBalance ?? 0),
-            pendingWithdrawals: Number(wallet?.pendingBalance ?? 0),
-            walletStatus: (wallet?.status || "active") as
-              | "active"
-              | "suspended"
-              | "pending",
-          };
+return {
+  id: user.id,
+  name: user.name || user.email || `User ${user.id}`,
+  totalAssigned: Number(wallet?.totalEarnings ?? 0),
+  totalWithdrawn,
+  availableToWithdraw: Number(wallet?.availableBalance ?? 0),
+  pendingWithdrawals: Number(wallet?.pendingBalance ?? 0),
+  walletStatus: (wallet?.status || "active") as
+    | "active"
+    | "suspended"
+    | "pending",
+};
         })
       );
 
