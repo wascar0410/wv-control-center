@@ -26,15 +26,22 @@ const DEFAULT_BUSINESS_CONFIG = {
   targetMilesPerMonth: 4000,
   minimumProfitPerMile: 1.5,
 
-  // Allocation buckets - current stage
+  // 5-bucket allocation model
   operatingExpensesPercent: 35,
   vanFundPercent: 30,
   emergencyReservePercent: 10,
   wascarDrawPercent: 12.5,
   yisvelDrawPercent: 12.5,
+
+  // Tax + goals settings
+  estimatedTaxPercent: 25,
+  quarterlyTaxEnabled: true,
+  taxReserveMode: "profit_based" as "profit_based" | "revenue_based" | "manual",
+  vanFundGoal: 15000,
+  emergencyReserveGoal: 5000,
 };
 
-const allocationConfigSchema = z
+const businessConfigSchema = z
   .object({
     fuelPricePerGallon: z.number().optional(),
     vanMpg: z.number().optional(),
@@ -53,6 +60,12 @@ const allocationConfigSchema = z
     emergencyReservePercent: z.number().min(0).max(100).optional(),
     wascarDrawPercent: z.number().min(0).max(100).optional(),
     yisvelDrawPercent: z.number().min(0).max(100).optional(),
+
+    estimatedTaxPercent: z.number().min(0).max(100).optional(),
+    quarterlyTaxEnabled: z.boolean().optional(),
+    taxReserveMode: z.enum(["profit_based", "revenue_based", "manual"]).optional(),
+    vanFundGoal: z.number().min(0).optional(),
+    emergencyReserveGoal: z.number().min(0).optional(),
   })
   .superRefine((data, ctx) => {
     const allocationFields = [
@@ -65,7 +78,6 @@ const allocationConfigSchema = z
 
     const provided = allocationFields.filter((v) => typeof v === "number");
 
-    // Only validate total if all 5 allocation fields are being sent together
     if (provided.length === 5) {
       const total =
         (data.operatingExpensesPercent || 0) +
@@ -123,7 +135,7 @@ export const businessConfigRouter = router({
   }),
 
   updateConfig: protectedProcedure
-    .input(allocationConfigSchema)
+    .input(businessConfigSchema)
     .mutation(async ({ ctx, input }) => {
       await updateBusinessConfig(ctx.user.id, input);
       return { success: true };
