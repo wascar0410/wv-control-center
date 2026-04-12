@@ -3,7 +3,14 @@ import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, TrendingUp, Clock, AlertCircle, Wallet, ShieldCheck } from "lucide-react";
+import {
+  DollarSign,
+  TrendingUp,
+  Clock,
+  AlertCircle,
+  Wallet,
+  ShieldCheck,
+} from "lucide-react";
 import WithdrawalRequestModal from "@/components/WithdrawalRequestModal";
 import WalletTools from "@/components/WalletTools";
 import BankConnectionPanel from "@/components/BankConnectionPanel";
@@ -56,11 +63,27 @@ export default function WalletDashboard() {
     }
   );
 
+  const {
+    data: partnerSummary = [],
+    isLoading: loadingPartnerSummary,
+    error: partnerSummaryError,
+  } = trpc.wallet.getPartnerSummary.useQuery(undefined, {
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
   const isLoading =
-    loadingWallet || loadingStats || loadingTransactions || loadingWithdrawals;
+    loadingWallet ||
+    loadingStats ||
+    loadingTransactions ||
+    loadingWithdrawals;
 
   const hasError =
-    !!walletError || !!statsError || !!transError || !!withdrawError;
+    !!walletError ||
+    !!statsError ||
+    !!transError ||
+    !!withdrawError ||
+    !!partnerSummaryError;
 
   const fallbackStats = {
     totalEarnings: 0,
@@ -103,16 +126,24 @@ export default function WalletDashboard() {
     });
   }, [recentTransactions]);
 
-  const availableBalance = Number(wallet?.availableBalance ?? displayStats.availableBalance ?? 0);
-  const pendingBalance = Number(wallet?.pendingBalance ?? displayStats.pendingBalance ?? 0);
-  const blockedBalance = Number(wallet?.blockedBalance ?? displayStats.blockedBalance ?? 0);
-  const totalEarnings = Number(wallet?.totalEarnings ?? displayStats.totalEarnings ?? 0);
+  const availableBalance = Number(
+    wallet?.availableBalance ?? displayStats.availableBalance ?? 0
+  );
+  const pendingBalance = Number(
+    wallet?.pendingBalance ?? displayStats.pendingBalance ?? 0
+  );
+  const blockedBalance = Number(
+    wallet?.blockedBalance ?? displayStats.blockedBalance ?? 0
+  );
+  const totalEarnings = Number(
+    wallet?.totalEarnings ?? displayStats.totalEarnings ?? 0
+  );
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
           <p className="text-muted-foreground">Cargando billetera...</p>
         </div>
       </div>
@@ -122,8 +153,8 @@ export default function WalletDashboard() {
   return (
     <div className="space-y-6 p-6">
       {hasError && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" />
           <div>
             <p className="font-semibold text-yellow-900">Aviso</p>
             <p className="text-sm text-yellow-800">
@@ -137,8 +168,8 @@ export default function WalletDashboard() {
         <div>
           <h1 className="text-3xl font-bold text-red-600">TEST WALLET NUEVO 999</h1>
           <p className="text-muted-foreground">
-  ESTE ES EL WALLET NUEVO EN PRODUCCION
-</p>
+            ESTE ES EL WALLET NUEVO EN PRODUCCION
+          </p>
         </div>
 
         <Button
@@ -147,25 +178,28 @@ export default function WalletDashboard() {
           className="gap-2"
           disabled={!canWithdraw}
         >
-          <DollarSign className="w-4 h-4" />
+          <DollarSign className="h-4 w-4" />
           {canWithdraw ? "Solicitar Retiro" : "Sin saldo disponible"}
         </Button>
       </div>
 
       <WalletTools />
 
-      <PartnerWalletSummary />
+      <PartnerWalletSummary
+        partners={partnerSummary}
+        isLoading={loadingPartnerSummary}
+      />
 
       {!canWithdraw && (
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="pt-6">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
               <div>
                 <p className="font-semibold text-amber-900">
                   No tienes saldo disponible para retirar
                 </p>
-                <p className="text-sm text-amber-800 mt-1">
+                <p className="mt-1 text-sm text-amber-800">
                   Completa más cargas o espera a que se procese tu próximo settlement.
                 </p>
               </div>
@@ -174,7 +208,7 @@ export default function WalletDashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -182,10 +216,8 @@ export default function WalletDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totalEarnings)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <div className="text-2xl font-bold">{formatCurrency(totalEarnings)}</div>
+            <p className="mt-1 text-xs text-muted-foreground">
               Todas las ganancias registradas
             </p>
           </CardContent>
@@ -193,8 +225,8 @@ export default function WalletDashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-green-500" />
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <TrendingUp className="h-4 w-4 text-green-500" />
               Saldo Disponible
             </CardTitle>
           </CardHeader>
@@ -206,7 +238,7 @@ export default function WalletDashboard() {
             >
               {formatCurrency(availableBalance)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               Listo para retirar
             </p>
           </CardContent>
@@ -214,8 +246,8 @@ export default function WalletDashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4 text-yellow-500" />
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Clock className="h-4 w-4 text-yellow-500" />
               Pendiente
             </CardTitle>
           </CardHeader>
@@ -223,7 +255,7 @@ export default function WalletDashboard() {
             <div className="text-2xl font-bold text-yellow-600">
               {formatCurrency(pendingBalance)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               En proceso de retiro
             </p>
           </CardContent>
@@ -231,8 +263,8 @@ export default function WalletDashboard() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-red-500" />
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-red-500" />
               Bloqueado
             </CardTitle>
           </CardHeader>
@@ -240,14 +272,18 @@ export default function WalletDashboard() {
             <div className="text-2xl font-bold text-red-600">
               {formatCurrency(blockedBalance)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               En disputa o verificación
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="w-full">
+      <Tabs
+        value={selectedTab}
+        onValueChange={setSelectedTab}
+        className="w-full"
+      >
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
           <TabsTrigger value="history">Historial</TabsTrigger>
@@ -261,7 +297,7 @@ export default function WalletDashboard() {
               <CardTitle>Resumen de Wallet</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                 <div>
                   <p className="text-xs text-muted-foreground">Saldo disponible</p>
                   <p className="text-2xl font-bold">
@@ -285,8 +321,8 @@ export default function WalletDashboard() {
 
                 <div>
                   <p className="text-xs text-muted-foreground">Wallet status</p>
-                  <p className="text-2xl font-bold flex items-center gap-2">
-                    <Wallet className="w-5 h-5" />
+                  <p className="flex items-center gap-2 text-2xl font-bold">
+                    <Wallet className="h-5 w-5" />
                     {wallet?.status || "active"}
                   </p>
                 </div>
@@ -295,7 +331,7 @@ export default function WalletDashboard() {
               {!canWithdraw && (
                 <div className="rounded-lg border border-dashed p-4">
                   <p className="font-medium">Retiro no disponible</p>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     Tu saldo disponible actual es {formatCurrency(availableBalance)}.
                   </p>
                 </div>
@@ -312,7 +348,7 @@ export default function WalletDashboard() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="font-semibold text-sm">
+                        <p className="text-sm font-semibold">
                           {tx.description || tx.type || "Transacción"}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -320,7 +356,7 @@ export default function WalletDashboard() {
                             ? new Date(tx.createdAt).toLocaleDateString("es-ES")
                             : "Sin fecha"}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1 uppercase">
+                        <p className="mt-1 text-xs uppercase text-muted-foreground">
                           {tx.type || "N/A"}
                         </p>
                       </div>
@@ -341,7 +377,7 @@ export default function WalletDashboard() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">
+                <p className="text-center text-muted-foreground">
                   No hay transacciones
                 </p>
               </CardContent>
@@ -357,7 +393,7 @@ export default function WalletDashboard() {
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="font-semibold text-sm">
+                        <p className="text-sm font-semibold">
                           Retiro #{withdrawal.id}
                         </p>
                         <p className="text-xs text-muted-foreground">
@@ -365,7 +401,7 @@ export default function WalletDashboard() {
                             ? new Date(withdrawal.requestedAt).toLocaleDateString("es-ES")
                             : "Sin fecha"}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           Método: {withdrawal.method || "N/A"}
                         </p>
                       </div>
@@ -386,7 +422,7 @@ export default function WalletDashboard() {
           ) : (
             <Card>
               <CardContent className="pt-6">
-                <p className="text-muted-foreground text-center">
+                <p className="text-center text-muted-foreground">
                   No hay retiros registrados
                 </p>
               </CardContent>
