@@ -30,8 +30,14 @@ const DEFAULT_BUSINESS_CONFIG = {
   emergencyReservePercent: "10.00",
   wascarDrawPercent: "12.50",
   yisvelDrawPercent: "12.50",
-};
 
+  // Tax + goals settings
+  estimatedTaxPercent: "25.00",
+  quarterlyTaxEnabled: true,
+  taxReserveMode: "profit_based",
+  vanFundGoal: "15000.00",
+  emergencyReserveGoal: "5000.00",
+};
 // ─── Business Config ───────────────────────────────────────────────────────────
 
 export async function getBusinessConfig(userId: number) {
