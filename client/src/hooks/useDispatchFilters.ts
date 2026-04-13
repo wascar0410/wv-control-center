@@ -14,7 +14,7 @@ export interface DispatchFilters {
 }
 
 const DEFAULT_FILTERS: DispatchFilters = {
-  status: [],
+  status: ["available", "quoted", "assigned", "in_transit", "delivered", "invoiced", "paid"],
   marginRange: [0, 50],
   search: "",
   sortBy: "date",
