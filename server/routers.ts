@@ -295,14 +295,15 @@ const loadsRouter = router({
         .optional()
     )
     .query(async ({ input }) => {
-      try {
-       const loads = await getLoads(input);
-return attachFinancialSnapshots(loads);
-      } catch (error) {
-        console.error("[loads.list] error:", error);
-        return [];
-      }
-    }),
+  try {
+    const loads = await getLoads(input);
+    console.log("[loads.list] raw loads count:", loads.length);
+    return loads;
+  } catch (error) {
+    console.error("[loads.list] error:", error);
+    return [];
+  }
+})
 
   byId: publicProcedure
     .input(z.object({ id: z.number() }))
