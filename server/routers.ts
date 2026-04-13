@@ -286,24 +286,24 @@ const driverStatsRouter = router({
 
 const loadsRouter = router({
   list: publicProcedure
-    .input(
-      z
-        .object({
-          status: z.string().optional(),
-          driverId: z.number().optional(),
-        })
-        .optional()
-    )
-    .query(async ({ input }) => {
-  try {
-    const loads = await getLoads(input);
-    console.log("[loads.list] raw loads count:", loads.length);
-    return loads;
-  } catch (error) {
-    console.error("[loads.list] error:", error);
-    return [];
-  }
-})
+  .input(
+    z
+      .object({
+        status: z.string().optional(),
+        driverId: z.number().optional(),
+      })
+      .optional()
+  )
+  .query(async ({ input }) => {
+    try {
+      const loads = await getLoads(input);
+      console.log("[loads.list] raw loads count:", loads.length);
+      return loads;
+    } catch (error) {
+      console.error("[loads.list] error:", error);
+      return [];
+    }
+  }),
 
   byId: publicProcedure
     .input(z.object({ id: z.number() }))
