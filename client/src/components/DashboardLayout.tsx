@@ -111,13 +111,38 @@ const getFilteredMenuItems = (role?: string) => {
 
   const itemsWithModuleKey = baseItems.map((item) => ({
     ...item,
-    moduleKey:
-      item.path === "/dispatch-board"
-        ? "loads-dispatch"
-        : item.path.replace("/", ""),
+    moduleKey: item.path.replace("/", ""),
   }));
 
-  return filterMenuByRole(itemsWithModuleKey as any, (role as any) || "user");
+  const filtered = filterMenuByRole(
+    itemsWithModuleKey as any,
+    (role as any) || "user"
+  );
+
+  const canSeeDispatchBoard = role === "admin" || role === "owner";
+  const hasDispatchBoard = filtered.some(
+    (item: any) => item.path === "/dispatch-board"
+  );
+
+  if (!hasDispatchBoard && canSeeDispatchBoard) {
+    const dispatchBoardItem = baseItems.find(
+      (item) => item.path === "/dispatch-board"
+    );
+
+    if (dispatchBoardItem) {
+      const loadsDispatchIndex = filtered.findIndex(
+        (item: any) => item.path === "/loads-dispatch"
+      );
+
+      if (loadsDispatchIndex >= 0) {
+        filtered.splice(loadsDispatchIndex, 0, dispatchBoardItem as any);
+      } else {
+        filtered.unshift(dispatchBoardItem as any);
+      }
+    }
+  }
+
+  return filtered;
 };
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
