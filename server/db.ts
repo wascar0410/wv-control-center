@@ -203,7 +203,7 @@ export async function getLoads(filters?: { status?: string; driverId?: number; i
   if (!db) return [];
   const conditions = [];
   if (filters?.status) conditions.push(eq(loads.status, filters.status as any));
-  
+
   if (filters?.driverId) {
     if (filters.includeUnassigned) {
       conditions.push(
@@ -216,8 +216,15 @@ export async function getLoads(filters?: { status?: string; driverId?: number; i
       conditions.push(eq(loads.assignedDriverId, filters.driverId));
     }
   }
-  
-  return db.select().from(loads).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(loads.createdAt));
+
+  const result = await db
+    .select()
+    .from(loads)
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(loads.createdAt));
+
+  console.log("[getLoads] filters:", filters, "count:", result.length);
+  return result;
 }
 
 export async function getLoadById(id: number) {
