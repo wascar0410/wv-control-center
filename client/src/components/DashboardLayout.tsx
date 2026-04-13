@@ -108,11 +108,15 @@ const getMenuItems = (role?: string) => {
 
 const getFilteredMenuItems = (role?: string) => {
   const baseItems = getMenuItems(role);
-  // Map path to module key for RBAC
+
   const itemsWithModuleKey = baseItems.map((item) => ({
     ...item,
-    moduleKey: item.path.replace("/", ""),
+    moduleKey:
+      item.path === "/dispatch-board"
+        ? "loads-dispatch"
+        : item.path.replace("/", ""),
   }));
+
   return filterMenuByRole(itemsWithModuleKey as any, (role as any) || "user");
 };
 
