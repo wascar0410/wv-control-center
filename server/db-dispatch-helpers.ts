@@ -14,17 +14,28 @@ function round2(value: number): number {
 }
 
 export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
-  const revenue = Number(load.price || 0);
-  const estimatedFuel = Number(load.estimatedFuel || 0);
-  const estimatedTolls = Number(load.estimatedTolls || 0);
+  const revenue = Number(load.price ?? 0);
+  const estimatedFuel = Number(load.estimatedFuel ?? 0);
+  const estimatedTolls = Number(load.estimatedTolls ?? 0);
 
-  const storedNetMargin = Number(load.netMargin || 0);
   const computedProfit = revenue - estimatedFuel - estimatedTolls;
-  const profit = load.netMargin != null ? storedNetMargin : computedProfit;
+
+  const rawNetMargin = load.netMargin;
+  const parsedStoredNetMargin =
+    rawNetMargin === null || rawNetMargin === undefined || rawNetMargin === ""
+      ? null
+      : Number(rawNetMargin);
+
+  const profit =
+    parsedStoredNetMargin !== null && Number.isFinite(parsedStoredNetMargin)
+      ? parsedStoredNetMargin
+      : computedProfit;
 
   const miles =
-    Number((load as any).estimatedMiles || 0) ||
-    Number((load as any).miles || 0) ||
+    Number((load as any).estimatedMiles ?? 0) ||
+    Number((load as any).miles ?? 0) ||
+    Number((load as any).totalMiles ?? 0) ||
+    Number((load as any).distanceMiles ?? 0) ||
     0;
 
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
