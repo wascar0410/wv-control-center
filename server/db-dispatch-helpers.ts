@@ -55,8 +55,24 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
 }
 
 export function attachFinancialSnapshots<T extends LoadItem>(loads: T[]) {
-  return loads.map((load) => ({
-    ...load,
-    financialSnapshot: buildLoadFinancialSnapshot(load),
-  }));
+  return loads.map((load, idx) => {
+    if (idx === 0) {
+      console.log('[DispatchBoard] Sample load data:', {
+        id: load.id,
+        price: load.price,
+        estimatedFuel: load.estimatedFuel,
+        estimatedTolls: load.estimatedTolls,
+        netMargin: load.netMargin,
+        estimatedMiles: (load as any).estimatedMiles,
+        miles: (load as any).miles,
+        totalMiles: (load as any).totalMiles,
+        distanceMiles: (load as any).distanceMiles,
+        allKeys: Object.keys(load),
+      });
+    }
+    return {
+      ...load,
+      financialSnapshot: buildLoadFinancialSnapshot(load),
+    };
+  });
 }

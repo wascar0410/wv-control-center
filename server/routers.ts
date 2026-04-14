@@ -1573,7 +1573,8 @@ const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
       
-      const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1).then(rows => rows[0]);
+      const rows = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1);
+      const existingUser = rows[0];
       
       return {
         available: !existingUser,
@@ -1602,7 +1603,8 @@ const adminRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database connection failed");
       // Check if user already exists
-      const existingUser = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1).then(rows => rows[0]);
+      const rows = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1);
+      const existingUser = rows[0];
 
       if (existingUser) {
         throw new Error("El correo ya está registrado en el sistema");
@@ -2320,7 +2322,8 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const db = await getDb();
         if (!db) throw new Error("Database connection failed");
-        const user = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1).then(rows => rows[0]);
+        const userRows = await db.select().from(usersTable).where(eq(usersTable.email, input.email)).limit(1);
+        const user = userRows[0];
         if (!user) return { success: true, message: "Si el email existe, recibirás un enlace de recuperación" };
         const token = generateResetToken();
         const expiresAt = getTokenExpirationTime();
@@ -2336,7 +2339,8 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database connection failed");
         const { passwordResetTokens } = await import("../drizzle/schema");
-        const resetToken = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, input.token)).limit(1).then(rows => rows[0]);
+        const tokenRows = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, input.token)).limit(1);
+        const resetToken = tokenRows[0];
         if (!resetToken) return { valid: false, error: "Token inválido o expirado" };
         if (isTokenExpired(resetToken.expiresAt)) return { valid: false, error: "El token ha expirado" };
         if (resetToken.usedAt) return { valid: false, error: "Este token ya fue utilizado" };
@@ -2348,7 +2352,8 @@ export const appRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database connection failed");
         const { passwordResetTokens } = await import("../drizzle/schema");
-        const resetToken = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, input.token)).limit(1).then(rows => rows[0]);
+        const tokenRows = await db.select().from(passwordResetTokens).where(eq(passwordResetTokens.token, input.token)).limit(1);
+        const resetToken = tokenRows[0];
         if (!resetToken || isTokenExpired(resetToken.expiresAt) || resetToken.usedAt) throw new Error("Token inválido");
         const passwordHash = await bcrypt.hash(input.newPassword, 10);
         await db.update(usersTable).set({ passwordHash, updatedAt: new Date() }).where(eq(usersTable.id, resetToken.userId));
