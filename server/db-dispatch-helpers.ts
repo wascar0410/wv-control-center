@@ -81,28 +81,54 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
 }
 
 export function attachFinancialSnapshots<T extends LoadItem>(loads: T[]) {
-  return loads.map((load, idx) => {
-    // Log first load to see actual field values
-    if (idx === 0) {
-      console.log("[attachFinancialSnapshots] Sample load fields:", {
-        id: load.id,
-        price: load.price,
-        estimatedFuel: load.estimatedFuel,
-        estimatedTolls: load.estimatedTolls,
-        netMargin: load.netMargin,
-        estimatedMiles: (load as any).estimatedMiles,
-        miles: (load as any).miles,
-        totalMiles: (load as any).totalMiles,
-        distanceMiles: (load as any).distanceMiles,
-        pickupLat: load.pickupLat,
-        pickupLng: load.pickupLng,
-        deliveryLat: load.deliveryLat,
-        deliveryLng: load.deliveryLng,
-      });
-    }
-    return {
+  try {
+    return loads.map((load, idx) => {
+      // Log first load to see actual field values
+      if (idx === 0) {
+        console.log("[attachFinancialSnapshots] Sample load fields:", {
+          id: load.id,
+          price: load.price,
+          estimatedFuel: load.estimatedFuel,
+          estimatedTolls: load.estimatedTolls,
+          netMargin: load.netMargin,
+          estimatedMiles: (load as any).estimatedMiles,
+          miles: (load as any).miles,
+          totalMiles: (load as any).totalMiles,
+          distanceMiles: (load as any).distanceMiles,
+          pickupLat: load.pickupLat,
+          pickupLng: load.pickupLng,
+          deliveryLat: load.deliveryLat,
+          deliveryLng: load.deliveryLng,
+        });
+      }
+      try {
+        return {
+          ...load,
+          financialSnapshot: buildLoadFinancialSnapshot(load),
+        };
+      } catch (err) {
+        console.error("[attachFinancialSnapshots] Error building snapshot for load", load.id, err);
+        return {
+          ...load,
+          financialSnapshot: {
+            margin: 0,
+            profit: 0,
+            ratePerMile: 0,
+            status: "loss" as const,
+          },
+        };
+      }
+    });
+  } catch (err) {
+    console.error("[attachFinancialSnapshots] Fatal error:", err);
+    return loads.map((load) => ({
       ...load,
-      financialSnapshot: buildLoadFinancialSnapshot(load),
-    };
-  });
+      financialSnapshot: {
+        margin: 0,
+        profit: 0,
+        ratePerMile: 0,
+        status: "loss" as const,
+      },
+    }));
+  }
 }
