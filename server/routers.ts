@@ -298,7 +298,7 @@ const loadsRouter = router({
   try {
     const loads = await getLoads(input);
     console.log("[loads.list] raw loads count:", loads.length);
-    return loads;
+    return attachFinancialSnapshots(loads);
   } catch (error) {
     console.error("[loads.list] error:", error);
     return [];
