@@ -28,6 +28,10 @@ export default function DispatchBoard() {
 
   const rawData = query.data;
 
+  // DIAGNOSTIC LOGGING
+  console.log("[DispatchBoard] rawData:", rawData);
+  console.log("[DispatchBoard] filters:", filters);
+
   const loads = useMemo(() => {
     if (Array.isArray(rawData)) return rawData;
     if (rawData && Array.isArray((rawData as any).loads)) return (rawData as any).loads;
@@ -36,6 +40,8 @@ export default function DispatchBoard() {
   }, [rawData]);
 
   const filteredLoads = useMemo(() => {
+    console.log("[DispatchBoard] loads.length:", loads.length);
+    console.log("[DispatchBoard] loads sample:", loads.slice(0, 3).map((l: any) => ({ id: l.id, status: l.status, price: l.price })));
     return loads.filter((load: any) => {
       const snapshot = load.financialSnapshot || {
         margin: 0,
@@ -62,6 +68,11 @@ export default function DispatchBoard() {
       return matchesStatus && matchesSearch && matchesMargin;
     });
   }, [loads, filters]);
+
+  // Log filtered results
+  console.log("[DispatchBoard] filteredLoads.length:", filteredLoads.length);
+  console.log("[DispatchBoard] filters.status:", filters.status);
+  console.log("[DispatchBoard] filters.marginRange:", filters.marginRange);
 
   const handleLoadSelect = (loadId: number) => {
     setSelectedLoadId(loadId);
