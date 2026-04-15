@@ -126,28 +126,6 @@ export default function DispatchBoard() {
       />
 
       <div className="flex flex-1 flex-col overflow-hidden p-6">
-        {/* DEBUG OVERLAY - FIXED */}
-        <div className="fixed top-20 right-4 z-50 max-w-sm rounded border bg-black/90 p-3 text-xs text-white shadow-lg">
-          <div className="font-bold">DEBUG</div>
-          <div>rawData isArray: {String(Array.isArray(rawData))}</div>
-          <div>loads.length: {loads.length}</div>
-          <div>filteredLoads.length: {filteredLoads.length}</div>
-          <pre className="mt-2 whitespace-pre-wrap">
-            {JSON.stringify(filters, null, 2)}
-          </pre>
-          <pre className="mt-2 whitespace-pre-wrap">
-            {JSON.stringify(
-              loads.slice(0, 3).map((l: any) => ({
-                id: l.id,
-                status: l.status,
-                margin: l.financialSnapshot?.margin,
-              })),
-              null,
-              2
-            )}
-          </pre>
-        </div>
-
         <div className="mb-4 flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Dispatch Board</h1>
