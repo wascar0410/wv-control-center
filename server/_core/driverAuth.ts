@@ -30,11 +30,13 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
   if (!db) throw new Error("Database connection failed");
 
   // Find user by email
+  console.log("[driverLogin] Attempting login with email:", payload.email, "type:", typeof payload.email);
   const rows = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.email, payload.email))
     .limit(1);
+  console.log("[driverLogin] Query result rows count:", rows.length);
   const user = rows[0];
 
   if (!user) {
