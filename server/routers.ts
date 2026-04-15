@@ -298,7 +298,31 @@ const loadsRouter = router({
   try {
     const loads = await getLoads(input);
     console.log("[loads.list] raw loads count:", loads.length);
-    return attachFinancialSnapshots(loads);
+    console.log("[loads.list] raw sample:", loads.slice(0, 3).map((l: any) => ({
+      id: l.id,
+      status: l.status,
+      price: l.price,
+      estimatedFuel: l.estimatedFuel,
+      estimatedTolls: l.estimatedTolls,
+      netMargin: l.netMargin,
+      estimatedMiles: (l as any).estimatedMiles,
+      miles: (l as any).miles,
+      totalMiles: (l as any).totalMiles,
+      distanceMiles: (l as any).distanceMiles,
+    })));
+    
+    const enriched = attachFinancialSnapshots(loads);
+    console.log("[loads.list] enriched count:", enriched.length);
+    console.log("[loads.list] enriched sample:", enriched.slice(0, 3).map((l: any) => ({
+      id: l.id,
+      status: l.status,
+      margin: l.financialSnapshot?.margin,
+      profit: l.financialSnapshot?.profit,
+      ratePerMile: l.financialSnapshot?.ratePerMile,
+      status_financial: l.financialSnapshot?.status,
+    })));
+    
+    return enriched;
   } catch (error) {
     console.error("[loads.list] error:", error);
     return [];
