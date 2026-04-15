@@ -298,9 +298,7 @@ const loadsRouter = router({
   try {
     const loads = await getLoads(input);
     console.log("[loads.list] raw loads count:", loads.length);
-    const loadsWithSnapshots = attachFinancialSnapshots(loads);
-    console.log("[loads.list] with snapshots count:", loadsWithSnapshots.length);
-    return loadsWithSnapshots as typeof loads;
+    return attachFinancialSnapshots(loads);
   } catch (error) {
     console.error("[loads.list] error:", error);
     return [];
