@@ -2364,6 +2364,12 @@ export const appRouter = router({
     driverLogin: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string() }))
       .mutation(async ({ input, ctx }) => {
+        console.log("[auth.driverLogin] input received:", {
+          email: input?.email,
+          hasEmail: input?.email !== undefined && input?.email !== null && input?.email !== "",
+          emailType: typeof input?.email,
+          passwordType: typeof input?.password,
+        });
         const result = await driverLogin({ email: input.email, password: input.password, ipAddress: ctx.req.ip, userAgent: ctx.req.headers["user-agent"] as string });
         // Set wv_session cookie so subsequent tRPC requests are authenticated
         const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
