@@ -73,7 +73,7 @@ import {
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _connection: mysql.Connection | null = null;
+let _pool: mysql.Pool | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
 
 export async function getDb() {
@@ -85,7 +85,7 @@ export async function getDb() {
   }
 
   try {
-    _connection = await mysql.createConnection({
+    _pool = mysql.createPool({
       uri: process.env.DATABASE_URL,
       ssl: {
         rejectUnauthorized: true,
@@ -95,7 +95,7 @@ export async function getDb() {
       queueLimit: 0,
     });
 
-    _db = drizzle(_connection, {
+    _db = drizzle(_pool, {
       mode: "default",
       schema: {
         users,
@@ -140,7 +140,7 @@ export async function getDb() {
     return _db;
   } catch (error) {
     console.error("[Database] Failed to connect:", error);
-    _connection = null;
+    _pool = null;
     _db = null;
     return null;
   }
