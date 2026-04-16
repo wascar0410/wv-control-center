@@ -1816,7 +1816,7 @@ export const bankAccountClassifications = mysqlTable(
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   },
   (table) => ({
-    bankAccountIdx: index("bank_account_classifications_account_unique").on(table.bankAccountId).unique(),
+    bankAccountIdx: uniqueIndex("bank_account_classifications_account_unique").on(table.bankAccountId),
     classificationIdx: index("bank_account_classifications_type_idx").on(table.classification),
   })
 );

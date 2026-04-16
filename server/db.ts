@@ -4575,25 +4575,18 @@ export async function getBankAccountClassifications(ownerId: number) {
   const db = await getDb();
   if (!db) return [];
   
-  // Get all bank accounts for owner, with their classifications
-  const accounts = await db
-    .select({
-      id: bankAccounts.id,
-      accountName: bankAccounts.accountName,
-      accountNumber: bankAccounts.accountNumber,
-      bankName: bankAccounts.bankName,
-      classification: bankAccountClassifications.classification,
-      label: bankAccountClassifications.label,
-      isActive: bankAccountClassifications.isActive,
-    })
-    .from(bankAccounts)
-    .leftJoin(
-      bankAccountClassifications,
-      eq(bankAccounts.id, bankAccountClassifications.bankAccountId)
+  // Get all bank account classifications for owner's accounts
+  const classifications = await db
+    .select()
+    .from(bankAccountClassifications)
+    .innerJoin(
+      bankAccounts,
+      eq(bankAccountClassifications.bankAccountId, bankAccounts.id)
     )
-    .where(eq(bankAccounts.ownerId, ownerId));
+    .where(eq(bankAccounts.userId, ownerId));
   
-  return accounts;
+  // Return only the classification data, not the joined account data
+  return classifications.map(row => row.bank_account_classifications);
 }
 
 /**
@@ -4607,9 +4600,12 @@ export async function setBankAccountClassification(
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
   
-  const existing = await db.query.bankAccountClassifications.findFirst({
-    where: eq(bankAccountClassifications.bankAccountId, bankAccountId),
-  });
+  const existingRows = await db
+    .select()
+    .from(bankAccountClassifications)
+    .where(eq(bankAccountClassifications.bankAccountId, bankAccountId))
+    .limit(1);
+  const existing = existingRows[0];
   
   if (existing) {
     // Update existing
@@ -4631,9 +4627,12 @@ export async function setBankAccountClassification(
     });
   }
   
-  return db.query.bankAccountClassifications.findFirst({
-    where: eq(bankAccountClassifications.bankAccountId, bankAccountId),
-  });
+  const resultRows = await db
+    .select()
+    .from(bankAccountClassifications)
+    .where(eq(bankAccountClassifications.bankAccountId, bankAccountId))
+    .limit(1);
+  return resultRows[0] || null;
 }
 
 /**
