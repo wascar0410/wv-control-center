@@ -136,6 +136,9 @@ export async function getDb() {
         taskComments,
         companies,
         businessConfig,
+        bankAccountClassifications,
+        cashFlowRules,
+        reserveTransferSuggestions,
       },
     });
 
@@ -4516,11 +4519,8 @@ export async function getCashFlowRule(ownerId: number) {
   const db = await getDb();
   if (!db) return null;
   
-  const rule = await db.query.cashFlowRules.findFirst({
-    where: eq(cashFlowRules.ownerId, ownerId),
-  });
-  
-  return rule || null;
+  const rules = await db.select().from(cashFlowRules).where(eq(cashFlowRules.ownerId, ownerId)).limit(1);
+  return rules[0] || null;
 }
 
 /**
