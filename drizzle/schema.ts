@@ -1797,3 +1797,86 @@ export const companies = mysqlTable("companies", {
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = typeof companies.$inferInsert;
+
+
+/**
+ * Bank Account Classifications - Classify connected accounts for cash flow management
+ * Types: operating (daily operations), reserve (emergency fund), personal (owner draw)
+ */
+export const bankAccountClassifications = mysqlTable(
+  "bank_account_classifications",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    bankAccountId: int("bank_account_id").notNull().references(() => bankAccounts.id, { onDelete: "cascade" }),
+    classification: mysqlEnum("classification", ["operating", "reserve", "personal"]).default("operating").notNull(),
+    label: varchar("label", { length: 255 }),
+    description: text("description"),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    bankAccountIdx: index("bank_account_classifications_account_unique").on(table.bankAccountId).unique(),
+    classificationIdx: index("bank_account_classifications_type_idx").on(table.classification),
+  })
+);
+export type BankAccountClassification = typeof bankAccountClassifications.$inferSelect;
+export type InsertBankAccountClassification = typeof bankAccountClassifications.$inferInsert;
+
+/**
+ * Cash Flow Rules - Configuration for reserve calculation and cash flow management
+ * Default: 20% of deposits go to reserve
+ */
+export const cashFlowRules = mysqlTable(
+  "cash_flow_rules",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerId: int("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    reservePercent: decimal("reserve_percent", { precision: 5, scale: 2 }).default("20.00").notNull(),
+    minReserveAmount: decimal("min_reserve_amount", { precision: 12, scale: 2 }).default("0.00"),
+    maxReserveAmount: decimal("max_reserve_amount", { precision: 12, scale: 2 }).default("999999.99"),
+    autoTransferEnabled: boolean("auto_transfer_enabled").default(false),
+    autoTransferDay: int("auto_transfer_day"), // Day of month (1-31) for auto transfer
+    operatingAccountId: int("operating_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
+    reserveAccountId: int("reserve_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    ownerIdx: index("cash_flow_rules_owner_idx").on(table.ownerId),
+    operatingIdx: index("cash_flow_rules_operating_idx").on(table.operatingAccountId),
+    reserveIdx: index("cash_flow_rules_reserve_idx").on(table.reserveAccountId),
+  })
+);
+export type CashFlowRule = typeof cashFlowRules.$inferSelect;
+export type InsertCashFlowRule = typeof cashFlowRules.$inferInsert;
+
+/**
+ * Reserve Transfer Suggestions - Track suggested and executed reserve transfers
+ */
+export const reserveTransferSuggestions = mysqlTable(
+  "reserve_transfer_suggestions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerId: int("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    fromAccountId: int("from_account_id").notNull().references(() => bankAccounts.id, { onDelete: "cascade" }),
+    toAccountId: int("to_account_id").notNull().references(() => bankAccounts.id, { onDelete: "cascade" }),
+    suggestedAmount: decimal("suggested_amount", { precision: 12, scale: 2 }).notNull(),
+    transferredAmount: decimal("transferred_amount", { precision: 12, scale: 2 }),
+    status: mysqlEnum("status", ["suggested", "pending", "completed", "cancelled"]).default("suggested").notNull(),
+    reason: varchar("reason", { length: 255 }),
+    transactionId: int("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    ownerIdx: index("reserve_transfer_suggestions_owner_idx").on(table.ownerId),
+    statusIdx: index("reserve_transfer_suggestions_status_idx").on(table.status),
+    fromIdx: index("reserve_transfer_suggestions_from_idx").on(table.fromAccountId),
+    toIdx: index("reserve_transfer_suggestions_to_idx").on(table.toAccountId),
+    transactionIdx: index("reserve_transfer_suggestions_transaction_idx").on(table.transactionId),
+  })
+);
+export type ReserveTransferSuggestion = typeof reserveTransferSuggestions.$inferSelect;
+export type InsertReserveTransferSuggestion = typeof reserveTransferSuggestions.$inferInsert;

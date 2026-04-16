@@ -17,7 +17,9 @@ import mysql from "mysql2/promise";
 import {
   alerts,
   bankAccounts,
+  bankAccountClassifications,
   businessConfig,
+  cashFlowRules,
   companies,
   contactSubmissions,
   driverLocations,
@@ -58,6 +60,7 @@ import {
   podDocuments,
   quoteAnalysis,
   receivables,
+  reserveTransferSuggestions,
   routeStops,
   settlementLoads,
   settlements,
@@ -4503,4 +4506,157 @@ export async function deleteCompany(companyId: number) {
 
   await db.delete(companies).where(eq(companies.id, companyId));
   return true;
+}
+
+
+/**
+ * Get cash flow rule for an owner
+ */
+export async function getCashFlowRule(ownerId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const rule = await db.query.cashFlowRules.findFirst({
+    where: eq(cashFlowRules.ownerId, ownerId),
+  });
+  
+  return rule || null;
+}
+
+/**
+ * Save or update cash flow rule
+ */
+export async function saveCashFlowRule(ownerId: number, data: {
+  reservePercent?: number;
+  minReserveAmount?: number;
+  maxReserveAmount?: number;
+  autoTransferEnabled?: boolean;
+  autoTransferDay?: number | null;
+  operatingAccountId?: number | null;
+  reserveAccountId?: number | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const existing = await getCashFlowRule(ownerId);
+  
+  if (existing) {
+    // Update existing
+    await db
+      .update(cashFlowRules)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(cashFlowRules.ownerId, ownerId));
+    
+    return getCashFlowRule(ownerId);
+  } else {
+    // Create new
+    const result = await db.insert(cashFlowRules).values({
+      ownerId,
+      reservePercent: data.reservePercent ?? 20,
+      minReserveAmount: data.minReserveAmount ?? 0,
+      maxReserveAmount: data.maxReserveAmount ?? 999999.99,
+      autoTransferEnabled: data.autoTransferEnabled ?? false,
+      autoTransferDay: data.autoTransferDay ?? null,
+      operatingAccountId: data.operatingAccountId ?? null,
+      reserveAccountId: data.reserveAccountId ?? null,
+    });
+    
+    return getCashFlowRule(ownerId);
+  }
+}
+
+/**
+ * Get bank account classifications for an owner
+ */
+export async function getBankAccountClassifications(ownerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get all bank accounts for owner, with their classifications
+  const accounts = await db
+    .select({
+      id: bankAccounts.id,
+      accountName: bankAccounts.accountName,
+      accountNumber: bankAccounts.accountNumber,
+      bankName: bankAccounts.bankName,
+      classification: bankAccountClassifications.classification,
+      label: bankAccountClassifications.label,
+      isActive: bankAccountClassifications.isActive,
+    })
+    .from(bankAccounts)
+    .leftJoin(
+      bankAccountClassifications,
+      eq(bankAccounts.id, bankAccountClassifications.bankAccountId)
+    )
+    .where(eq(bankAccounts.ownerId, ownerId));
+  
+  return accounts;
+}
+
+/**
+ * Set bank account classification
+ */
+export async function setBankAccountClassification(
+  bankAccountId: number,
+  classification: "operating" | "reserve" | "personal",
+  label?: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  
+  const existing = await db.query.bankAccountClassifications.findFirst({
+    where: eq(bankAccountClassifications.bankAccountId, bankAccountId),
+  });
+  
+  if (existing) {
+    // Update existing
+    await db
+      .update(bankAccountClassifications)
+      .set({
+        classification,
+        label: label ?? existing.label,
+        updatedAt: new Date(),
+      })
+      .where(eq(bankAccountClassifications.bankAccountId, bankAccountId));
+  } else {
+    // Create new
+    await db.insert(bankAccountClassifications).values({
+      bankAccountId,
+      classification,
+      label: label ?? null,
+      isActive: true,
+    });
+  }
+  
+  return db.query.bankAccountClassifications.findFirst({
+    where: eq(bankAccountClassifications.bankAccountId, bankAccountId),
+  });
+}
+
+/**
+ * Calculate reserve suggestion
+ */
+export function calculateReserveSuggestion(amount: number, reservePercent: number): number {
+  if (!amount || !reservePercent) return 0;
+  return (amount * reservePercent) / 100;
+}
+
+/**
+ * Get cash flow summary for reporting
+ */
+export async function getCashFlowSummary(ownerId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const rule = await getCashFlowRule(ownerId);
+  const classifications = await getBankAccountClassifications(ownerId);
+  
+  return {
+    rule,
+    classifications,
+    reservePercent: rule?.reservePercent ?? 20,
+  };
 }

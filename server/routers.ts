@@ -2326,6 +2326,120 @@ const driverFeedbackRouter = router({
     }),
 });
 
+// ─── Banking and Cash Flow Router ─────────────────────────────────────────────
+const bankingRouter = router({
+  /**
+   * Get cash flow rule configuration for the current user
+   */
+  getCashFlowRule: protectedProcedure.query(async ({ ctx }) => {
+    const {
+      getCashFlowRule,
+    } = await import("./db");
+    
+    const rule = await getCashFlowRule(ctx.user.id);
+    return rule || {
+      ownerId: ctx.user.id,
+      reservePercent: 20,
+      minReserveAmount: 0,
+      maxReserveAmount: 999999.99,
+      autoTransferEnabled: false,
+    };
+  }),
+
+  /**
+   * Save or update cash flow rule
+   */
+  saveCashFlowRule: protectedProcedure
+    .input(z.object({
+      reservePercent: z.number().min(0).max(100).optional(),
+      minReserveAmount: z.number().min(0).optional(),
+      maxReserveAmount: z.number().min(0).optional(),
+      autoTransferEnabled: z.boolean().optional(),
+      autoTransferDay: z.number().min(1).max(31).nullable().optional(),
+      operatingAccountId: z.number().nullable().optional(),
+      reserveAccountId: z.number().nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const {
+        saveCashFlowRule,
+      } = await import("./db");
+      
+      const updated = await saveCashFlowRule(ctx.user.id, input);
+      return updated;
+    }),
+
+  /**
+   * Get bank account classifications for current user
+   */
+  getBankAccountClassifications: protectedProcedure.query(async ({ ctx }) => {
+    const {
+      getBankAccountClassifications,
+    } = await import("./db");
+    
+    const classifications = await getBankAccountClassifications(ctx.user.id);
+    return classifications;
+  }),
+
+  /**
+   * Set classification for a bank account
+   */
+  setBankAccountClassification: protectedProcedure
+    .input(z.object({
+      bankAccountId: z.number(),
+      classification: z.enum(["operating", "reserve", "personal"]),
+      label: z.string().max(255).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const {
+        setBankAccountClassification,
+      } = await import("./db");
+      
+      const result = await setBankAccountClassification(
+        input.bankAccountId,
+        input.classification,
+        input.label
+      );
+      return result;
+    }),
+
+  /**
+   * Calculate reserve suggestion for an amount
+   */
+  calculateReserveSuggestion: protectedProcedure
+    .input(z.object({
+      amount: z.number().min(0),
+      reservePercent: z.number().min(0).max(100).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const {
+        getCashFlowRule,
+        calculateReserveSuggestion,
+      } = await import("./db");
+      
+      const rule = await getCashFlowRule(ctx.user.id);
+      const reservePercent = input.reservePercent ?? rule?.reservePercent ?? 20;
+      const suggestion = calculateReserveSuggestion(input.amount, reservePercent);
+      
+      return {
+        amount: input.amount,
+        reservePercent,
+        reserveSuggestion: suggestion,
+      };
+    }),
+
+  /**
+   * Get cash flow summary for reporting
+   */
+  getCashFlowSummary: protectedProcedure.query(async ({ ctx }) => {
+    const {
+      getCashFlowSummary,
+    } = await import("./db");
+    
+    const summary = await getCashFlowSummary(ctx.user.id);
+    return summary;
+  }),
+});
+
 // ─── App Router ───────────────────────────────────────────────────────────────
 export const appRouter = router({
   financial: financialRouter,
@@ -2453,6 +2567,9 @@ export const appRouter = router({
   invoicing: invoicingRouter,
   alertsAndTasks: alertsAndTasksRouter,
   company: companyRouter,
+  banking: bankingRouter,
 });
 
 export type AppRouter = typeof appRouter;
+
+

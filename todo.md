@@ -1591,3 +1591,16 @@
 
 ### Checkpoint
 - [ ] Guardar checkpoint de Fase 1A completada
+
+
+## Fase 35: Banking Setup y Cash Flow Rule
+- [ ] Actualizar esquema DB: tabla bankAccountClassifications (operating, reserve, personal)
+- [ ] Actualizar esquema DB: tabla cashFlowRules (reservePercent, default 20%)
+- [ ] Backend: queries para clasificar cuentas y calcular sugerencia de reserva
+- [ ] Backend: routers tRPC para getBankAccounts, updateAccountClassification, getCashFlowRules, updateReservePercent
+- [ ] Frontend: componente BankingSetup para clasificar cuentas
+- [ ] Frontend: componente CashFlowRule para mostrar configuración y sugerencia
+- [ ] Frontend: componente SuggestedReserveTransfer con cálculo de reserva
+- [ ] Frontend: reporte financiero con gross income, fuel, tolls, net profit, reserve suggestion
+- [ ] Tests para banking setup y cash flow (10 tests nuevos)
+- [ ] Checkpoint y entrega
