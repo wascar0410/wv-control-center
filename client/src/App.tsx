@@ -19,6 +19,7 @@ const SettlementsPage = lazy(() => import("./pages/SettlementsPage"));
 const QuoteAnalyzer = lazy(() => import("./pages/QuoteAnalyzer"));
 const InvoicingPage = lazy(() => import("./pages/InvoicingPage"));
 const FinanceDashboard = lazy(() => import("./pages/FinanceDashboard"));
+const BankingCashFlow = lazy(() => import("./pages/BankingCashFlow"));
 const AlertsTasksPage = lazy(() => import("./pages/AlertsTasksPage"));
 const Chat = lazy(() =>
   import("./pages/Chat").then((m) => ({ default: m.Chat }))
@@ -82,6 +83,7 @@ export default function App() {
           component={withLayout(SettlementsPage)}
         />
         <Route path="/invoicing" component={withLayout(InvoicingPage)} />
+        <Route path="/banking-cashflow" component={withLayout(BankingCashFlow)} />
 
         {/* Fleet & Drivers */}
         <Route path="/fleet-tracking" component={withLayout(FleetTracking)} />
