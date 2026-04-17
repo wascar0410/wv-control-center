@@ -306,6 +306,11 @@
 - [ ] Checkpoint final
 
 
+## Bugs to Fix
+- [ ] Fix React infinite loop error in FinanceDashboard (/finance-dashboard page) - "Maximum update depth exceeded"
+- [ ] Investigate useEffect dependencies in components rendering financial data
+- [ ] Test FinanceDashboard page after fix to ensure no console errors
+
 ## Fase 33: Mejoras Profesionales del Proyecto
 - [x] Interfaz profesional de cotizaciones tipo tabla (como ejemplo del usuario)
 - [x] Dashboard ejecutivo con KPIs y análisis de tendencias

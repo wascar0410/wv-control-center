@@ -3,7 +3,7 @@
  * Unified Loads & Dispatch - Operational hub for approved loads
  * Flow: Analyze -> Approve -> Operate
  */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -238,6 +238,11 @@ function LoadBoardTab() {
   const [profitabilityFilter, setProfitabilityFilter] = useState<"all" | "profitable" | "watchlist" | "risk">("all");
   const [profitData, setProfitData] = useState<Record<number, any>>({});
 
+  // Memoize callback to prevent infinite loop in ProfitMarginCell
+  const handleProfitDataChange = useCallback((loadId: number, data: any) => {
+    setProfitData(prev => ({ ...prev, [loadId]: data }));
+  }, []);
+
   const { data: loads = [], refetch } = trpc.loads.list.useQuery();
 
   const filteredLoads = useMemo(() => {
@@ -453,7 +458,7 @@ function LoadBoardTab() {
                           {formatCurrency(load.estimatedIncome || 0)}
                         </p>
                       </div>
-                      <ProfitMarginCell loadId={load.id} onProfitDataChange={(data) => setProfitData(prev => ({ ...prev, [load.id]: data }))} />
+                      <ProfitMarginCell loadId={load.id} onProfitDataChange={(data) => handleProfitDataChange(load.id, data)} />
                     </div>
                   </div>
 
