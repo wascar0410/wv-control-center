@@ -26,6 +26,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     "finance-dashboard": true,
     "finance-wallet": true,
     "finance-settlements": true,
+    "banking-cashflow": true,
     "invoicing": true,
     
     // Fleet & Drivers
@@ -58,6 +59,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     "finance-dashboard": true,
     "finance-wallet": true,
     "finance-settlements": true,
+    "banking-cashflow": true,
     "invoicing": true,
     
     // Fleet & Drivers (view only)
