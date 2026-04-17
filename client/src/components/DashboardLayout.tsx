@@ -71,6 +71,7 @@ const adminMenuItems = [
   { icon: DollarSign, label: "Finance Dashboard", path: "/finance-dashboard", description: "Centro operacional financiero unificado" },
   { icon: Wallet, label: "Wallet", path: "/finance-wallet", description: "Billetera y retiros" },
   { icon: CreditCard, label: "Settlements", path: "/finance-settlements", description: "Distribución de ganancias" },
+  { icon: TrendingUp, label: "Banking Cash Flow", path: "/banking-cashflow", description: "Gestión de flujo de caja y reservas" },
   { icon: FileText, label: "Invoicing", path: "/invoicing", description: "Facturas y cuentas por cobrar" },
 
    // ===== FLEET =====
