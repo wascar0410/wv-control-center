@@ -311,7 +311,27 @@
 - [ ] Investigate useEffect dependencies in components rendering financial data
 - [ ] Test FinanceDashboard page after fix to ensure no console errors
 
-## Fase 33: Mejoras Profesionales del Proyecto
+## Fase 33: Banking Cash Flow Management
+- [x] Crear esquema DB: tablas cash_flow_rules, bank_account_classifications, reserve_transfer_suggestions
+- [x] Backend: implementar 6 endpoints tRPC (getCashFlowRule, saveCashFlowRule, getBankAccountClassifications, setBankAccountClassification, calculateReserveSuggestion, getCashFlowSummary)
+- [x] Frontend: crear página BankingCashFlow con 3 cards (Cash Flow Rule, Account Classifications, Reserve Suggestion Preview)
+- [x] Frontend: agregar item de menú "Banking Cash Flow" en sidebar (sección FINANCE)
+- [x] Validación funcional completa en preview (Manus)
+- [x] Validación de persistencia: edit → save → reload → verify
+- [x] Validación de endpoints tRPC con cliente Node.js
+- [x] Fix de React infinite loop error en FinanceDashboard (useCallback memoization)
+- [x] Agregado a RBAC: permisos banking-cashflow para admin y owner
+- [x] Agregada lógica de visibilidad garantizada en getFilteredMenuItems() (patrón Dispatch Board)
+- [x] Tests para banking router (4 tests nuevos)
+- [x] Checkpoint y entrega
+
+## Mejoras Futuras Menores
+- [ ] Mover Banking Cash Flow al bloque visual de FINANCE en el sidebar para consistencia del menú
+- [ ] Implementar auto-transfer scheduling: toggle + selector de día en Cash Flow Rule card
+- [ ] Agregar saldo actual de cuenta en Account Classifications para contexto de reservas
+- [ ] Implementar webhook para transferencias automáticas de reserva
+
+## Fase 34: Mejoras Profesionales del Proyecto
 - [x] Interfaz profesional de cotizaciones tipo tabla (como ejemplo del usuario)
 - [x] Dashboard ejecutivo con KPIs y análisis de tendencias
 - [x] Sistema de notificaciones en tiempo real
