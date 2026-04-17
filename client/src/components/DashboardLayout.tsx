@@ -143,6 +143,30 @@ const getFilteredMenuItems = (role?: string) => {
     }
   }
 
+  // Guarantee Banking Cash Flow visibility for admin/owner
+  const canSeeBankingCashFlow = role === "admin" || role === "owner";
+  const hasBankingCashFlow = filtered.some(
+    (item: any) => item.path === "/banking-cashflow"
+  );
+
+  if (!hasBankingCashFlow && canSeeBankingCashFlow) {
+    const bankingCashFlowItem = baseItems.find(
+      (item) => item.path === "/banking-cashflow"
+    );
+
+    if (bankingCashFlowItem) {
+      const invoicingIndex = filtered.findIndex(
+        (item: any) => item.path === "/invoicing"
+      );
+
+      if (invoicingIndex >= 0) {
+        filtered.splice(invoicingIndex, 0, bankingCashFlowItem as any);
+      } else {
+        filtered.push(bankingCashFlowItem as any);
+      }
+    }
+  }
+
   return filtered;
 };
 
