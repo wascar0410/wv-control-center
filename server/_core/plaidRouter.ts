@@ -26,6 +26,7 @@ import {
   createFinancialTransaction,
 } from "../db";
 import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
+import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
 
 /** Read plaidSyncCursor directly from DB (column added via startup migration) */
 async function getPlaidCursor(accountId: number): Promise<string | undefined> {
@@ -212,7 +213,25 @@ export const plaidRouter = router({
         suggestionSkipped: suggestionsResult.skipped,
       };
     }),
+const syncResult = await syncPlaidTransactionsForItem({
+  userId: ctx.user.id,
+  itemId: input.itemId, // o como lo recibas hoy
+});
 
+const suggestionResult = await generateReserveSuggestionsFromTransactions({
+  ownerId: ctx.user.id,
+  transactions: syncResult.importedTransactions,
+});
+
+return {
+  imported: syncResult.imported,
+  modified: syncResult.modified,
+  removed: syncResult.removed,
+  hasMore: syncResult.hasMore,
+  suggestionsCreated: suggestionResult.created,
+  suggestionSkipped: suggestionResult.skipped,
+};
+  
   /**
    * Get sync status for a bank account.
    * hasCursor = true means at least one sync has been completed.
