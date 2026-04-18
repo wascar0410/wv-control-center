@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "./db";
 import {
+  bankAccounts,
   bankAccountClassifications,
   cashFlowRules,
   reserveTransferSuggestions,
@@ -11,10 +12,13 @@ import {
 type SyncedTransaction = {
   id?: string;
   transactionId?: string;
+  externalTransactionId?: string;
   accountId?: number | string;
+  bankAccountId?: number | string;
   amount: number | string;
   name?: string | null;
   date?: string | null;
+  transactionType?: "credit" | "debit" | string;
 };
 
 function toNumber(value: unknown): number {
@@ -31,7 +35,7 @@ export async function generateReserveSuggestionsFromTransactions(params: {
 
   const { ownerId, transactions } = params;
 
-  // 1) load rule
+  // 1) Load user's cash flow rule
   const rules = await db
     .select()
     .from(cashFlowRules)
@@ -39,6 +43,7 @@ export async function generateReserveSuggestionsFromTransactions(params: {
     .limit(1);
 
   const rule = rules[0];
+
   if (!rule) {
     return {
       created: 0,
@@ -51,11 +56,22 @@ export async function generateReserveSuggestionsFromTransactions(params: {
   const minReserveAmount = toNumber(rule.minReserveAmount);
   const maxReserveAmount = toNumber(rule.maxReserveAmount);
 
-  // 2) load operating classifications
+  // 2) Load only this owner's operating accounts
   const classifications = await db
-    .select()
+    .select({
+      bankAccountId: bankAccountClassifications.bankAccountId,
+    })
     .from(bankAccountClassifications)
-    .where(eq(bankAccountClassifications.classification, "operating"));
+    .innerJoin(
+      bankAccounts,
+      eq(bankAccounts.id, bankAccountClassifications.bankAccountId)
+    )
+    .where(
+      and(
+        eq(bankAccountClassifications.classification, "operating"),
+        eq(bankAccounts.userId, ownerId)
+      )
+    );
 
   const operatingAccountIds = new Set(
     classifications.map((c) => Number(c.bankAccountId))
@@ -65,7 +81,7 @@ export async function generateReserveSuggestionsFromTransactions(params: {
     return {
       created: 0,
       skipped: 0,
-      reason: "No operating accounts classified",
+      reason: "No operating accounts classified for this user",
     };
   }
 
@@ -74,8 +90,19 @@ export async function generateReserveSuggestionsFromTransactions(params: {
 
   for (const tx of transactions) {
     const amount = toNumber(tx.amount);
-    const bankAccountId = Number(tx.accountId);
-    const externalTransactionId = tx.transactionId || tx.id || null;
+
+    // support either accountId or bankAccountId
+    const bankAccountId = Number(tx.accountId ?? tx.bankAccountId ?? 0);
+
+    // support all possible tx id shapes
+    const externalTransactionId =
+      tx.externalTransactionId ?? tx.transactionId ?? tx.id ?? null;
+
+    // must have a valid account
+    if (!bankAccountId || Number.isNaN(bankAccountId)) {
+      skipped++;
+      continue;
+    }
 
     // only deposits/credits
     if (amount <= 0) {
@@ -83,7 +110,7 @@ export async function generateReserveSuggestionsFromTransactions(params: {
       continue;
     }
 
-    // only operating accounts
+    // only accounts classified as operating for this user
     if (!operatingAccountIds.has(bankAccountId)) {
       skipped++;
       continue;
@@ -92,15 +119,18 @@ export async function generateReserveSuggestionsFromTransactions(params: {
     // duplicate protection
     if (externalTransactionId) {
       const existing = await db
-  .select()
-  .from(reserveTransferSuggestions)
-  .where(
-    and(
-      eq(reserveTransferSuggestions.ownerId, ownerId),
-      eq(reserveTransferSuggestions.externalTransactionId, externalTransactionId)
-    )
-  )
-  .limit(1);
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(
+          and(
+            eq(reserveTransferSuggestions.ownerId, ownerId),
+            eq(
+              reserveTransferSuggestions.externalTransactionId,
+              externalTransactionId
+            )
+          )
+        )
+        .limit(1);
 
       if (existing.length > 0) {
         skipped++;
@@ -114,19 +144,20 @@ export async function generateReserveSuggestionsFromTransactions(params: {
     if (suggestedAmount < minReserveAmount) {
       suggestedAmount = minReserveAmount;
     }
+
     if (suggestedAmount > maxReserveAmount) {
       suggestedAmount = maxReserveAmount;
     }
 
     await db.insert(reserveTransferSuggestions).values({
-  ownerId,
-  fromAccountId: bankAccountId,
-  toAccountId: rule.reserveAccountId ?? bankAccountId,
-  suggestedAmount: suggestedAmount.toFixed(2) as any,
-  status: "suggested",
-  reason: `Auto reserve suggestion from deposit${tx.name ? `: ${tx.name}` : ""}`,
-  externalTransactionId: externalTransactionId,
-});
+      ownerId,
+      fromAccountId: bankAccountId,
+      toAccountId: rule.reserveAccountId ?? bankAccountId,
+      suggestedAmount: suggestedAmount.toFixed(2) as any,
+      status: "suggested",
+      reason: `Auto reserve suggestion from deposit${tx.name ? `: ${tx.name}` : ""}`,
+      externalTransactionId,
+    });
 
     created++;
   }
