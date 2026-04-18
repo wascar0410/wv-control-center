@@ -49,14 +49,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PlaidLinkButton } from "@/components/PlaidLinkButton";
 
-// Reuse existing Plaid integration if already present in the project.
-// Adjust the import path if your component lives somewhere else.
-try {
-  var PlaidLinkButton = require("@/components/PlaidLinkButton").default;
-} catch {
-  var PlaidLinkButton = () => <div className="text-xs text-muted-foreground">Plaid not available</div>;
-}
+// Fallback component if PlaidLinkButton fails to load
+const PlaidLinkButtonFallback = () => (
+  <Button variant="outline" size="sm" disabled className="w-full">
+    <Link2 className="mr-2 h-4 w-4" />
+    Connect Bank (coming soon)
+  </Button>
+);
 
 function formatCurrency(value: number | string | null | undefined) {
   const num =
