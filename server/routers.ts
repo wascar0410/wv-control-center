@@ -2564,6 +2564,15 @@ export const appRouter = router({
           passwordType: typeof input?.password,
         });
         const result = await driverLogin({ email: input.email, password: input.password, ipAddress: ctx.req.ip, userAgent: ctx.req.headers["user-agent"] as string });
+        console.log("[auth.driverLogin] result keys:", Object.keys(result));
+        console.log("[auth.driverLogin] result types:", {
+          token: typeof result.token,
+          expiresIn: typeof result.expiresIn,
+          userId: typeof result.userId,
+          email: typeof result.email,
+          name: typeof result.name,
+          role: typeof result.role,
+        });
         // Set wv_session cookie so subsequent tRPC requests are authenticated
         const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
         const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
@@ -2574,6 +2583,7 @@ export const appRouter = router({
           maxAge: ONE_YEAR_MS,
           path: "/",
         });
+        console.log("[auth.driverLogin] about to return result");
         return result;
       }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {
