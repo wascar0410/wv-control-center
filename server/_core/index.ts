@@ -226,45 +226,56 @@ async function startServer() {
       );
 
       if (
-        webhook_type === "TRANSACTIONS" &&
-        webhook_code === "SYNC_UPDATES_AVAILABLE"
-      ) {
-        console.log(
-          `[Plaid Webhook] Transactions sync available for item ${item_id}`
-        );
-      }
-
-      return res.json({ received: true });
-    } catch (err) {
-      console.error("[Plaid Webhook] Error:", err);
-      return res.status(200).json({ received: false, error: String(err) });
-    }
-  });
-
-  app.use(
-    "/api/trpc",
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    })
+  webhook_type === "TRANSACTIONS" &&
+  webhook_code === "SYNC_UPDATES_AVAILABLE"
+) {
+  console.log(
+    `[Plaid Webhook] Transactions sync available for item ${item_id}`
   );
 
-  if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
 
-    app.get("*", (_req, res) => {
-      res.sendFile("index.html", { root: "dist/public" });
+    // 1. Encontrar cuenta asociada al item
+    const accountRows = await db
+      .select()
+      .from(bankAccounts)
+      .where(eq(bankAccounts.plaidItemId, item_id))
+      .limit(1);
+
+    const account = accountRows[0];
+
+    if (!account) {
+      console.log("[Plaid Webhook] No account found for item", item_id);
+      return res.json({ received: true, skipped: true });
+    }
+
+    const userId = Number(account.userId);
+
+    // 2. Sync automático de transacciones
+    const syncResult = await syncPlaidTransactionsForItem({
+      userId,
+      itemId: item_id,
     });
-  }
 
-  const preferredPort = parseInt(process.env.PORT || "3000", 10);
-  const port = await findAvailablePort(preferredPort);
+    // 3. Generar sugerencias automáticamente
+    const suggestionResult = await generateReserveSuggestionsFromTransactions({
+      ownerId: userId,
+      transactions: syncResult.importedTransactions,
+    });
 
-  if (port !== preferredPort) {
-    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+    console.log("[CashFlow] Suggestions created", {
+      itemId: item_id,
+      userId,
+      imported: syncResult.imported,
+      created: suggestionResult.created,
+      skipped: suggestionResult.skipped,
+    });
+  } catch (error) {
+    console.error("[Plaid Webhook] Failed to sync/generate suggestions", error);
   }
+}
 
   // Ensure business_plan_events table exists
   if (process.env.DATABASE_URL) {
