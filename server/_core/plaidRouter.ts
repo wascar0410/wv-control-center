@@ -25,6 +25,7 @@ import {
   deactivateBankAccount,
   createFinancialTransaction,
 } from "../db";
+import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
 
 /** Read plaidSyncCursor directly from DB (column added via startup migration) */
 async function getPlaidCursor(accountId: number): Promise<string | undefined> {
@@ -179,16 +180,37 @@ export const plaidRouter = router({
         100
       );
       let imported = 0;
+      const syncedTransactions: any[] = [];
       for (const tx of added) {
         const mapped = mapPlaidTransaction(tx);
         try {
           await createFinancialTransaction({ ...mapped, createdBy: ctx.user.id });
           imported++;
+          syncedTransactions.push({
+            amount: tx.amount,
+            accountId: input.bankAccountId,
+            transactionId: tx.transaction_id,
+            name: tx.name,
+            date: tx.date,
+          });
         } catch { /* skip duplicates */ }
       }
       if (nextCursor) await savePlaidCursor(input.bankAccountId, nextCursor);
       await updateBankAccount(input.bankAccountId, { lastSyncedAt: new Date() });
-      return { imported, modified: modified.length, removed: removed.length, hasMore };
+
+      const suggestionsResult = await generateReserveSuggestionsFromTransactions({
+        ownerId: ctx.user.id,
+        transactions: syncedTransactions,
+      });
+
+      return {
+        imported,
+        modified: modified.length,
+        removed: removed.length,
+        hasMore,
+        suggestionsCreated: suggestionsResult.created,
+        suggestionSkipped: suggestionsResult.skipped,
+      };
     }),
 
   /**

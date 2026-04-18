@@ -1618,14 +1618,52 @@
 - [ ] Guardar checkpoint de Fase 1A completada
 
 
-## Fase 35: Banking Setup y Cash Flow Rule
-- [ ] Actualizar esquema DB: tabla bankAccountClassifications (operating, reserve, personal)
-- [ ] Actualizar esquema DB: tabla cashFlowRules (reservePercent, default 20%)
-- [ ] Backend: queries para clasificar cuentas y calcular sugerencia de reserva
-- [ ] Backend: routers tRPC para getBankAccounts, updateAccountClassification, getCashFlowRules, updateReservePercent
-- [ ] Frontend: componente BankingSetup para clasificar cuentas
-- [ ] Frontend: componente CashFlowRule para mostrar configuración y sugerencia
-- [ ] Frontend: componente SuggestedReserveTransfer con cálculo de reserva
-- [ ] Frontend: reporte financiero con gross income, fuel, tolls, net profit, reserve suggestion
-- [ ] Tests para banking setup y cash flow (10 tests nuevos)
+## Fase 33: Banking Cash Flow Management — COMPLETADA
+- [x] Actualizar esquema DB: tabla bankAccountClassifications (operating, reserve, personal)
+- [x] Actualizar esquema DB: tabla cashFlowRules (reservePercent, default 20%)
+- [x] Actualizar esquema DB: tabla reserveTransferSuggestions
+- [x] Backend: queries para clasificar cuentas y calcular sugerencia de reserva
+- [x] Backend: routers tRPC (6 endpoints: getCashFlowRule, saveCashFlowRule, getBankAccountClassifications, setBankAccountClassification, calculateReserveSuggestion, getCashFlowSummary)
+- [x] Frontend: página BankingCashFlow.tsx con 3 cards funcionales
+- [x] Frontend: CashFlowRuleCard (editable, persiste)
+- [x] Frontend: AccountClassificationsCard (editable, color-coded)
+- [x] Frontend: ReserveSuggestionCard (real-time calculator)
+- [x] Navegación: agregar "Banking Cash Flow" al sidebar en grupo FINANCE
+- [x] RBAC: permisos para admin/owner en shared/rbac.ts
+- [x] Visibilidad: garantizada en DashboardLayout.tsx con fallback logic
+- [x] Validación: funcional en preview (Manus) y Railway production
+- [x] Persistencia: edit/save/reload confirmado
+- [x] Bug fixes: React infinite loop (useCallback), RBAC permissions, menu visibility
+- [x] Checkpoint guardado: b1c1e47a
+- [x] Tests: validación end-to-end completada
+
+- [x] Portación de backend: servidor/plaid-cashflow.ts con generateReserveSuggestionsFromTransactions()
+- [x] Integración: conectado al endpoint plaid.syncTransactions en server/_core/plaidRouter.ts
+- [x] Respuesta extendida: syncTransactions ahora retorna suggestionsCreated y suggestionSkipped
+
+**ESTADO FINAL:** ✅ OPERATIVO EN PRODUCCIÓN + BACKEND INTELIGENTE PARA FASE 34
+
+
+## Fase 34: UI/UX Refinements y Advanced Banking Features (PRÓXIMA)
+- [ ] Reordenar sidebar: mover Banking Cash Flow al grupo visual FINANCE
+- [ ] Agregar auto-transfer scheduling (toggle + day selector)
+- [ ] Mostrar real-time account balances en Classifications card
+- [ ] Integrar Plaid para conexión automática de cuentas
+- [ ] Crear tabla-based quotation interface mejorada
+- [ ] Implementar executive dashboard con trend analysis
+- [ ] Desarrollar exportable PDF/Excel reports
+- [ ] Tests para nuevas features
 - [ ] Checkpoint y entrega
+
+
+## Fase 35: Banking Setup y Cash Flow Rule (DEPRECATED - Merged into Phase 33)
+- [x] Actualizar esquema DB: tabla bankAccountClassifications (operating, reserve, personal)
+- [x] Actualizar esquema DB: tabla cashFlowRules (reservePercent, default 20%)
+- [x] Backend: queries para clasificar cuentas y calcular sugerencia de reserva
+- [x] Backend: routers tRPC para getBankAccounts, updateAccountClassification, getCashFlowRules, updateReservePercent
+- [x] Frontend: componente BankingSetup para clasificar cuentas
+- [x] Frontend: componente CashFlowRule para mostrar configuración y sugerencia
+- [x] Frontend: componente SuggestedReserveTransfer con cálculo de reserva
+- [x] Frontend: reporte financiero con gross income, fuel, tolls, net profit, reserve suggestion
+- [x] Tests para banking setup y cash flow (10 tests nuevos)
+- [x] Checkpoint y entrega
