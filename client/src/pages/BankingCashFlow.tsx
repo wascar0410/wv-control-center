@@ -35,12 +35,28 @@ import {
   RefreshCw,
   Link2,
   Landmark,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Reuse existing Plaid integration if already present in the project.
 // Adjust the import path if your component lives somewhere else.
-import PlaidLinkButton from "@/components/PlaidLinkButton";
+try {
+  var PlaidLinkButton = require("@/components/PlaidLinkButton").default;
+} catch {
+  var PlaidLinkButton = () => <div className="text-xs text-muted-foreground">Plaid not available</div>;
+}
 
 function formatCurrency(value: number | string | null | undefined) {
   const num =
@@ -611,6 +627,130 @@ function ReserveSuggestionCard() {
   );
 }
 
+// Suggested Transfers Card Component
+function SuggestedTransfersCard() {
+  const { toast } = useToast();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // Fetch reserve suggestions with status "suggested"
+  const { data: suggestions, isLoading, refetch } = trpc.banking.getReserveSuggestions.useQuery(
+    { status: "suggested" },
+    { refetchInterval: 30000 } // Refetch every 30s
+  );
+
+  // Mutation to mark as completed
+  const markCompletedMutation = trpc.banking.markReserveSuggestionCompleted.useMutation({
+    onSuccess: () => {
+      toast({ title: "✅ Sugerencia marcada como completada" });
+      refetch();
+    },
+    onError: (err) => {
+      toast({ title: "❌ Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Suggested Transfers
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const hasSuggestions = suggestions && suggestions.length > 0;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" />
+          Suggested Transfers
+        </CardTitle>
+        <CardDescription>
+          {hasSuggestions
+            ? `${suggestions.length} pending transfer${suggestions.length !== 1 ? "s" : ""}`
+            : "No pending transfer suggestions"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!hasSuggestions ? (
+          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+            <Clock className="mx-auto mb-2 h-8 w-8 text-gray-400" />
+            <p className="text-sm text-muted-foreground">
+              Sync transactions to generate transfer suggestions
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {suggestions.map((sugg: any) => (
+              <div
+                key={sugg.id}
+                className="rounded-lg border border-gray-200 bg-white p-4 hover:bg-gray-50 transition"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ArrowRight className="h-4 w-4 text-blue-500" />
+                      <span className="font-semibold text-lg">
+                        {formatCurrency(sugg.suggested_amount)}
+                      </span>
+                      <Badge variant="outline" className="text-xs">
+                        {sugg.status}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1">{sugg.reason}</p>
+                    <div className="flex gap-4 text-xs text-gray-500">
+                      <span>From: Account {sugg.from_account_id}</span>
+                      <span>To: Account {sugg.to_account_id}</span>
+                      <span>
+                        {sugg.created_at
+                          ? new Date(sugg.created_at).toLocaleDateString()
+                          : "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      markCompletedMutation.mutate({ suggestionId: sugg.id })
+                    }
+                    disabled={markCompletedMutation.isPending}
+                    className="ml-2 whitespace-nowrap"
+                  >
+                    {markCompletedMutation.isPending ? (
+                      <>
+                        <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                        Marking...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                        Mark Done
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // Main Component
 export default function BankingCashFlow() {
   return (
@@ -630,6 +770,10 @@ export default function BankingCashFlow() {
 
         <AccountClassificationsCard />
         <ReserveSuggestionCard />
+        
+        <div className="lg:col-span-2">
+          <SuggestedTransfersCard />
+        </div>
       </div>
     </div>
   );

@@ -2438,6 +2438,61 @@ const bankingRouter = router({
     const summary = await getCashFlowSummary(ctx.user.id);
     return summary;
   }),
+
+  /**
+   * Get reserve transfer suggestions for current user
+   */
+  getReserveSuggestions: protectedProcedure
+    .input(z.object({
+      status: z.enum(["suggested", "completed", "rejected"]).optional(),
+    }).optional())
+    .query(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      
+      const { reserveTransferSuggestions } = await import("../drizzle/schema");
+      
+      let query = db.select().from(reserveTransferSuggestions)
+        .where(eq(reserveTransferSuggestions.ownerId, ctx.user.id));
+      
+      if (input?.status) {
+        query = query.where(eq(reserveTransferSuggestions.status, input.status));
+      }
+      
+      const suggestions = await query.orderBy(desc(reserveTransferSuggestions.createdAt));
+      return suggestions;
+    }),
+
+  /**
+   * Mark a reserve suggestion as completed
+   */
+  markReserveSuggestionCompleted: protectedProcedure
+    .input(z.object({
+      suggestionId: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database connection failed");
+      
+      const { reserveTransferSuggestions } = await import("../drizzle/schema");
+      
+      // Verify ownership
+      const [existing] = await db.select().from(reserveTransferSuggestions)
+        .where(and(
+          eq(reserveTransferSuggestions.id, input.suggestionId),
+          eq(reserveTransferSuggestions.ownerId, ctx.user.id)
+        ));
+      
+      if (!existing) {
+        throw new Error("Sugerencia no encontrada o no tienes permiso");
+      }
+      
+      const updated = await db.update(reserveTransferSuggestions)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(eq(reserveTransferSuggestions.id, input.suggestionId));
+      
+      return { success: true, suggestionId: input.suggestionId };
+    }),
 });
 
 // ─── App Router ───────────────────────────────────────────────────────────────
