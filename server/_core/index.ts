@@ -226,56 +226,87 @@ async function startServer() {
       );
 
       if (
-  webhook_type === "TRANSACTIONS" &&
-  webhook_code === "SYNC_UPDATES_AVAILABLE"
-) {
-  console.log(
-    `[Plaid Webhook] Transactions sync available for item ${item_id}`
+        webhook_type === "TRANSACTIONS" &&
+        webhook_code === "SYNC_UPDATES_AVAILABLE"
+      ) {
+        console.log(
+          `[Plaid Webhook] Transactions sync available for item ${item_id}`
+        );
+
+        try {
+          const db = await getDb();
+          if (!db) throw new Error("Database not available");
+
+          const accountRows = await db
+            .select()
+            .from(bankAccounts)
+            .where(eq(bankAccounts.plaidItemId, item_id))
+            .limit(1);
+
+          const account = accountRows[0];
+
+          if (!account) {
+            console.log("[Plaid Webhook] No account found for item", item_id);
+            return res.json({ received: true, skipped: true });
+          }
+
+          const userId = Number(account.userId);
+
+          const syncResult = await syncPlaidTransactionsForItem({
+            userId,
+            itemId: item_id,
+          });
+
+          const importedTransactions = syncResult.importedTransactions ?? [];
+
+          const suggestionResult = await generateReserveSuggestionsFromTransactions({
+            ownerId: userId,
+            transactions: importedTransactions,
+          });
+
+          console.log("[CashFlow] Suggestions created", {
+            itemId: item_id,
+            userId,
+            imported: syncResult.imported ?? importedTransactions.length ?? 0,
+            created: suggestionResult.created,
+            skipped: suggestionResult.skipped,
+          });
+        } catch (error) {
+          console.error("[Plaid Webhook] Failed to sync/generate suggestions", error);
+        }
+      }
+
+      return res.json({ received: true });
+    } catch (err) {
+      console.error("[Plaid Webhook] Error:", err);
+      return res.status(200).json({ received: false, error: String(err) });
+    }
+  });
+
+  app.use(
+    "/api/trpc",
+    createExpressMiddleware({
+      router: appRouter,
+      createContext,
+    })
   );
 
-  try {
-    const db = await getDb();
-    if (!db) throw new Error("Database not available");
+  if (process.env.NODE_ENV === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
 
-    // 1. Encontrar cuenta asociada al item
-    const accountRows = await db
-      .select()
-      .from(bankAccounts)
-      .where(eq(bankAccounts.plaidItemId, item_id))
-      .limit(1);
-
-    const account = accountRows[0];
-
-    if (!account) {
-      console.log("[Plaid Webhook] No account found for item", item_id);
-      return res.json({ received: true, skipped: true });
-    }
-
-    const userId = Number(account.userId);
-
-    // 2. Sync automático de transacciones
-    const syncResult = await syncPlaidTransactionsForItem({
-      userId,
-      itemId: item_id,
+    app.get("*", (_req, res) => {
+      res.sendFile("index.html", { root: "dist/public" });
     });
-
-    // 3. Generar sugerencias automáticamente
-    const suggestionResult = await generateReserveSuggestionsFromTransactions({
-      ownerId: userId,
-      transactions: syncResult.importedTransactions,
-    });
-
-    console.log("[CashFlow] Suggestions created", {
-      itemId: item_id,
-      userId,
-      imported: syncResult.imported,
-      created: suggestionResult.created,
-      skipped: suggestionResult.skipped,
-    });
-  } catch (error) {
-    console.error("[Plaid Webhook] Failed to sync/generate suggestions", error);
   }
-}
+
+  const preferredPort = parseInt(process.env.PORT || "3000", 10);
+  const port = await findAvailablePort(preferredPort);
+
+  if (port !== preferredPort) {
+    console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
+  }
 
   // Ensure business_plan_events table exists
   if (process.env.DATABASE_URL) {
@@ -652,3 +683,5 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
+
+
