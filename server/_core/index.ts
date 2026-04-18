@@ -13,6 +13,10 @@ import { recordHostRejection } from "./hostMonitoring";
 import { requestLoggerMiddleware } from "./requestLogger";
 import { adaptiveRateLimiter } from "./adaptiveRateLimiter";
 import { getDb } from "../db";
+import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
+import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
+import { bankAccounts } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
