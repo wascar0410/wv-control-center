@@ -48,6 +48,16 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
     throw new Error("Email o contraseña incorrectos");
   }
 
+  console.log("[driverLogin] rows[0] keys:", Object.keys(user));
+  console.log("[driverLogin] rows[0] types:", {
+    id: typeof user.id,
+    email: typeof user.email,
+    name: typeof user.name,
+    role: typeof user.role,
+    createdAt: typeof (user as any).createdAt,
+  });
+  if ((user as any).createdAt) console.log("[driverLogin] createdAt instanceof Date:", (user as any).createdAt instanceof Date);
+
   // Allow owner, admin, and driver roles
   if (user.role !== "driver" && user.role !== "owner" && user.role !== "admin") {
     throw new Error("Este usuario no tiene acceso al sistema");
@@ -92,7 +102,7 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
     { expiresIn }
   );
 
-  return {
+  const response = {
     token,
     expiresIn,
     userId: user.id,
@@ -100,6 +110,23 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
     name: user.name || "",
     role: user.role,
   };
+
+  console.log("[driverLogin] response keys:", Object.keys(response));
+  console.log("[driverLogin] response types:", {
+    token: typeof response.token,
+    expiresIn: typeof response.expiresIn,
+    userId: typeof response.userId,
+    email: typeof response.email,
+    name: typeof response.name,
+    role: typeof response.role,
+  });
+  try {
+    console.log("[driverLogin] response JSON:", JSON.stringify(response));
+  } catch (e) {
+    console.log("[driverLogin] JSON.stringify failed:", e instanceof Error ? e.message : String(e));
+  }
+
+  return response;
 }
 
 /**
