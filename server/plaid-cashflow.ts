@@ -92,15 +92,15 @@ export async function generateReserveSuggestionsFromTransactions(params: {
     // duplicate protection
     if (externalTransactionId) {
       const existing = await db
-        .select()
-        .from(reserveTransferSuggestions)
-        .where(
-          and(
-            eq(reserveTransferSuggestions.ownerId, ownerId),
-            eq(reserveTransferSuggestions.transactionId, Number(externalTransactionId))
-          )
-        )
-        .limit(1);
+  .select()
+  .from(reserveTransferSuggestions)
+  .where(
+    and(
+      eq(reserveTransferSuggestions.ownerId, ownerId),
+      eq(reserveTransferSuggestions.externalTransactionId, externalTransactionId)
+    )
+  )
+  .limit(1);
 
       if (existing.length > 0) {
         skipped++;
@@ -119,14 +119,14 @@ export async function generateReserveSuggestionsFromTransactions(params: {
     }
 
     await db.insert(reserveTransferSuggestions).values({
-      ownerId,
-      fromAccountId: bankAccountId,
-      toAccountId: rule.reserveAccountId ?? bankAccountId,
-      suggestedAmount: suggestedAmount.toFixed(2) as any,
-      status: "suggested",
-      reason: `Auto reserve suggestion from deposit${tx.name ? `: ${tx.name}` : ""}`,
-      transactionId: externalTransactionId ? Number(externalTransactionId) : null,
-    });
+  ownerId,
+  fromAccountId: bankAccountId,
+  toAccountId: rule.reserveAccountId ?? bankAccountId,
+  suggestedAmount: suggestedAmount.toFixed(2) as any,
+  status: "suggested",
+  reason: `Auto reserve suggestion from deposit${tx.name ? `: ${tx.name}` : ""}`,
+  externalTransactionId: externalTransactionId,
+});
 
     created++;
   }
