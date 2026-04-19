@@ -198,19 +198,25 @@ export const plaidRouter = router({
     }),
 
   /**
-   * Legacy / manual sync by itemId.
-   * Uses the reusable sync service and then generates reserve suggestions.
+   * Manual sync by bankAccountId.
+   * Looks up the account, gets its plaidItemId, syncs transactions, and generates reserve suggestions.
    */
   syncTransactions: protectedProcedure
     .input(
       z.object({
-        itemId: z.string(),
+        bankAccountId: z.number(),
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const account = await getBankAccountById(input.bankAccountId);
+
+      if (!account || !account.plaidItemId) {
+        throw new Error("Cuenta bancaria no encontrada o sin plaidItemId");
+      }
+
       const syncResult = await syncPlaidTransactionsForItem({
         userId: ctx.user.id,
-        itemId: input.itemId,
+        itemId: account.plaidItemId,
       });
 
       const suggestionResult = await generateReserveSuggestionsFromTransactions({
