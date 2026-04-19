@@ -8,6 +8,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { trpc } from "@/lib/trpc";
 import {
   Card,
@@ -341,11 +342,16 @@ function AccountClassificationsCard() {
   const classifyMutation =
     trpc.banking.setBankAccountClassification.useMutation();
 
+  const [syncResult, setSyncResult] = useState<any>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+
   const syncMutation = trpc.plaid.syncTransactions.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      setSyncResult(data);
+      setLastSyncTime(new Date());
       toast({
         title: "Sync complete",
-        description: "Transactions synced successfully",
+        description: `Imported ${data.imported} transactions, created ${data.suggestionsCreated} suggestions`,
       });
       await refetchAccounts();
     },
@@ -357,6 +363,9 @@ function AccountClassificationsCard() {
       });
     },
   });
+
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin" || user?.role === "owner";
 
   const [editingBankAccountId, setEditingBankAccountId] = useState<
     number | null
@@ -444,20 +453,64 @@ function AccountClassificationsCard() {
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
           <PlaidLinkButton />
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => syncMutation.mutate()}
-            disabled={syncMutation.isPending}
-          >
-            <RefreshCw
-              className={`mr-2 h-4 w-4 ${
-                syncMutation.isPending ? "animate-spin" : ""
-              }`}
-            />
-            {syncMutation.isPending ? "Syncing..." : "Sync Transactions"}
-          </Button>
+          {mergedAccounts && mergedAccounts.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                const firstAccount = mergedAccounts[0];
+                syncMutation.mutate({ bankAccountId: firstAccount.id });
+              }}
+              disabled={syncMutation.isPending}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${
+                  syncMutation.isPending ? "animate-spin" : ""
+                }`}
+              />
+              {syncMutation.isPending ? "Syncing..." : "Sync Transactions"}
+            </Button>
+          )}
+          {isAdmin && mergedAccounts && mergedAccounts.length > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const firstAccount = mergedAccounts[0];
+                syncMutation.mutate({ bankAccountId: firstAccount.id });
+              }}
+              disabled={syncMutation.isPending}
+              title="Force sync for debugging - admin only"
+            >
+              <RefreshCw
+                className={`mr-2 h-3 w-3 ${
+                  syncMutation.isPending ? "animate-spin" : ""
+                }`}
+              />
+              Force Sync (Debug)
+            </Button>
+          )}
         </div>
+
+        {lastSyncTime && syncResult && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <span className="text-muted-foreground">Last Sync:</span>
+                <p className="font-semibold">{lastSyncTime.toLocaleTimeString()}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Transactions Imported:</span>
+                <p className="font-semibold">{syncResult.imported}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Suggestions Created:</span>
+                <p className="font-semibold">{syncResult.suggestionsCreated}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {!mergedAccounts || mergedAccounts.length === 0 ? (
           <div className="py-6 text-center text-muted-foreground">
