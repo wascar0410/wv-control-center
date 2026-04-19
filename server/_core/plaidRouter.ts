@@ -3,10 +3,11 @@ import { protectedProcedure, publicProcedure, router } from "./trpc";
 import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
 import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
 import { getBankAccountById } from "../db";
+import { createLinkToken as createPlaidLinkToken, exchangePublicToken } from "./plaid";
 
 export const plaidRouter = router({
   createLinkToken: publicProcedure
-    .input(z.object({ redirectUri: z.string() }))
+    .input(z.object({ redirectUri: z.string().optional() }))
     .mutation(async ({ input }) => {
       try {
         console.log("[Plaid] createLinkToken input:", {
@@ -15,9 +16,11 @@ export const plaidRouter = router({
           environment: process.env.PLAID_ENV,
         });
 
-        // TODO: Call Plaid API to create link token
-        // For now, return test token
-        const linkToken = "test_link_token_placeholder";
+        // Generate a unique user ID for this session
+        const sessionUserId = Math.floor(Math.random() * 1000000);
+        
+        // Call real Plaid API to create link token
+        const linkToken = await createPlaidLinkToken(sessionUserId, input.redirectUri);
         console.log("[Plaid] createLinkToken response:", { linkToken });
         
         return { linkToken };
@@ -36,18 +39,16 @@ export const plaidRouter = router({
           userId: ctx.user.id,
         });
 
-        // TODO: Call Plaid API to exchange public token for access token
-        // For now, return success
-        console.log("[Plaid] exchangeToken response: success");
+        // Call real Plaid API to exchange public token for access token
+        const result = await exchangePublicToken(input.publicToken);
+        console.log("[Plaid] exchangeToken response:", { itemId: result.itemId });
         
-        return { success: true, accountCount: 1 };
+        return { success: true, accountCount: 1, itemId: result.itemId, accessToken: result.accessToken };
       } catch (err) {
         console.error("[Plaid] exchangeToken error:", err);
         throw err;
       }
     }),
-
-
 
   /**
    * Manual sync by bankAccountId.
