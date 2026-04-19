@@ -1,10 +1,8 @@
 import { z } from "zod";
 import { protectedProcedure, publicProcedure, router } from "./trpc";
-import { syncPlaidBatch, syncPlaidTransactionsForItem } from "./plaidSync";
+import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
 import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
-import { getBankAccountById, savePlaidCursor } from "../db";
-import { mapPlaidTransaction } from "./plaidTransactionMapper";
-import { createFinancialTransaction } from "../db";
+import { getBankAccountById } from "../db";
 
 export const plaidRouter = router({
   createLinkToken: publicProcedure
@@ -21,53 +19,7 @@ export const plaidRouter = router({
       return { success: true };
     }),
 
-  syncBatch: protectedProcedure
-    .input(
-      z.object({
-        bankAccountId: z.number(),
-        batchSize: z.number().optional().default(100),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const account = await getBankAccountById(input.bankAccountId);
 
-      if (!account || !account.plaidAccessToken) {
-        throw new Error("Account not found or missing access token");
-      }
-
-      const storedCursor = account.plaidCursor || undefined;
-
-      const { added, modified, removed, nextCursor, hasMore } =
-        await syncPlaidBatch(account.plaidAccessToken, storedCursor, input.batchSize);
-
-      let imported = 0;
-
-      for (const tx of added) {
-        const mapped = mapPlaidTransaction(tx);
-
-        try {
-          await createFinancialTransaction({
-            ...mapped,
-            createdBy: ctx.user.id,
-          });
-          imported++;
-        } catch {
-          // Skip duplicates silently
-        }
-      }
-
-      if (nextCursor) {
-        await savePlaidCursor(input.bankAccountId, nextCursor);
-      }
-
-      return {
-        imported,
-        modified: modified.length,
-        removed: removed.length,
-        hasMore,
-        cursor: nextCursor ?? null,
-      };
-    }),
 
   /**
    * Manual sync by bankAccountId.
