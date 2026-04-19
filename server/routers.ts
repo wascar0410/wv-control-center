@@ -2559,14 +2559,8 @@ export const appRouter = router({
   .input(z.object({ email: z.string().email(), password: z.string() }))
   .mutation(async ({ input, ctx }) => {
 
-    console.log("[auth.driverLogin] input received:", {
-      email: input?.email,
-      hasEmail: input?.email !== undefined && input?.email !== null && input?.email !== "",
-      emailType: typeof input?.email,
-      passwordType: typeof input?.password,
-    });
+    const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 
-    // 🔐 login real
     const result = await driverLogin({
       email: input.email,
       password: input.password,
@@ -2574,12 +2568,14 @@ export const appRouter = router({
       userAgent: ctx.req.headers["user-agent"],
     });
 
-    console.log("[auth.driverLogin] login success for:", result.email);
-
-    // 🔥 FIX CRÍTICO: guardar cookie de sesión
-    setAuthCookie(ctx.res, result.token);
-
-    console.log("[auth.driverLogin] cookie set");
+    // 🔥 FIX: guardar cookie
+    ctx.res.cookie("wv_session", result.token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: ONE_YEAR_MS,
+      path: "/",
+    });
 
     return result;
   }),
