@@ -6,7 +6,7 @@ import { getBankAccountById } from "../db";
 
 export const plaidRouter = router({
   createLinkToken: publicProcedure
-    .input(z.object({ userId: z.number() }))
+    .input(z.object({ redirectUri: z.string() }))
     .mutation(async ({ input }) => {
       // Implementation here
       return { linkToken: "test" };
@@ -16,10 +16,22 @@ export const plaidRouter = router({
     .input(z.object({ publicToken: z.string() }))
     .mutation(async ({ ctx, input }) => {
       // Implementation here
-      return { success: true };
+      return { success: true, accountCount: 1 };
     }),
 
 
+
+  getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
+    // Implementation here
+    return [];
+  }),
+
+  removeBankAccount: protectedProcedure
+    .input(z.object({ bankAccountId: z.number() }))
+    .mutation(async ({ input }) => {
+      // Implementation here
+      return { success: true };
+    }),
 
   /**
    * Manual sync by bankAccountId.
