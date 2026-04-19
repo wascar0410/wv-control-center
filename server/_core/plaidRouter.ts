@@ -31,24 +31,46 @@ export const plaidRouter = router({
     }),
 
   exchangeToken: protectedProcedure
-    .input(z.object({ publicToken: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+  .input(z.object({ publicToken: z.string() }))
+  .mutation(async ({ input, ctx }) => {
+    const { accessToken, itemId } = await exchangePublicToken(input.publicToken);
+
+    const accounts = await getAccounts(accessToken);
+
+    let storedCount = 0;
+
+    for (const account of accounts) {
       try {
-        console.log("[Plaid] exchangeToken input:", {
-          publicToken: input.publicToken.substring(0, 20) + "...",
+        await createBankAccount({
           userId: ctx.user.id,
+          bankName: account.name || account.official_name || "Bank Account",
+          accountType: (account.subtype || "other") as any,
+          accountLast4: account.mask || "****",
+          plaidAccountId: account.account_id,
+          plaidAccessToken: accessToken,
+          plaidItemId: itemId,
         });
 
-        // Call real Plaid API to exchange public token for access token
-        const result = await exchangePublicToken(input.publicToken);
-        console.log("[Plaid] exchangeToken response:", { itemId: result.itemId });
-        
-        return { success: true, accountCount: 1, itemId: result.itemId, accessToken: result.accessToken };
-      } catch (err) {
-        console.error("[Plaid] exchangeToken error:", err);
-        throw err;
+        storedCount++;
+      } catch (err: any) {
+        // si ya existe por plaidAccountId, no rompas el flujo
+        console.error("[Plaid] createBankAccount error:", err?.message || err);
       }
-    }),
+    }
+
+    console.log("[Plaid] exchangeToken success:", {
+      userId: ctx.user.id,
+      itemId,
+      accountCount: accounts.length,
+      storedCount,
+    });
+
+    return {
+      success: true,
+      itemId,
+      accountCount: storedCount,
+    };
+  }),
 
   /**
    * Manual sync by bankAccountId.
