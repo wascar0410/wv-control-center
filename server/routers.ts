@@ -41,7 +41,6 @@ import { alertsAndTasksRouter } from "./routers/alertsAndTasks";
 import { companyRouter } from "./routers/company";
 import { financialRouter } from "./routers/financial";
 import { financialExtendedRouter } from "./routers/financialExtended";
-import { driverLogin, setAuthCookie } from "./driverAuth"; // ajusta path si es necesario
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -56,6 +55,7 @@ import {
 } from "./_core/passwordReset";
 import {
   driverLogin,
+  setAuthCookie,
   logPasswordChange,
   logPasswordReset,
   getPasswordAuditHistory,
