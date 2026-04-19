@@ -21,18 +21,6 @@ export const plaidRouter = router({
 
 
 
-  getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
-    // Implementation here
-    return [];
-  }),
-
-  removeBankAccount: protectedProcedure
-    .input(z.object({ bankAccountId: z.number() }))
-    .mutation(async ({ input }) => {
-      // Implementation here
-      return { success: true };
-    }),
-
   /**
    * Manual sync by bankAccountId.
    * Looks up the account, gets its plaidItemId, syncs transactions, and generates reserve suggestions.
