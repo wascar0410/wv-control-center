@@ -29,11 +29,9 @@ export function PlaidLinkButton({
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [isExchanging, setIsExchanging] = useState(false);
 
-  const { data: tokenData, isLoading: tokenLoading, refetch: refetchToken } =
-    trpc.plaid.createLinkToken.useQuery(
-      { redirectUri: OAUTH_REDIRECT_URI },
-      { enabled: false, retry: false }
-    );
+  const createLinkTokenMutation = trpc.plaid.createLinkToken.useMutation({
+    onError: (err) => toast.error(`Error al crear link token: ${err.message}`),
+  });
 
   const exchangeToken = trpc.plaid.exchangeToken.useMutation({
     onSuccess: (data) => {
@@ -44,13 +42,13 @@ export function PlaidLinkButton({
   });
 
   const handleOpen = async () => {
-    const result = await refetchToken();
-    if (result.data?.linkToken) setLinkToken(result.data.linkToken);
+    try {
+      const result = await createLinkTokenMutation.mutateAsync({ redirectUri: OAUTH_REDIRECT_URI });
+      if (result?.linkToken) setLinkToken(result.linkToken);
+    } catch (err) {
+      console.error("Error creating link token:", err);
+    }
   };
-
-  useEffect(() => {
-    if (tokenData?.linkToken) setLinkToken(tokenData.linkToken);
-  }, [tokenData]);
 
   const onPlaidSuccess: PlaidLinkOnSuccess = useCallback(
     async (publicToken: string) => {
@@ -84,7 +82,7 @@ export function PlaidLinkButton({
     if (linkToken && ready) open();
   }, [linkToken, ready, open]);
 
-  const isLoading = tokenLoading || isExchanging;
+  const isLoading = createLinkTokenMutation.isPending || isExchanging;
 
   return (
     <Button onClick={handleOpen} disabled={isLoading} variant={variant} size={size} className="gap-2">
