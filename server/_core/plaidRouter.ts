@@ -8,15 +8,43 @@ export const plaidRouter = router({
   createLinkToken: publicProcedure
     .input(z.object({ redirectUri: z.string() }))
     .mutation(async ({ input }) => {
-      // Implementation here
-      return { linkToken: "test" };
+      try {
+        console.log("[Plaid] createLinkToken input:", {
+          redirectUri: input.redirectUri,
+          clientId: process.env.PLAID_CLIENT_ID ? "***" : "MISSING",
+          environment: process.env.PLAID_ENV,
+        });
+
+        // TODO: Call Plaid API to create link token
+        // For now, return test token
+        const linkToken = "test_link_token_placeholder";
+        console.log("[Plaid] createLinkToken response:", { linkToken });
+        
+        return { linkToken };
+      } catch (err) {
+        console.error("[Plaid] createLinkToken error:", err);
+        throw err;
+      }
     }),
 
   exchangeToken: protectedProcedure
     .input(z.object({ publicToken: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Implementation here
-      return { success: true, accountCount: 1 };
+      try {
+        console.log("[Plaid] exchangeToken input:", {
+          publicToken: input.publicToken.substring(0, 20) + "...",
+          userId: ctx.user.id,
+        });
+
+        // TODO: Call Plaid API to exchange public token for access token
+        // For now, return success
+        console.log("[Plaid] exchangeToken response: success");
+        
+        return { success: true, accountCount: 1 };
+      } catch (err) {
+        console.error("[Plaid] exchangeToken error:", err);
+        throw err;
+      }
     }),
 
 
