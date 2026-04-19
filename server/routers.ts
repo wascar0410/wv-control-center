@@ -41,6 +41,7 @@ import { alertsAndTasksRouter } from "./routers/alertsAndTasks";
 import { companyRouter } from "./routers/company";
 import { financialRouter } from "./routers/financial";
 import { financialExtendedRouter } from "./routers/financialExtended";
+import { driverLogin, setAuthCookie } from "./driverAuth"; // ajusta path si es necesario
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -2555,24 +2556,33 @@ export const appRouter = router({
         return { success: true, message: "Contraseña actualizada" };
       }),
     driverLogin: publicProcedure
-      .input(z.object({ email: z.string().email(), password: z.string() }))
-      .mutation(async ({ input, ctx }) => {
-        console.log("[auth.driverLogin] input received:", {
-          email: input?.email,
-          hasEmail: input?.email !== undefined && input?.email !== null && input?.email !== "",
-          emailType: typeof input?.email,
-          passwordType: typeof input?.password,
-        });
-        const result = await driverLogin({ email: input.email, password: input.password, ipAddress: ctx.req.ip, userAgent: ctx.req.headers["user-agent"] as string });
-        console.log("[auth.driverLogin] result keys:", Object.keys(result));
-        console.log("[auth.driverLogin] result types:", {
-          token: typeof result.token,
-          expiresIn: typeof result.expiresIn,
-          userId: typeof result.userId,
-          email: typeof result.email,
-          name: typeof result.name,
-          role: typeof result.role,
-        });
+  .input(z.object({ email: z.string().email(), password: z.string() }))
+  .mutation(async ({ input, ctx }) => {
+
+    console.log("[auth.driverLogin] input received:", {
+      email: input?.email,
+      hasEmail: input?.email !== undefined && input?.email !== null && input?.email !== "",
+      emailType: typeof input?.email,
+      passwordType: typeof input?.password,
+    });
+
+    // 🔐 login real
+    const result = await driverLogin({
+      email: input.email,
+      password: input.password,
+      ipAddress: ctx.req.ip,
+      userAgent: ctx.req.headers["user-agent"],
+    });
+
+    console.log("[auth.driverLogin] login success for:", result.email);
+
+    // 🔥 FIX CRÍTICO: guardar cookie de sesión
+    setAuthCookie(ctx.res, result.token);
+
+    console.log("[auth.driverLogin] cookie set");
+
+    return result;
+  }),
         // Set wv_session cookie so subsequent tRPC requests are authenticated
         const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
         const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
