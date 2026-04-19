@@ -4,6 +4,8 @@ import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
 import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
 import { getBankAccountById } from "../db";
 import { createLinkToken as createPlaidLinkToken, exchangePublicToken } from "./plaid";
+import { getAccounts } from "./plaid";
+import { createBankAccount, getBankAccountsByUserId } from "../db";
 
 export const plaidRouter = router({
   createLinkToken: publicProcedure
@@ -30,10 +32,16 @@ export const plaidRouter = router({
       }
     }),
 
-  exchangeToken: protectedProcedure
+ exchangeToken: protectedProcedure
   .input(z.object({ publicToken: z.string() }))
   .mutation(async ({ input, ctx }) => {
+    if (!ctx.user) {
+      throw new Error("User not authenticated");
+    }
+
     const { accessToken, itemId } = await exchangePublicToken(input.publicToken);
+
+    console.log("[Plaid] exchangePublicToken:", { itemId });
 
     const accounts = await getAccounts(accessToken);
 
@@ -53,7 +61,6 @@ export const plaidRouter = router({
 
         storedCount++;
       } catch (err: any) {
-        // si ya existe por plaidAccountId, no rompas el flujo
         console.error("[Plaid] createBankAccount error:", err?.message || err);
       }
     }
@@ -71,7 +78,6 @@ export const plaidRouter = router({
       accountCount: storedCount,
     };
   }),
-
   /**
    * Manual sync by bankAccountId.
    * Looks up the account, gets its plaidItemId, syncs transactions, and generates reserve suggestions.
