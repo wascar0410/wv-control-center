@@ -2559,6 +2559,10 @@ export const appRouter = router({
   .input(z.object({ email: z.string().email(), password: z.string() }))
   .mutation(async ({ input, ctx }) => {
 
+    console.log("[auth.driverLogin] input received:", {
+      email: input.email,
+    });
+
     const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 
     const result = await driverLogin({
@@ -2568,29 +2572,23 @@ export const appRouter = router({
       userAgent: ctx.req.headers["user-agent"],
     });
 
+    const isSecure =
+      ctx.req.protocol === "https" ||
+      ctx.req.headers["x-forwarded-proto"] === "https";
+
     ctx.res.cookie("wv_session", result.token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: isSecure,
+      sameSite: isSecure ? "none" : "lax",
       maxAge: ONE_YEAR_MS,
       path: "/",
     });
 
+    console.log("[auth.driverLogin] cookie set");
+    console.log("[auth.driverLogin] returning result");
+
     return result;
   }),
-        // Set wv_session cookie so subsequent tRPC requests are authenticated
-        const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
-        const isSecure = ctx.req.protocol === "https" || ctx.req.headers["x-forwarded-proto"] === "https";
-        ctx.res.cookie("wv_session", result.token, {
-          httpOnly: true,
-          secure: isSecure,
-          sameSite: isSecure ? "none" : "lax",
-          maxAge: ONE_YEAR_MS,
-          path: "/",
-        });
-        console.log("[auth.driverLogin] about to return result");
-        return result;
-      }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") throw new Error("No autorizado");
       return await getPasswordAuditHistory(ctx.user.id, 20);
