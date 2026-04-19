@@ -2568,7 +2568,6 @@ export const appRouter = router({
       userAgent: ctx.req.headers["user-agent"],
     });
 
-    // 🔥 FIX: guardar cookie
     ctx.res.cookie("wv_session", result.token, {
       httpOnly: true,
       secure: true,
