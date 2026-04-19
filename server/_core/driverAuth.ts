@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { getDb } from "../db";
 import { users as usersTable, passwordAuditLog } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface DriverLoginPayload {
   email: string;
@@ -20,77 +20,60 @@ export interface DriverToken {
   role: string;
 }
 
+const JWT_SECRET = process.env.JWT_SECRET || "wv-transport-secret-2026";
+const TOKEN_EXPIRY_SECONDS = 365 * 24 * 60 * 60; // 1 año
+
 /**
  * Authenticate user with email and password.
- * Works for all roles: owner, admin, driver.
- * Returns a JWT token AND the user role so the frontend can redirect correctly.
  */
 export async function driverLogin(payload: DriverLoginPayload): Promise<DriverToken> {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
-  // Find user by email
-  console.log("[driverLogin] payload received:", {
-    email: payload?.email,
-    hasEmail: payload?.email !== undefined && payload?.email !== null && payload?.email !== "",
-    emailType: typeof payload?.email,
-    passwordType: typeof payload?.password,
-  });
+  // 🔍 Buscar usuario
   const rows = await db
     .select()
     .from(usersTable)
     .where(eq(usersTable.email, payload.email))
     .limit(1);
-  console.log("[driverLogin] rows length:", Array.isArray(rows) ? rows.length : "not-array");
+
   const user = rows[0];
 
   if (!user) {
     throw new Error("Email o contraseña incorrectos");
   }
 
-  console.log("[driverLogin] rows[0] keys:", Object.keys(user));
-  console.log("[driverLogin] rows[0] types:", {
-    id: typeof user.id,
-    email: typeof user.email,
-    name: typeof user.name,
-    role: typeof user.role,
-    createdAt: typeof (user as any).createdAt,
-  });
-  if ((user as any).createdAt) console.log("[driverLogin] createdAt instanceof Date:", (user as any).createdAt instanceof Date);
-
-  // Allow owner, admin, and driver roles
-  if (user.role !== "driver" && user.role !== "owner" && user.role !== "admin") {
+  // 🔒 Validar rol permitido
+  if (!["driver", "owner", "admin"].includes(user.role)) {
     throw new Error("Este usuario no tiene acceso al sistema");
   }
 
-  // Verify password
+  // 🔒 Validar contraseña
   if (!user.passwordHash) {
-    throw new Error("Este usuario no tiene contraseña configurada. Contacta al administrador.");
+    throw new Error("Usuario sin contraseña configurada");
   }
 
   const isPasswordValid = await bcrypt.compare(payload.password, user.passwordHash);
+
   if (!isPasswordValid) {
     throw new Error("Email o contraseña incorrectos");
   }
 
-  // Log successful login (non-fatal)
+  // 🧾 Log de login (no crítico)
   try {
     await db.insert(passwordAuditLog).values({
       userId: user.id,
-      action: "changed",
+      action: "login",
       ipAddress: payload.ipAddress,
       userAgent: payload.userAgent,
       reason: "login",
     });
   } catch {
-    // Non-fatal - don't block login if audit log fails
+    // no bloquear login
   }
 
-  // Generate JWT token (used as session cookie value)
-  const jwtSecret = process.env.JWT_SECRET || "wv-transport-secret-2026";
-  const expiresIn = 365 * 24 * 60 * 60; // 1 year in seconds
-
-  const token = (jwt as any).sign(
+  // 🔑 Generar JWT
+  const token = jwt.sign(
     {
       userId: user.id,
       openId: user.openId,
@@ -98,44 +81,45 @@ export async function driverLogin(payload: DriverLoginPayload): Promise<DriverTo
       name: user.name,
       role: user.role,
     },
-    jwtSecret,
-    { expiresIn }
+    JWT_SECRET,
+    { expiresIn: TOKEN_EXPIRY_SECONDS }
   );
 
-  const response = {
+  return {
     token,
-    expiresIn,
+    expiresIn: TOKEN_EXPIRY_SECONDS,
     userId: user.id,
     email: user.email || "",
     name: user.name || "",
     role: user.role,
   };
-
-  console.log("[driverLogin] response keys:", Object.keys(response));
-  console.log("[driverLogin] response types:", {
-    token: typeof response.token,
-    expiresIn: typeof response.expiresIn,
-    userId: typeof response.userId,
-    email: typeof response.email,
-    name: typeof response.name,
-    role: typeof response.role,
-  });
-  try {
-    console.log("[driverLogin] response JSON:", JSON.stringify(response));
-  } catch (e) {
-    console.log("[driverLogin] JSON.stringify failed:", e instanceof Error ? e.message : String(e));
-  }
-
-  return response;
 }
 
 /**
- * Verify JWT token (used by context.ts to authenticate requests)
+ * 🔥 NUEVO: helper para setear cookie correctamente
  */
-export function verifyDriverToken(token: string): { userId: number; openId: string; email: string; name: string; role: string } | null {
+export function setAuthCookie(res: any, token: string) {
+  res.cookie("wv_session", token, {
+    httpOnly: true,
+    secure: true,          // obligatorio en Railway
+    sameSite: "none",      // necesario si frontend != backend
+    maxAge: TOKEN_EXPIRY_SECONDS * 1000,
+    path: "/",
+  });
+}
+
+/**
+ * Verify JWT token
+ */
+export function verifyDriverToken(token: string) {
   try {
-    const jwtSecret = process.env.JWT_SECRET || "wv-transport-secret-2026";
-    return (jwt as any).verify(token, jwtSecret) as any;
+    return jwt.verify(token, JWT_SECRET) as {
+      userId: number;
+      openId: string;
+      email: string;
+      name: string;
+      role: string;
+    };
   } catch {
     return null;
   }
@@ -183,19 +167,16 @@ export async function logPasswordReset(
 }
 
 /**
- * Get password audit history for user
+ * Get password audit history
  */
 export async function getPasswordAuditHistory(userId: number, limit = 10) {
   const db = await getDb();
   if (!db) return [];
 
-  const rows = await db
+  return await db
     .select()
     .from(passwordAuditLog)
     .where(eq(passwordAuditLog.userId, userId))
     .orderBy(desc(passwordAuditLog.createdAt))
     .limit(limit);
-  return rows;
 }
-// Force redeploy Mon Apr 13 09:59:01 EDT 2026
-// Force redeploy 1776111999
