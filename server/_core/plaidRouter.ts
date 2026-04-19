@@ -168,51 +168,27 @@ export const plaidRouter = router({
    * Calls one batch of 100 (same as syncBatch with batchSize=100).
    */
   syncTransactions: protectedProcedure
-    .input(z.object({ bankAccountId: z.number() }))
-    .mutation(async ({ input, ctx }) => {
-      const account = await getBankAccountById(input.bankAccountId);
-      if (!account || !account.plaidAccessToken) {
-        throw new Error("Cuenta bancaria no encontrada o sin acceso Plaid");
-      }
-      const storedCursor = await getPlaidCursor(input.bankAccountId);
-      const { added, modified, removed, nextCursor, hasMore } = await syncTransactions(
-        account.plaidAccessToken,
-        storedCursor,
-        100
-      );
-      let imported = 0;
-      const syncedTransactions: any[] = [];
-      for (const tx of added) {
-        const mapped = mapPlaidTransaction(tx);
-        try {
-          await createFinancialTransaction({ ...mapped, createdBy: ctx.user.id });
-          imported++;
-          syncedTransactions.push({
-            amount: tx.amount,
-            accountId: input.bankAccountId,
-            transactionId: tx.transaction_id,
-            name: tx.name,
-            date: tx.date,
-          });
-        } catch { /* skip duplicates */ }
-      }
-      if (nextCursor) await savePlaidCursor(input.bankAccountId, nextCursor);
-      await updateBankAccount(input.bankAccountId, { lastSyncedAt: new Date() });
+  .input(z.object({
+    itemId: z.string(),
+  }))
+  .mutation(async ({ ctx, input }) => {
 
-      const suggestionsResult = await generateReserveSuggestionsFromTransactions({
-        ownerId: ctx.user.id,
-        transactions: syncedTransactions,
-      });
+    const syncResult = await syncPlaidTransactionsForItem({
+      userId: ctx.user.id,
+      itemId: input.itemId,
+    });
 
-      return {
-        imported,
-        modified: modified.length,
-        removed: removed.length,
-        hasMore,
-        suggestionsCreated: suggestionsResult.created,
-        suggestionSkipped: suggestionsResult.skipped,
-      };
-    }),
+    const suggestionResult = await generateReserveSuggestionsFromTransactions({
+      ownerId: ctx.user.id,
+      transactions: syncResult.importedTransactions,
+    });
+
+    return {
+      ...syncResult,
+      suggestionsCreated: suggestionResult.created,
+      suggestionSkipped: suggestionResult.skipped,
+    };
+  }),
 const syncResult = await syncPlaidTransactionsForItem({
   userId: ctx.user.id,
   itemId: input.itemId, // o como lo recibas hoy
