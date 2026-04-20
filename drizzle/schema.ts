@@ -341,6 +341,7 @@ export const bankAccounts = mysqlTable(
     accountLast4: varchar("accountLast4", { length: 4 }).notNull(),
     plaidAccountId: varchar("plaidAccountId", { length: 255 }),
     plaidAccessToken: text("plaidAccessToken"),
+    plaidItemId: varchar("plaidItemId", { length: 255 }),
     isActive: boolean("isActive").default(true).notNull(),
     lastSyncedAt: timestamp("lastSyncedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),

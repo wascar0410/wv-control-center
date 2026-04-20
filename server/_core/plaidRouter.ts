@@ -81,6 +81,7 @@ export const plaidRouter = router({
               accountLast4: account.mask || "0000",
               plaidAccountId: account.account_id,
               plaidAccessToken: exchangeResult.accessToken,
+              plaidItemId: exchangeResult.itemId,
               isActive: true,
             });
             
