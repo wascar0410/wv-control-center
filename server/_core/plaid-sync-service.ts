@@ -187,13 +187,16 @@ export async function syncPlaidTransactionsForItem(params: {
     hasMore = Boolean(data.has_more);
   }
 
-  // Guardar cursor en todas las cuentas del mismo item
+  // Guardar cursor y lastSyncedAt en todas las cuentas del mismo item
   for (const account of validAccounts as any[]) {
+    const updateData = {
+      plaidSyncCursor: cursor,
+      lastSyncedAt: new Date(),
+    };
+    
     await db
       .update(bankAccounts)
-      .set({
-        plaidSyncCursor: cursor,
-      } as any)
+      .set(updateData)
       .where(eq(bankAccounts.id, account.id));
   }
 
