@@ -8,34 +8,26 @@ import {
   getBankAccountsByUserId,
   deactivateBankAccount,
 } from "../db";
-import {
-  createLinkToken as createPlaidLinkToken,
-  exchangePublicToken,
-  getAccounts,
-} from "./plaid";
+import { createLinkToken as createPlaidLinkToken, exchangePublicToken, getAccounts } from "./plaid";
 
 export const plaidRouter = router({
-  createLinkToken: protectedProcedure
+  createLinkToken: publicProcedure
     .input(z.object({ redirectUri: z.string().optional() }))
-    .mutation(async ({ input, ctx }) => {
+    .mutation(async ({ input }) => {
       try {
         console.log("[Plaid] createLinkToken input:", {
           redirectUri: input.redirectUri,
           clientId: process.env.PLAID_CLIENT_ID ? "***" : "MISSING",
           environment: process.env.PLAID_ENV,
-          userId: ctx.user.id,
         });
 
-        const linkToken = await createPlaidLinkToken(
-          ctx.user.id,
-          input.redirectUri
-        );
-
-        console.log("[Plaid] createLinkToken response:", {
-          linkTokenPreview:
-            typeof linkToken === "string" ? `${linkToken.slice(0, 12)}...` : "invalid",
-        });
-
+        // Generate a unique user ID for this session
+        const sessionUserId = Math.floor(Math.random() * 1000000);
+        
+        // Call real Plaid API to create link token
+        const linkToken = await createPlaidLinkToken(sessionUserId, input.redirectUri);
+        console.log("[Plaid] createLinkToken response:", { linkToken });
+        
         return { linkToken };
       } catch (err) {
         console.error("[Plaid] createLinkToken error:", err);
@@ -45,57 +37,83 @@ export const plaidRouter = router({
 
   exchangeToken: protectedProcedure
     .input(z.object({ publicToken: z.string() }))
-    .mutation(async ({ input, ctx }) => {
-      if (!ctx.user) {
-        throw new Error("User not authenticated");
-      }
+    .mutation(async ({ ctx, input }) => {
+      try {
+        console.log("[Plaid] exchangeToken START:", {
+          publicToken: input.publicToken.substring(0, 20) + "...",
+          userId: ctx.user.id,
+        });
 
-      const { accessToken, itemId } = await exchangePublicToken(input.publicToken);
-
-      console.log("[Plaid] exchangePublicToken:", { itemId, userId: ctx.user.id });
-
-      const accounts = await getAccounts(accessToken);
-      console.log("[Plaid] accounts fetched:", accounts.length);
-
-      let storedCount = 0;
-
-      for (const account of accounts) {
-        try {
-          await createBankAccount({
-            userId: ctx.user.id,
-            bankName: account.name || account.official_name || "Bank Account",
-            accountType: (account.subtype || "other") as any,
-            accountLast4: account.mask || "****",
-            plaidAccountId: account.account_id,
-            plaidAccessToken: accessToken,
-            plaidItemId: itemId,
-          });
-
-          storedCount++;
-          console.log("[Plaid] createBankAccount success:", {
-            plaidAccountId: account.account_id,
-            bankName: account.name,
-            mask: account.mask,
-          });
-        } catch (err: any) {
-          console.error("[Plaid] createBankAccount error:", err?.message || err);
+        // Step 1: Exchange public token for access token
+        console.log("[Plaid] Step 1: Calling exchangePublicToken");
+        const exchangeResult = await exchangePublicToken(input.publicToken);
+        console.log("[Plaid] Step 1 SUCCESS:", { itemId: exchangeResult.itemId });
+        
+        // Step 2: Get accounts from Plaid
+        console.log("[Plaid] Step 2: Calling getAccounts with accessToken");
+        const accounts = await getAccounts(exchangeResult.accessToken);
+        console.log("[Plaid] Step 2 SUCCESS:", { 
+          accountCount: accounts.length, 
+          accounts: accounts.map((a: any) => ({ 
+            id: a.account_id, 
+            name: a.name, 
+            subtype: a.subtype,
+            mask: a.mask
+          })) 
+        });
+        
+        // Step 3: Create bank account entries for each account
+        console.log("[Plaid] Step 3: Creating bank account entries");
+        const createdAccounts = [];
+        for (const account of accounts) {
+          try {
+            console.log("[Plaid] Creating bank account for:", { 
+              accountId: account.account_id, 
+              name: account.name,
+              subtype: account.subtype,
+              mask: account.mask
+            });
+            
+            const result = await createBankAccount({
+              userId: ctx.user.id,
+              bankName: account.name || "Unknown Bank",
+              accountType: (account.subtype as "checking" | "savings" | "credit_card" | "other") || "other",
+              accountLast4: account.mask || "0000",
+              plaidAccountId: account.account_id,
+              plaidAccessToken: exchangeResult.accessToken,
+              isActive: true,
+            });
+            
+            console.log("[Plaid] Bank account created SUCCESS:", { insertId: result.insertId });
+            createdAccounts.push({ id: result.insertId, name: account.name });
+          } catch (accountErr) {
+            console.error("[Plaid] Error creating bank account:", accountErr);
+          }
         }
+        
+        console.log("[Plaid] exchangeToken FINAL RESULT:", { 
+          success: true, 
+          accountCount: createdAccounts.length, 
+          createdAccounts,
+          itemId: exchangeResult.itemId
+        });
+        
+        return { 
+          success: true, 
+          accountCount: createdAccounts.length, 
+          itemId: exchangeResult.itemId, 
+          accessToken: exchangeResult.accessToken 
+        };
+      } catch (err) {
+        console.error("[Plaid] exchangeToken FAILED:", err);
+        throw err;
       }
-
-      console.log("[Plaid] exchangeToken success:", {
-        userId: ctx.user.id,
-        itemId,
-        accountCount: accounts.length,
-        storedCount,
-      });
-
-      return {
-        success: true,
-        itemId,
-        accountCount: storedCount,
-      };
     }),
 
+  /**
+   * Manual sync by bankAccountId.
+   * Looks up the account, gets its plaidItemId, syncs transactions, and generates reserve suggestions.
+   */
   syncTransactions: protectedProcedure
     .input(
       z.object({
@@ -122,12 +140,14 @@ export const plaidRouter = router({
           throw new Error("Account has no plaidItemId");
         }
 
+        console.log("[Sync] Starting syncPlaidTransactionsForItem with itemId:", account.plaidItemId);
         const syncResult = await syncPlaidTransactionsForItem({
           userId: ctx.user.id,
           itemId: account.plaidItemId,
         });
         console.log("[Sync] syncResult:", syncResult);
 
+        console.log("[Sync] Starting generateReserveSuggestionsFromTransactions");
         const suggestionResult = await generateReserveSuggestionsFromTransactions({
           ownerId: ctx.user.id,
           transactions: syncResult.importedTransactions,
@@ -148,6 +168,10 @@ export const plaidRouter = router({
       }
     }),
 
+  /**
+   * Get sync status for a bank account.
+   * hasCursor = true means at least one sync has been completed.
+   */
   getSyncStatus: protectedProcedure
     .input(
       z.object({
@@ -167,41 +191,30 @@ export const plaidRouter = router({
       };
     }),
 
+  /**
+   * Get all linked bank accounts for the current user.
+   */
   getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
-    if (!ctx.user) {
-      throw new Error("User not authenticated");
-    }
-
+    console.log("[Plaid] getBankAccounts for userId:", ctx.user.id);
     const accounts = await getBankAccountsByUserId(ctx.user.id);
-
-    console.log("[BankAccounts] fetched:", {
-      userId: ctx.user.id,
-      count: accounts.length,
-      ids: accounts.map((a: any) => a.id),
-    });
-
+    console.log("[Plaid] getBankAccounts result:", { count: accounts.length, accounts });
     return accounts;
   }),
 
+  /**
+   * Remove a bank account link.
+   */
   removeBankAccount: protectedProcedure
     .input(z.object({ bankAccountId: z.number() }))
-    .mutation(async ({ input, ctx }) => {
-      if (!ctx.user) {
-        throw new Error("User not authenticated");
+    .mutation(async ({ ctx, input }) => {
+      try {
+        console.log("[Plaid] removeBankAccount input:", { bankAccountId: input.bankAccountId, userId: ctx.user.id });
+        await deactivateBankAccount(input.bankAccountId);
+        console.log("[Plaid] removeBankAccount SUCCESS");
+        return { success: true };
+      } catch (err) {
+        console.error("[Plaid] removeBankAccount error:", err);
+        throw err;
       }
-
-      const account = await getBankAccountById(input.bankAccountId);
-
-      if (!account) {
-        throw new Error("Account not found");
-      }
-
-      if (Number(account.userId) !== Number(ctx.user.id)) {
-        throw new Error("Not authorized to remove this account");
-      }
-
-      await deactivateBankAccount(input.bankAccountId);
-
-      return { success: true };
     }),
 });
