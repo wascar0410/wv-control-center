@@ -46,12 +46,12 @@ export const plaidRouter = router({
 
         // Step 1: Exchange public token for access token
         console.log("[Plaid] Step 1: Calling exchangePublicToken");
-        const exchangeResult = await exchangePublicToken(input.publicToken);
-        console.log("[Plaid] Step 1 SUCCESS:", { itemId: exchangeResult.itemId });
+        const { accessToken, itemId } = await exchangePublicToken(input.publicToken);
+        console.log("[Plaid] Step 1 SUCCESS:", { itemId });
         
         // Step 2: Get accounts from Plaid
         console.log("[Plaid] Step 2: Calling getAccounts with accessToken");
-        const accounts = await getAccounts(exchangeResult.accessToken);
+        const accounts = await getAccounts(accessToken);
         console.log("[Plaid] Step 2 SUCCESS:", { 
           accountCount: accounts.length, 
           accounts: accounts.map((a: any) => ({ 
@@ -74,14 +74,8 @@ export const plaidRouter = router({
               mask: account.mask
             });
             
-            // DEBUG: Log exact values before insert
-            console.log("[DEBUG] exchangeResult:", { 
-              accessToken: exchangeResult.accessToken ? "***" : "MISSING",
-              itemId: exchangeResult.itemId,
-              itemIdType: typeof exchangeResult.itemId,
-              itemIdIsNull: exchangeResult.itemId === null,
-              itemIdIsUndefined: exchangeResult.itemId === undefined
-            });
+            // Verification log before insert
+            console.log("[DEBUG] saving plaidItemId:", itemId);
             
             const bankAccountData = {
               userId: ctx.user.id,
@@ -89,21 +83,10 @@ export const plaidRouter = router({
               accountType: (account.subtype as "checking" | "savings" | "credit_card" | "other") || "other",
               accountLast4: account.mask || "0000",
               plaidAccountId: account.account_id,
-              plaidAccessToken: exchangeResult.accessToken,
-              plaidItemId: exchangeResult.itemId,
+              plaidAccessToken: accessToken,
+              plaidItemId: itemId,
               isActive: true,
             };
-            
-            console.log("[DEBUG] bankAccountData before insert:", {
-              userId: bankAccountData.userId,
-              bankName: bankAccountData.bankName,
-              accountType: bankAccountData.accountType,
-              accountLast4: bankAccountData.accountLast4,
-              plaidAccountId: bankAccountData.plaidAccountId,
-              plaidAccessToken: bankAccountData.plaidAccessToken ? "***" : "MISSING",
-              plaidItemId: bankAccountData.plaidItemId,
-              isActive: bankAccountData.isActive
-            });
             
             const result = await createBankAccount(bankAccountData);
             
@@ -118,14 +101,14 @@ export const plaidRouter = router({
           success: true, 
           accountCount: createdAccounts.length, 
           createdAccounts,
-          itemId: exchangeResult.itemId
+          itemId
         });
         
         return { 
           success: true, 
           accountCount: createdAccounts.length, 
-          itemId: exchangeResult.itemId, 
-          accessToken: exchangeResult.accessToken 
+          itemId, 
+          accessToken
         };
       } catch (err) {
         console.error("[Plaid] exchangeToken FAILED:", err);
@@ -219,9 +202,18 @@ export const plaidRouter = router({
    */
   getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
     console.log("[Plaid] getBankAccounts for userId:", ctx.user.id);
-    const accounts = await getBankAccountsByUserId(ctx.user.id);
-    console.log("[Plaid] getBankAccounts result:", { count: accounts.length, accounts });
-    return accounts;
+    const allAccounts = await getBankAccountsByUserId(ctx.user.id);
+    
+    // Filter to only valid accounts: must be active and have plaidItemId
+    const validAccounts = allAccounts.filter(acc => acc.isActive && acc.plaidItemId);
+    
+    console.log("[Plaid] getBankAccounts result:", { 
+      total: allAccounts.length, 
+      valid: validAccounts.length,
+      filtered: allAccounts.length - validAccounts.length
+    });
+    
+    return validAccounts;
   }),
 
   /**
