@@ -74,7 +74,16 @@ export const plaidRouter = router({
               mask: account.mask
             });
             
-            const result = await createBankAccount({
+            // DEBUG: Log exact values before insert
+            console.log("[DEBUG] exchangeResult:", { 
+              accessToken: exchangeResult.accessToken ? "***" : "MISSING",
+              itemId: exchangeResult.itemId,
+              itemIdType: typeof exchangeResult.itemId,
+              itemIdIsNull: exchangeResult.itemId === null,
+              itemIdIsUndefined: exchangeResult.itemId === undefined
+            });
+            
+            const bankAccountData = {
               userId: ctx.user.id,
               bankName: account.name || "Unknown Bank",
               accountType: (account.subtype as "checking" | "savings" | "credit_card" | "other") || "other",
@@ -83,7 +92,20 @@ export const plaidRouter = router({
               plaidAccessToken: exchangeResult.accessToken,
               plaidItemId: exchangeResult.itemId,
               isActive: true,
+            };
+            
+            console.log("[DEBUG] bankAccountData before insert:", {
+              userId: bankAccountData.userId,
+              bankName: bankAccountData.bankName,
+              accountType: bankAccountData.accountType,
+              accountLast4: bankAccountData.accountLast4,
+              plaidAccountId: bankAccountData.plaidAccountId,
+              plaidAccessToken: bankAccountData.plaidAccessToken ? "***" : "MISSING",
+              plaidItemId: bankAccountData.plaidItemId,
+              isActive: bankAccountData.isActive
             });
+            
+            const result = await createBankAccount(bankAccountData);
             
             console.log("[Plaid] Bank account created SUCCESS:", { insertId: result.insertId });
             createdAccounts.push({ id: result.insertId, name: account.name });
