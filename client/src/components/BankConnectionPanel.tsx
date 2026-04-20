@@ -12,6 +12,7 @@ export default function BankConnectionPanel() {
   const { data: linkedAccounts, isLoading: loadingAccounts, refetch: refetchAccounts } = trpc.wallet.getLinkedBankAccounts.useQuery();
   const createPlaidLinkMutation = trpc.wallet.createPlaidLinkToken.useMutation();
   const exchangeTokenMutation = trpc.wallet.exchangePlaidPublicToken.useMutation();
+  const removeBankAccountMutation = trpc.plaid.removeBankAccount.useMutation();
 
   const handleConnectBank = async () => {
     setIsConnecting(true);
@@ -50,12 +51,24 @@ export default function BankConnectionPanel() {
     }
   };
 
-  const handleRemoveAccount = async (accountId: number) => {
-    // Placeholder for account removal
-    setMessage({
-      type: "info",
-      text: "🗑️ Account removal not yet implemented",
-    });
+  const handleRemoveAccount = async (accountId: number, accountName: string) => {
+    if (!confirm(`¿Estás seguro de que deseas desconectar ${accountName}?`)) {
+      return;
+    }
+
+    try {
+      await removeBankAccountMutation.mutateAsync({ bankAccountId: accountId });
+      setMessage({
+        type: "success",
+        text: `✅ Cuenta ${accountName} desconectada exitosamente`,
+      });
+      await refetchAccounts();
+    } catch (error: any) {
+      setMessage({
+        type: "error",
+        text: `❌ Error al desconectar cuenta: ${error?.message || "Error desconocido"}`,
+      });
+    }
   };
 
   return (
@@ -102,7 +115,8 @@ export default function BankConnectionPanel() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleRemoveAccount(account.id)}
+                  onClick={() => handleRemoveAccount(account.id, account.bankName)}
+                  disabled={removeBankAccountMutation.isPending}
                   className="text-red-600 hover:text-red-700"
                 >
                   <Trash2 className="w-4 h-4" />

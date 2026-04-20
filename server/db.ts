@@ -908,7 +908,7 @@ export async function deactivateBankAccount(accountId: number) {
 
   await db
     .update(bankAccounts)
-    .set({ isActive: false })
+    .set({ isActive: false, updatedAt: new Date() })
     .where(eq(bankAccounts.id, accountId));
 }
 

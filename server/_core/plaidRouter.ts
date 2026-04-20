@@ -216,6 +216,17 @@ export const plaidRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         console.log("[Plaid] removeBankAccount input:", { bankAccountId: input.bankAccountId, userId: ctx.user.id });
+        
+        // Validate ownership: account must belong to current user
+        const account = await getBankAccountById(input.bankAccountId);
+        if (!account) {
+          throw new Error("Bank account not found");
+        }
+        
+        if (account.userId !== ctx.user.id) {
+          throw new Error("Unauthorized: account does not belong to user");
+        }
+        
         await deactivateBankAccount(input.bankAccountId);
         console.log("[Plaid] removeBankAccount SUCCESS");
         return { success: true };
