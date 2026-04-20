@@ -202,18 +202,10 @@ export const plaidRouter = router({
    */
   getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
     console.log("[Plaid] getBankAccounts for userId:", ctx.user.id);
-    const allAccounts = await getBankAccountsByUserId(ctx.user.id);
-    
-    // Filter to only valid accounts: must be active and have plaidItemId
-    const validAccounts = allAccounts.filter(acc => acc.isActive && acc.plaidItemId);
-    
-    console.log("[Plaid] getBankAccounts result:", { 
-      total: allAccounts.length, 
-      valid: validAccounts.length,
-      filtered: allAccounts.length - validAccounts.length
-    });
-    
-    return validAccounts;
+    // getBankAccountsByUserId already filters for isActive=true and plaidItemId IS NOT NULL
+    const accounts = await getBankAccountsByUserId(ctx.user.id);
+    console.log("[Plaid] getBankAccounts result:", { count: accounts.length });
+    return accounts;
   }),
 
   /**

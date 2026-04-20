@@ -883,7 +883,13 @@ export async function getBankAccountsByUserId(userId: number) {
   return await db
     .select()
     .from(bankAccounts)
-    .where(eq(bankAccounts.userId, userId));
+    .where(
+      and(
+        eq(bankAccounts.userId, userId),
+        eq(bankAccounts.isActive, true),
+        isNotNull(bankAccounts.plaidItemId)
+      )
+    );
 }
 
 export async function updateBankAccount(accountId: number, data: Partial<InsertBankAccount>) {
