@@ -56,7 +56,7 @@ export default function WithdrawalRequestModal({
   const requestWithdrawalMutation = trpc.wallet.requestWithdrawal.useMutation();
 
   const { data: linkedAccounts = [], isLoading: loadingAccounts } =
-    trpc.wallet.getLinkedBankAccounts.useQuery(undefined, {
+    trpc.plaid.getBankAccounts.useQuery(undefined, {
       enabled: isOpen,
       retry: 1,
       refetchOnWindowFocus: false,

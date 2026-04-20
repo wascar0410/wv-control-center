@@ -9,9 +9,9 @@ export default function BankConnectionPanel() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
-  const { data: linkedAccounts, isLoading: loadingAccounts, refetch: refetchAccounts } = trpc.wallet.getLinkedBankAccounts.useQuery();
-  const createPlaidLinkMutation = trpc.wallet.createPlaidLinkToken.useMutation();
-  const exchangeTokenMutation = trpc.wallet.exchangePlaidPublicToken.useMutation();
+  const { data: linkedAccounts, isLoading: loadingAccounts, refetch: refetchAccounts } = trpc.plaid.getBankAccounts.useQuery();
+  const createPlaidLinkMutation = trpc.plaid.createLinkToken.useMutation();
+  const exchangeTokenMutation = trpc.plaid.exchangeToken.useMutation();
   const removeBankAccountMutation = trpc.plaid.removeBankAccount.useMutation();
 
   const handleConnectBank = async () => {

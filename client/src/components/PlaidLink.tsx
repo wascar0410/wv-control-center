@@ -15,8 +15,8 @@ export function PlaidLink() {
   const [isLoading, setIsLoading] = useState(false);
   const [linkedAccounts, setLinkedAccounts] = useState<any[]>([]);
 
-  const createLinkToken = trpc.wallet.createPlaidLinkToken.useMutation();
-  const exchangePublicToken = trpc.wallet.exchangePlaidPublicToken.useMutation({
+  const createLinkToken = trpc.plaid.createLinkToken.useMutation();
+  const exchangePublicToken = trpc.plaid.exchangeToken.useMutation({
     onSuccess: (data) => {
       toast.success("Bank account connected successfully!");
       // Reload linked accounts
@@ -27,7 +27,7 @@ export function PlaidLink() {
     },
   });
 
-  const getLinkedAccounts = trpc.wallet.getLinkedBankAccounts.useQuery();
+  const getLinkedAccounts = trpc.plaid.getBankAccounts.useQuery();
 
   const loadLinkedAccounts = () => {
     getLinkedAccounts.refetch();
