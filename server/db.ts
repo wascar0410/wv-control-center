@@ -846,19 +846,21 @@ export async function createBankAccount(data: InsertBankAccount) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const result = await db.insert(bankAccounts).values(data);
+  const result = await db.insert(bankAccounts).values({
+    userId: data.userId,
+    bankName: data.bankName,
+    accountType: data.accountType,
+    accountLast4: data.accountLast4,
+    plaidAccountId: data.plaidAccountId,
+    plaidAccessToken: data.plaidAccessToken,
+    plaidItemId: data.plaidItemId,
+    isActive: data.isActive ?? true,
+    lastSyncedAt: data.lastSyncedAt ?? null,
+    createdAt: data.createdAt ?? new Date(),
+    updatedAt: data.updatedAt ?? new Date(),
+  });
+
   return result;
-}
-
-export async function getBankAccountsByUserId(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-
-  return db
-    .select()
-    .from(bankAccounts)
-    .where(and(eq(bankAccounts.userId, userId), eq(bankAccounts.isActive, true)))
-    .orderBy(desc(bankAccounts.createdAt));
 }
 
 export async function getBankAccountById(accountId: number) {
