@@ -876,6 +876,16 @@ export async function getBankAccountById(accountId: number) {
   return result.length > 0 ? result[0] : null;
 }
 
+export async function getBankAccountsByUserId(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db
+    .select()
+    .from(bankAccounts)
+    .where(eq(bankAccounts.userId, userId));
+}
+
 export async function updateBankAccount(accountId: number, data: Partial<InsertBankAccount>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
