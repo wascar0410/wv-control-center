@@ -20,7 +20,9 @@ export default function BankConnectionPanel() {
 
     try {
       // Create Plaid link token
-      const { linkToken } = await createPlaidLinkMutation.mutateAsync();
+      const { linkToken } = await createPlaidLinkMutation.mutateAsync({
+        redirectUri: window.location.origin + "/plaid-oauth-return"
+      });
 
       if (!linkToken) {
         throw new Error("Failed to create Plaid link token");
