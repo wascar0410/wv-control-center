@@ -25,10 +25,7 @@ export default function PlaidOAuthReturn() {
   const receivedRedirectUri = window.location.href;
   const redirectUri = `${window.location.origin}/plaid-oauth-return`;
 
-  const { refetch: fetchToken } = trpc.plaid.createLinkToken.useQuery(
-    { redirectUri },
-    { enabled: false, retry: false }
-  );
+  const createLinkTokenMutation = trpc.plaid.createLinkToken.useMutation();
 
   const exchangeToken = trpc.plaid.exchangeToken.useMutation({
     onSuccess: () => {
@@ -67,15 +64,17 @@ export default function PlaidOAuthReturn() {
 
   // Fetch a fresh link token on mount
   useEffect(() => {
-    fetchToken().then((result) => {
-      if (result.data?.linkToken) {
-        setLinkToken(result.data.linkToken);
+    createLinkTokenMutation.mutateAsync({ redirectUri }).then((result) => {
+      if (result?.linkToken) {
+        setLinkToken(result.linkToken);
         setStatus("opening");
       } else {
         setStatus("error");
       }
+    }).catch(() => {
+      setStatus("error");
     });
-  }, []);
+  }, [createLinkTokenMutation, redirectUri]);
 
   // Auto-open Link once token + SDK are ready
   useEffect(() => {

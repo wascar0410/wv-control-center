@@ -47,7 +47,9 @@ export function PlaidLink() {
     setIsLoading(true);
     try {
       // Create link token
-      const { linkToken } = await createLinkToken.mutateAsync();
+      const { linkToken } = await createLinkToken.mutateAsync({
+        redirectUri: window.location.origin + "/plaid-oauth-return"
+      });
 
       // Load Plaid SDK
       if (!window.Plaid) {

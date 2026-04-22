@@ -204,10 +204,7 @@ function PlaidConnectButton({ onSuccess }: { onSuccess: () => void }) {
   const [isLoading, setIsLoading] = useState(false);
   const [plaidError, setPlaidError] = useState<string | null>(null);
 
-  const { refetch } = trpc.plaid.createLinkToken.useQuery(
-    { redirectUri: "" },
-    { enabled: false, retry: false }
-  );
+  const createLinkTokenMutation = trpc.plaid.createLinkToken.useMutation();
 
   const exchangeToken = trpc.plaid.exchangeToken.useMutation({
     onSuccess: (data) => {
@@ -225,15 +222,17 @@ function PlaidConnectButton({ onSuccess }: { onSuccess: () => void }) {
     setPlaidError(null);
     setIsLoading(true);
     try {
-      const result = await refetch();
-      if (result.error || !result.data?.linkToken) {
-        const msg = (result.error as any)?.message || "Error al obtener token de Plaid";
+      const result = await createLinkTokenMutation.mutateAsync({
+        redirectUri: window.location.origin + "/plaid-oauth-return"
+      });
+      if (!result?.linkToken) {
+        const msg = "Error al obtener token de Plaid";
         setPlaidError(msg);
         toast.error(msg);
         setIsLoading(false);
         return;
       }
-      const token = result.data.linkToken;
+      const token = result.linkToken;
       // Open Plaid via raw SDK — completely outside React tree, no DOM conflict
       openPlaidLink(
         token,
