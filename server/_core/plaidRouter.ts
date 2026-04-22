@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { protectedProcedure, publicProcedure, router } from "./trpc";
 import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
 import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
@@ -7,8 +8,11 @@ import {
   createBankAccount,
   getBankAccountsByUserId,
   deactivateBankAccount,
+  getDb,
 } from "../db";
 import { createLinkToken as createPlaidLinkToken, exchangePublicToken, getAccounts } from "./plaid";
+import { bankAccountClassifications } from "../../drizzle/schema";
+
 
 export const plaidRouter = router({
   createLinkToken: publicProcedure
@@ -65,6 +69,8 @@ export const plaidRouter = router({
         // Step 3: Create bank account entries for each account
         console.log("[Plaid] Step 3: Creating bank account entries");
         const createdAccounts = [];
+        let isFirstAccount = true;
+        
         for (const account of accounts) {
           try {
             console.log("[Plaid] Creating bank account for:", { 
@@ -92,6 +98,30 @@ export const plaidRouter = router({
             
             console.log("[Plaid] Bank account created SUCCESS:", { insertId: result.insertId });
             createdAccounts.push({ id: result.insertId, name: account.name });
+            
+            // Auto-classify first account as 'operating'
+            if (isFirstAccount) {
+              try {
+                console.log("[Plaid] Auto-classifying first account as 'operating'", { bankAccountId: result.insertId });
+                const db = await getDb();
+                if (db) {
+                  await db.insert(bankAccountClassifications).values({
+                    bankAccountId: result.insertId,
+                    classification: "operating",
+                    label: "Operating Account",
+                    description: "Auto-classified as first connected account",
+                    isActive: true,
+                  }).onDuplicateKeyUpdate({
+                    set: { classification: "operating" }
+                  });
+                  console.log("[Plaid] Auto-classification SUCCESS");
+                }
+              } catch (classErr) {
+                console.error("[Plaid] Error auto-classifying account:", classErr);
+                // Don't fail the whole flow if classification fails
+              }
+              isFirstAccount = false;
+            }
           } catch (accountErr) {
             console.error("[Plaid] Error creating bank account:", accountErr);
           }

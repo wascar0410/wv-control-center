@@ -693,9 +693,20 @@ function SuggestedTransfersCard() {
   );
 
   // Mutation to mark as completed
-  const markCompletedMutation = trpc.banking.markReserveSuggestionCompleted.useMutation({
+  const markCompletedMutation = trpc.wallet.completeReserveSuggestion.useMutation({
     onSuccess: () => {
       toast({ title: "✅ Sugerencia marcada como completada" });
+      refetch();
+    },
+    onError: (err) => {
+      toast({ title: "❌ Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Mutation to dismiss
+  const dismissMutation = trpc.wallet.dismissReserveSuggestion.useMutation({
+    onSuccess: () => {
+      toast({ title: "✅ Sugerencia descartada" });
       refetch();
     },
     onError: (err) => {
@@ -774,30 +785,123 @@ function SuggestedTransfersCard() {
                       </span>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      markCompletedMutation.mutate({ suggestionId: sugg.id })
-                    }
-                    disabled={markCompletedMutation.isPending}
-                    className="ml-2 whitespace-nowrap"
-                  >
-                    {markCompletedMutation.isPending ? (
-                      <>
-                        <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
-                        Marking...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-1 h-3 w-3" />
-                        Mark Done
-                      </>
-                    )}
-                  </Button>
+                  <div className="ml-2 flex gap-2 whitespace-nowrap">
+                    <Button
+                      size="sm"
+                      variant="default"
+                      onClick={() =>
+                        markCompletedMutation.mutate({ suggestionId: sugg.id })
+                      }
+                      disabled={markCompletedMutation.isPending || dismissMutation.isPending}
+                    >
+                      {markCompletedMutation.isPending ? (
+                        <>
+                          <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                          Marking...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="mr-1 h-3 w-3" />
+                          Done
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        dismissMutation.mutate({ suggestionId: sugg.id })
+                      }
+                      disabled={dismissMutation.isPending || markCompletedMutation.isPending}
+                    >
+                      {dismissMutation.isPending ? (
+                        <>
+                          <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                          Dismissing...
+                        </>
+                      ) : (
+                        "Dismiss"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// System Status Card Component
+function SystemStatusCard() {
+  const { data: bankAccounts, isLoading: loadingAccounts } = trpc.plaid.getBankAccounts.useQuery(undefined, {
+    refetchInterval: 60000, // Refetch every 60s
+  });
+
+  const { data: rule } = trpc.banking.getCashFlowRule.useQuery();
+
+  const hasOperatingAccount = bankAccounts?.some(
+    (acc: any) => acc.classification === "operating"
+  );
+
+  const hasReserveRule = rule && rule.reservePercent > 0;
+
+  const lastSync = bankAccounts?.[0]?.lastSyncedAt
+    ? new Date(bankAccounts[0].lastSyncedAt).toLocaleString("es-ES")
+    : "Never";
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <AlertCircle className="h-5 w-5" />
+          System Status
+        </CardTitle>
+        <CardDescription>
+          Health check for Auto Reserve System
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b pb-2">
+            <span className="text-sm text-muted-foreground">Plaid Connected</span>
+            <Badge variant={bankAccounts && bankAccounts.length > 0 ? "default" : "secondary"}>
+              {bankAccounts && bankAccounts.length > 0 ? "✅ Yes" : "❌ No"}
+            </Badge>
+          </div>
+
+          <div className="flex items-center justify-between border-b pb-2">
+            <span className="text-sm text-muted-foreground">Bank Accounts</span>
+            <Badge variant="outline">
+              {loadingAccounts ? "Loading..." : `${bankAccounts?.length ?? 0} connected`}
+            </Badge>
+          </div>
+
+          <div className="flex items-center justify-between border-b pb-2">
+            <span className="text-sm text-muted-foreground">Operating Account</span>
+            <Badge variant={hasOperatingAccount ? "default" : "secondary"}>
+              {hasOperatingAccount ? "✅ Configured" : "❌ Not set"}
+            </Badge>
+          </div>
+
+          <div className="flex items-center justify-between border-b pb-2">
+            <span className="text-sm text-muted-foreground">Reserve Rule</span>
+            <Badge variant={hasReserveRule ? "default" : "secondary"}>
+              {hasReserveRule ? `✅ ${rule?.reservePercent}%` : "❌ Not set"}
+            </Badge>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Last Sync</span>
+            <span className="text-xs font-mono text-muted-foreground">{lastSync}</span>
+          </div>
+        </div>
+
+        {(!hasOperatingAccount || !hasReserveRule) && (
+          <div className="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800">
+            ⚠️ Complete system setup: Set an operating account and configure reserve percentage
           </div>
         )}
       </CardContent>
@@ -822,8 +926,9 @@ export default function BankingCashFlow() {
           <CashFlowRuleCard />
         </div>
 
-        <AccountClassificationsCard />
+        <SystemStatusCard />
         <ReserveSuggestionCard />
+        <AccountClassificationsCard />
         
         <div className="lg:col-span-2">
           <SuggestedTransfersCard />

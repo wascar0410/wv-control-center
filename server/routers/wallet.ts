@@ -611,6 +611,259 @@ export const walletRouter = router({
       }
     }),
 
+  /**
+   * Complete reserve suggestion - Mark as done
+   */
+  completeReserveSuggestion: protectedProcedure
+    .input(z.object({ suggestionId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Verify ownership
+        const suggestion = await db
+          .select()
+          .from(reserveTransferSuggestions)
+          .where(eq(reserveTransferSuggestions.id, input.suggestionId))
+          .limit(1);
+
+        if (!suggestion.length || suggestion[0].ownerId !== ctx.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Suggestion not found or unauthorized",
+          });
+        }
+
+        // Update status to completed
+        await db
+          .update(reserveTransferSuggestions)
+          .set({ 
+            status: "completed", 
+            completedAt: new Date(),
+            updatedAt: new Date() 
+          })
+          .where(eq(reserveTransferSuggestions.id, input.suggestionId));
+
+        return { success: true };
+      } catch (err) {
+        console.error("[wallet.completeReserveSuggestion]", err);
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to complete suggestion",
+        });
+      }
+    }),
+
+  /**
+   * Get withdrawable balance - available minus reserved pending
+   */
+  getWithdrawableBalance: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get wallet balance
+      let walletRaw = await getWalletByDriverId(ctx.user.id);
+      if (!walletRaw) {
+        walletRaw = await getOrCreateWallet(ctx.user.id);
+      }
+      const wallet = safeWallet(walletRaw);
+      const availableBalance = wallet?.availableBalance ?? 0;
+
+      // Get reserved pending (suggested + approved)
+      const suggestions = await db
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(eq(reserveTransferSuggestions.ownerId, ctx.user.id));
+
+      const reservedPending = suggestions
+        .filter((s) => s.status === "suggested" || s.status === "approved")
+        .reduce((sum, s) => sum + toNumber(s.suggestedAmount), 0);
+
+      const withdrawable = Math.max(0, availableBalance - reservedPending);
+
+      return {
+        availableBalance,
+        reservedPending,
+        withdrawable,
+      };
+    } catch (err) {
+      console.error("[wallet.getWithdrawableBalance]", err);
+      return {
+        availableBalance: 0,
+        reservedPending: 0,
+        withdrawable: 0,
+      };
+    }
+  }),
+
+  /**
+   * Validate withdrawal - Check if withdrawal is allowed
+   */
+  validateWithdrawal: protectedProcedure
+    .input(z.object({ amount: z.number().positive() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        // Get wallet balance
+        let walletRaw = await getWalletByDriverId(ctx.user.id);
+        if (!walletRaw) {
+          walletRaw = await getOrCreateWallet(ctx.user.id);
+        }
+        const wallet = safeWallet(walletRaw);
+        const availableBalance = wallet?.availableBalance ?? 0;
+
+        // Get reserved pending
+        const suggestions = await db
+          .select()
+          .from(reserveTransferSuggestions)
+          .where(eq(reserveTransferSuggestions.ownerId, ctx.user.id));
+
+        const reservedPending = suggestions
+          .filter((s) => s.status === "suggested" || s.status === "approved")
+          .reduce((sum, s) => sum + toNumber(s.suggestedAmount), 0);
+
+        const withdrawable = Math.max(0, availableBalance - reservedPending);
+        const isAllowed = input.amount <= withdrawable && input.amount > 0;
+
+        return {
+          isAllowed,
+          availableBalance,
+          reservedPending,
+          withdrawable,
+          requestedAmount: input.amount,
+          reason: !isAllowed 
+            ? input.amount > withdrawable 
+              ? "Insufficient withdrawable balance (some funds are reserved)"
+              : "Invalid amount"
+            : undefined,
+        };
+      } catch (err) {
+        console.error("[wallet.validateWithdrawal]", err);
+        return {
+          isAllowed: false,
+          availableBalance: 0,
+          reservedPending: 0,
+          withdrawable: 0,
+          requestedAmount: input.amount,
+          reason: "Failed to validate withdrawal",
+        };
+      }
+    }),
+
+  /**
+   * Get financial history - All cash flow events
+   */
+  getFinancialHistory: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(200).default(50),
+        offset: z.number().min(0).default(0),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const events: any[] = [];
+
+        // 1. Get wallet transactions (deposits, withdrawals, adjustments)
+        let wallet = await getWalletByDriverId(ctx.user.id);
+        if (!wallet) {
+          wallet = await getOrCreateWallet(ctx.user.id);
+        }
+
+        if (wallet) {
+          const walletTxns = await getWalletTransactions(wallet.id, 1000, 0);
+          events.push(
+            ...walletTxns.map((t: any) => ({
+              id: `wallet-${t.id}`,
+              type: t.type === "deposit" ? "Deposit" : t.type === "withdrawal" ? "Withdrawal" : "Adjustment",
+              amount: toNumber(t.amount),
+              description: t.description,
+              date: t.createdAt,
+              category: "wallet",
+            }))
+          );
+        }
+
+        // 2. Get reserve suggestions (created, completed, dismissed)
+        const suggestions = await db
+          .select()
+          .from(reserveTransferSuggestions)
+          .where(eq(reserveTransferSuggestions.ownerId, ctx.user.id));
+
+        events.push(
+          ...suggestions.map((s: any) => {
+            let typeLabel = "Reserve Suggested";
+            if (s.status === "completed") typeLabel = "Reserve Completed";
+            if (s.status === "dismissed") typeLabel = "Reserve Dismissed";
+            if (s.status === "approved") typeLabel = "Reserve Approved";
+
+            return {
+              id: `suggestion-${s.id}`,
+              type: typeLabel,
+              amount: toNumber(s.suggestedAmount),
+              description: s.reason || "Reserve transfer",
+              date: s.status === "completed" ? s.completedAt : s.createdAt,
+              category: "reserve",
+              status: s.status,
+            };
+          })
+        );
+
+        // 3. Get bank account connections/disconnections
+        const accounts = await db
+          .select()
+          .from(bankAccounts)
+          .where(eq(bankAccounts.userId, ctx.user.id));
+
+        events.push(
+          ...accounts.map((a: any) => ({
+            id: `account-${a.id}`,
+            type: a.isActive ? "Bank Connected" : "Bank Disconnected",
+            amount: 0,
+            description: `${a.bankName} ****${a.accountLast4}`,
+            date: a.isActive ? a.createdAt : a.updatedAt,
+            category: "bank",
+          }))
+        );
+
+        // Sort by date descending
+        events.sort((a, b) => {
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          return dateB - dateA;
+        });
+
+        // Apply pagination
+        const paginated = events.slice(input.offset, input.offset + input.limit);
+
+        return {
+          events: paginated,
+          total: events.length,
+          limit: input.limit,
+          offset: input.offset,
+        };
+      } catch (err) {
+        console.error("[wallet.getFinancialHistory]", err);
+        return {
+          events: [],
+          total: 0,
+          limit: input.limit,
+          offset: input.offset,
+        };
+      }
+    }),
+
+  /**
+   * Wallet stats
+   */
   getStats: protectedProcedure.query(async ({ ctx }) => {
     try {
       let walletRaw = await getWalletByDriverId(ctx.user.id);

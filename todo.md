@@ -1667,3 +1667,34 @@
 - [x] Frontend: reporte financiero con gross income, fuel, tolls, net profit, reserve suggestion
 - [x] Tests para banking setup y cash flow (10 tests nuevos)
 - [x] Checkpoint y entrega
+
+
+## Fase 36: Consolidación Final Wallet ↔ Banking (COMPLETADA)
+
+### Backend - Endpoints Consolidados
+- [x] wallet.getReserveSummary: reserved_pending, completed_reserves, withdrawable_balance
+- [x] wallet.getFinancialHistory: depósitos, suggestions, retiros, conexiones bancarias
+- [x] wallet.completeReserveSuggestion: marcar sugerencia como completed
+- [x] wallet.dismissReserveSuggestion: marcar sugerencia como dismissed
+- [x] wallet.getWithdrawableBalance: balance - reserved_pending
+- [x] wallet.validateWithdrawal: verificar si retiro es permitido
+
+### Frontend - Wallet UI
+- [x] WalletDashboard Resumen: mostrar available, reserved, completed, last sync
+- [x] WalletDashboard Historial: eventos de cash flow (deposits, suggestions, completions, withdrawals)
+- [x] WalletDashboard Retiros: usar withdrawable_balance real, bloquear si hay reservas
+- [x] WalletDashboard Banco: usar plaid.getBankAccounts, sin duplicación
+
+### Frontend - Banking UI
+- [x] BankingCashFlow Suggested Transfers: Mark as done, Dismiss actions
+- [x] BankingCashFlow System Status: Plaid connected, Last sync, Webhook active, Operating account, Reserve rule
+- [x] Auto-clasificación: primera cuenta conectada → operating
+
+### Validación Final
+- [x] Conectar banco en Wallet aparece en Banking
+- [x] Sync genera suggestions automáticamente
+- [x] Wallet muestra reserved_pending correctamente
+- [x] Wallet bloquea retiros si hay reservas
+- [x] Marcar suggestion como completed se refleja en Wallet
+
+**ESTADO FINAL:** Auto Reserve System COMPLETO - Wallet y Banking sincronizados
