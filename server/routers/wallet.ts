@@ -523,6 +523,94 @@ export const walletRouter = router({
   /**
    * Wallet stats
    */
+  /**
+   * Auto Reserve System - Consolidated endpoints
+   */
+  getReserveSummary: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const { reserveTransferSuggestions } = await import("../../drizzle/schema");
+      const suggestions = await db
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(eq(reserveTransferSuggestions.ownerId, ctx.user.id));
+
+      const suggested = suggestions.filter((s) => s.status === "suggested").length;
+      const approved = suggestions.filter((s) => s.status === "approved").length;
+      const completed = suggestions.filter((s) => s.status === "completed").length;
+      const dismissed = suggestions.filter((s) => s.status === "dismissed").length;
+
+      const totalSuggested = suggestions
+        .filter((s) => s.status === "suggested")
+        .reduce((sum, s) => sum + toNumber(s.suggestedAmount), 0);
+
+      return {
+        suggested,
+        approved,
+        completed,
+        dismissed,
+        totalSuggested,
+      };
+    } catch (err) {
+      console.error("[wallet.getReserveSummary]", err);
+      return {
+        suggested: 0,
+        approved: 0,
+        completed: 0,
+        dismissed: 0,
+        totalSuggested: 0,
+      };
+    }
+  }),
+
+  dismissReserveSuggestion: protectedProcedure
+    .input((val) => {
+      if (typeof val !== "object" || val === null) throw new Error("Invalid input");
+      const obj = val as Record<string, unknown>;
+      if (typeof obj.suggestionId !== "number") throw new Error("suggestionId must be a number");
+      return { suggestionId: obj.suggestionId };
+    })
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const db = await getDb();
+        if (!db) throw new Error("Database not available");
+
+        const { reserveTransferSuggestions } = await import("../../drizzle/schema");
+        const { and } = await import("drizzle-orm");
+
+        // Verify ownership
+        const suggestion = await db
+          .select()
+          .from(reserveTransferSuggestions)
+          .where(eq(reserveTransferSuggestions.id, input.suggestionId))
+          .limit(1);
+
+        if (!suggestion.length || suggestion[0].ownerId !== ctx.user.id) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Suggestion not found or unauthorized",
+          });
+        }
+
+        // Update status to dismissed
+        await db
+          .update(reserveTransferSuggestions)
+          .set({ status: "dismissed", updatedAt: new Date() })
+          .where(eq(reserveTransferSuggestions.id, input.suggestionId));
+
+        return { success: true };
+      } catch (err) {
+        console.error("[wallet.dismissReserveSuggestion]", err);
+        if (err instanceof TRPCError) throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to dismiss suggestion",
+        });
+      }
+    }),
+
   getStats: protectedProcedure.query(async ({ ctx }) => {
     try {
       let walletRaw = await getWalletByDriverId(ctx.user.id);
