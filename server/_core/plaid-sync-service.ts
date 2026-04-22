@@ -31,6 +31,7 @@ export async function syncPlaidTransactionsForItem(params: {
   if (!db) throw new Error("Database not available");
 
   const { userId, itemId } = params;
+  console.log(`[Sync] START: userId=${userId}, itemId=${itemId}`);
 
   // Busca cuentas de este item
   const accounts = await db
@@ -166,6 +167,7 @@ export async function syncPlaidTransactionsForItem(params: {
         transactionType: amount > 0 ? "credit" : "debit",
       });
 
+      console.log(`[Sync] IMPORTED: Account ${localBankAccountId}, Amount ${amount}, Type ${amount > 0 ? "credit" : "debit"}, TxId ${tx.transaction_id}`);
       imported++;
     }
 
@@ -185,7 +187,11 @@ export async function syncPlaidTransactionsForItem(params: {
 
     cursor = data.next_cursor ?? cursor;
     hasMore = Boolean(data.has_more);
+    console.log(`[Sync] Batch: added=${added.length}, modified=${changed.length}, removed=${deleted.length}, hasMore=${hasMore}`);
   }
+
+  console.log(`[Sync] COMPLETE: imported=${imported}, modified=${modified}, removed=${removed}, totalImportedTxs=${importedTransactions.length}`);
+  console.log(`[Sync] ImportedTransactions summary:`, importedTransactions.map(t => `[Account ${t.accountId}: ${t.transactionType} ${t.amount}]`).join(', '));
 
   // Guardar cursor y lastSyncedAt en todas las cuentas del mismo item
   for (const account of validAccounts as any[]) {
