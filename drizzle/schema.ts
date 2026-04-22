@@ -1864,7 +1864,7 @@ export const reserveTransferSuggestions = mysqlTable(
     toAccountId: int("to_account_id").notNull().references(() => bankAccounts.id, { onDelete: "cascade" }),
     suggestedAmount: decimal("suggested_amount", { precision: 12, scale: 2 }).notNull(),
     transferredAmount: decimal("transferred_amount", { precision: 12, scale: 2 }),
-    status: mysqlEnum("status", ["suggested", "pending", "completed", "cancelled"]).default("suggested").notNull(),
+    status: mysqlEnum("status", ["suggested", "approved", "completed", "dismissed", "failed"]).default("suggested").notNull(),
     reason: varchar("reason", { length: 255 }),
     transactionId: int("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),

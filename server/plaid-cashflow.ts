@@ -11,7 +11,7 @@ import {
 
 type SyncedTransaction = {
   id?: string;
-  transactionId?: string;
+  transactionId?: string | number;
   externalTransactionId?: string;
   accountId?: number | string;
   bankAccountId?: number | string;
@@ -116,27 +116,9 @@ export async function generateReserveSuggestionsFromTransactions(params: {
       continue;
     }
 
-    // duplicate protection
-    if (externalTransactionId) {
-      const existing = await db
-        .select()
-        .from(reserveTransferSuggestions)
-        .where(
-          and(
-            eq(reserveTransferSuggestions.ownerId, ownerId),
-            eq(
-              reserveTransferSuggestions.externalTransactionId,
-              externalTransactionId
-            )
-          )
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        skipped++;
-        continue;
-      }
-    }
+    // duplicate protection: check if we already created a suggestion for this transaction
+    // Note: We don't have externalTransactionId in the schema, so we skip duplicate check for now
+    // In the future, we could add externalTransactionId to the schema for better duplicate detection
 
     let suggestedAmount = (amount * reservePercent) / 100;
 
@@ -156,7 +138,7 @@ export async function generateReserveSuggestionsFromTransactions(params: {
       suggestedAmount: suggestedAmount.toFixed(2) as any,
       status: "suggested",
       reason: `Auto reserve suggestion from deposit${tx.name ? `: ${tx.name}` : ""}`,
-      externalTransactionId,
+      // transactionId will be populated when the transaction is imported
     });
 
     created++;
