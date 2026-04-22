@@ -208,6 +208,10 @@ async function startServer() {
   }
 
   app.post("/api/plaid/webhook", express.raw({ type: "*/*" }), async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`[Plaid Webhook] RECEIVED at ${timestamp}`);
+    console.log(`[Plaid Webhook] Headers:`, req.headers);
+    
     try {
       let body: any;
 
@@ -222,7 +226,7 @@ async function startServer() {
       const { webhook_type, webhook_code, item_id } = body || {};
 
       console.log(
-        `[Plaid Webhook] ${webhook_type}/${webhook_code} item=${item_id}`
+        `[Plaid Webhook] ${timestamp} | Type: ${webhook_type} | Code: ${webhook_code} | Item: ${item_id}`
       );
 
       if (
@@ -230,7 +234,7 @@ async function startServer() {
         webhook_code === "SYNC_UPDATES_AVAILABLE"
       ) {
         console.log(
-          `[Plaid Webhook] Transactions sync available for item ${item_id}`
+          `[Plaid Webhook] ${timestamp} | SYNC_UPDATES_AVAILABLE for item ${item_id} | Starting sync...`
         );
 
         try {
@@ -252,27 +256,27 @@ async function startServer() {
 
           const userId = Number(account.userId);
 
+          console.log(`[Plaid Webhook] ${timestamp} | Found account for item ${item_id} | userId: ${userId}`);
+          
           const syncResult = await syncPlaidTransactionsForItem({
             userId,
             itemId: item_id,
           });
 
           const importedTransactions = syncResult.importedTransactions ?? [];
+          console.log(`[Plaid Webhook] ${timestamp} | Sync complete | Imported: ${importedTransactions.length}`);
 
           const suggestionResult = await generateReserveSuggestionsFromTransactions({
             ownerId: userId,
             transactions: importedTransactions,
           });
 
-          console.log("[CashFlow] Suggestions created", {
+          console.log(`[Plaid Webhook] ${timestamp} | COMPLETE | Imported: ${syncResult.imported ?? importedTransactions.length ?? 0} | Suggestions: ${suggestionResult.created} created, ${suggestionResult.skipped} skipped`, {
             itemId: item_id,
             userId,
-            imported: syncResult.imported ?? importedTransactions.length ?? 0,
-            created: suggestionResult.created,
-            skipped: suggestionResult.skipped,
           });
         } catch (error) {
-          console.error("[Plaid Webhook] Failed to sync/generate suggestions", error);
+          console.error(`[Plaid Webhook] ${timestamp} | ERROR during sync/suggestions:`, error);
         }
       }
 

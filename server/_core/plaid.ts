@@ -30,7 +30,7 @@ export function getPlaidClient(): PlaidApi {
   return _plaidClient;
 }
 
-export async function createLinkToken(userId: number, redirectUri?: string) {
+export async function createLinkToken(userId: number, redirectUri: string) {
   const client = getPlaidClient();
 
   const params: any = {
@@ -43,10 +43,8 @@ export async function createLinkToken(userId: number, redirectUri?: string) {
     webhook: ENV.isProduction
       ? `https://wv-control-center-production.up.railway.app/api/plaid/webhook`
       : undefined,
-    // NOTE: redirect_uri is intentionally omitted.
-    // To enable OAuth institutions (Chase, BofA), register the redirect URI
-    // in dashboard.plaid.com → API → Allowed redirect URIs, then uncomment:
-    // ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+    // Include redirect_uri for OAuth institutions (Chase, BofA, etc.)
+    ...(redirectUri ? { redirect_uri: redirectUri } : {}),
   };
 
   try {
