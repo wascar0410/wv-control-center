@@ -36,7 +36,7 @@ export async function generateReserveSuggestionsFromTransactions(params: {
   const { ownerId, transactions } = params;
   console.log(`[Reserve] START: ownerId=${ownerId}, transactionCount=${transactions.length}`);
 
-  // 1) Load user's cash flow rule
+  // 1) Load rule
   const rules = await db
     .select()
     .from(cashFlowRules)
@@ -46,20 +46,17 @@ export async function generateReserveSuggestionsFromTransactions(params: {
   const rule = rules[0];
 
   if (!rule) {
-    console.log(`[Reserve] ABORT: No cash flow rule for ownerId=${ownerId}`);
-    return {
-      created: 0,
-      skipped: 0,
-      reason: "No cash flow rule configured",
-    };
+    console.log(`[Reserve] ABORT: No rule`);
+    return { created: 0, skipped: 0 };
   }
 
   const reservePercent = toNumber(rule.reservePercent);
   const minReserveAmount = toNumber(rule.minReserveAmount);
   const maxReserveAmount = toNumber(rule.maxReserveAmount);
-  console.log(`[Reserve] CashFlowRule: reservePercent=${reservePercent}%, minAmount=${minReserveAmount}, maxAmount=${maxReserveAmount}`);
 
-  // 2) Load only this owner's operating accounts
+  console.log(`[Reserve] Rule: ${reservePercent}%`);
+
+  // 2) Operating accounts
   const classifications = await db
     .select({
       bankAccountId: bankAccountClassifications.bankAccountId,
@@ -79,15 +76,11 @@ export async function generateReserveSuggestionsFromTransactions(params: {
   const operatingAccountIds = new Set(
     classifications.map((c) => Number(c.bankAccountId))
   );
-  console.log(`[Reserve] Operating accounts: [${Array.from(operatingAccountIds).join(", ")}]`);
+
+  console.log(`[Reserve] Operating accounts:`, Array.from(operatingAccountIds));
 
   if (operatingAccountIds.size === 0) {
-    console.log(`[Reserve] ABORT: No operating accounts for ownerId=${ownerId}`);
-    return {
-      created: 0,
-      skipped: 0,
-      reason: "No operating accounts classified for this user",
-    };
+    return { created: 0, skipped: 0 };
   }
 
   let created = 0;
@@ -95,44 +88,37 @@ export async function generateReserveSuggestionsFromTransactions(params: {
 
   for (const tx of transactions) {
     const amount = toNumber(tx.amount);
-
-    // support either accountId or bankAccountId
     const bankAccountId = Number(tx.accountId ?? tx.bankAccountId ?? 0);
-
-    // support all possible tx id shapes
     const externalTransactionId =
       tx.externalTransactionId ?? tx.transactionId ?? tx.id ?? null;
 
-    // must have a valid account
-    if (!bankAccountId || Number.isNaN(bankAccountId)) {
-      console.log(`[Reserve] SKIP: Invalid bankAccountId for tx ${externalTransactionId}`);
+    const txType = tx.transactionType;
+
+    // 🔥 FIX REAL (CLAVE)
+    if (txType !== "credit") {
+      console.log(`[Reserve] SKIP non-credit`, txType);
       skipped++;
       continue;
     }
 
-    // only deposits/credits
     if (amount <= 0) {
-      console.log(`[Reserve] SKIP: Non-positive amount ${amount} for account ${bankAccountId}`);
       skipped++;
       continue;
     }
 
-    // only accounts classified as operating for this user
     if (!operatingAccountIds.has(bankAccountId)) {
-      console.log(`[Reserve] SKIP: Account ${bankAccountId} not in operating list`);
       skipped++;
       continue;
     }
 
-    console.log(`[Reserve] PROCESS: Account ${bankAccountId}, Amount ${amount}, TxId ${externalTransactionId}`);
-
-    // duplicate protection: check if we already created a suggestion for this transaction
-    // Note: We don't have externalTransactionId in the schema, so we skip duplicate check for now
-    // In the future, we could add externalTransactionId to the schema for better duplicate detection
+    console.log(`[Reserve] PROCESS`, {
+      bankAccountId,
+      amount,
+      txType,
+    });
 
     let suggestedAmount = (amount * reservePercent) / 100;
 
-    // apply min/max rule
     if (suggestedAmount < minReserveAmount) {
       suggestedAmount = minReserveAmount;
     }
@@ -147,15 +133,19 @@ export async function generateReserveSuggestionsFromTransactions(params: {
       toAccountId: rule.reserveAccountId ?? bankAccountId,
       suggestedAmount: suggestedAmount.toFixed(2) as any,
       status: "suggested",
-      reason: `Auto reserve suggestion from deposit${tx.name ? `: ${tx.name}` : ""}`,
-      // transactionId will be populated when the transaction is imported
+      reason: `Auto reserve`,
     });
 
-    console.log(`[Reserve] CREATED: Suggestion for ${suggestedAmount} from account ${bankAccountId}`);
+    console.log(`[Reserve] CREATED`, {
+      amount,
+      suggestedAmount,
+    });
+
     created++;
   }
 
   console.log(`[Reserve] COMPLETE: created=${created}, skipped=${skipped}`);
+
   return {
     created,
     skipped,
