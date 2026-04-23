@@ -1869,6 +1869,7 @@ export const reserveTransferSuggestions = mysqlTable(
     status: mysqlEnum("status", ["suggested", "approved", "completed", "dismissed", "failed"]).default("suggested").notNull(),
     reason: varchar("reason", { length: 255 }),
     transactionId: int("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
+    externalTransactionId: varchar("external_transaction_id", { length: 255 }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at"),
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
@@ -1879,6 +1880,7 @@ export const reserveTransferSuggestions = mysqlTable(
     fromIdx: index("reserve_transfer_suggestions_from_idx").on(table.fromAccountId),
     toIdx: index("reserve_transfer_suggestions_to_idx").on(table.toAccountId),
     transactionIdx: index("reserve_transfer_suggestions_transaction_idx").on(table.transactionId),
+    externalTxIdx: index("reserve_transfer_suggestions_external_tx_idx").on(table.ownerId, table.externalTransactionId),
   })
 );
 export type ReserveTransferSuggestion = typeof reserveTransferSuggestions.$inferSelect;

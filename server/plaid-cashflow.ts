@@ -85,6 +85,9 @@ export async function generateReserveSuggestionsFromTransactions(params: {
 
   let created = 0;
   let skipped = 0;
+  let skippedDuplicates = 0;
+  let skippedNonCredit = 0;
+  let skippedNonOperating = 0;
 
   for (const tx of transactions) {
     const amount = toNumber(tx.amount);
@@ -94,9 +97,9 @@ export async function generateReserveSuggestionsFromTransactions(params: {
 
     const txType = tx.transactionType;
 
-    // 🔥 FIX REAL (CLAVE)
+    // Check if non-credit
     if (txType !== "credit") {
-      console.log(`[Reserve] SKIP non-credit`, txType);
+      skippedNonCredit++;
       skipped++;
       continue;
     }
@@ -107,15 +110,30 @@ export async function generateReserveSuggestionsFromTransactions(params: {
     }
 
     if (!operatingAccountIds.has(bankAccountId)) {
+      skippedNonOperating++;
       skipped++;
       continue;
     }
 
-    console.log(`[Reserve] PROCESS`, {
-      bankAccountId,
-      amount,
-      txType,
-    });
+    // DEDUPLICATION: Check if suggestion already exists for this transaction
+    if (externalTransactionId) {
+      const existingSuggestion = await db
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(
+          and(
+            eq(reserveTransferSuggestions.ownerId, ownerId),
+            eq(reserveTransferSuggestions.reason, `Plaid:${externalTransactionId}`)
+          )
+        )
+        .limit(1);
+
+      if (existingSuggestion.length > 0) {
+        skippedDuplicates++;
+        skipped++;
+        continue;
+      }
+    }
 
     let suggestedAmount = (amount * reservePercent) / 100;
 
@@ -133,22 +151,18 @@ export async function generateReserveSuggestionsFromTransactions(params: {
       toAccountId: rule.reserveAccountId ?? bankAccountId,
       suggestedAmount: suggestedAmount.toFixed(2) as any,
       status: "suggested",
-      reason: `Auto reserve`,
-    });
-
-    console.log(`[Reserve] CREATED`, {
-      amount,
-      suggestedAmount,
+      reason: externalTransactionId ? `Plaid:${externalTransactionId}` : `Auto reserve`,
     });
 
     created++;
   }
 
-  console.log(`[Reserve] COMPLETE: created=${created}, skipped=${skipped}`);
+  console.log(`[Reserve] COMPLETE: created=${created}, skipped=${skipped}, duplicates=${skippedDuplicates}, nonCredit=${skippedNonCredit}, nonOperating=${skippedNonOperating}`);
 
   return {
     created,
     skipped,
+    skippedDuplicates,
     reservePercent,
   };
 }
