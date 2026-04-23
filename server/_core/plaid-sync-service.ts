@@ -161,11 +161,6 @@ export async function syncPlaidTransactionsForItem(params: {
         )
         .limit(1);
 
-      if (existing.length > 0) {
-        console.log('[Sync SKIP] Already imported:', tx.transaction_id);
-        continue;
-      }
-
       // Plaid:
       // amount > 0 => expense/debit
       // amount < 0 => income/credit
@@ -178,6 +173,33 @@ export async function syncPlaidTransactionsForItem(params: {
 
       const transactionType = rawAmount < 0 ? 'credit' : 'debit';
       const normalizedAmount = Math.abs(rawAmount);
+
+      if (existing.length > 0) {
+        console.log('[Sync EXISTING] checking reuse for reserve', {
+          plaidTransactionId: tx.transaction_id,
+          rawAmount,
+        });
+
+        // Reutilizar solo si es crédito/ingreso para evaluación de reserve
+        if (rawAmount < 0) {
+          importedTransactions.push({
+            accountId: localBankAccountId,
+            amount: normalizedAmount,
+            transactionType: 'credit',
+            name: tx.name ?? '',
+            externalTransactionId: tx.transaction_id,
+            date: tx.authorized_date || tx.date || null,
+          });
+
+          console.log('[Sync REUSED CREDIT]', {
+            plaidTransactionId: tx.transaction_id,
+            bankAccountId: localBankAccountId,
+            amount: normalizedAmount,
+          });
+        }
+
+        continue;
+      }
 
       await db.insert(transactionImports).values({
         bankAccountId: localBankAccountId,
