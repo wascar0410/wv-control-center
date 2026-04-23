@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
-import { bankAccounts } from "../../drizzle/schema";
+import { bankAccounts, reserveTransferSuggestions } from "../../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
@@ -72,7 +72,7 @@ export const walletRouter = router({
    */
   getWalletSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
-      let result = await getWalletSummaryFromDb(ctx.user.id);
+      const result = await getWalletSummaryFromDb(ctx.user.id);
 
       if (!result) {
         const wallet = await getOrCreateWallet(ctx.user.id);
@@ -426,7 +426,7 @@ export const walletRouter = router({
       }
     }),
 
-/**
+  /**
    * Partner wallet summary
    */
   getPartnerSummary: protectedProcedure.query(async ({ ctx }) => {
@@ -485,7 +485,6 @@ export const walletRouter = router({
     }
   }),
 
-
   normalizeLegacyPendingWithdrawals: protectedProcedure
     .input(
       z.object({
@@ -519,10 +518,7 @@ export const walletRouter = router({
         });
       }
     }),
-  
-  /**
-   * Wallet stats
-   */
+
   /**
    * Auto Reserve System - Consolidated endpoints
    */
@@ -531,7 +527,6 @@ export const walletRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      const { reserveTransferSuggestions } = await import("../../drizzle/schema");
       const suggestions = await db
         .select()
         .from(reserveTransferSuggestions)
@@ -566,21 +561,12 @@ export const walletRouter = router({
   }),
 
   dismissReserveSuggestion: protectedProcedure
-    .input((val) => {
-      if (typeof val !== "object" || val === null) throw new Error("Invalid input");
-      const obj = val as Record<string, unknown>;
-      if (typeof obj.suggestionId !== "number") throw new Error("suggestionId must be a number");
-      return { suggestionId: obj.suggestionId };
-    })
+    .input(z.object({ suggestionId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       try {
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        const { reserveTransferSuggestions } = await import("../../drizzle/schema");
-        const { and } = await import("drizzle-orm");
-
-        // Verify ownership
         const suggestion = await db
           .select()
           .from(reserveTransferSuggestions)
@@ -594,7 +580,6 @@ export const walletRouter = router({
           });
         }
 
-        // Update status to dismissed
         await db
           .update(reserveTransferSuggestions)
           .set({ status: "dismissed", updatedAt: new Date() })
@@ -621,7 +606,6 @@ export const walletRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Verify ownership
         const suggestion = await db
           .select()
           .from(reserveTransferSuggestions)
@@ -635,13 +619,12 @@ export const walletRouter = router({
           });
         }
 
-        // Update status to completed
         await db
           .update(reserveTransferSuggestions)
-          .set({ 
-            status: "completed", 
+          .set({
+            status: "completed",
             completedAt: new Date(),
-            updatedAt: new Date() 
+            updatedAt: new Date(),
           })
           .where(eq(reserveTransferSuggestions.id, input.suggestionId));
 
@@ -664,7 +647,6 @@ export const walletRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Get wallet balance
       let walletRaw = await getWalletByDriverId(ctx.user.id);
       if (!walletRaw) {
         walletRaw = await getOrCreateWallet(ctx.user.id);
@@ -672,7 +654,6 @@ export const walletRouter = router({
       const wallet = safeWallet(walletRaw);
       const availableBalance = wallet?.availableBalance ?? 0;
 
-      // Get reserved pending (suggested + approved)
       const suggestions = await db
         .select()
         .from(reserveTransferSuggestions)
@@ -709,7 +690,6 @@ export const walletRouter = router({
         const db = await getDb();
         if (!db) throw new Error("Database not available");
 
-        // Get wallet balance
         let walletRaw = await getWalletByDriverId(ctx.user.id);
         if (!walletRaw) {
           walletRaw = await getOrCreateWallet(ctx.user.id);
@@ -717,7 +697,6 @@ export const walletRouter = router({
         const wallet = safeWallet(walletRaw);
         const availableBalance = wallet?.availableBalance ?? 0;
 
-        // Get reserved pending
         const suggestions = await db
           .select()
           .from(reserveTransferSuggestions)
@@ -736,8 +715,8 @@ export const walletRouter = router({
           reservedPending,
           withdrawable,
           requestedAmount: input.amount,
-          reason: !isAllowed 
-            ? input.amount > withdrawable 
+          reason: !isAllowed
+            ? input.amount > withdrawable
               ? "Insufficient withdrawable balance (some funds are reserved)"
               : "Invalid amount"
             : undefined,
@@ -772,7 +751,6 @@ export const walletRouter = router({
 
         const events: any[] = [];
 
-        // 1. Get wallet transactions (deposits, withdrawals, adjustments)
         let wallet = await getWalletByDriverId(ctx.user.id);
         if (!wallet) {
           wallet = await getOrCreateWallet(ctx.user.id);
@@ -783,7 +761,12 @@ export const walletRouter = router({
           events.push(
             ...walletTxns.map((t: any) => ({
               id: `wallet-${t.id}`,
-              type: t.type === "deposit" ? "Deposit" : t.type === "withdrawal" ? "Withdrawal" : "Adjustment",
+              type:
+                t.type === "deposit"
+                  ? "Deposit"
+                  : t.type === "withdrawal"
+                    ? "Withdrawal"
+                    : "Adjustment",
               amount: toNumber(t.amount),
               description: t.description,
               date: t.createdAt,
@@ -792,7 +775,6 @@ export const walletRouter = router({
           );
         }
 
-        // 2. Get reserve suggestions (created, completed, dismissed)
         const suggestions = await db
           .select()
           .from(reserveTransferSuggestions)
@@ -817,7 +799,6 @@ export const walletRouter = router({
           })
         );
 
-        // 3. Get bank account connections/disconnections
         const accounts = await db
           .select()
           .from(bankAccounts)
@@ -834,14 +815,12 @@ export const walletRouter = router({
           }))
         );
 
-        // Sort by date descending
         events.sort((a, b) => {
           const dateA = new Date(a.date).getTime();
           const dateB = new Date(b.date).getTime();
           return dateB - dateA;
         });
 
-        // Apply pagination
         const paginated = events.slice(input.offset, input.offset + input.limit);
 
         return {
