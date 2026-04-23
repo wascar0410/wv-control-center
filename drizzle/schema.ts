@@ -1838,6 +1838,8 @@ export const cashFlowRules = mysqlTable(
     maxReserveAmount: decimal("max_reserve_amount", { precision: 12, scale: 2 }).default("999999.99"),
     autoTransferEnabled: boolean("auto_transfer_enabled").default(false),
     autoTransferDay: int("auto_transfer_day"), // Day of month (1-31) for auto transfer
+    autoTransferTime: varchar("auto_transfer_time", { length: 5 }).default("09:00"), // HH:MM format
+    lastAutoTransferAt: timestamp("last_auto_transfer_at"),
     operatingAccountId: int("operating_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
     reserveAccountId: int("reserve_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -1881,3 +1883,31 @@ export const reserveTransferSuggestions = mysqlTable(
 );
 export type ReserveTransferSuggestion = typeof reserveTransferSuggestions.$inferSelect;
 export type InsertReserveTransferSuggestion = typeof reserveTransferSuggestions.$inferInsert;
+
+/**
+ * Auto Transfer Logs - Track auto transfer execution history
+ */
+export const autoTransferLogs = mysqlTable(
+  "auto_transfer_logs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ownerId: int("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    cashFlowRuleId: int("cash_flow_rule_id").notNull().references(() => cashFlowRules.id, { onDelete: "cascade" }),
+    status: mysqlEnum("status", ["success", "failed", "skipped"]).notNull(),
+    amount: decimal("amount", { precision: 12, scale: 2 }),
+    reason: varchar("reason", { length: 255 }),
+    error: text("error"),
+    fromAccountId: int("from_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
+    toAccountId: int("to_account_id").references(() => bankAccounts.id, { onDelete: "set null" }),
+    executedAt: timestamp("executed_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    ownerIdx: index("auto_transfer_logs_owner_idx").on(table.ownerId),
+    ruleIdx: index("auto_transfer_logs_rule_idx").on(table.cashFlowRuleId),
+    statusIdx: index("auto_transfer_logs_status_idx").on(table.status),
+    executedIdx: index("auto_transfer_logs_executed_idx").on(table.executedAt),
+  })
+);
+export type AutoTransferLog = typeof autoTransferLogs.$inferSelect;
+export type InsertAutoTransferLog = typeof autoTransferLogs.$inferInsert;

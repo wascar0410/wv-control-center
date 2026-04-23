@@ -1733,3 +1733,44 @@
 - [x] Checkpoint y entrega
 
 **ESTADO FINAL:** ✅ Webhook de Plaid OPERATIVO - Sincronización automática en tiempo real
+
+
+## Fase 38: Auto-Transfer Scheduling (EN PROGRESO)
+
+### Backend - Schema
+- [x] Crear tabla autoTransferSchedules (userId, enabled, dayOfWeek, time, lastExecutedAt)
+- [x] Crear tabla autoTransferLogs (userId, scheduledId, status, amount, executedAt, error)
+
+### Backend - Endpoints
+- [x] banking.getAutoTransferSchedule - obtener configuración actual
+- [x] banking.setAutoTransferSchedule - guardar configuración (día, hora, enabled)
+- [x] banking.getAutoTransferLogs - historial de ejecuciones
+- [x] banking.executeAutoTransfer - ejecutar transferencia manualmente
+
+### Backend - Job Scheduler
+- [ ] Crear scheduler que verifica cada minuto si hay transferencias programadas
+- [ ] Validar que no hay reservas pendientes antes de ejecutar
+- [ ] Ejecutar transferencia de reserva si condiciones se cumplen
+- [ ] Registrar resultado en autoTransferLogs
+- [ ] Notificar al usuario si transferencia fue exitosa/fallida
+
+### Frontend - UI (BankingCashFlow.tsx)
+- [ ] Agregar AutoTransferScheduleCard
+- [ ] Toggle para habilitar/deshabilitar auto-transfer
+- [ ] Selector de día de semana (Lunes-Domingo)
+- [ ] Selector de hora (00:00 - 23:59)
+- [ ] Mostrar última ejecución
+- [ ] Botón para ejecutar manualmente
+- [ ] Historial de últimas 5 ejecuciones
+
+### Validación
+- [ ] No ejecutar si hay reservas pendientes
+- [ ] No ejecutar si balance < monto a transferir
+- [ ] Validar que no se ejecute más de una vez por día
+- [ ] Registrar todos los intentos (exitosos y fallidos)
+
+### Testing & Validation
+- [ ] Tests para scheduler
+- [ ] Tests para validación de condiciones
+- [ ] Tests para logging
+- [ ] Checkpoint y entrega

@@ -41,6 +41,7 @@ import { alertsAndTasksRouter } from "./routers/alertsAndTasks";
 import { companyRouter } from "./routers/company";
 import { financialRouter } from "./routers/financial";
 import { financialExtendedRouter } from "./routers/financialExtended";
+import { bankingAutoTransferRouter } from "./routers/banking-auto-transfer";
 import {
   getRateLimitStats,
   resetRateLimitForHost,
@@ -2494,6 +2495,9 @@ const bankingRouter = router({
       
       return { success: true, suggestionId: input.suggestionId };
     }),
+
+  // Auto-transfer scheduling endpoints
+  ...bankingAutoTransferRouter._def.procedures,
 });
 
 // ─── App Router ───────────────────────────────────────────────────────────────
