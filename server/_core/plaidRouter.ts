@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, publicProcedure, router } from "./trpc";
+import { protectedProcedure, router } from "./trpc";
 import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
 import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
 import {
@@ -10,32 +10,47 @@ import {
   deactivateBankAccount,
   getDb,
 } from "../db";
-import { createLinkToken as createPlaidLinkToken, exchangePublicToken, getAccounts } from "./plaid";
+import {
+  createLinkToken as createPlaidLinkToken,
+  exchangePublicToken,
+  getAccounts,
+} from "./plaid";
 import { bankAccountClassifications } from "../../drizzle/schema";
 
-
 export const plaidRouter = router({
-  createLinkToken: publicProcedure
+  createLinkToken: protectedProcedure
     .input(z.object({ redirectUri: z.string().optional() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         console.log("[Plaid] createLinkToken input:", {
+          userId: ctx.user.id,
           redirectUri: input.redirectUri,
           clientId: process.env.PLAID_CLIENT_ID ? "***" : "MISSING",
           environment: process.env.PLAID_ENV,
         });
 
-        // Generate a unique user ID for this session
-        const sessionUserId = Math.floor(Math.random() * 1000000);
-        
-        // Call real Plaid API to create link token
-        const linkToken = await createPlaidLinkToken(sessionUserId, input.redirectUri);
-        console.log("[Plaid] createLinkToken response:", { linkToken });
-        
+        const linkToken = await createPlaidLinkToken(
+          ctx.user.id,
+          input.redirectUri
+        );
+
+        console.log("[Plaid] createLinkToken response:", {
+          linkToken:
+            typeof linkToken === "string"
+              ? `${linkToken.slice(0, 20)}...`
+              : "invalid",
+        });
+
         return { linkToken };
       } catch (err) {
         console.error("[Plaid] createLinkToken error:", err);
-        throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to create Plaid link token",
+        });
       }
     }),
 
@@ -48,101 +63,128 @@ export const plaidRouter = router({
           userId: ctx.user.id,
         });
 
-        // Step 1: Exchange public token for access token
-        console.log("[Plaid] Step 1: Calling exchangePublicToken");
-        const { accessToken, itemId } = await exchangePublicToken(input.publicToken);
-        console.log("[Plaid] Step 1 SUCCESS:", { itemId });
-        
-        // Step 2: Get accounts from Plaid
-        console.log("[Plaid] Step 2: Calling getAccounts with accessToken");
+        const { accessToken, itemId } = await exchangePublicToken(
+          input.publicToken
+        );
+
+        console.log("[Plaid] exchangePublicToken SUCCESS:", { itemId });
+
         const accounts = await getAccounts(accessToken);
-        console.log("[Plaid] Step 2 SUCCESS:", { 
-          accountCount: accounts.length, 
-          accounts: accounts.map((a: any) => ({ 
-            id: a.account_id, 
-            name: a.name, 
+
+        console.log("[Plaid] getAccounts SUCCESS:", {
+          accountCount: accounts.length,
+          accounts: accounts.map((a: any) => ({
+            id: a.account_id,
+            name: a.name,
             subtype: a.subtype,
-            mask: a.mask
-          })) 
+            mask: a.mask,
+          })),
         });
-        
-        // Step 3: Create bank account entries for each account
-        console.log("[Plaid] Step 3: Creating bank account entries");
-        const createdAccounts = [];
+
+        const createdAccounts: Array<{ id: number; name: string }> = [];
         let isFirstAccount = true;
-        
+
         for (const account of accounts) {
           try {
-            console.log("[Plaid] Creating bank account for:", { 
-              accountId: account.account_id, 
+            console.log("[Plaid] Creating bank account:", {
+              accountId: account.account_id,
               name: account.name,
               subtype: account.subtype,
-              mask: account.mask
+              mask: account.mask,
+              plaidItemId: itemId,
             });
-            
-            // Verification log before insert
-            console.log("[DEBUG] saving plaidItemId:", itemId);
-            
+
             const bankAccountData = {
               userId: ctx.user.id,
               bankName: account.name || "Unknown Bank",
-              accountType: (account.subtype as "checking" | "savings" | "credit_card" | "other") || "other",
+              accountType:
+                (account.subtype as
+                  | "checking"
+                  | "savings"
+                  | "credit_card"
+                  | "other") || "other",
               accountLast4: account.mask || "0000",
               plaidAccountId: account.account_id,
               plaidAccessToken: accessToken,
               plaidItemId: itemId,
               isActive: true,
             };
-            
+
             const result = await createBankAccount(bankAccountData);
-            
-            console.log("[Plaid] Bank account created SUCCESS:", { insertId: result.insertId });
-            createdAccounts.push({ id: result.insertId, name: account.name });
-            
-            // Auto-classify first account as 'operating'
+
+            console.log("[Plaid] createBankAccount SUCCESS:", {
+              insertId: result.insertId,
+            });
+
+            createdAccounts.push({
+              id: result.insertId,
+              name: account.name || "Unknown Bank",
+            });
+
             if (isFirstAccount) {
               try {
-                console.log("[Plaid] Auto-classifying first account as 'operating'", { bankAccountId: result.insertId });
                 const db = await getDb();
                 if (db) {
-                  await db.insert(bankAccountClassifications).values({
-                    bankAccountId: result.insertId,
-                    classification: "operating",
-                    label: "Operating Account",
-                    description: "Auto-classified as first connected account",
-                    isActive: true,
-                  }).onDuplicateKeyUpdate({
-                    set: { classification: "operating" }
-                  });
+                  console.log(
+                    "[Plaid] Auto-classifying first account as operating:",
+                    { bankAccountId: result.insertId }
+                  );
+
+                  await db
+                    .insert(bankAccountClassifications)
+                    .values({
+                      bankAccountId: result.insertId,
+                      classification: "operating",
+                      label: "Operating Account",
+                      description: "Auto-classified as first connected account",
+                      isActive: true,
+                    })
+                    .onDuplicateKeyUpdate({
+                      set: {
+                        classification: "operating",
+                        label: "Operating Account",
+                        description:
+                          "Auto-classified as first connected account",
+                        isActive: true,
+                      },
+                    });
+
                   console.log("[Plaid] Auto-classification SUCCESS");
                 }
               } catch (classErr) {
-                console.error("[Plaid] Error auto-classifying account:", classErr);
-                // Don't fail the whole flow if classification fails
+                console.error(
+                  "[Plaid] Auto-classification error (non-fatal):",
+                  classErr
+                );
               }
+
               isFirstAccount = false;
             }
           } catch (accountErr) {
             console.error("[Plaid] Error creating bank account:", accountErr);
           }
         }
-        
-        console.log("[Plaid] exchangeToken FINAL RESULT:", { 
-          success: true, 
-          accountCount: createdAccounts.length, 
+
+        console.log("[Plaid] exchangeToken COMPLETE:", {
+          success: true,
+          itemId,
+          accountCount: createdAccounts.length,
           createdAccounts,
-          itemId
         });
-        
-        return { 
-          success: true, 
-          accountCount: createdAccounts.length, 
-          itemId, 
-          accessToken
+
+        return {
+          success: true,
+          accountCount: createdAccounts.length,
+          createdAccounts,
+          itemId,
         };
       } catch (err) {
         console.error("[Plaid] exchangeToken FAILED:", err);
-        throw err;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            err instanceof Error ? err.message : "Failed to exchange token",
+        });
       }
     }),
 
@@ -159,35 +201,52 @@ export const plaidRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         console.log("[Sync] input:", input);
-        console.log("[Sync] ctx.user:", ctx.user);
-
-        if (!ctx.user) {
-          throw new Error("User not authenticated in syncTransactions");
-        }
+        console.log("[Sync] ctx.user:", { id: ctx.user.id, role: ctx.user.role });
 
         const account = await getBankAccountById(input.bankAccountId);
         console.log("[Sync] account:", account);
 
         if (!account) {
-          throw new Error("Bank account not found");
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Bank account not found",
+          });
+        }
+
+        if (Number(account.userId) !== Number(ctx.user.id)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Unauthorized: account does not belong to user",
+          });
         }
 
         if (!account.plaidItemId) {
-          throw new Error("Account has no plaidItemId");
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Account has no plaidItemId",
+          });
         }
 
-        console.log("[Sync] Starting syncPlaidTransactionsForItem with itemId:", account.plaidItemId);
+        console.log(
+          "[Sync] Starting syncPlaidTransactionsForItem with itemId:",
+          account.plaidItemId
+        );
+
         const syncResult = await syncPlaidTransactionsForItem({
           userId: ctx.user.id,
           itemId: account.plaidItemId,
         });
-        console.log("[Sync] syncResult:", syncResult);
 
+        console.log("[Sync] syncResult:", syncResult);
         console.log("[Sync] Starting generateReserveSuggestionsFromTransactions");
-        const suggestionResult = await generateReserveSuggestionsFromTransactions({
-          ownerId: ctx.user.id,
-          transactions: syncResult.importedTransactions,
-        });
+
+        const suggestionResult = await generateReserveSuggestionsFromTransactions(
+          {
+            ownerId: ctx.user.id,
+            transactions: syncResult.importedTransactions,
+          }
+        );
+
         console.log("[Sync] suggestionResult:", suggestionResult);
 
         return {
@@ -200,13 +259,21 @@ export const plaidRouter = router({
         };
       } catch (err) {
         console.error("[Sync ERROR]:", err);
-        throw err;
+
+        if (err instanceof TRPCError) throw err;
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to sync transactions",
+        });
       }
     }),
 
   /**
    * Get sync status for a bank account.
-   * hasCursor = true means at least one sync has been completed.
    */
   getSyncStatus: protectedProcedure
     .input(
@@ -214,16 +281,28 @@ export const plaidRouter = router({
         bankAccountId: z.number(),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const account = await getBankAccountById(input.bankAccountId);
 
       if (!account) {
-        throw new Error("Account not found");
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Account not found",
+        });
       }
 
+      if (Number(account.userId) !== Number(ctx.user.id)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Unauthorized",
+        });
+      }
+
+      const cursor = (account as any).plaidSyncCursor ?? (account as any).plaidCursor ?? null;
+
       return {
-        hasCursor: !!account.plaidCursor,
-        cursor: account.plaidCursor,
+        hasCursor: !!cursor,
+        cursor,
       };
     }),
 
@@ -232,9 +311,11 @@ export const plaidRouter = router({
    */
   getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
     console.log("[Plaid] getBankAccounts for userId:", ctx.user.id);
-    // getBankAccountsByUserId already filters for isActive=true and plaidItemId IS NOT NULL
+
     const accounts = await getBankAccountsByUserId(ctx.user.id);
+
     console.log("[Plaid] getBankAccounts result:", { count: accounts.length });
+
     return accounts;
   }),
 
@@ -245,24 +326,44 @@ export const plaidRouter = router({
     .input(z.object({ bankAccountId: z.number() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        console.log("[Plaid] removeBankAccount input:", { bankAccountId: input.bankAccountId, userId: ctx.user.id });
-        
-        // Validate ownership: account must belong to current user
+        console.log("[Plaid] removeBankAccount input:", {
+          bankAccountId: input.bankAccountId,
+          userId: ctx.user.id,
+        });
+
         const account = await getBankAccountById(input.bankAccountId);
+
         if (!account) {
-          throw new Error("Bank account not found");
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Bank account not found",
+          });
         }
-        
-        if (account.userId !== ctx.user.id) {
-          throw new Error("Unauthorized: account does not belong to user");
+
+        if (Number(account.userId) !== Number(ctx.user.id)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Unauthorized: account does not belong to user",
+          });
         }
-        
+
         await deactivateBankAccount(input.bankAccountId);
+
         console.log("[Plaid] removeBankAccount SUCCESS");
+
         return { success: true };
       } catch (err) {
         console.error("[Plaid] removeBankAccount error:", err);
-        throw err;
+
+        if (err instanceof TRPCError) throw err;
+
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Failed to remove bank account",
+        });
       }
     }),
 });
