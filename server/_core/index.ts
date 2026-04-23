@@ -17,6 +17,11 @@ import { syncPlaidTransactionsForItem } from "./plaid-sync-service";
 import { generateReserveSuggestionsFromTransactions } from "../plaid-cashflow";
 import { bankAccounts } from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import {
+  verifyPlaidWebhookSignature,
+  handlePlaidWebhook,
+  PlaidWebhookEvent,
+} from "./plaid-webhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -207,10 +212,70 @@ async function startServer() {
     app.use("/api", adaptiveRateLimiter);
   }
 
+// New webhook endpoint section to replace lines 215-293
+// This should be inserted in place of the old app.post("/api/plaid/webhook", ...) block
+
+  // New webhook endpoint with signature verification and improved handler
+  app.post(
+    "/api/webhooks/plaid",
+    express.raw({ type: "application/json" }),
+    async (req, res) => {
+      const timestamp = new Date().toISOString();
+      console.log(`[Plaid Webhook] RECEIVED at ${timestamp}`);
+
+      try {
+        // Get raw body for signature verification
+        const rawBody =
+          typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+        const signature = req.headers["x-plaid-verification-header"] as string;
+
+        // Verify webhook signature if secret is configured
+        const webhookSecret = process.env.PLAID_WEBHOOK_SECRET;
+        if (webhookSecret) {
+          const isValid = verifyPlaidWebhookSignature(
+            rawBody,
+            signature,
+            webhookSecret
+          );
+
+          if (!isValid) {
+            console.error("[Plaid Webhook] Signature verification failed");
+            return res.status(401).json({ error: "Unauthorized" });
+          }
+        } else {
+          console.warn(
+            "[Plaid Webhook] PLAID_WEBHOOK_SECRET not configured - skipping signature verification"
+          );
+        }
+
+        // Parse body
+        let body: PlaidWebhookEvent;
+        if (Buffer.isBuffer(req.body)) {
+          body = JSON.parse(req.body.toString("utf8"));
+        } else if (typeof req.body === "string") {
+          body = JSON.parse(req.body);
+        } else {
+          body = req.body;
+        }
+
+        console.log(`[Plaid Webhook] Event: ${body.webhook_type}/${body.webhook_code}`);
+
+        // Handle webhook event using new handler
+        await handlePlaidWebhook(body);
+
+        return res.json({ received: true });
+      } catch (err) {
+        console.error("[Plaid Webhook] Error:", err);
+        // Always return 200 to acknowledge receipt
+        return res.status(200).json({ received: false, error: String(err) });
+      }
+    }
+  );
+
+  // Legacy endpoint for backward compatibility
   app.post("/api/plaid/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     const timestamp = new Date().toISOString();
-    console.log(`[Plaid Webhook] RECEIVED at ${timestamp}`);
-    console.log(`[Plaid Webhook] Headers:`, req.headers);
+    console.log(`[Plaid Webhook] RECEIVED (legacy) at ${timestamp}`);
     
     try {
       let body: any;

@@ -1698,3 +1698,38 @@
 - [x] Marcar suggestion como completed se refleja en Wallet
 
 **ESTADO FINAL:** Auto Reserve System COMPLETO - Wallet y Banking sincronizados
+
+
+## Fase 37: Webhook de Plaid para Sincronización Automática (COMPLETADA)
+
+### Backend - Webhook Endpoint
+- [x] Crear endpoint POST /api/webhooks/plaid
+- [x] Validar autenticidad del webhook (signature verification)
+- [x] Parsear eventos de Plaid (TRANSACTIONS_UPDATED, ITEM_ERROR, AUTH_REQUIRED, etc.)
+- [x] Logging de eventos para debugging
+
+### Backend - Handler de Eventos
+- [x] TRANSACTIONS_UPDATED: sincronizar transacciones automáticamente
+- [x] Llamar a generateReserveSuggestionsFromTransactions después de sync
+- [x] ITEM_ERROR: registrar y notificar al usuario
+- [x] AUTH_REQUIRED: marcar cuenta como requiriendo re-auth
+- [x] WEBHOOK_UPDATE_ACKNOWLEDGED: confirmar recepción
+
+### Backend - Seguridad
+- [x] Implementar signature verification (HMAC-SHA256)
+- [x] Rate limiting en endpoint webhook
+- [x] Logging de intentos fallidos
+
+### Frontend - UI Updates
+- [x] Mostrar "Auto-syncing..." cuando webhook procesa eventos
+- [x] Actualizar Suggested Transfers en tiempo real
+- [x] Notificar si hay errores de sincronización
+
+### Testing & Validation
+- [x] Simular webhook de Plaid localmente
+- [x] Verificar que transacciones se sincronizan automáticamente
+- [x] Verificar que sugerencias se generan automáticamente
+- [x] Verificar que errores se registran correctamente
+- [x] Checkpoint y entrega
+
+**ESTADO FINAL:** ✅ Webhook de Plaid OPERATIVO - Sincronización automática en tiempo real
