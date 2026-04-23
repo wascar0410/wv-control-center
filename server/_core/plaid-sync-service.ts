@@ -120,6 +120,14 @@ export async function syncPlaidTransactionsForItem(params: {
     );
 
     for (const tx of added) {
+      // DEBUG: Log cada transacción de Plaid
+      console.log('[Sync DEBUG TX]', {
+        plaidTransactionId: tx.transaction_id,
+        amount: tx.amount,
+        name: tx.name,
+        accountId: tx.account_id
+      });
+
       let localBankAccountId = accountIdMap.get(String(tx.account_id));
 
       // fallback útil si solo hay una cuenta local para ese item
@@ -154,6 +162,7 @@ export async function syncPlaidTransactionsForItem(params: {
         .limit(1);
 
       if (existing.length > 0) {
+        console.log('[Sync SKIP] Already imported:', tx.transaction_id);
         continue;
       }
 
@@ -161,9 +170,14 @@ export async function syncPlaidTransactionsForItem(params: {
       // amount > 0 => expense/debit
       // amount < 0 => income/credit
       const rawAmount = Number(tx.amount ?? 0);
-      const isIncome = rawAmount < 0;
+
+      if (!rawAmount || isNaN(rawAmount)) {
+        console.log('[Sync SKIP] invalid amount', tx.transaction_id, tx.amount);
+        continue;
+      }
+
+      const transactionType = rawAmount < 0 ? 'credit' : 'debit';
       const normalizedAmount = Math.abs(rawAmount);
-      const transactionType: "credit" | "debit" = isIncome ? "credit" : "debit";
 
       await db.insert(transactionImports).values({
         bankAccountId: localBankAccountId,
@@ -189,9 +203,12 @@ export async function syncPlaidTransactionsForItem(params: {
         transactionType,
       });
 
-      console.log(
-        `[Sync] IMPORTED: Account ${localBankAccountId}, Raw ${rawAmount}, Normalized ${normalizedAmount}, Type ${transactionType}, TxId ${tx.transaction_id}`
-      );
+      console.log('[Sync PUSHED]', {
+        amount: normalizedAmount,
+        transactionType,
+        bankAccountId: localBankAccountId,
+        plaidTransactionId: tx.transaction_id
+      });
 
       imported++;
     }
@@ -202,6 +219,8 @@ export async function syncPlaidTransactionsForItem(params: {
     cursor = data.next_cursor ?? cursor;
     hasMore = Boolean(data.has_more);
   }
+
+  console.log('[Sync FINAL COUNT]', importedTransactions.length);
 
   console.log(
     `[Sync] COMPLETE: imported=${imported}, modified=${modified}, removed=${removed}, totalImportedTxs=${importedTransactions.length}`
@@ -233,6 +252,8 @@ export async function syncPlaidTransactionsForItem(params: {
     hasMore: false,
     cursor,
   });
+
+  console.log('[Sync] About to return result with', importedTransactions.length, 'transactions');
 
   return {
     importedTransactions,
