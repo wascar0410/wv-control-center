@@ -23,6 +23,16 @@ function toDate(value?: string | null) {
   return new Date(`${value}T00:00:00`);
 }
 
+function emptyResult(): SyncResult {
+  return {
+    importedTransactions: [],
+    imported: 0,
+    modified: 0,
+    removed: 0,
+    hasMore: false,
+  };
+}
+
 export async function syncPlaidTransactionsForItem(params: {
   userId: number;
   itemId: string;
@@ -48,21 +58,32 @@ export async function syncPlaidTransactionsForItem(params: {
   );
 
   if (!validAccounts.length) {
-    console.log("[Plaid Sync] No accounts matched user/item");
+    console.log(
+      "[Plaid Sync] No bank accounts matched user/item",
+      JSON.stringify({ userId, itemId })
+    );
     return emptyResult();
   }
 
   const firstAccount: any = validAccounts[0];
-  const accessToken = firstAccount.plaidAccessToken;
+  const accessToken =
+    firstAccount.plaidAccessToken ??
+    firstAccount.accessToken ??
+    firstAccount.plaid_access_token;
 
   if (!accessToken) {
-    throw new Error("Missing accessToken");
+    throw new Error(
+      `[Plaid Sync] Missing access token for item ${itemId} / user ${userId}`
+    );
   }
 
-  let cursor = firstAccount.plaidSyncCursor ?? null;
+  let cursor =
+    firstAccount.plaidSyncCursor ??
+    firstAccount.syncCursor ??
+    firstAccount.plaid_sync_cursor ??
+    null;
 
   const accountIdMap = new Map<string, number>();
-
   for (const account of validAccounts as any[]) {
     if (account.plaidAccountId) {
       accountIdMap.set(String(account.plaidAccountId), Number(account.id));
@@ -86,20 +107,38 @@ export async function syncPlaidTransactionsForItem(params: {
 
     const data: any = response.data;
     const added = data.added || [];
+    const changed = data.modified || [];
+    const deleted = data.removed || [];
 
-    console.log("[Sync DEBUG] Plaid account_ids:", added.map((t: any) => t.account_id));
+    console.log(
+      `[Sync] Batch: added=${added.length}, modified=${changed.length}, removed=${deleted.length}, hasMore=${Boolean(data.has_more)}`
+    );
+
+    console.log(
+      "[Sync DEBUG] Plaid account_ids in batch:",
+      added.map((t: any) => t.account_id)
+    );
 
     for (const tx of added) {
       let localBankAccountId = accountIdMap.get(String(tx.account_id));
 
-      // 🔥 FIX CRÍTICO: fallback si no hay match
+      // fallback útil si solo hay una cuenta local para ese item
       if (!localBankAccountId && validAccounts.length === 1) {
-        localBankAccountId = validAccounts[0].id;
-        console.log("[Sync FIX] Using fallback account:", localBankAccountId);
+        localBankAccountId = Number(validAccounts[0].id);
+        console.log(
+          "[Sync FIX] Fallback account match:",
+          tx.transaction_id,
+          "->",
+          localBankAccountId
+        );
       }
 
       if (!localBankAccountId) {
-        console.log("[Sync ERROR] No match for account_id:", tx.account_id);
+        console.log(
+          "[Plaid Sync] Skipping tx, no local bank account match",
+          tx.transaction_id,
+          tx.account_id
+        );
         continue;
       }
 
@@ -114,33 +153,67 @@ export async function syncPlaidTransactionsForItem(params: {
         )
         .limit(1);
 
-      if (existing.length > 0) continue;
+      if (existing.length > 0) {
+        continue;
+      }
 
-      const amount = Number(tx.amount ?? 0);
+      // Plaid:
+      // amount > 0 => expense/debit
+      // amount < 0 => income/credit
+      const rawAmount = Number(tx.amount ?? 0);
+      const isIncome = rawAmount < 0;
+      const normalizedAmount = Math.abs(rawAmount);
+      const transactionType: "credit" | "debit" = isIncome ? "credit" : "debit";
 
       await db.insert(transactionImports).values({
         bankAccountId: localBankAccountId,
         transactionId: null,
         externalTransactionId: tx.transaction_id,
-        amount,
+        amount: normalizedAmount,
         description: tx.name ?? "",
-        transactionType: amount > 0 ? "expense" : "income",
+        transactionType,
         transactionDate: toDate(tx.date),
-        category: "plaid",
+        category: tx.personal_finance_category?.primary
+          ? String(tx.personal_finance_category.primary)
+          : "other",
         isMatched: 0,
         importedAt: new Date(),
       });
 
+      importedTransactions.push({
+        accountId: localBankAccountId,
+        amount: normalizedAmount,
+        name: tx.name ?? "",
+        date: tx.date ?? null,
+        externalTransactionId: tx.transaction_id,
+        transactionType,
+      });
+
+      console.log(
+        `[Sync] IMPORTED: Account ${localBankAccountId}, Raw ${rawAmount}, Normalized ${normalizedAmount}, Type ${transactionType}, TxId ${tx.transaction_id}`
+      );
+
       imported++;
     }
 
+    modified += changed.length;
+    removed += deleted.length;
+
     cursor = data.next_cursor ?? cursor;
     hasMore = Boolean(data.has_more);
-
-    console.log(`[Sync] Batch: added=${added.length}, hasMore=${hasMore}`);
   }
 
-  // guardar cursor
+  console.log(
+    `[Sync] COMPLETE: imported=${imported}, modified=${modified}, removed=${removed}, totalImportedTxs=${importedTransactions.length}`
+  );
+
+  console.log(
+    "[Sync] ImportedTransactions summary:",
+    importedTransactions
+      .map((t) => `[Account ${t.accountId}: ${t.transactionType} ${t.amount}]`)
+      .join(", ")
+  );
+
   for (const account of validAccounts as any[]) {
     await db
       .update(bankAccounts)
@@ -151,23 +224,21 @@ export async function syncPlaidTransactionsForItem(params: {
       .where(eq(bankAccounts.id, account.id));
   }
 
-  console.log(`[Sync COMPLETE] imported=${imported}`);
+  console.log("[Plaid Sync] Completed", {
+    itemId,
+    userId,
+    imported,
+    modified,
+    removed,
+    hasMore: false,
+    cursor,
+  });
 
   return {
     importedTransactions,
     imported,
     modified,
     removed,
-    hasMore: false,
-  };
-}
-
-function emptyResult(): SyncResult {
-  return {
-    importedTransactions: [],
-    imported: 0,
-    modified: 0,
-    removed: 0,
     hasMore: false,
   };
 }
