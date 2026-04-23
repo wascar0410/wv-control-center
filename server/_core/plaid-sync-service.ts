@@ -33,7 +33,6 @@ export async function syncPlaidTransactionsForItem(params: {
   const { userId, itemId } = params;
   console.log(`[Sync] START: userId=${userId}, itemId=${itemId}`);
 
-  // Busca cuentas de este item
   const accounts = await db
     .select()
     .from(bankAccounts)
@@ -41,59 +40,36 @@ export async function syncPlaidTransactionsForItem(params: {
 
   if (!accounts.length) {
     console.log("[Plaid Sync] No bank accounts found for item", itemId);
-    return {
-      importedTransactions: [],
-      imported: 0,
-      modified: 0,
-      removed: 0,
-      hasMore: false,
-    };
+    return emptyResult();
   }
 
-  // Validación mínima: las cuentas deben pertenecer al usuario esperado
   const validAccounts = accounts.filter(
     (a: any) => Number(a.userId) === Number(userId)
   );
 
   if (!validAccounts.length) {
-    console.log(
-      "[Plaid Sync] No bank accounts matched user/item",
-      JSON.stringify({ userId, itemId })
-    );
-    return {
-      importedTransactions: [],
-      imported: 0,
-      modified: 0,
-      removed: 0,
-      hasMore: false,
-    };
+    console.log("[Plaid Sync] No accounts matched user/item");
+    return emptyResult();
   }
 
-  // Normalmente un item comparte access token y cursor
   const firstAccount: any = validAccounts[0];
-  const accessToken =
-    firstAccount.plaidAccessToken ??
-    firstAccount.accessToken ??
-    firstAccount.plaid_access_token;
+  const accessToken = firstAccount.plaidAccessToken;
 
   if (!accessToken) {
-    throw new Error(
-      `[Plaid Sync] Missing access token for item ${itemId} / user ${userId}`
-    );
+    throw new Error("Missing accessToken");
   }
 
-  let cursor =
-    firstAccount.plaidSyncCursor ??
-    firstAccount.syncCursor ??
-    firstAccount.plaid_sync_cursor ??
-    null;
+  let cursor = firstAccount.plaidSyncCursor ?? null;
 
   const accountIdMap = new Map<string, number>();
+
   for (const account of validAccounts as any[]) {
     if (account.plaidAccountId) {
       accountIdMap.set(String(account.plaidAccountId), Number(account.id));
     }
   }
+
+  console.log("[Sync DEBUG] Local account map:", [...accountIdMap.entries()]);
 
   const importedTransactions: SyncResult["importedTransactions"] = [];
   let imported = 0;
@@ -110,21 +86,23 @@ export async function syncPlaidTransactionsForItem(params: {
 
     const data: any = response.data;
     const added = data.added || [];
-    const changed = data.modified || [];
-    const deleted = data.removed || [];
+
+    console.log("[Sync DEBUG] Plaid account_ids:", added.map((t: any) => t.account_id));
 
     for (const tx of added) {
-      const localBankAccountId = accountIdMap.get(String(tx.account_id));
+      let localBankAccountId = accountIdMap.get(String(tx.account_id));
+
+      // 🔥 FIX CRÍTICO: fallback si no hay match
+      if (!localBankAccountId && validAccounts.length === 1) {
+        localBankAccountId = validAccounts[0].id;
+        console.log("[Sync FIX] Using fallback account:", localBankAccountId);
+      }
 
       if (!localBankAccountId) {
-        console.log(
-          "[Plaid Sync] Skipping tx, no local bank account match",
-          tx.transaction_id
-        );
+        console.log("[Sync ERROR] No match for account_id:", tx.account_id);
         continue;
       }
 
-      // Evitar duplicados por externalTransactionId
       const existing = await db
         .select()
         .from(transactionImports)
@@ -136,9 +114,7 @@ export async function syncPlaidTransactionsForItem(params: {
         )
         .limit(1);
 
-      if (existing.length > 0) {
-        continue;
-      }
+      if (existing.length > 0) continue;
 
       const amount = Number(tx.amount ?? 0);
 
@@ -148,79 +124,50 @@ export async function syncPlaidTransactionsForItem(params: {
         externalTransactionId: tx.transaction_id,
         amount,
         description: tx.name ?? "",
-        transactionType: amount > 0 ? "credit" : "debit",
+        transactionType: amount > 0 ? "expense" : "income",
         transactionDate: toDate(tx.date),
-        category:
-          Array.isArray(tx.personal_finance_category?.primary)
-            ? String(tx.personal_finance_category.primary)
-            : "other",
+        category: "plaid",
         isMatched: 0,
         importedAt: new Date(),
       });
 
-      importedTransactions.push({
-        accountId: localBankAccountId,
-        amount,
-        name: tx.name ?? "",
-        date: tx.date ?? null,
-        externalTransactionId: tx.transaction_id,
-        transactionType: amount > 0 ? "credit" : "debit",
-      });
-
-      console.log(`[Sync] IMPORTED: Account ${localBankAccountId}, Amount ${amount}, Type ${amount > 0 ? "credit" : "debit"}, TxId ${tx.transaction_id}`);
       imported++;
-    }
-
-    // Opcional: podrías actualizar filas ya importadas
-    for (const tx of changed) {
-      const localBankAccountId = accountIdMap.get(String(tx.account_id));
-      if (!localBankAccountId) continue;
-
-      // Si quieres mantenerlo simple, solo contamos modified
-      modified++;
-    }
-
-    // Opcional: marcar removidas; por ahora solo contar
-    for (const tx of deleted) {
-      removed++;
     }
 
     cursor = data.next_cursor ?? cursor;
     hasMore = Boolean(data.has_more);
-    console.log(`[Sync] Batch: added=${added.length}, modified=${changed.length}, removed=${deleted.length}, hasMore=${hasMore}`);
+
+    console.log(`[Sync] Batch: added=${added.length}, hasMore=${hasMore}`);
   }
 
-  console.log(`[Sync] COMPLETE: imported=${imported}, modified=${modified}, removed=${removed}, totalImportedTxs=${importedTransactions.length}`);
-  console.log(`[Sync] ImportedTransactions summary:`, importedTransactions.map(t => `[Account ${t.accountId}: ${t.transactionType} ${t.amount}]`).join(', '));
-
-  // Guardar cursor y lastSyncedAt en todas las cuentas del mismo item
+  // guardar cursor
   for (const account of validAccounts as any[]) {
-    const updateData = {
-      plaidSyncCursor: cursor,
-      lastSyncedAt: new Date(),
-    };
-    
     await db
       .update(bankAccounts)
-      .set(updateData)
+      .set({
+        plaidSyncCursor: cursor,
+        lastSyncedAt: new Date(),
+      })
       .where(eq(bankAccounts.id, account.id));
   }
 
-  console.log("[Plaid Sync] Completed", {
-    itemId,
-    userId,
-    imported,
-    modified,
-    removed,
-    hasMore: false,
-    cursor,
-  });
+  console.log(`[Sync COMPLETE] imported=${imported}`);
 
   return {
     importedTransactions,
     imported,
     modified,
     removed,
+    hasMore: false,
+  };
+}
+
+function emptyResult(): SyncResult {
+  return {
+    importedTransactions: [],
+    imported: 0,
+    modified: 0,
+    removed: 0,
     hasMore: false,
   };
 }
