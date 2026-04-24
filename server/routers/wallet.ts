@@ -551,33 +551,112 @@ export const walletRouter = router({
    */
   getWalletSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const summary = await getWalletSummaryFromDb(ctx.user.id);
-      if (!summary) {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get wallet directly
+      let wallet = await getWalletByDriverId(ctx.user.id);
+      if (!wallet) {
+        wallet = await getOrCreateWallet(ctx.user.id);
+      }
+
+      if (!wallet) {
+        console.error("[WalletSummary] wallet not found for user", ctx.user.id);
         return {
           wallet: null,
           recentTransactions: [],
           pendingWithdrawals: [],
-          completedReservesAmount: 0,
-          reservedPendingAmount: 0,
+          totalEarnings: 0,
+          availableBalance: 0,
+          reservedBalance: 0,
+          reservedPending: 0,
+          completedReserves: 0,
+          withdrawableBalance: 0,
+          pendingBalance: 0,
+          blockedBalance: 0,
         };
       }
-      const wallet = safeWallet(summary.wallet);
-      const reservedPending = summary.reservedPendingAmount || 0;
-      const completedReserves = wallet?.reservedBalance || 0;
-      const withdrawableBalance = Math.max(0, (wallet?.availableBalance || 0) - reservedPending);
+
+      console.log("[WalletSummary] wallet found", {
+        walletId: wallet.id,
+        totalEarnings: wallet.totalEarnings,
+        availableBalance: wallet.availableBalance,
+        reservedBalance: wallet.reservedBalance,
+      });
+
+      // Backfill reservedBalance if it's 0 but has completed reserves
+      if (Number(wallet.reservedBalance || 0) === 0) {
+        const completedReserves = await db
+          .select()
+          .from(reserveTransferSuggestions)
+          .where(
+            and(
+              eq(reserveTransferSuggestions.ownerId, ctx.user.id),
+              eq(reserveTransferSuggestions.status, "completed")
+            )
+          );
+
+        const totalCompleted = completedReserves.reduce(
+          (sum, r) => sum + Number(r.suggestedAmount || 0),
+          0
+        );
+
+        if (totalCompleted > 0) {
+          console.log("[WalletSummary] backfilling reservedBalance", totalCompleted);
+          await updateWalletBalance(wallet.id, {
+            reservedBalance: String(totalCompleted),
+          });
+          wallet.reservedBalance = String(totalCompleted);
+        }
+      }
+
+      // Get pending reserves (suggested + approved)
+      const pendingReserves = await db
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(
+          and(
+            eq(reserveTransferSuggestions.ownerId, ctx.user.id),
+            inArray(reserveTransferSuggestions.status, ["suggested", "approved"] as any)
+          )
+        );
+
+      const reservedPending = pendingReserves.reduce(
+        (sum, r) => sum + Number(r.suggestedAmount || 0),
+        0
+      );
+
+      const safeWalletData = safeWallet(wallet);
+      const completedReserves = Number(wallet.reservedBalance || 0);
+      const withdrawableBalance = Math.max(0, Number(wallet.availableBalance || 0) - reservedPending);
+
+      console.log("[WalletSummary] computed balances", {
+        completedReserves,
+        reservedPending,
+        withdrawableBalance,
+      });
+
+      const recentTransactions = await getWalletTransactions(wallet.id, 10, 0);
+      const pendingWithdrawals = await db.query.withdrawals.findMany({
+        where: and(
+          eq(withdrawals.driverId, ctx.user.id),
+          inArray(withdrawals.status, ["requested", "approved"] as any)
+        ),
+        orderBy: desc(withdrawals.requestedAt),
+      });
 
       return {
-        wallet,
-        recentTransactions: summary.recentTransactions || [],
-        pendingWithdrawals: summary.pendingWithdrawals || [],
-        totalEarnings: wallet?.totalEarnings || 0,
-        availableBalance: wallet?.availableBalance || 0,
-        reservedBalance: wallet?.reservedBalance || 0,
+        wallet: safeWalletData,
+        recentTransactions: recentTransactions || [],
+        pendingWithdrawals: pendingWithdrawals || [],
+        totalEarnings: Number(wallet.totalEarnings || 0),
+        availableBalance: Number(wallet.availableBalance || 0),
+        reservedBalance: Number(wallet.reservedBalance || 0),
         reservedPending,
         completedReserves,
         withdrawableBalance,
-        pendingBalance: wallet?.pendingBalance || 0,
-        blockedBalance: wallet?.blockedBalance || 0,
+        pendingBalance: Number(wallet.pendingBalance || 0),
+        blockedBalance: Number(wallet.blockedBalance || 0),
       };
     } catch (err) {
       console.error("[wallet.getWalletSummary]", err);
@@ -585,8 +664,14 @@ export const walletRouter = router({
         wallet: null,
         recentTransactions: [],
         pendingWithdrawals: [],
-        completedReservesAmount: 0,
-        reservedPendingAmount: 0,
+        totalEarnings: 0,
+        availableBalance: 0,
+        reservedBalance: 0,
+        reservedPending: 0,
+        completedReserves: 0,
+        withdrawableBalance: 0,
+        pendingBalance: 0,
+        blockedBalance: 0,
       };
     }
   }),
@@ -596,10 +681,51 @@ export const walletRouter = router({
    */
   getPartnerSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const summary = await getPartnerSummaryFromDb(ctx.user.id);
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Get all partnerships for this user
+      const partnerships = await db.query.partnership.findMany({
+        where: eq(partnership.userId, ctx.user.id),
+      });
+
+      console.log("[PartnerSummary] partnerships count:", partnerships.length);
+
+      if (!partnerships || partnerships.length === 0) {
+        console.log("[PartnerSummary] no partnerships found");
+        return {
+          partners: [],
+          totalParticipation: 0,
+        };
+      }
+
+      // For each partnership, get the partner's wallet
+      const partners = [];
+      let totalParticipation = 0;
+
+      for (const p of partnerships) {
+        const partnerWallet = await getWalletByDriverId(p.partnerId);
+        if (partnerWallet) {
+          partners.push({
+            id: p.id,
+            name: p.partnerName,
+            role: "Partner",
+            participationPercent: p.participationPercent,
+            totalAssigned: Number(partnerWallet.totalEarnings || 0),
+            availableToWithdraw: Number(partnerWallet.availableBalance || 0),
+            reservedBalance: Number(partnerWallet.reservedBalance || 0),
+            pendingWithdrawals: Number(partnerWallet.pendingBalance || 0),
+            walletStatus: "active",
+          });
+          totalParticipation += p.participationPercent;
+        }
+      }
+
+      console.log("[PartnerSummary] partners found:", partners.length, "totalParticipation:", totalParticipation);
+
       return {
-        partners: summary.partners || [],
-        totalParticipation: summary.totalParticipation || 0,
+        partners,
+        totalParticipation,
       };
     } catch (err) {
       console.error("[wallet.getPartnerSummary]", err);
