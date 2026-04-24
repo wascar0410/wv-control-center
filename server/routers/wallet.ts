@@ -906,5 +906,47 @@ export const walletRouter = router({
     }
   }),
 
+  /**
+   * Dismiss historical reserve suggestions (older than today)
+   */
+  dismissHistoricalReserveSuggestions: protectedProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const historicalSuggestions = await db
+      .select()
+      .from(reserveTransferSuggestions)
+      .where(
+        sql`${reserveTransferSuggestions.status} = 'suggested' AND ${reserveTransferSuggestions.createdAt} < ${today} AND ${reserveTransferSuggestions.ownerId} = ${ctx.user.id}`
+      );
+
+    if (historicalSuggestions.length === 0) {
+      console.log("[Reserve] No historical suggestions to dismiss");
+      return { dismissed: 0, message: "No historical suggestions found" };
+    }
+
+    await db
+      .update(reserveTransferSuggestions)
+      .set({
+        status: "dismissed",
+        updatedAt: new Date(),
+      })
+      .where(
+        sql`${reserveTransferSuggestions.status} = 'suggested' AND ${reserveTransferSuggestions.createdAt} < ${today} AND ${reserveTransferSuggestions.ownerId} = ${ctx.user.id}`
+      );
+
+    console.log("[Reserve] DISMISSED HISTORICAL", {
+      count: historicalSuggestions.length,
+      userId: ctx.user.id,
+      beforeDate: today.toISOString(),
+    });
+
+    return {
+      dismissed: historicalSuggestions.length,
+      message: `Dismissed ${historicalSuggestions.length} historical reserve suggestions`,
+    };
+  }),
 });
