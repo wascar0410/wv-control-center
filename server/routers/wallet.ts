@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
-import { bankAccounts, reserveTransferSuggestions } from "../../drizzle/schema";
+import { bankAccounts, reserveTransferSuggestions, financialTransactions } from "../../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
@@ -878,4 +878,59 @@ export const walletRouter = router({
       };
     }
   }),
+
+  completeReserveSuggestion: protectedProcedure
+    .input(z.object({
+      suggestionId: z.number(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const suggestion = await db
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(eq(reserveTransferSuggestions.id, input.suggestionId))
+        .limit(1);
+
+      if (!suggestion.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Suggestion not found",
+        });
+      }
+
+      const s = suggestion[0];
+
+      if (s.status === "completed") {
+        return { success: true };
+      }
+
+      // 1. Marcar como completed
+      await db
+        .update(reserveTransferSuggestions)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(reserveTransferSuggestions.id, input.suggestionId));
+
+      // 2. Registrar movimiento en wallet (tipo reserve)
+      await db.insert(financialTransactions).values({
+        userId: ctx.user.id,
+        type: "reserve",
+        amount: String(s.suggestedAmount),
+        description: `Auto reserve from tx ${s.reason}`,
+        createdAt: new Date(),
+      });
+
+      console.log("[Reserve] COMPLETED", {
+        suggestionId: input.suggestionId,
+        amount: s.suggestedAmount,
+        userId: ctx.user.id,
+      });
+
+      return { success: true };
+    }),
 });
