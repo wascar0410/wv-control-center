@@ -15,6 +15,8 @@ import {
   failWithdrawal,
   getWalletSummary as getWalletSummaryFromDb,
   getPartnerSummary as getPartnerSummaryFromDb,
+  getFinancialHistory as getFinancialHistoryFromDb,
+  backfillReservedBalance,
   normalizeLegacyPendingWithdrawals,
 } from "../db";
 
@@ -289,6 +291,8 @@ export const walletRouter = router({
       await addWalletTransaction(wallet.id, ctx.user.id, {
         type: "reserve_transfer",
         amount: String(amount),
+        reserveSuggestionId: input.suggestionId,
+        externalTransactionId: s.externalTransactionId || undefined,
         description: `Auto reserve completed (Suggestion #${input.suggestionId})`,
         status: "completed",
       });
@@ -303,8 +307,8 @@ export const walletRouter = router({
         })
         .where(eq(reserveTransferSuggestions.id, input.suggestionId));
 
-      // 6. log claro con trazabilidad
-      console.log("[Reserve] COMPLETED + WALLET UPDATED", {
+      // 6. log claro con trazabilidad contable
+      console.log("[Accounting] Reserve transfer completed", {
         suggestionId: input.suggestionId,
         externalTransactionId: s.externalTransactionId,
         amount,
@@ -313,6 +317,7 @@ export const walletRouter = router({
         previousReservedBalance: wallet.reservedBalance,
         newReservedBalance,
         userId: ctx.user.id,
+        timestamp: new Date().toISOString(),
       });
 
       return { success: true };
@@ -556,12 +561,23 @@ export const walletRouter = router({
           reservedPendingAmount: 0,
         };
       }
+      const wallet = safeWallet(summary.wallet);
+      const reservedPending = summary.reservedPendingAmount || 0;
+      const completedReserves = wallet?.reservedBalance || 0;
+      const withdrawableBalance = Math.max(0, (wallet?.availableBalance || 0) - reservedPending);
+
       return {
-        wallet: safeWallet(summary.wallet),
+        wallet,
         recentTransactions: summary.recentTransactions || [],
         pendingWithdrawals: summary.pendingWithdrawals || [],
-        completedReservesAmount: summary.completedReservesAmount || 0,
-        reservedPendingAmount: summary.reservedPendingAmount || 0,
+        totalEarnings: wallet?.totalEarnings || 0,
+        availableBalance: wallet?.availableBalance || 0,
+        reservedBalance: wallet?.reservedBalance || 0,
+        reservedPending,
+        completedReserves,
+        withdrawableBalance,
+        pendingBalance: wallet?.pendingBalance || 0,
+        blockedBalance: wallet?.blockedBalance || 0,
       };
     } catch (err) {
       console.error("[wallet.getWalletSummary]", err);
@@ -591,6 +607,36 @@ export const walletRouter = router({
         partners: [],
         totalParticipation: 0,
       };
+    }
+  }),
+
+  /**
+   * Get financial history - all accounting events
+   */
+  getFinancialHistory: protectedProcedure
+    .input(z.object({ limit: z.number().optional() }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const history = await getFinancialHistoryFromDb(ctx.user.id, input.limit || 50);
+        return { history };
+      } catch (err) {
+        console.error("[wallet.getFinancialHistory]", err);
+        return { history: [] };
+      }
+    }),
+
+  /**
+   * Admin: Backfill reservedBalance for completed reserves
+   */
+  adminBackfillReservedBalance: protectedProcedure.mutation(async ({ ctx }) => {
+    ensureAdminOrOwner(ctx.user.role);
+    try {
+      const result = await backfillReservedBalance();
+      console.log("[Admin] Backfill completed:", result);
+      return result;
+    } catch (err) {
+      console.error("[wallet.adminBackfillReservedBalance]", err);
+      return { success: false, error: String(err) };
     }
   }),
 });

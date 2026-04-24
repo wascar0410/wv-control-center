@@ -1321,12 +1321,16 @@ export const walletTransactions = mysqlTable("wallet_transactions", {
     "bonus",            // Performance bonus
     "refund",           // Refund for cancelled load
     "chargeback",       // Payment dispute chargeback
+    "reserve_transfer",  // Auto reserve transfer
   ]).notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
   // Reference
   loadId: int("loadId").references(() => loads.id),
   settlementId: int("settlementId").references(() => settlements.id),
   withdrawalId: int("withdrawalId").references(() => withdrawals.id),
+  // Reserve transfer tracking
+  reserveSuggestionId: int("reserveSuggestionId").references(() => reserveTransferSuggestions.id, { onDelete: "set null" }),
+  externalTransactionId: varchar("externalTransactionId", { length: 255 }),
   // Notes
   description: text("description"),
   notes: text("notes"),

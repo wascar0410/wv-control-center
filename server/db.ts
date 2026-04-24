@@ -2628,6 +2628,8 @@ export async function addWalletTransaction(
     loadId?: number;
     settlementId?: number;
     withdrawalId?: number;
+    reserveSuggestionId?: number;
+    externalTransactionId?: string;
     description?: string;
     notes?: string;
     status?: string;
@@ -2646,6 +2648,8 @@ export async function addWalletTransaction(
       loadId: transaction.loadId,
       settlementId: transaction.settlementId,
       withdrawalId: transaction.withdrawalId,
+      reserveSuggestionId: transaction.reserveSuggestionId,
+      externalTransactionId: transaction.externalTransactionId,
       description: transaction.description,
       notes: transaction.notes,
       status: (transaction.status || "pending") as any,
@@ -4790,5 +4794,147 @@ export async function getPartnerSummary(userId: number) {
       partners: [],
       totalParticipation: 0,
     };
+  }
+}
+
+/**
+ * Get financial history for user
+ * Shows all accounting events: reserves, withdrawals, adjustments, etc.
+ */
+export async function getFinancialHistory(userId: number, limit: number = 50) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  try {
+    // Get wallet transactions (reserve transfers, withdrawals, etc.)
+    const transactions = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.driverId, userId))
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(limit);
+
+    // Get reserve transfer suggestions (all statuses)
+    const reserves = await db
+      .select()
+      .from(reserveTransferSuggestions)
+      .where(eq(reserveTransferSuggestions.ownerId, userId))
+      .orderBy(desc(reserveTransferSuggestions.createdAt))
+      .limit(limit);
+
+    // Get withdrawals
+    const withdrawals = await db
+      .select()
+      .from(withdrawals as any)
+      .where(eq((withdrawals as any).driverId, userId))
+      .orderBy(desc((withdrawals as any).createdAt))
+      .limit(limit);
+
+    // Combine and sort by date
+    const history = [
+      ...transactions.map((t) => ({
+        type: "transaction",
+        subtype: t.type,
+        status: t.status,
+        amount: Number(t.amount || 0),
+        description: t.description,
+        timestamp: t.createdAt,
+        id: `tx-${t.id}`,
+        details: {
+          reserveSuggestionId: t.reserveSuggestionId,
+          externalTransactionId: t.externalTransactionId,
+        },
+      })),
+      ...reserves.map((r) => ({
+        type: "reserve",
+        subtype: r.status,
+        status: r.status,
+        amount: Number(r.suggestedAmount || 0),
+        description: `Reserve ${r.status}`,
+        timestamp: r.createdAt,
+        id: `reserve-${r.id}`,
+        details: {
+          suggestionId: r.id,
+          externalTransactionId: r.externalTransactionId,
+        },
+      })),
+      ...withdrawals.map((w: any) => ({
+        type: "withdrawal",
+        subtype: w.status,
+        status: w.status,
+        amount: Number(w.amount || 0),
+        description: `Withdrawal ${w.status}`,
+        timestamp: w.createdAt,
+        id: `withdrawal-${w.id}`,
+        details: {
+          method: w.method,
+          netAmount: Number(w.netAmount || 0),
+        },
+      })),
+    ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    return history;
+  } catch (err) {
+    console.error("[getFinancialHistory] Error:", err);
+    return [];
+  }
+}
+
+/**
+ * Backfill reservedBalance for users with completed reserves
+ * Safe operation: only updates if reservedBalance is still 0
+ */
+export async function backfillReservedBalance() {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  try {
+    // Get all users with completed reserves
+    const usersWithCompletedReserves = await db
+      .select({
+        ownerId: reserveTransferSuggestions.ownerId,
+        totalAmount: sql`SUM(CAST(${reserveTransferSuggestions.suggestedAmount} AS DECIMAL(12,2)))`,
+      })
+      .from(reserveTransferSuggestions)
+      .where(eq(reserveTransferSuggestions.status, "completed"))
+      .groupBy(reserveTransferSuggestions.ownerId);
+
+    console.log(`[Backfill] Found ${usersWithCompletedReserves.length} users with completed reserves`);
+
+    let updatedCount = 0;
+
+    for (const record of usersWithCompletedReserves) {
+      const userId = record.ownerId;
+      const totalAmount = Number(record.totalAmount || 0);
+
+      if (totalAmount === 0) continue;
+
+      // Get wallet
+      const wallet = await getWalletByDriverId(userId);
+      if (!wallet) {
+        console.log(`[Backfill] No wallet found for user ${userId}`);
+        continue;
+      }
+
+      // Only backfill if reservedBalance is still 0
+      if (Number(wallet.reservedBalance || 0) !== 0) {
+        console.log(`[Backfill] User ${userId} already has reservedBalance: ${wallet.reservedBalance}`);
+        continue;
+      }
+
+      // Update wallet
+      await updateWalletBalance(wallet.id, {
+        reservedBalance: String(totalAmount),
+      });
+
+      console.log(`[Backfill] Updated user ${userId}: reservedBalance = ${totalAmount}`);
+      updatedCount++;
+    }
+
+    console.log(`[Backfill] Completed: ${updatedCount} wallets updated`);
+    return { success: true, updatedCount };
+  } catch (err) {
+    console.error("[backfillReservedBalance] Error:", err);
+    return { success: false, error: String(err) };
   }
 }
