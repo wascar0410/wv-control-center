@@ -272,6 +272,61 @@ async function startServer() {
     }
   );
 
+  // Debug endpoint to check and fix DB schema
+  app.get("/api/debug/check-db", async (req, res) => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Check status column
+      const [statusResult] = await db.execute(
+        "SHOW COLUMNS FROM reserve_transfer_suggestions LIKE 'status'"
+      );
+      console.log('[DB CHECK] Status column:', statusResult);
+
+      // Check updated_at column
+      const [updatedAtResult] = await db.execute(
+        "SHOW COLUMNS FROM reserve_transfer_suggestions LIKE 'updated_at'"
+      );
+      console.log('[DB CHECK] Updated_at column:', updatedAtResult);
+
+      // Fix if needed
+      if (statusResult.length > 0) {
+        const statusType = statusResult[0].Type;
+        if (!statusType.includes('dismissed')) {
+          console.log('[DB FIX] Updating status enum...');
+          await db.execute(`
+            ALTER TABLE reserve_transfer_suggestions
+            MODIFY COLUMN status ENUM(
+              'suggested',
+              'approved',
+              'processing',
+              'pending',
+              'completed',
+              'dismissed',
+              'failed',
+              'cancelled'
+            ) NOT NULL DEFAULT 'suggested'
+          `);
+          console.log('[DB FIX] Status enum updated');
+        }
+      }
+
+      if (updatedAtResult.length === 0) {
+        console.log('[DB FIX] Adding updated_at column...');
+        await db.execute(
+          'ALTER TABLE reserve_transfer_suggestions ADD COLUMN updated_at DATETIME NULL'
+        );
+        console.log('[DB FIX] updated_at added');
+      }
+
+      res.json({ success: true, message: 'DB check and fix completed' });
+    } catch (err) {
+      console.error('[DB CHECK ERROR]', err);
+      res.status(500).json({ success: false, error: String(err) });
+    }
+  });
+
   // Legacy endpoint for backward compatibility
   app.post("/api/plaid/webhook", express.raw({ type: "*/*" }), async (req, res) => {
     const timestamp = new Date().toISOString();
