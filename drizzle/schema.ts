@@ -1257,6 +1257,10 @@ export const wallets = mysqlTable(
       .default("0.00")
       .notNull(),
 
+    reservedBalance: decimal("reservedBalance", { precision: 12, scale: 2 })
+      .default("0.00")
+      .notNull(),
+
     pendingBalance: decimal("pendingBalance", { precision: 12, scale: 2 })
       .default("0.00")
       .notNull(),

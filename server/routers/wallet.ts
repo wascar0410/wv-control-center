@@ -33,6 +33,7 @@ function safeWallet(wallet: any) {
     ...wallet,
     totalEarnings: toNumber(wallet.totalEarnings),
     availableBalance: toNumber(wallet.availableBalance),
+    reservedBalance: toNumber(wallet.reservedBalance),
     pendingBalance: toNumber(wallet.pendingBalance),
     blockedBalance: toNumber(wallet.blockedBalance),
     minimumWithdrawalAmount: toNumber(wallet.minimumWithdrawalAmount),
@@ -273,16 +274,26 @@ export const walletRouter = router({
         });
       }
 
-      // 2. calcular nuevo balance
+      // 2. calcular nuevo balance - mover de available a reserved
       const amount = Number(s.suggestedAmount || 0);
       const newAvailableBalance = Math.max(0, Number(wallet.availableBalance || 0) - amount);
+      const newReservedBalance = Number(wallet.reservedBalance || 0) + amount;
 
-      // 3. actualizar wallet
+      // 3. actualizar wallet - mover dinero
       await updateWalletBalance(wallet.id, {
         availableBalance: String(newAvailableBalance),
+        reservedBalance: String(newReservedBalance),
       });
 
-      // 4. marcar suggestion como completed
+      // 4. crear evento contable en wallet_transactions
+      await addWalletTransaction(wallet.id, ctx.user.id, {
+        type: "reserve_transfer",
+        amount: String(amount),
+        description: `Auto reserve completed (Suggestion #${input.suggestionId})`,
+        status: "completed",
+      });
+
+      // 5. marcar suggestion como completed
       await db
         .update(reserveTransferSuggestions)
         .set({
@@ -292,12 +303,15 @@ export const walletRouter = router({
         })
         .where(eq(reserveTransferSuggestions.id, input.suggestionId));
 
-      // 5. log claro
+      // 6. log claro con trazabilidad
       console.log("[Reserve] COMPLETED + WALLET UPDATED", {
         suggestionId: input.suggestionId,
+        externalTransactionId: s.externalTransactionId,
         amount,
         previousAvailableBalance: wallet.availableBalance,
         newAvailableBalance,
+        previousReservedBalance: wallet.reservedBalance,
+        newReservedBalance,
         userId: ctx.user.id,
       });
 

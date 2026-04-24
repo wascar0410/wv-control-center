@@ -2591,6 +2591,7 @@ export async function updateWalletBalance(
   updates: {
     totalEarnings?: number | string;
     availableBalance?: number | string;
+    reservedBalance?: number | string;
     pendingBalance?: number | string;
     blockedBalance?: number | string;
   }
@@ -4747,12 +4748,28 @@ export async function getPartnerSummary(userId: number) {
           0
         );
 
+        // Get wallet if partner has userId
+        let wallet = null;
+        if (partner.userId) {
+          const walletData = await getWalletByDriverId(partner.userId);
+          wallet = walletData;
+        }
+
+        const totalAssigned = wallet ? Number(wallet.totalEarnings || 0) : 0;
+        const availableBalance = wallet ? Number(wallet.availableBalance || 0) : 0;
+        const reservedBalance = wallet ? Number(wallet.reservedBalance || 0) : 0;
+        const pendingBalance = wallet ? Number(wallet.pendingBalance || 0) : 0;
+
         return {
           id: partner.id,
           name: partner.partnerName,
           role: partner.partnerRole,
           participationPercent: Number(partner.participationPercent || 0),
-          totalDrawn,
+          totalAssigned,
+          withdrawn: totalDrawn,
+          available: availableBalance,
+          reserved: reservedBalance,
+          pending: pendingBalance,
           userId: partner.userId,
         };
       })
