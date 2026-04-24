@@ -525,4 +525,54 @@ export const walletRouter = router({
       };
     }
   }),
+
+  /**
+   * Get wallet summary with recent transactions and pending withdrawals
+   */
+  getWalletSummary: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const summary = await getWalletSummaryFromDb(ctx.user.id);
+      if (!summary) {
+        return {
+          wallet: null,
+          recentTransactions: [],
+          pendingWithdrawals: [],
+        };
+      }
+      return {
+        wallet: safeWallet(summary.wallet),
+        recentTransactions: summary.recentTransactions || [],
+        pendingWithdrawals: summary.pendingWithdrawals || [],
+      };
+    } catch (err) {
+      console.error("[wallet.getWalletSummary]", err);
+      return {
+        wallet: null,
+        recentTransactions: [],
+        pendingWithdrawals: [],
+      };
+    }
+  }),
+
+  /**
+   * Get partner summary (placeholder for now)
+   */
+  getPartnerSummary: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      return {
+        partnerId: null,
+        partnerName: null,
+        sharedBalance: 0,
+        sharedTransactions: [],
+      };
+    } catch (err) {
+      console.error("[wallet.getPartnerSummary]", err);
+      return {
+        partnerId: null,
+        partnerName: null,
+        sharedBalance: 0,
+        sharedTransactions: [],
+      };
+    }
+  }),
 });
