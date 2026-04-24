@@ -216,18 +216,18 @@ export const walletRouter = router({
         });
       }
 
-      // 3. Update (SIN tocar wallet)
+      // 3. Update (SIN tocar wallet, SIN updatedAt por ahora)
       await db
         .update(reserveTransferSuggestions)
         .set({
           status: "dismissed",
-          updatedAt: new Date(),
         })
         .where(eq(reserveTransferSuggestions.id, suggestionId));
 
       console.log("[Reserve] DISMISSED", {
         suggestionId,
         userId: ctx.user.id,
+        newStatus: "dismissed",
       });
 
       return { success: true };
