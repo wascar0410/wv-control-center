@@ -177,31 +177,57 @@ export const walletRouter = router({
   }),
 
   /**
-   * Dismiss reserve suggestion
+   * Dismiss reserve suggestion - Simple and safe
    */
   dismissReserveSuggestion: protectedProcedure
     .input(z.object({ suggestionId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      try {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
-        await db
-          .update(reserveTransferSuggestions)
-          .set({
-            status: "dismissed",
-            updatedAt: new Date(),
-          })
-          .where(eq(reserveTransferSuggestions.id, input.suggestionId));
+      const { suggestionId } = input;
 
-        return { success: true };
-      } catch (err) {
-        console.error("[wallet.dismissReserveSuggestion]", err);
+      // 1. Buscar sugerencia
+      const suggestion = await db
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(
+          sql`${reserveTransferSuggestions.id} = ${suggestionId} AND ${reserveTransferSuggestions.ownerId} = ${ctx.user.id}`
+        )
+        .limit(1);
+
+      if (!suggestion.length) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to dismiss suggestion",
+          code: "NOT_FOUND",
+          message: "Suggestion not found",
         });
       }
+
+      const s = suggestion[0];
+
+      // 2. Validar estado
+      if (s.status !== "suggested") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Only suggested can be dismissed",
+        });
+      }
+
+      // 3. Update (SIN tocar wallet)
+      await db
+        .update(reserveTransferSuggestions)
+        .set({
+          status: "dismissed",
+          updatedAt: new Date(),
+        })
+        .where(eq(reserveTransferSuggestions.id, suggestionId));
+
+      console.log("[Reserve] DISMISSED", {
+        suggestionId,
+        userId: ctx.user.id,
+      });
+
+      return { success: true };
     }),
 
   /**
