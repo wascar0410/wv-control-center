@@ -192,7 +192,10 @@ export const walletRouter = router({
         .select()
         .from(reserveTransferSuggestions)
         .where(
-          sql`${reserveTransferSuggestions.id} = ${suggestionId} AND ${reserveTransferSuggestions.ownerId} = ${ctx.user.id}`
+          and(
+            eq(reserveTransferSuggestions.id, suggestionId),
+            eq(reserveTransferSuggestions.ownerId, ctx.user.id)
+          )
         )
         .limit(1);
 
