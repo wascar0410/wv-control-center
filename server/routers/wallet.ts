@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
-import { bankAccounts, reserveTransferSuggestions } from "../../drizzle/schema";
+import { bankAccounts, reserveTransferSuggestions, wallets } from "../../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
@@ -602,49 +602,50 @@ export const walletRouter = router({
   completeReserveSuggestion: protectedProcedure
     .input(z.object({ suggestionId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      try {
-        const db = await getDb();
-        if (!db) throw new Error("Database not available");
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
 
-        const suggestion = await db
-          .select()
-          .from(reserveTransferSuggestions)
-          .where(eq(reserveTransferSuggestions.id, input.suggestionId))
-          .limit(1);
+      const suggestion = await db
+        .select()
+        .from(reserveTransferSuggestions)
+        .where(eq(reserveTransferSuggestions.id, input.suggestionId))
+        .limit(1);
 
-        if (!suggestion.length || suggestion[0].ownerId !== ctx.user.id) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Suggestion not found or unauthorized",
-          });
-        }
-
-        const s = suggestion[0];
-
-        await db
-          .update(reserveTransferSuggestions)
-          .set({
-            status: "completed",
-            completedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(reserveTransferSuggestions.id, input.suggestionId));
-
-        console.log("[Reserve] COMPLETED", {
-          suggestionId: input.suggestionId,
-          amount: s.suggestedAmount,
-          userId: ctx.user.id,
-        });
-
-        return { success: true };
-      } catch (err) {
-        console.error("[wallet.completeReserveSuggestion]", err);
-        if (err instanceof TRPCError) throw err;
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to complete suggestion",
-        });
+      if (!suggestion.length) {
+        throw new Error("Suggestion not found");
       }
+
+      const s = suggestion[0];
+
+      if (s.status === "completed") {
+        return { success: true };
+      }
+
+      // 1. marcar como completed
+      await db
+        .update(reserveTransferSuggestions)
+        .set({
+          status: "completed",
+          updatedAt: new Date(),
+        })
+        .where(eq(reserveTransferSuggestions.id, input.suggestionId));
+
+      // 2. reducir balance disponible
+      await db
+        .update(wallets)
+        .set({
+          availableBalance: sql`${wallets.availableBalance} - ${s.suggestedAmount}`
+        })
+        .where(eq(wallets.userId, ctx.user.id));
+
+      // 3. log claro
+      console.log("[Reserve] COMPLETED + WALLET UPDATED", {
+        suggestionId: input.suggestionId,
+        amount: s.suggestedAmount,
+        userId: ctx.user.id,
+      });
+
+      return { success: true };
     }),
 
   /**
