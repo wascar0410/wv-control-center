@@ -41,7 +41,7 @@ export async function syncPlaidTransactionsForItem(params: {
   if (!db) throw new Error("Database not available");
 
   const { userId, itemId } = params;
-  console.log(`[Sync] START: userId=${userId}, itemId=${itemId}`);
+  // Logging minimizado - solo en caso de error
 
   const accounts = await db
     .select()
@@ -90,7 +90,7 @@ export async function syncPlaidTransactionsForItem(params: {
     }
   }
 
-  console.log("[Sync DEBUG] Local account map:", [...accountIdMap.entries()]);
+  // Account map creado - logging solo si hay problemas
 
   const importedTransactions: SyncResult["importedTransactions"] = [];
   let imported = 0;
@@ -110,43 +110,26 @@ export async function syncPlaidTransactionsForItem(params: {
     const changed = data.modified || [];
     const deleted = data.removed || [];
 
-    console.log(
-      `[Sync] Batch: added=${added.length}, modified=${changed.length}, removed=${deleted.length}, hasMore=${Boolean(data.has_more)}`
-    );
-
-    console.log(
-      "[Sync DEBUG] Plaid account_ids in batch:",
-      added.map((t: any) => t.account_id)
-    );
+    // Log solo si hay transacciones nuevas
+    if (added.length > 0) {
+      console.log(
+        `[Sync] Batch: added=${added.length}, modified=${changed.length}, removed=${deleted.length}`
+      );
+    }
 
     for (const tx of added) {
-      // DEBUG: Log cada transacción de Plaid
-      console.log('[Sync DEBUG TX]', {
-        plaidTransactionId: tx.transaction_id,
-        amount: tx.amount,
-        name: tx.name,
-        accountId: tx.account_id
-      });
+      // Logging individual de TX removido - solo summary al final
 
       let localBankAccountId = accountIdMap.get(String(tx.account_id));
 
       // fallback útil si solo hay una cuenta local para ese item
       if (!localBankAccountId && validAccounts.length === 1) {
         localBankAccountId = Number(validAccounts[0].id);
-        console.log(
-          "[Sync FIX] Fallback account match:",
-          tx.transaction_id,
-          "->",
-          localBankAccountId
-        );
+        // Fallback usado - logging solo si hay error
       }
 
       if (!localBankAccountId) {
-        console.log(
-          "[Plaid Sync] Skipping tx, no local bank account match",
-          tx.transaction_id,
-          tx.account_id
-        );
+        // Skipped tx - logging solo en summary
         continue;
       }
 
@@ -167,7 +150,7 @@ export async function syncPlaidTransactionsForItem(params: {
       const rawAmount = Number(tx.amount ?? 0);
 
       if (!rawAmount || isNaN(rawAmount)) {
-        console.log('[Sync SKIP] invalid amount', tx.transaction_id, tx.amount);
+        // Invalid amount - logging solo en summary
         continue;
       }
 
@@ -175,10 +158,7 @@ export async function syncPlaidTransactionsForItem(params: {
       const normalizedAmount = Math.abs(rawAmount);
 
       if (existing.length > 0) {
-        console.log('[Sync EXISTING] checking reuse for reserve', {
-          plaidTransactionId: tx.transaction_id,
-          rawAmount,
-        });
+        // Existing transaction - checking for reuse
 
         // Reutilizar solo si es crédito/ingreso para evaluación de reserve
         if (rawAmount < 0) {
@@ -191,11 +171,7 @@ export async function syncPlaidTransactionsForItem(params: {
             date: tx.authorized_date || tx.date || null,
           });
 
-          console.log('[Sync REUSED CREDIT]', {
-            plaidTransactionId: tx.transaction_id,
-            bankAccountId: localBankAccountId,
-            amount: normalizedAmount,
-          });
+          // Credit reused for reserve evaluation
         }
 
         continue;
@@ -225,12 +201,7 @@ export async function syncPlaidTransactionsForItem(params: {
         transactionType,
       });
 
-      console.log('[Sync PUSHED]', {
-        amount: normalizedAmount,
-        transactionType,
-        bankAccountId: localBankAccountId,
-        plaidTransactionId: tx.transaction_id
-      });
+      // Transaction pushed - logging removed
 
       imported++;
     }
@@ -242,18 +213,12 @@ export async function syncPlaidTransactionsForItem(params: {
     hasMore = Boolean(data.has_more);
   }
 
-  console.log('[Sync FINAL COUNT]', importedTransactions.length);
-
-  console.log(
-    `[Sync] COMPLETE: imported=${imported}, modified=${modified}, removed=${removed}, totalImportedTxs=${importedTransactions.length}`
-  );
-
-  console.log(
-    "[Sync] ImportedTransactions summary:",
-    importedTransactions
-      .map((t) => `[Account ${t.accountId}: ${t.transactionType} ${t.amount}]`)
-      .join(", ")
-  );
+  // Log solo summary de counts
+  if (imported > 0 || modified > 0 || removed > 0) {
+    console.log(
+      `[Sync] COMPLETE: imported=${imported}, modified=${modified}, removed=${removed}, totalImportedTxs=${importedTransactions.length}`
+    );
+  }
 
   for (const account of validAccounts as any[]) {
     await db
