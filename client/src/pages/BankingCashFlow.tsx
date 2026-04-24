@@ -714,6 +714,20 @@ function SuggestedTransfersCard() {
     },
   });
 
+  // Mutation to dismiss historical suggestions
+  const dismissHistoricalMutation = trpc.wallet.dismissHistoricalReserveSuggestions.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: "✅ Limpieza completada",
+        description: `${data.dismissed} sugerencias descartadas. Reserved: $${data.reservedPendingBefore.toFixed(2)} → $${data.reservedPendingAfter.toFixed(2)}`,
+      });
+      refetch();
+    },
+    onError: (err) => {
+      toast({ title: "❌ Error", description: err.message, variant: "destructive" });
+    },
+  });
+
   if (isLoading) {
     return (
       <Card>
@@ -757,7 +771,27 @@ function SuggestedTransfersCard() {
             </p>
           </div>
         ) : (
+          <div className="space-y-4">
           <div className="space-y-3">
+            {/* Bulk dismiss button */}
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => dismissHistoricalMutation.mutate()}
+                disabled={dismissHistoricalMutation.isPending || suggestions.length === 0}
+              >
+                {dismissHistoricalMutation.isPending ? (
+                  <>
+                    <RefreshCw className="mr-1 h-3 w-3 animate-spin" />
+                    Dismissing Historical...
+                  </>
+                ) : (
+                  "Dismiss Historical Suggestions"
+                )}
+              </Button>
+            </div>
+
             {suggestions.map((sugg: any) => (
               <div
                 key={sugg.id}
@@ -827,6 +861,7 @@ function SuggestedTransfersCard() {
                 </div>
               </div>
             ))}
+          </div>
           </div>
         )}
       </CardContent>
