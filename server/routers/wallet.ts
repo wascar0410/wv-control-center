@@ -621,27 +621,45 @@ export const walletRouter = router({
         return { success: true };
       }
 
-      // 1. marcar como completed
+      // 1. obtener wallet actual
+      let walletRaw = await getWalletByDriverId(ctx.user.id);
+      if (!walletRaw) {
+        walletRaw = await getOrCreateWallet(ctx.user.id);
+      }
+
+      const wallet = safeWallet(walletRaw);
+      if (!wallet || !wallet.id) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Wallet not found",
+        });
+      }
+
+      // 2. calcular nuevo balance
+      const amount = Number(s.suggestedAmount || 0);
+      const newAvailableBalance = Math.max(0, Number(wallet.availableBalance || 0) - amount);
+
+      // 3. actualizar wallet
+      await updateWalletBalance(wallet.id, {
+        availableBalance: String(newAvailableBalance),
+      });
+
+      // 4. marcar suggestion como completed
       await db
         .update(reserveTransferSuggestions)
         .set({
           status: "completed",
+          completedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(reserveTransferSuggestions.id, input.suggestionId));
 
-      // 2. reducir balance disponible
-      await db
-        .update(wallets)
-        .set({
-          availableBalance: sql`${wallets.availableBalance} - ${s.suggestedAmount}`
-        })
-        .where(sql`user_id = ${ctx.user.id}`);
-
-      // 3. log claro
+      // 5. log claro
       console.log("[Reserve] COMPLETED + WALLET UPDATED", {
         suggestionId: input.suggestionId,
-        amount: s.suggestedAmount,
+        amount,
+        previousAvailableBalance: wallet.availableBalance,
+        newAvailableBalance,
         userId: ctx.user.id,
       });
 
