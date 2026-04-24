@@ -636,7 +636,7 @@ export const walletRouter = router({
         .set({
           availableBalance: sql`${wallets.availableBalance} - ${s.suggestedAmount}`
         })
-        .where(eq(wallets.userId, ctx.user.id));
+        .where(sql`user_id = ${ctx.user.id}`);
 
       // 3. log claro
       console.log("[Reserve] COMPLETED + WALLET UPDATED", {
