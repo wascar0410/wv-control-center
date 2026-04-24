@@ -3015,10 +3015,44 @@ export async function getWalletSummary(driverId: number) {
     orderBy: desc(withdrawals.requestedAt),
   });
 
+  // Calculate completed reserves (status='completed')
+  const completedReserves = await db
+    .select()
+    .from(reserveTransferSuggestions)
+    .where(
+      and(
+        eq(reserveTransferSuggestions.ownerId, driverId),
+        eq(reserveTransferSuggestions.status, "completed")
+      )
+    );
+
+  const completedReservesAmount = completedReserves.reduce(
+    (sum, r) => sum + Number(r.suggestedAmount || 0),
+    0
+  );
+
+  // Calculate reserved pending (status='suggested' or 'approved')
+  const reservedPending = await db
+    .select()
+    .from(reserveTransferSuggestions)
+    .where(
+      and(
+        eq(reserveTransferSuggestions.ownerId, driverId),
+        inArray(reserveTransferSuggestions.status, ["suggested", "approved"] as any)
+      )
+    );
+
+  const reservedPendingAmount = reservedPending.reduce(
+    (sum, r) => sum + Number(r.suggestedAmount || 0),
+    0
+  );
+
   return {
     wallet,
     recentTransactions,
     pendingWithdrawals,
+    completedReservesAmount,
+    reservedPendingAmount,
   };
 }
 
@@ -4676,4 +4710,68 @@ export async function getCashFlowSummary(ownerId: number) {
     classifications,
     reservePercent: rule?.reservePercent ?? 20,
   };
+}
+
+/**
+ * Get partner summary with real partner data
+ */
+export async function getPartnerSummary(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  try {
+    // Get all active partners
+    const partners = await db
+      .select()
+      .from(partnership)
+      .where(eq(partnership.isActive, true));
+
+    if (!partners || partners.length === 0) {
+      return {
+        partners: [],
+        totalParticipation: 0,
+      };
+    }
+
+    // For each partner, calculate their balance based on participation
+    const partnerSummaries = await Promise.all(
+      partners.map(async (partner) => {
+        // Get owner draws for this partner
+        const draws = await db
+          .select()
+          .from(ownerDraws)
+          .where(eq(ownerDraws.partnerId, partner.id));
+
+        const totalDrawn = draws.reduce(
+          (sum, d) => sum + Number(d.amount || 0),
+          0
+        );
+
+        return {
+          id: partner.id,
+          name: partner.partnerName,
+          role: partner.partnerRole,
+          participationPercent: Number(partner.participationPercent || 0),
+          totalDrawn,
+          userId: partner.userId,
+        };
+      })
+    );
+
+    const totalParticipation = partnerSummaries.reduce(
+      (sum, p) => sum + p.participationPercent,
+      0
+    );
+
+    return {
+      partners: partnerSummaries,
+      totalParticipation,
+    };
+  } catch (err) {
+    console.error("[getPartnerSummary] Error:", err);
+    return {
+      partners: [],
+      totalParticipation: 0,
+    };
+  }
 }

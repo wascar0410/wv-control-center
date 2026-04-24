@@ -14,6 +14,7 @@ import {
   getWithdrawals,
   failWithdrawal,
   getWalletSummary as getWalletSummaryFromDb,
+  getPartnerSummary as getPartnerSummaryFromDb,
   normalizeLegacyPendingWithdrawals,
 } from "../db";
 
@@ -537,12 +538,16 @@ export const walletRouter = router({
           wallet: null,
           recentTransactions: [],
           pendingWithdrawals: [],
+          completedReservesAmount: 0,
+          reservedPendingAmount: 0,
         };
       }
       return {
         wallet: safeWallet(summary.wallet),
         recentTransactions: summary.recentTransactions || [],
         pendingWithdrawals: summary.pendingWithdrawals || [],
+        completedReservesAmount: summary.completedReservesAmount || 0,
+        reservedPendingAmount: summary.reservedPendingAmount || 0,
       };
     } catch (err) {
       console.error("[wallet.getWalletSummary]", err);
@@ -550,28 +555,27 @@ export const walletRouter = router({
         wallet: null,
         recentTransactions: [],
         pendingWithdrawals: [],
+        completedReservesAmount: 0,
+        reservedPendingAmount: 0,
       };
     }
   }),
 
   /**
-   * Get partner summary (placeholder for now)
+   * Get partner summary with real partner data
    */
   getPartnerSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
+      const summary = await getPartnerSummaryFromDb(ctx.user.id);
       return {
-        partnerId: null,
-        partnerName: null,
-        sharedBalance: 0,
-        sharedTransactions: [],
+        partners: summary.partners || [],
+        totalParticipation: summary.totalParticipation || 0,
       };
     } catch (err) {
       console.error("[wallet.getPartnerSummary]", err);
       return {
-        partnerId: null,
-        partnerName: null,
-        sharedBalance: 0,
-        sharedTransactions: [],
+        partners: [],
+        totalParticipation: 0,
       };
     }
   }),
