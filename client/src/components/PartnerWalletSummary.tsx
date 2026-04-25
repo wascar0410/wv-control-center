@@ -6,8 +6,8 @@ export interface PartnerData {
   id?: number;
   name: string;
   totalAssigned: number;
-  totalWithdrawn: number;
   availableToWithdraw: number;
+  reservedBalance?: number;
   pendingWithdrawals: number;
   walletStatus: "active" | "suspended" | "pending";
 }
@@ -57,7 +57,7 @@ export default function PartnerWalletSummary({
   }
 
   const totalAssigned = partners.reduce((sum, p) => sum + p.totalAssigned, 0);
-  const totalWithdrawn = partners.reduce((sum, p) => sum + p.totalWithdrawn, 0);
+  const totalReserved = partners.reduce((sum, p) => sum + (p.reservedBalance || 0), 0);
   const totalAvailable = partners.reduce(
     (sum, p) => sum + p.availableToWithdraw,
     0
@@ -81,8 +81,8 @@ export default function PartnerWalletSummary({
             </div>
 
             <div className="rounded-lg border p-4">
-              <p className="text-xs text-muted-foreground">Total Retirado</p>
-              <p className="text-2xl font-bold">{formatCurrency(totalWithdrawn)}</p>
+              <p className="text-xs text-muted-foreground">Total Reservado</p>
+              <p className="text-2xl font-bold">{formatCurrency(totalReserved)}</p>
             </div>
 
             <div className="rounded-lg border p-4">
@@ -133,10 +133,10 @@ export default function PartnerWalletSummary({
                   <div>
                     <p className="flex items-center gap-1 text-xs text-muted-foreground">
                       <DollarSign className="h-3 w-3" />
-                      Retirado
+                      Reservado
                     </p>
                     <p className="font-semibold">
-                      {formatCurrency(partner.totalWithdrawn)}
+                      {formatCurrency(partner.reservedBalance || 0)}
                     </p>
                   </div>
 

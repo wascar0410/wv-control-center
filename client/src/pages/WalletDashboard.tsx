@@ -133,9 +133,10 @@ export default function WalletDashboard() {
   const recentTransactions = walletSummary?.recentTransactions ?? transactions ?? [];
   const pendingWithdrawals = walletSummary?.pendingWithdrawals ?? [];
 
-  const reservedPending = withdrawableData?.reservedPending ?? 0;
-  const withdrawable = withdrawableData?.withdrawable ?? 0;
-  const completedReserves = reserveSummary?.completed ?? 0;
+  // Get values from walletSummary (which has all the fields)
+  const reservedPending = walletSummary?.reservedPending ?? 0;
+  const withdrawable = walletSummary?.withdrawableBalance ?? 0;
+  const completedReserves = walletSummary?.completedReserves ?? 0;
   const totalCompletedAmount = useMemo(() => {
     return (financialHistory?.events ?? [])
       .filter((e: any) => e.type === "Reserve Completed")
@@ -170,17 +171,21 @@ export default function WalletDashboard() {
     });
   }, [recentTransactions]);
 
+  // Get values from walletSummary directly (already has all fields)
   const availableBalance = Number(
-    wallet?.availableBalance ?? displayStats.availableBalance ?? 0
+    walletSummary?.availableBalance ?? wallet?.availableBalance ?? displayStats.availableBalance ?? 0
   );
   const pendingBalance = Number(
-    wallet?.pendingBalance ?? displayStats.pendingBalance ?? 0
+    walletSummary?.pendingBalance ?? wallet?.pendingBalance ?? displayStats.pendingBalance ?? 0
   );
   const blockedBalance = Number(
-    wallet?.blockedBalance ?? displayStats.blockedBalance ?? 0
+    walletSummary?.blockedBalance ?? wallet?.blockedBalance ?? displayStats.blockedBalance ?? 0
   );
   const totalEarnings = Number(
-    wallet?.totalEarnings ?? displayStats.totalEarnings ?? 0
+    walletSummary?.totalEarnings ?? wallet?.totalEarnings ?? displayStats.totalEarnings ?? 0
+  );
+  const reservedBalance = Number(
+    walletSummary?.reservedBalance ?? wallet?.reservedBalance ?? 0
   );
 
   const canWithdraw = withdrawable > 0;
@@ -379,7 +384,7 @@ export default function WalletDashboard() {
                     {formatCurrency(reservedPending)}
                   </p>
                   <p className="mt-1 text-xs text-blue-600">
-                    {reserveSummary?.suggested ?? 0} sugerencias activas
+                    Sugerencias activas
                   </p>
                 </div>
 

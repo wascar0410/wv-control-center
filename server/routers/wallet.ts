@@ -631,9 +631,16 @@ export const walletRouter = router({
       const withdrawableBalance = Math.max(0, Number(wallet.availableBalance || 0) - reservedPending);
 
       console.log("[WalletSummary] computed balances", {
+        walletId: wallet.id,
+        driverId: wallet.driverId,
+        totalEarnings: Number(wallet.totalEarnings || 0),
+        availableBalance: Number(wallet.availableBalance || 0),
+        reservedBalance: Number(wallet.reservedBalance || 0),
         completedReserves,
         reservedPending,
         withdrawableBalance,
+        pendingBalance: Number(wallet.pendingBalance || 0),
+        blockedBalance: Number(wallet.blockedBalance || 0),
       });
 
       const recentTransactions = await getWalletTransactions(wallet.id, 10, 0);
@@ -722,6 +729,7 @@ export const walletRouter = router({
       }
 
       console.log("[PartnerSummary] partners found:", partners.length, "totalParticipation:", totalParticipation);
+      console.log("[PartnerSummary]", partners);
 
       return {
         partners,
