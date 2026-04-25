@@ -2574,10 +2574,13 @@ export async function getWalletByDriverId(driverId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
+  // Always get the oldest wallet (by id asc) for this driver
+  // This ensures we get the primary wallet with real balance
   const result = await db
     .select()
     .from(wallets)
     .where(eq(wallets.driverId, driverId))
+    .orderBy(asc(wallets.id))
     .limit(1);
 
   return result[0] || null;
