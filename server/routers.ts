@@ -2562,36 +2562,63 @@ export const appRouter = router({
     driverLogin: publicProcedure
   .input(z.object({ email: z.string().email(), password: z.string() }))
   .mutation(async ({ input, ctx }) => {
+    try {
+      console.log("[auth.driverLogin] input received:", {
+        email: input.email,
+      });
 
-    console.log("[auth.driverLogin] input received:", {
-      email: input.email,
-    });
+      const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 
-    const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
+      const result = await driverLogin({
+        email: input.email,
+        password: input.password,
+        ipAddress: ctx.req.ip,
+        userAgent: ctx.req.headers["user-agent"],
+      });
 
-    const result = await driverLogin({
-      email: input.email,
-      password: input.password,
-      ipAddress: ctx.req.ip,
-      userAgent: ctx.req.headers["user-agent"],
-    });
+      if (!result) {
+        throw new Error("Login failed: no result returned");
+      }
 
-    const isSecure =
-      ctx.req.protocol === "https" ||
-      ctx.req.headers["x-forwarded-proto"] === "https";
+      const isSecure =
+        ctx.req.protocol === "https" ||
+        ctx.req.headers["x-forwarded-proto"] === "https";
 
-    ctx.res.cookie("wv_session", result.token, {
-      httpOnly: true,
-      secure: isSecure,
-      sameSite: isSecure ? "none" : "lax",
-      maxAge: ONE_YEAR_MS,
-      path: "/",
-    });
+      ctx.res.cookie("wv_session", result.token, {
+        httpOnly: true,
+        secure: isSecure,
+        sameSite: isSecure ? "none" : "lax",
+        maxAge: ONE_YEAR_MS,
+        path: "/",
+      });
 
-    console.log("[auth.driverLogin] cookie set");
-    console.log("[auth.driverLogin] returning result");
+      console.log("[auth.driverLogin] cookie set");
+      console.log("[LOGIN RESULT]", {
+        userId: result.userId,
+        email: result.email,
+        role: result.role,
+        expiresIn: result.expiresIn,
+      });
 
-    return result;
+      // Retornar objeto JSON puro serializable
+      const responseData = {
+        success: true,
+        user: {
+          id: Number(result.userId),
+          email: String(result.email || ""),
+          name: String(result.name || ""),
+          role: String(result.role),
+        },
+        token: String(result.token),
+        expiresIn: Number(result.expiresIn),
+      };
+
+      console.log("[auth.driverLogin] returning response");
+      return responseData;
+    } catch (error) {
+      console.error("[auth.driverLogin] error:", error);
+      throw error;
+    }
   }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") throw new Error("No autorizado");
