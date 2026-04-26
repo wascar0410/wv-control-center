@@ -236,7 +236,7 @@ const bankTransactionRouter = router({
 // ─── Driver Stats Router ─────────────────────────────────────────────────────────
 
 const driverStatsRouter = router({
-  getStats: protectedProcedure
+  getDriverStats: protectedProcedure
     .input(z.object({ driverId: z.number() }))
     .query(async ({ input, ctx }) => {
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
