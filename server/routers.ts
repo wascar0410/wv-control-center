@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { eq, inArray, and, desc, sql } from "drizzle-orm";
 import * as bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -2590,19 +2591,35 @@ export const appRouter = router({
       });
     }
 
-    ctx.res.cookie('session', JSON.stringify({
-      userId: user.id,
-      role: user.role
-    }), {
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
+      process.env.JWT_SECRET || 'wv-transport-secret-2026',
+      { expiresIn: 365 * 24 * 60 * 60 }
+    );
+
+    // Set wv_session cookie with JWT token
+    ctx.res.cookie('wv_session', token, {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: true
+      sameSite: 'none',
+      secure: true,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+      path: '/'
     });
 
     console.log('[LOGIN SUCCESS]', {
       id: user.id,
       email: user.email,
       role: user.role
+    });
+    console.log('[LOGIN COOKIE SET]', {
+      cookieName: 'wv_session',
+      userId: user.id,
+      expiresIn: 365 * 24 * 60 * 60
     });
 
     return {
