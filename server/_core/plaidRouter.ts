@@ -17,20 +17,26 @@ import {
 } from "./plaid";
 import { bankAccountClassifications } from "../../drizzle/schema";
 
+
+// Helper para company-level scope
+const getScopedUserId = (ctx: any) => {
+  const isOwnerOrAdmin = ctx.user.role === "owner" || ctx.user.role === "admin";
+  return isOwnerOrAdmin ? 1 : getScopedUserId(ctx);
+};
 export const plaidRouter = router({
   createLinkToken: protectedProcedure
     .input(z.object({ redirectUri: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       try {
         console.log("[Plaid] createLinkToken input:", {
-          userId: ctx.user.id,
+          userId: getScopedUserId(ctx),
           redirectUri: input.redirectUri,
           clientId: process.env.PLAID_CLIENT_ID ? "***" : "MISSING",
           environment: process.env.PLAID_ENV,
         });
 
         const linkToken = await createPlaidLinkToken(
-          ctx.user.id,
+          getScopedUserId(ctx),
           input.redirectUri
         );
 
@@ -60,7 +66,7 @@ export const plaidRouter = router({
       try {
         console.log("[Plaid] exchangeToken START:", {
           publicToken: input.publicToken.substring(0, 20) + "...",
-          userId: ctx.user.id,
+          userId: getScopedUserId(ctx),
         });
 
         const { accessToken, itemId } = await exchangePublicToken(
@@ -95,7 +101,7 @@ export const plaidRouter = router({
             });
 
             const bankAccountData = {
-              userId: ctx.user.id,
+              userId: getScopedUserId(ctx),
               bankName: account.name || "Unknown Bank",
               accountType:
                 (account.subtype as
@@ -201,7 +207,7 @@ export const plaidRouter = router({
     .mutation(async ({ ctx, input }) => {
       try {
         console.log("[Sync] input:", input);
-        console.log("[Sync] ctx.user:", { id: ctx.user.id, role: ctx.user.role });
+        console.log("[Sync] ctx.user:", { id: getScopedUserId(ctx), role: ctx.user.role });
 
         const account = await getBankAccountById(input.bankAccountId);
         console.log("[Sync] account:", account);
@@ -213,7 +219,7 @@ export const plaidRouter = router({
           });
         }
 
-        if (Number(account.userId) !== Number(ctx.user.id)) {
+        if (Number(account.userId) !== Number(getScopedUserId(ctx))) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Unauthorized: account does not belong to user",
@@ -233,7 +239,7 @@ export const plaidRouter = router({
         );
 
         const syncResult = await syncPlaidTransactionsForItem({
-          userId: ctx.user.id,
+          userId: getScopedUserId(ctx),
           itemId: account.plaidItemId,
         });
 
@@ -242,7 +248,7 @@ export const plaidRouter = router({
 
         const suggestionResult = await generateReserveSuggestionsFromTransactions(
           {
-            ownerId: ctx.user.id,
+            ownerId: getScopedUserId(ctx),
             transactions: syncResult.importedTransactions,
           }
         );
@@ -291,7 +297,7 @@ export const plaidRouter = router({
         });
       }
 
-      if (Number(account.userId) !== Number(ctx.user.id)) {
+      if (Number(account.userId) !== Number(getScopedUserId(ctx))) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Unauthorized",
@@ -310,9 +316,9 @@ export const plaidRouter = router({
    * Get all linked bank accounts for the current user.
    */
   getBankAccounts: protectedProcedure.query(async ({ ctx }) => {
-    console.log("[Plaid] getBankAccounts for userId:", ctx.user.id);
+    console.log("[Plaid] getBankAccounts for userId:", getScopedUserId(ctx));
 
-    const accounts = await getBankAccountsByUserId(ctx.user.id);
+    const accounts = await getBankAccountsByUserId(getScopedUserId(ctx));
 
     console.log("[Plaid] getBankAccounts result:", { count: accounts.length });
 
@@ -328,7 +334,7 @@ export const plaidRouter = router({
       try {
         console.log("[Plaid] removeBankAccount input:", {
           bankAccountId: input.bankAccountId,
-          userId: ctx.user.id,
+          userId: getScopedUserId(ctx),
         });
 
         const account = await getBankAccountById(input.bankAccountId);
@@ -340,7 +346,7 @@ export const plaidRouter = router({
           });
         }
 
-        if (Number(account.userId) !== Number(ctx.user.id)) {
+        if (Number(account.userId) !== Number(getScopedUserId(ctx))) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Unauthorized: account does not belong to user",

@@ -10,6 +10,13 @@ import { cashFlowRules, autoTransferLogs, bankAccounts, reserveTransferSuggestio
 import { eq, and, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
+// Helper para company-level scope
+const getScopedUserId = (ctx: any) => {
+  const isOwnerOrAdmin = ctx.user.role === "owner" || ctx.user.role === "admin";
+  return isOwnerOrAdmin ? 1 : getScopedUserId(ctx);
+};
+
+
 export const bankingAutoTransferRouter = router({
   /**
    * Get auto-transfer schedule configuration
@@ -22,7 +29,7 @@ export const bankingAutoTransferRouter = router({
       const rule = await db
         .select()
         .from(cashFlowRules)
-        .where(eq(cashFlowRules.ownerId, ctx.user.id))
+        .where(eq(cashFlowRules.ownerId, getScopedUserId(ctx)))
         .limit(1);
 
       if (!rule || rule.length === 0) {
@@ -70,7 +77,7 @@ export const bankingAutoTransferRouter = router({
         const existing = await db
           .select()
           .from(cashFlowRules)
-          .where(eq(cashFlowRules.ownerId, ctx.user.id))
+          .where(eq(cashFlowRules.ownerId, getScopedUserId(ctx)))
           .limit(1);
 
         if (existing && existing.length > 0) {
@@ -82,11 +89,11 @@ export const bankingAutoTransferRouter = router({
               autoTransferDay: input.dayOfMonth,
               autoTransferTime: input.time,
             })
-            .where(eq(cashFlowRules.ownerId, ctx.user.id));
+            .where(eq(cashFlowRules.ownerId, getScopedUserId(ctx)));
         } else {
           // Create new
           await db.insert(cashFlowRules).values({
-            ownerId: ctx.user.id,
+            ownerId: getScopedUserId(ctx),
             autoTransferEnabled: input.enabled,
             autoTransferDay: input.dayOfMonth,
             autoTransferTime: input.time,
@@ -95,7 +102,7 @@ export const bankingAutoTransferRouter = router({
         }
 
         console.log("[Banking] Auto-transfer schedule updated:", {
-          userId: ctx.user.id,
+          userId: getScopedUserId(ctx),
           enabled: input.enabled,
           dayOfMonth: input.dayOfMonth,
           time: input.time,
@@ -133,7 +140,7 @@ export const bankingAutoTransferRouter = router({
         const logs = await db
           .select()
           .from(autoTransferLogs)
-          .where(eq(autoTransferLogs.ownerId, ctx.user.id))
+          .where(eq(autoTransferLogs.ownerId, getScopedUserId(ctx)))
           .orderBy(desc(autoTransferLogs.executedAt))
           .limit(input.limit);
 
@@ -166,7 +173,7 @@ export const bankingAutoTransferRouter = router({
       const rule = await db
         .select()
         .from(cashFlowRules)
-        .where(eq(cashFlowRules.ownerId, ctx.user.id))
+        .where(eq(cashFlowRules.ownerId, getScopedUserId(ctx)))
         .limit(1);
 
       if (!rule || rule.length === 0) {
@@ -191,7 +198,7 @@ export const bankingAutoTransferRouter = router({
         .from(reserveTransferSuggestions)
         .where(
           and(
-            eq(reserveTransferSuggestions.ownerId, ctx.user.id),
+            eq(reserveTransferSuggestions.ownerId, getScopedUserId(ctx)),
             eq(reserveTransferSuggestions.fromAccountId, r.operatingAccountId)
           )
         );
@@ -203,7 +210,7 @@ export const bankingAutoTransferRouter = router({
       if (reservedAmount > 0) {
         // Log as skipped
         await db.insert(autoTransferLogs).values({
-          ownerId: ctx.user.id,
+          ownerId: getScopedUserId(ctx),
           cashFlowRuleId: r.id,
           status: "skipped",
           reason: `Pending reserves: $${reservedAmount.toFixed(2)}`,
@@ -237,7 +244,7 @@ export const bankingAutoTransferRouter = router({
       if (balance <= minReserve) {
         // Log as skipped
         await db.insert(autoTransferLogs).values({
-          ownerId: ctx.user.id,
+          ownerId: getScopedUserId(ctx),
           cashFlowRuleId: r.id,
           status: "skipped",
           reason: `Insufficient balance: $${balance.toFixed(2)} <= min $${minReserve.toFixed(2)}`,
@@ -259,7 +266,7 @@ export const bankingAutoTransferRouter = router({
 
       // Log successful execution
       await db.insert(autoTransferLogs).values({
-        ownerId: ctx.user.id,
+        ownerId: getScopedUserId(ctx),
         cashFlowRuleId: r.id,
         status: "success",
         amount: transferAmount,
@@ -275,7 +282,7 @@ export const bankingAutoTransferRouter = router({
         .where(eq(cashFlowRules.id, r.id));
 
       console.log("[Banking] Auto-transfer executed:", {
-        userId: ctx.user.id,
+        userId: getScopedUserId(ctx),
         amount: transferAmount,
         fromAccountId: r.operatingAccountId,
         toAccountId: r.reserveAccountId,
