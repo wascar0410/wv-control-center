@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { getDb } from "../db";
+import { getDb, processBankTransaction } from "../db";
 import { plaidClient } from "./plaidClient";
 import { bankAccounts, transactionImports } from "../../drizzle/schema";
 
@@ -201,6 +201,21 @@ export async function syncPlaidTransactionsForItem(params: {
         transactionType,
       });
 
+      // Process credit transactions into wallet ledger
+      if (transactionType === 'credit') {
+        try {
+          await processBankTransaction(userId, {
+            amount: normalizedAmount,
+            type: 'income',
+            name: tx.name ?? '',
+            date: tx.date ?? new Date().toISOString(),
+            plaidTransactionId: tx.transaction_id,
+          });
+        } catch (err) {
+          console.error('[LEDGER] Error processing transaction:', err);
+        }
+      }
+
       // Transaction pushed - logging removed
 
       imported++;
@@ -241,6 +256,7 @@ export async function syncPlaidTransactionsForItem(params: {
   });
 
   console.log('[Sync] About to return result with', importedTransactions.length, 'transactions');
+  console.log('[LEDGER] Processed', importedTransactions.filter(t => t.transactionType === 'credit').length, 'credit transactions into wallet');
 
   return {
     importedTransactions,

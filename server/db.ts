@@ -5126,3 +5126,109 @@ export async function addLedgerEntry(
     throw err;
   }
 }
+
+
+/**
+ * Process a bank transaction and create wallet ledger entry
+ * Converts Plaid transactions into wallet accounting events
+ */
+export async function processBankTransaction(
+  userId: number,
+  transaction: {
+    amount: number;
+    type: "income" | "expense";
+    name: string;
+    date: string;
+    plaidTransactionId: string;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    // Only process income transactions for wallet
+    if (transaction.type !== "income") {
+      console.log("[LEDGER] Skipping expense transaction:", transaction.name);
+      return null;
+    }
+
+    // Classify transaction
+    const isIncome = transaction.name.toLowerCase().includes("zelle") ||
+                    transaction.name.toLowerCase().includes("refund") ||
+                    transaction.type === "income";
+
+    if (!isIncome) {
+      console.log("[LEDGER] Transaction not classified as income:", transaction.name);
+      return null;
+    }
+
+    // Check for duplicates
+    const existing = await db
+      .select()
+      .from(walletTransactions)
+      .where(
+        and(
+          eq(walletTransactions.externalTransactionId, transaction.plaidTransactionId),
+          eq(walletTransactions.walletId, userId)
+        )
+      )
+      .limit(1);
+
+    if (existing.length > 0) {
+      console.log("[LEDGER] Duplicate transaction skipped:", transaction.plaidTransactionId);
+      return null;
+    }
+
+    // Get or create wallet
+    let wallet = await db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.driverId, userId))
+      .limit(1);
+
+    if (!wallet || wallet.length === 0) {
+      const inserted = await db
+        .insert(wallets)
+        .values({
+          driverId: userId,
+          totalEarnings: 0,
+          availableBalance: 0,
+          reservedBalance: 0,
+          pendingBalance: 0,
+          blockedBalance: 0,
+        })
+        .returning();
+      wallet = inserted;
+    }
+
+    const walletId = wallet[0].id;
+
+    // Create wallet transaction
+    const result = await db
+      .insert(walletTransactions)
+      .values({
+        walletId,
+        type: "income",
+        status: "completed",
+        amount: transaction.amount,
+        description: `Bank sync: ${transaction.name}`,
+        externalTransactionId: transaction.plaidTransactionId,
+      })
+      .returning();
+
+    console.log("[LEDGER] Transaction created", {
+      amount: transaction.amount,
+      userId,
+      transactionId: transaction.plaidTransactionId,
+    });
+
+    // Recalculate wallet
+    await recalculateWallet(walletId);
+
+    return result[0];
+  } catch (error) {
+    console.error("[LEDGER] Error processing transaction:", error);
+    throw error;
+  }
+}
+
