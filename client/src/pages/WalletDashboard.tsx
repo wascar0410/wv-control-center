@@ -421,9 +421,10 @@ export default function WalletDashboard() {
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">
-          {financialHistory?.events && financialHistory.events.length > 0 ? (
-            <div className="space-y-2">
-              {financialHistory.events.map((event: any) => {
+          <div className="space-y-2">
+            {financialHistory?.events && financialHistory.events.length > 0 ? (
+              <>
+                {financialHistory.events.map((event: any) => {
                 const isPositive = event.type === "Deposit" || event.type === "Reserve Completed";
                 const bgColor = 
                   event.type === "Deposit" ? "bg-green-50" :
@@ -489,22 +490,24 @@ export default function WalletDashboard() {
                   </Card>
                 );
               })}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
-                  No hay eventos en el historial
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              </>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No hay eventos en el historial
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="withdrawals" className="space-y-4">
-          {withdrawals && withdrawals.length > 0 ? (
-            <div className="space-y-2">
-              {withdrawals.map((withdrawal: any) => (
+          <div className="space-y-2">
+            {withdrawals && withdrawals.length > 0 ? (
+              <>
+                {withdrawals.map((withdrawal: any) => (
                 <Card key={withdrawal.id}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
@@ -534,16 +537,17 @@ export default function WalletDashboard() {
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-center text-muted-foreground">
-                  No hay retiros registrados
-                </p>
-              </CardContent>
-            </Card>
-          )}
+              </>
+            ) : (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-center text-muted-foreground">
+                    No hay retiros registrados
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="bank" className="space-y-4">

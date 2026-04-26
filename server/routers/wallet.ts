@@ -491,11 +491,9 @@ export const walletRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
-      // Determine wallet scope based on role
-      // Owners/Admins see company wallet (driverId=1 for company)
-      // Drivers see their individual wallet (driverId=ctx.user.id)
-      const isOwnerOrAdmin = ctx.user.role === "owner" || ctx.user.role === "admin";
-      const walletUserId = isOwnerOrAdmin ? 1 : ctx.user.id; // Company wallet uses driverId=1 for owners
+      // Each user has their own wallet (driverId=ctx.user.id)
+      // No forzar walletUserId a 1 - cada usuario ve su propia wallet
+      const walletUserId = ctx.user.id;
 
       console.log("[WalletSummary] fetching wallet", {
         userId: ctx.user.id,

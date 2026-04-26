@@ -512,21 +512,23 @@ function AccountClassificationsCard() {
           </div>
         )}
 
-        {!mergedAccounts || mergedAccounts.length === 0 ? (
-          <div className="py-6 text-center text-muted-foreground">
-            <Link2 className="mx-auto mb-2 h-8 w-8 opacity-50" />
-            <p className="text-sm">No bank accounts connected yet</p>
-            <p className="mt-1 text-xs">
-              Connect a bank account to classify operating, reserve, or personal
-              accounts.
-            </p>
-          </div>
-        ) : (
-          mergedAccounts.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-lg border p-3"
-            >
+        <div className="space-y-3">
+          {!mergedAccounts || mergedAccounts.length === 0 ? (
+            <div className="py-6 text-center text-muted-foreground">
+              <Link2 className="mx-auto mb-2 h-8 w-8 opacity-50" />
+              <p className="text-sm">No bank accounts connected yet</p>
+              <p className="mt-1 text-xs">
+                Connect a bank account to classify operating, reserve, or personal
+                accounts.
+              </p>
+            </div>
+          ) : (
+            <>
+              {mergedAccounts.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-lg border p-3"
+              >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">
@@ -607,8 +609,10 @@ function AccountClassificationsCard() {
                 )}
               </div>
             </div>
-          ))
-        )}
+              ))}
+            </>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
