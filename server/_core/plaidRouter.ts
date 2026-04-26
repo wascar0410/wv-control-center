@@ -21,7 +21,7 @@ import { bankAccountClassifications } from "../../drizzle/schema";
 // Helper para company-level scope
 const getScopedUserId = (ctx: any) => {
   const isOwnerOrAdmin = ctx.user.role === "owner" || ctx.user.role === "admin";
-  return isOwnerOrAdmin ? 1 : getScopedUserId(ctx);
+  return isOwnerOrAdmin ? 1 : ctx.user.id;
 };
 export const plaidRouter = router({
   createLinkToken: protectedProcedure
