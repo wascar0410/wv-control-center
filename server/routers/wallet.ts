@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, sql, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
-import { bankAccounts, reserveTransferSuggestions, wallets } from "../../drizzle/schema";
+import { bankAccounts, partnership, reserveTransferSuggestions, wallets } from "../../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
@@ -702,9 +702,6 @@ export const walletRouter = router({
    */
   getPartnerSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
-
       // Check permissions: only owners/admins can see partner summaries
       const isOwnerOrAdmin = ctx.user.role === "owner" || ctx.user.role === "admin";
       if (!isOwnerOrAdmin) {
@@ -715,50 +712,10 @@ export const walletRouter = router({
         };
       }
 
-      // Get all partnerships for this user
-      const partnerships = await db.query.partnership.findMany({
-        where: eq(partnership.userId, ctx.user.id),
-      });
-
-      console.log("[PartnerSummary] partnerships count:", partnerships.length);
-
-      if (!partnerships || partnerships.length === 0) {
-        console.log("[PartnerSummary] no partnerships found");
-        return {
-          partners: [],
-          totalParticipation: 0,
-        };
-      }
-
-      // For each partnership, get the partner's wallet
-      const partners = [];
-      let totalParticipation = 0;
-
-      for (const p of partnerships) {
-        const partnerWallet = await getWalletByDriverId(p.partnerId);
-        if (partnerWallet) {
-          partners.push({
-            id: p.id,
-            name: p.partnerName,
-            role: "Partner",
-            participationPercent: p.participationPercent,
-            totalAssigned: Number(partnerWallet.totalEarnings || 0),
-            availableToWithdraw: Number(partnerWallet.availableBalance || 0),
-            reservedBalance: Number(partnerWallet.reservedBalance || 0),
-            pendingWithdrawals: Number(partnerWallet.pendingBalance || 0),
-            walletStatus: "active",
-          });
-          totalParticipation += p.participationPercent;
-        }
-      }
-
-      console.log("[PartnerSummary] partners found:", partners.length, "totalParticipation:", totalParticipation);
-      console.log("[PartnerSummary]", partners);
-
-      return {
-        partners,
-        totalParticipation,
-      };
+      // Use db function to get partner summary
+      const result = await getPartnerSummaryFromDb(ctx.user.id);
+      console.log("[PartnerSummary]", result);
+      return result;
     } catch (err) {
       console.error("[wallet.getPartnerSummary]", err);
       return {

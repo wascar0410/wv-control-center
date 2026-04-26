@@ -1923,3 +1923,55 @@ export const autoTransferLogs = mysqlTable(
 );
 export type AutoTransferLog = typeof autoTransferLogs.$inferSelect;
 export type InsertAutoTransferLog = typeof autoTransferLogs.$inferInsert;
+
+/**
+ * Wallet Ledger - Complete accounting ledger for all wallet movements
+ * Immutable record of every balance change for audit and reconciliation
+ */
+export const walletLedger = mysqlTable(
+  "wallet_ledger",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    walletId: int("walletId")
+      .notNull()
+      .references(() => wallets.id, { onDelete: "cascade" }),
+    
+    // Ledger entry type
+    type: mysqlEnum("type", [
+      "income",           // Income from loads/work
+      "reserve_move",     // Move from available to reserved
+      "withdrawal",       // Withdrawal request
+      "adjustment",       // Manual adjustment
+      "fee",             // Fees charged
+      "bonus",           // Bonuses earned
+      "reversal",        // Reversal of previous entry
+    ])
+      .notNull(),
+    
+    // Amount and direction
+    amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+    direction: mysqlEnum("direction", ["debit", "credit"]).notNull(),
+    
+    // Balance after this entry
+    balanceAfter: decimal("balanceAfter", { precision: 12, scale: 2 }).notNull(),
+    
+    // Reference information
+    referenceType: varchar("referenceType", { length: 50 }), // "load", "reserve", "withdrawal", etc.
+    referenceId: int("referenceId"),
+    
+    // Description
+    description: text("description"),
+    
+    // Audit trail
+    createdBy: int("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    walletIdIdx: index("wallet_ledger_wallet_id_idx").on(table.walletId),
+    typeIdx: index("wallet_ledger_type_idx").on(table.type),
+    createdAtIdx: index("wallet_ledger_created_at_idx").on(table.createdAt),
+  })
+);
+
+export type WalletLedgerEntry = typeof walletLedger.$inferSelect;
+export type InsertWalletLedgerEntry = typeof walletLedger.$inferInsert;

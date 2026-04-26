@@ -71,6 +71,7 @@ import {
   users,
   userPreferences,
   wallets,
+  walletLedger,
   walletTransactions,
   withdrawals,
 } from "../drizzle/schema";
@@ -4826,11 +4827,11 @@ export async function getFinancialHistory(userId: number, limit: number = 50) {
       .limit(limit);
 
     // Get withdrawals
-    const withdrawals = await db
+    const withdrawalRecords = await db
       .select()
-      .from(withdrawals as any)
-      .where(eq((withdrawals as any).driverId, userId))
-      .orderBy(desc((withdrawals as any).createdAt))
+      .from(withdrawals)
+      .where(eq(withdrawals.driverId, userId))
+      .orderBy(desc(withdrawals.createdAt))
       .limit(limit);
 
     // Combine and sort by date
@@ -4861,7 +4862,7 @@ export async function getFinancialHistory(userId: number, limit: number = 50) {
           externalTransactionId: r.externalTransactionId,
         },
       })),
-      ...withdrawals.map((w: any) => ({
+      ...withdrawalRecords.map((w: any) => ({
         type: "withdrawal",
         subtype: w.status,
         status: w.status,
@@ -4939,5 +4940,189 @@ export async function backfillReservedBalance() {
   } catch (err) {
     console.error("[backfillReservedBalance] Error:", err);
     return { success: false, error: String(err) };
+  }
+}
+
+
+/**
+ * Recalculate wallet balances from ledger
+ * Ensures consistency between wallet balances and ledger entries
+ * Safe operation: reads ledger, calculates balances, updates wallet
+ */
+export async function recalculateWallet(walletId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  try {
+    console.log("[recalculateWallet] Starting recalculation for wallet", walletId);
+
+    // Get all ledger entries for this wallet, ordered by creation
+    const ledgerEntries = await db
+      .select()
+      .from(walletLedger)
+      .where(eq(walletLedger.walletId, walletId))
+      .orderBy(asc(walletLedger.createdAt));
+
+    if (ledgerEntries.length === 0) {
+      console.log("[recalculateWallet] No ledger entries found for wallet", walletId);
+      return {
+        success: true,
+        message: "No ledger entries to recalculate",
+        walletId,
+        entriesProcessed: 0,
+      };
+    }
+
+    // Get wallet
+    const wallet = await db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!wallet) {
+      throw new Error(`Wallet ${walletId} not found`);
+    }
+
+    // Recalculate balances from ledger
+    let calculatedAvailable = 0;
+    let calculatedReserved = 0;
+    let calculatedPending = 0;
+    let calculatedBlocked = 0;
+    let totalEarnings = 0;
+
+    for (const entry of ledgerEntries) {
+      const amount = Number(entry.amount || 0);
+      const isCredit = entry.direction === "credit";
+
+      // Track total earnings (all income entries)
+      if (entry.type === "income" && isCredit) {
+        totalEarnings += amount;
+      }
+
+      // Update balance categories based on type
+      if (entry.type === "income") {
+        if (isCredit) calculatedAvailable += amount;
+        else calculatedAvailable -= amount;
+      } else if (entry.type === "reserve_move") {
+        if (isCredit) {
+          calculatedReserved += amount;
+          calculatedAvailable -= amount;
+        } else {
+          calculatedReserved -= amount;
+          calculatedAvailable += amount;
+        }
+      } else if (entry.type === "withdrawal") {
+        if (isCredit) calculatedPending += amount;
+        else calculatedAvailable += amount;
+      } else if (entry.type === "adjustment") {
+        if (isCredit) calculatedAvailable += amount;
+        else calculatedAvailable -= amount;
+      } else if (entry.type === "fee") {
+        if (isCredit) calculatedBlocked += amount;
+        else calculatedBlocked -= amount;
+      } else if (entry.type === "bonus") {
+        if (isCredit) calculatedAvailable += amount;
+        else calculatedAvailable -= amount;
+      } else if (entry.type === "reversal") {
+        if (isCredit) calculatedAvailable -= amount;
+        else calculatedAvailable += amount;
+      }
+    }
+
+    // Ensure non-negative balances
+    calculatedAvailable = Math.max(0, calculatedAvailable);
+    calculatedReserved = Math.max(0, calculatedReserved);
+    calculatedPending = Math.max(0, calculatedPending);
+    calculatedBlocked = Math.max(0, calculatedBlocked);
+
+    // Update wallet with recalculated balances
+    await db
+      .update(wallets)
+      .set({
+        totalEarnings: String(totalEarnings),
+        availableBalance: String(calculatedAvailable),
+        reservedBalance: String(calculatedReserved),
+        pendingBalance: String(calculatedPending),
+        blockedBalance: String(calculatedBlocked),
+      })
+      .where(eq(wallets.id, walletId));
+
+    console.log("[recalculateWallet] ✅ Recalculation complete", {
+      walletId,
+      totalEarnings,
+      availableBalance: calculatedAvailable,
+      reservedBalance: calculatedReserved,
+      pendingBalance: calculatedPending,
+      blockedBalance: calculatedBlocked,
+      entriesProcessed: ledgerEntries.length,
+    });
+
+    return {
+      success: true,
+      message: "Wallet recalculated successfully",
+      walletId,
+      entriesProcessed: ledgerEntries.length,
+      balances: {
+        totalEarnings,
+        availableBalance: calculatedAvailable,
+        reservedBalance: calculatedReserved,
+        pendingBalance: calculatedPending,
+        blockedBalance: calculatedBlocked,
+      },
+    };
+  } catch (err) {
+    console.error("[recalculateWallet] Error:", err);
+    return {
+      success: false,
+      message: String(err),
+      walletId,
+      entriesProcessed: 0,
+    };
+  }
+}
+
+/**
+ * Add ledger entry for wallet movement
+ * Called before updating wallet balance to maintain trazability
+ */
+export async function addLedgerEntry(
+  walletId: number,
+  type: "income" | "reserve_move" | "withdrawal" | "adjustment" | "fee" | "bonus" | "reversal",
+  amount: number,
+  direction: "debit" | "credit",
+  balanceAfter: number,
+  referenceType?: string,
+  referenceId?: number,
+  description?: string,
+  createdBy?: number
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+
+  try {
+    await db.insert(walletLedger).values({
+      walletId,
+      type,
+      amount: String(amount),
+      direction,
+      balanceAfter: String(balanceAfter),
+      referenceType,
+      referenceId,
+      description,
+      createdBy,
+    });
+
+    console.log("[addLedgerEntry] ✅ Entry added", {
+      walletId,
+      type,
+      amount,
+      direction,
+      balanceAfter,
+    });
+  } catch (err) {
+    console.error("[addLedgerEntry] Error:", err);
+    throw err;
   }
 }
