@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { and, eq, sql, inArray } from "drizzle-orm";
+import { and, eq, sql, inArray, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
-import { bankAccounts, partnership, reserveTransferSuggestions, wallets } from "../../drizzle/schema";
+import { bankAccounts, partnership, reserveTransferSuggestions, wallets, withdrawals } from "../../drizzle/schema";
 import {
   getDb,
   getOrCreateWallet,
