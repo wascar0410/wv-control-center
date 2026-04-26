@@ -2561,7 +2561,7 @@ export const appRouter = router({
         return { success: true, message: "Contraseña actualizada" };
       }),
     driverLogin: publicProcedure
-  .input(z.object({ email: z.string().email() }))
+  .input(z.object({ email: z.string().email(), password: z.string() }))
   .mutation(async ({ input, ctx }) => {
     const db = await getDb();
     if (!db) {
@@ -2579,6 +2579,14 @@ export const appRouter = router({
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'User not found'
+      });
+    }
+
+    const passwordValid = await bcrypt.compare(input.password, user.passwordHash || '');
+    if (!passwordValid) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'Invalid password'
       });
     }
 
