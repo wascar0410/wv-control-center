@@ -5132,6 +5132,45 @@ export async function addLedgerEntry(
  * Process a bank transaction and create wallet ledger entry
  * Converts Plaid transactions into wallet accounting events
  */
+/**
+ * Classify Plaid transactions into wallet transaction types
+ * Maps transaction names/patterns to specific categories
+ */
+function classifyTransaction(transactionName: string): {
+  type: "load_payment" | "other_income" | "bonus" | "refund" | "adjustment";
+  category: string;
+} {
+  const name = transactionName.toLowerCase();
+
+  // Load payments (from freight/dispatch systems)
+  if (name.includes("dispatch") || name.includes("load") || name.includes("freight")) {
+    return { type: "load_payment", category: "load_payment" };
+  }
+
+  // Owner investments (Zelle transfers, wire transfers) - NOT withdrawable
+  if (name.includes("zelle") || name.includes("wire") || name.includes("transfer")) {
+    return { type: "adjustment", category: "owner_investment" };
+  }
+
+  // Refunds
+  if (name.includes("refund") || name.includes("return")) {
+    return { type: "refund", category: "refund" };
+  }
+
+  // Bonuses
+  if (name.includes("bonus") || name.includes("incentive") || name.includes("promotion")) {
+    return { type: "bonus", category: "bonus" };
+  }
+
+  // Other income (Instacart, DoorDash, Uber, etc.)
+  if (name.includes("instacart") || name.includes("doordash") || name.includes("uber")) {
+    return { type: "other_income", category: "other_income" };
+  }
+
+  // Default: treat as other income
+  return { type: "other_income", category: "other_income" };
+}
+
 export async function processBankTransaction(
   userId: number,
   transaction: {
@@ -5152,15 +5191,13 @@ export async function processBankTransaction(
       return null;
     }
 
-    // Classify transaction
-    const isIncome = transaction.name.toLowerCase().includes("zelle") ||
-                    transaction.name.toLowerCase().includes("refund") ||
-                    transaction.type === "income";
-
-    if (!isIncome) {
-      console.log("[LEDGER] Transaction not classified as income:", transaction.name);
-      return null;
-    }
+    // Classify transaction using improved classifier
+    const classification = classifyTransaction(transaction.name);
+    console.log("[LEDGER] Transaction classified:", {
+      name: transaction.name,
+      type: classification.type,
+      category: classification.category,
+    });
 
     // Check for duplicates
     const existing = await db
@@ -5203,15 +5240,16 @@ export async function processBankTransaction(
 
     const walletId = wallet[0].id;
 
-    // Create wallet transaction
+    // Create wallet transaction with classified type
     const result = await db
       .insert(walletTransactions)
       .values({
         walletId,
-        type: "income",
+        driverId: userId,
+        type: classification.type,
         status: "completed",
         amount: transaction.amount,
-        description: `Bank sync: ${transaction.name}`,
+        description: `Bank sync (${classification.category}): ${transaction.name}`,
         externalTransactionId: transaction.plaidTransactionId,
       })
       .returning();
@@ -5221,6 +5259,48 @@ export async function processBankTransaction(
       userId,
       transactionId: transaction.plaidTransactionId,
     });
+
+    // Determine if this transaction affects wallet balance
+    // Only load_payment and bonus affect availableBalance
+    // other_income is optional, owner_investment doesn't affect withdrawable
+    const affectsBalance = classification.type === "load_payment" || classification.type === "bonus";
+
+    if (affectsBalance) {
+      // Create ledger entry for accounting
+      // Get current wallet balance before this entry
+      const wallet = await db
+        .select()
+        .from(wallets)
+        .where(eq(wallets.id, walletId))
+        .limit(1)
+        .then((rows) => rows[0]);
+
+      const currentBalance = Number(wallet?.availableBalance || 0);
+      const newBalance = currentBalance + transaction.amount;
+
+      // Map transaction type to ledger type
+      let ledgerType: "income" | "bonus" | "adjustment" = "income";
+      if (classification.type === "bonus") ledgerType = "bonus";
+      else if (classification.type === "adjustment") ledgerType = "adjustment";
+
+      await db
+        .insert(walletLedger)
+        .values({
+          walletId,
+          type: ledgerType,
+          amount: String(transaction.amount),
+          direction: "credit",
+          balanceAfter: String(newBalance),
+          referenceType: "plaid_transaction",
+          referenceId: result[0].id,
+          description: `Bank sync (${classification.category}): ${transaction.name}`,
+          createdBy: userId,
+        })
+        .catching((err) => {
+          console.error("[LEDGER] Error creating ledger entry:", err);
+          // Don't fail if ledger entry fails - transaction already created
+        });
+    }
 
     // Recalculate wallet
     await recalculateWallet(walletId);
