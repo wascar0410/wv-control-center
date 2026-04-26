@@ -1245,6 +1245,7 @@ export const wallets = mysqlTable(
   "wallets",
   {
     id: int("id").autoincrement().primaryKey(),
+    companyId: int("companyId").default(1), // Company-level wallet (default to 1 for backward compatibility)
     driverId: int("driverId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
@@ -1297,6 +1298,7 @@ export const wallets = mysqlTable(
   },
   (table) => ({
     driverIdUnique: uniqueIndex("wallets_driver_id_unique").on(table.driverId),
+    companyIdIdx: index("wallets_company_id_idx").on(table.companyId),
     statusIdx: index("wallets_status_idx").on(table.status),
   })
 );

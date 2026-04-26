@@ -554,10 +554,23 @@ export const walletRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      // Determine wallet scope based on role
+      // Owners/Admins see company wallet (driverId=1 for company)
+      // Drivers see their individual wallet (driverId=ctx.user.id)
+      const isOwnerOrAdmin = ctx.user.role === "owner" || ctx.user.role === "admin";
+      const walletUserId = isOwnerOrAdmin ? 1 : ctx.user.id; // Company wallet uses driverId=1 for owners
+
+      console.log("[WalletSummary] fetching wallet", {
+        userId: ctx.user.id,
+        role: ctx.user.role,
+        walletUserId,
+        isOwnerOrAdmin,
+      });
+
       // Get wallet directly
-      let wallet = await getWalletByDriverId(ctx.user.id);
+      let wallet = await getWalletByDriverId(walletUserId);
       if (!wallet) {
-        wallet = await getOrCreateWallet(ctx.user.id);
+        wallet = await getOrCreateWallet(walletUserId);
       }
 
       if (!wallet) {
@@ -685,11 +698,22 @@ export const walletRouter = router({
 
   /**
    * Get partner summary with real partner data
+   * Only owners/admins can see partner summaries
    */
   getPartnerSummary: protectedProcedure.query(async ({ ctx }) => {
     try {
       const db = await getDb();
       if (!db) throw new Error("Database not available");
+
+      // Check permissions: only owners/admins can see partner summaries
+      const isOwnerOrAdmin = ctx.user.role === "owner" || ctx.user.role === "admin";
+      if (!isOwnerOrAdmin) {
+        console.log("[PartnerSummary] access denied for role:", ctx.user.role);
+        return {
+          partners: [],
+          totalParticipation: 0,
+        };
+      }
 
       // Get all partnerships for this user
       const partnerships = await db.query.partnership.findMany({
@@ -771,6 +795,71 @@ export const walletRouter = router({
     } catch (err) {
       console.error("[wallet.adminBackfillReservedBalance]", err);
       return { success: false, error: String(err) };
+    }
+  }),
+
+  /**
+   * Get driver individual earnings (separate from company wallet)
+   * Only drivers can see their own earnings
+   */
+  getDriverEarnings: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      // Check permissions: only drivers can see their earnings
+      const isDriver = ctx.user.role === "driver";
+      if (!isDriver) {
+        console.log("[DriverEarnings] access denied for role:", ctx.user.role);
+        return {
+          earnings: 0,
+          availableBalance: 0,
+          reservedBalance: 0,
+          pendingWithdrawals: 0,
+          totalWithdrawn: 0,
+        };
+      }
+
+      // Get driver's individual wallet
+      let wallet = await getWalletByDriverId(ctx.user.id);
+      if (!wallet) {
+        wallet = await getOrCreateWallet(ctx.user.id);
+      }
+
+      if (!wallet) {
+        console.error("[DriverEarnings] wallet not found for driver", ctx.user.id);
+        return {
+          earnings: 0,
+          availableBalance: 0,
+          reservedBalance: 0,
+          pendingWithdrawals: 0,
+          totalWithdrawn: 0,
+        };
+      }
+
+      console.log("[DriverEarnings] fetched for driver", {
+        driverId: ctx.user.id,
+        earnings: wallet.totalEarnings,
+        available: wallet.availableBalance,
+        reserved: wallet.reservedBalance,
+      });
+
+      return {
+        earnings: Number(wallet.totalEarnings || 0),
+        availableBalance: Number(wallet.availableBalance || 0),
+        reservedBalance: Number(wallet.reservedBalance || 0),
+        pendingWithdrawals: Number(wallet.pendingBalance || 0),
+        totalWithdrawn: 0, // Can be calculated from withdrawals table if needed
+      };
+    } catch (err) {
+      console.error("[wallet.getDriverEarnings]", err);
+      return {
+        earnings: 0,
+        availableBalance: 0,
+        reservedBalance: 0,
+        pendingWithdrawals: 0,
+        totalWithdrawn: 0,
+      };
     }
   }),
 });
