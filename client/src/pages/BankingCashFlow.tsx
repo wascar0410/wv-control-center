@@ -775,7 +775,6 @@ function SuggestedTransfersCard() {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
           <div className="space-y-3">
             {/* Bulk dismiss button */}
             <div className="flex justify-end">
@@ -865,7 +864,6 @@ function SuggestedTransfersCard() {
                 </div>
               </div>
             ))}
-          </div>
           </div>
         )}
       </CardContent>
