@@ -499,7 +499,6 @@ export const walletRouter = router({
         userId: ctx.user.id,
         role: ctx.user.role,
         walletUserId,
-        isOwnerOrAdmin,
       });
 
       // Get wallet directly
