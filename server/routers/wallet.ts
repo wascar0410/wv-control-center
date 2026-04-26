@@ -374,69 +374,6 @@ export const walletRouter = router({
   }),
 
   /**
-   * Get financial history - combined events
-   */
-  getFinancialHistory: protectedProcedure
-    .input(z.object({ limit: z.number().optional(), offset: z.number().optional() }))
-    .query(async ({ ctx, input }) => {
-      try {
-        const db = await getDb();
-        if (!db) return [];
-
-        const limit = input.limit || 50;
-        const offset = input.offset || 0;
-
-        const transactions = await getWalletTransactions(ctx.user.id, limit + 100, 0);
-        const suggestions = await db
-          .select()
-          .from(reserveTransferSuggestions)
-          .where(eq(reserveTransferSuggestions.ownerId, ctx.user.id));
-
-        const events: any[] = [];
-
-        if (transactions) {
-          transactions.forEach((tx: any) => {
-            events.push({
-              id: `tx-${tx.id}`,
-              type: tx.type === "withdrawal" ? "Withdrawal" : "Deposit",
-              amount: tx.amount,
-              description: tx.description,
-              date: tx.createdAt,
-              status: tx.status,
-            });
-          });
-        }
-
-        suggestions.forEach((s: any) => {
-          const statusLabel =
-            s.status === "suggested"
-              ? "Reserve Suggested"
-              : s.status === "completed"
-                ? "Reserve Completed"
-                : s.status === "dismissed"
-                  ? "Reserve Dismissed"
-                  : "Reserve Approved";
-
-          events.push({
-            id: `reserve-${s.id}`,
-            type: statusLabel,
-            amount: s.suggestedAmount,
-            description: s.reason,
-            date: s.createdAt,
-            status: s.status,
-          });
-        });
-
-        events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-        return events.slice(offset, offset + limit);
-      } catch (err) {
-        console.error("[wallet.getFinancialHistory]", err);
-        return [];
-      }
-    }),
-
-  /**
    * Dismiss historical reserve suggestions (older than today)
    */
   dismissHistoricalReserveSuggestions: protectedProcedure.mutation(async ({ ctx }) => {
