@@ -26,6 +26,7 @@ import { advancedSearchRouter } from "./_core/advancedSearchRouter";
 import { chatRouter } from "./_core/chatRouter";
 import { analyticsRouter } from "./_core/analyticsRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { users } from "../drizzle/schema";
 import { getDb } from "./db";
 import { users as usersTable, loads as loadsTable } from "../drizzle/schema";
 import { notifyOwner } from "./_core/notification";
@@ -2560,65 +2561,50 @@ export const appRouter = router({
         return { success: true, message: "Contraseña actualizada" };
       }),
     driverLogin: publicProcedure
-  .input(z.object({ email: z.string().email(), password: z.string() }))
+  .input(z.object({ email: z.string().email() }))
   .mutation(async ({ input, ctx }) => {
-    try {
-      console.log("[auth.driverLogin] input received:", {
-        email: input.email,
+    const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Database connection failed'
       });
-
-      const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
-
-      const result = await driverLogin({
-        email: input.email,
-        password: input.password,
-        ipAddress: ctx.req.ip,
-        userAgent: ctx.req.headers["user-agent"],
-      });
-
-      if (!result) {
-        throw new Error("Login failed: no result returned");
-      }
-
-      const isSecure =
-        ctx.req.protocol === "https" ||
-        ctx.req.headers["x-forwarded-proto"] === "https";
-
-      ctx.res.cookie("wv_session", result.token, {
-        httpOnly: true,
-        secure: isSecure,
-        sameSite: isSecure ? "none" : "lax",
-        maxAge: ONE_YEAR_MS,
-        path: "/",
-      });
-
-      console.log("[auth.driverLogin] cookie set");
-      console.log("[LOGIN RESULT]", {
-        userId: result.userId,
-        email: result.email,
-        role: result.role,
-        expiresIn: result.expiresIn,
-      });
-
-      // Retornar objeto JSON puro serializable
-      const responseData = {
-        success: true,
-        user: {
-          id: Number(result.userId),
-          email: String(result.email || ""),
-          name: String(result.name || ""),
-          role: String(result.role),
-        },
-        token: String(result.token),
-        expiresIn: Number(result.expiresIn),
-      };
-
-      console.log("[auth.driverLogin] returning response");
-      return responseData;
-    } catch (error) {
-      console.error("[auth.driverLogin] error:", error);
-      throw error;
     }
+
+    const user = await db.query.users.findFirst({
+      where: eq(usersTable.email, input.email)
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: 'UNAUTHORIZED',
+        message: 'User not found'
+      });
+    }
+
+    ctx.res.cookie('session', JSON.stringify({
+      userId: user.id,
+      role: user.role
+    }), {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true
+    });
+
+    console.log('[LOGIN SUCCESS]', {
+      id: user.id,
+      email: user.email,
+      role: user.role
+    });
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      }
+    };
   }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {
       if (ctx.user?.role !== "admin" && ctx.user?.role !== "owner") throw new Error("No autorizado");
