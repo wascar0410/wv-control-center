@@ -5372,25 +5372,70 @@ export async function analyzeLoad(load: {
   const reasons: string[] = [];
   const riskFlags: string[] = [];
 
-  // Calculate or use provided mileage
-  let miles = 0;
-  if (
+  // CRITICAL: Force calculation of miles from coordinates
+  const hasCoords =
     load.pickupLat &&
     load.pickupLng &&
     load.deliveryLat &&
-    load.deliveryLng
-  ) {
-    miles = calculateDistance(
-      Number(load.pickupLat),
-      Number(load.pickupLng),
-      Number(load.deliveryLat),
-      Number(load.deliveryLng)
-    );
-    console.log(`[AI Load Advisor] Load ${load.id}: Calculated distance from coordinates: ${miles.toFixed(1)} miles`);
-  } else {
-    console.log(`[AI Load Advisor] Load ${load.id}: Missing coordinates - pickup(${load.pickupLat}, ${load.pickupLng}), delivery(${load.deliveryLat}, ${load.deliveryLng})`);
-    riskFlags.push("Missing coordinates - cannot calculate exact distance");
-    miles = 0;
+    load.deliveryLng;
+
+  let miles = 0;
+  let calculatedFromCoords = false;
+
+  if (hasCoords) {
+    try {
+      const pickupLatNum = Number(load.pickupLat);
+      const pickupLngNum = Number(load.pickupLng);
+      const deliveryLatNum = Number(load.deliveryLat);
+      const deliveryLngNum = Number(load.deliveryLng);
+
+      // Validate that numbers are valid
+      if (
+        !isNaN(pickupLatNum) &&
+        !isNaN(pickupLngNum) &&
+        !isNaN(deliveryLatNum) &&
+        !isNaN(deliveryLngNum)
+      ) {
+        miles = calculateDistance(
+          pickupLatNum,
+          pickupLngNum,
+          deliveryLatNum,
+          deliveryLngNum
+        );
+        calculatedFromCoords = true;
+        console.log(`[AI Load Advisor] Load ${load.id}: Calculated distance from coordinates: ${miles.toFixed(1)} miles`);
+      } else {
+        console.warn(`[AI Load Advisor] Load ${load.id}: Coordinates are not valid numbers`);
+        riskFlags.push("Invalid coordinate values");
+      }
+    } catch (error) {
+      console.error(`[AI Load Advisor] Load ${load.id}: Error calculating distance:`, error);
+      riskFlags.push("Error calculating distance");
+    }
+  }
+
+  // Log coordinate status
+  console.log(`[AI Load Advisor] Load ${load.id}: hasCoords=${hasCoords}, miles=${miles}, calculatedFromCoords=${calculatedFromCoords}`);
+
+  // CRITICAL: If no miles after all attempts, return early with negotiate recommendation
+  if (!miles || miles === 0) {
+    console.warn(`[AI Load Advisor] Load ${load.id}: MISSING MILES - Cannot analyze without distance`);
+    return {
+      recommendation: "negotiate",
+      confidence: 50,
+      suggestedRate: Number(load.price),
+      reason: ["Missing distance data - cannot calculate rate per mile"],
+      riskFlags: ["missing_miles"],
+      financials: {
+        miles: 0,
+        ratePerMile: 0,
+        estimatedProfit: 0,
+        estimatedMargin: 0,
+        fuelCost: 0,
+        tolls: 0,
+        totalCost: 0,
+      },
+    };
   }
 
   // Use provided fuel cost or estimate
