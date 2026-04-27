@@ -622,4 +622,10 @@ getAllocationSettings: protectedProcedure.query(async () => {
         };
       }
     }),
+
+  // AI Finance Advisor - Analyze financial health
+  getAIAdvisor: protectedProcedure.query(async ({ ctx }) => {
+    const { analyzeFinancialHealth } = await import("../db");
+    return analyzeFinancialHealth(ctx.user.id);
+  }),
 });
