@@ -5386,7 +5386,9 @@ export async function analyzeLoad(load: {
       Number(load.deliveryLat),
       Number(load.deliveryLng)
     );
+    console.log(`[AI Load Advisor] Load ${load.id}: Calculated distance from coordinates: ${miles.toFixed(1)} miles`);
   } else {
+    console.log(`[AI Load Advisor] Load ${load.id}: Missing coordinates - pickup(${load.pickupLat}, ${load.pickupLng}), delivery(${load.deliveryLat}, ${load.deliveryLng})`);
     riskFlags.push("Missing coordinates - cannot calculate exact distance");
     miles = 0;
   }
@@ -5433,6 +5435,9 @@ export async function analyzeLoad(load: {
     reasons.push(`Good rate per mile: $${ratePerMile.toFixed(2)}/mi`);
   }
 
+  // Log final recommendation
+  console.log(`[AI Load Advisor] Load ${load.id}: price=$${Number(load.price).toFixed(2)}, miles=${miles.toFixed(1)}, ratePerMile=$${ratePerMile.toFixed(2)}, recommendation=${recommendation}, confidence=${confidence}%`);
+
   // Additional checks
   if (miles === 0) {
     riskFlags.push("Cannot verify distance - coordinates missing");
@@ -5451,6 +5456,8 @@ export async function analyzeLoad(load: {
   if (estimatedMargin > 0) {
     reasons.push(`Estimated margin: ${estimatedMargin.toFixed(1)}%`);
   }
+
+  console.log(`[AI Load Advisor] Load ${load.id} analysis complete: ${recommendation.toUpperCase()}, confidence=${confidence}%, profit=$${estimatedProfit.toFixed(2)}, margin=${estimatedMargin.toFixed(1)}%`);
 
   return {
     recommendation,
