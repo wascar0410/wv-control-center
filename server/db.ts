@@ -5137,38 +5137,28 @@ export async function addLedgerEntry(
  * Maps transaction names/patterns to specific categories
  */
 function classifyTransaction(transactionName: string): {
-  type: "load_payment" | "other_income" | "bonus" | "refund" | "adjustment";
+  type: "load_payment" | "other_income" | "owner_investment" | "unknown";
   category: string;
 } {
   const name = transactionName.toLowerCase();
 
-  // Load payments (from freight/dispatch systems)
-  if (name.includes("dispatch") || name.includes("load") || name.includes("freight")) {
+  // Zelle transfers = Owner investments (NOT withdrawable)
+  if (name.includes("zelle")) {
+    return { type: "owner_investment", category: "owner_investment" };
+  }
+
+  // Refunds = Other income
+  if (name.includes("refund")) {
+    return { type: "other_income", category: "refund" };
+  }
+
+  // Load payments from broker/dispatch systems
+  if (name.includes("broker") || name.includes("dispatch") || name.includes("load")) {
     return { type: "load_payment", category: "load_payment" };
   }
 
-  // Owner investments (Zelle transfers, wire transfers) - NOT withdrawable
-  if (name.includes("zelle") || name.includes("wire") || name.includes("transfer")) {
-    return { type: "adjustment", category: "owner_investment" };
-  }
-
-  // Refunds
-  if (name.includes("refund") || name.includes("return")) {
-    return { type: "refund", category: "refund" };
-  }
-
-  // Bonuses
-  if (name.includes("bonus") || name.includes("incentive") || name.includes("promotion")) {
-    return { type: "bonus", category: "bonus" };
-  }
-
-  // Other income (Instacart, DoorDash, Uber, etc.)
-  if (name.includes("instacart") || name.includes("doordash") || name.includes("uber")) {
-    return { type: "other_income", category: "other_income" };
-  }
-
-  // Default: treat as other income
-  return { type: "other_income", category: "other_income" };
+  // Unknown/unclassified - do not process
+  return { type: "unknown", category: "unknown" };
 }
 
 export async function processBankTransaction(
@@ -5198,6 +5188,12 @@ export async function processBankTransaction(
       type: classification.type,
       category: classification.category,
     });
+
+    // Skip unknown/unclassified transactions
+    if (classification.type === "unknown") {
+      console.log("[LEDGER] Skipping unclassified transaction:", transaction.name);
+      return null;
+    }
 
     // Check for duplicates in ledger (single source of truth)
     const existingLedger = await db
