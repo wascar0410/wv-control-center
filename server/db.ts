@@ -5199,20 +5199,20 @@ export async function processBankTransaction(
       category: classification.category,
     });
 
-    // Check for duplicates
-    const existing = await db
+    // Check for duplicates in ledger (single source of truth)
+    const existingLedger = await db
       .select()
-      .from(walletTransactions)
+      .from(walletLedger)
       .where(
         and(
-          eq(walletTransactions.externalTransactionId, transaction.plaidTransactionId),
-          eq(walletTransactions.walletId, userId)
+          eq(walletLedger.referenceType, "plaid_transaction"),
+          eq(walletLedger.referenceId, transaction.plaidTransactionId)
         )
       )
       .limit(1);
 
-    if (existing.length > 0) {
-      console.log("[LEDGER] Duplicate transaction skipped:", transaction.plaidTransactionId);
+    if (existingLedger.length > 0) {
+      console.log("[LEDGER] Duplicate transaction skipped (already in ledger):", transaction.plaidTransactionId);
       return null;
     }
 
@@ -5240,72 +5240,75 @@ export async function processBankTransaction(
 
     const walletId = wallet[0].id;
 
-    // Create wallet transaction with classified type
-    const result = await db
-      .insert(walletTransactions)
-      .values({
-        walletId,
-        driverId: userId,
-        type: classification.type,
-        status: "completed",
-        amount: transaction.amount,
-        description: `Bank sync (${classification.category}): ${transaction.name}`,
-        externalTransactionId: transaction.plaidTransactionId,
-      })
-      .returning();
-
-    console.log("[LEDGER] Transaction created", {
-      amount: transaction.amount,
-      userId,
-      transactionId: transaction.plaidTransactionId,
-    });
-
-    // Determine if this transaction affects wallet balance
+    // Determine ledger type based on classification
     // Only load_payment and bonus affect availableBalance
     // other_income is optional, owner_investment doesn't affect withdrawable
     const affectsBalance = classification.type === "load_payment" || classification.type === "bonus";
 
-    if (affectsBalance) {
-      // Create ledger entry for accounting
-      // Get current wallet balance before this entry
-      const wallet = await db
-        .select()
-        .from(wallets)
-        .where(eq(wallets.id, walletId))
-        .limit(1)
-        .then((rows) => rows[0]);
+    let ledgerType: "income" | "bonus" | "adjustment" = "income";
+    if (classification.type === "bonus") ledgerType = "bonus";
+    else if (classification.type === "adjustment") ledgerType = "adjustment";
 
-      const currentBalance = Number(wallet?.availableBalance || 0);
-      const newBalance = currentBalance + transaction.amount;
+    // Get current wallet balance before this entry (for balanceAfter calculation)
+    const currentWallet = await db
+      .select()
+      .from(wallets)
+      .where(eq(wallets.id, walletId))
+      .limit(1)
+      .then((rows) => rows[0]);
 
-      // Map transaction type to ledger type
-      let ledgerType: "income" | "bonus" | "adjustment" = "income";
-      if (classification.type === "bonus") ledgerType = "bonus";
-      else if (classification.type === "adjustment") ledgerType = "adjustment";
+    const currentBalance = Number(currentWallet?.availableBalance || 0);
+    const newBalance = affectsBalance ? currentBalance + transaction.amount : currentBalance;
 
+    // CREATE LEDGER ENTRY (single source of truth for accounting)
+    const ledgerResult = await db
+      .insert(walletLedger)
+      .values({
+        walletId,
+        type: ledgerType,
+        amount: String(transaction.amount),
+        direction: "credit",
+        balanceAfter: String(newBalance),
+        referenceType: "plaid_transaction",
+        referenceId: transaction.plaidTransactionId, // Use Plaid ID for deduplication
+        description: `Bank sync (${classification.category}): ${transaction.name}`,
+        createdBy: userId,
+      })
+      .returning();
+
+    console.log("[LEDGER] Ledger entry created (single source of truth)", {
+      amount: transaction.amount,
+      type: ledgerType,
+      category: classification.category,
+      userId,
+      plaidTransactionId: transaction.plaidTransactionId,
+    });
+
+    // OPTIONALLY: Create walletTransactions entry for UI history (non-accounting)
+    // This is purely for UI display and does NOT affect balance calculations
+    try {
       await db
-        .insert(walletLedger)
+        .insert(walletTransactions)
         .values({
           walletId,
-          type: ledgerType,
-          amount: String(transaction.amount),
-          direction: "credit",
-          balanceAfter: String(newBalance),
-          referenceType: "plaid_transaction",
-          referenceId: result[0].id,
+          driverId: userId,
+          type: classification.type,
+          status: "completed",
+          amount: transaction.amount,
           description: `Bank sync (${classification.category}): ${transaction.name}`,
-          createdBy: userId,
+          externalTransactionId: transaction.plaidTransactionId,
         })
-        .catching((err) => {
-          console.error("[LEDGER] Error creating ledger entry:", err);
-          // Don't fail if ledger entry fails - transaction already created
+        .catching(() => {
+          // Silently fail - walletTransactions is just for UI, not critical
         });
+    } catch (err) {
+      console.warn("[LEDGER] Warning: Could not create walletTransactions entry (non-critical):", err);
     }
 
-    // Recalculate wallet
+    // Recalculate wallet from ledger (single source of truth)
     await recalculateWallet(walletId);
 
-    return result[0];
+    return ledgerResult[0];
   } catch (error) {
     console.error("[LEDGER] Error processing transaction:", error);
     throw error;
