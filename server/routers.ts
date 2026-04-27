@@ -553,6 +553,31 @@ const loadsRouter = router({
 
       return { success: true };
     }),
+
+  getLoadAdvice: publicProcedure
+    .input(z.object({ loadId: z.number() }))
+    .query(async ({ input }) => {
+      try {
+        const { getLoadAdvice } = await import("../db");
+        return await getLoadAdvice(input.loadId);
+      } catch (error) {
+        console.error("[loads.getLoadAdvice] error:", error);
+        return null;
+      }
+    }),
+
+  getLoadAdviceBatch: publicProcedure
+    .input(z.object({ loadIds: z.array(z.number()) }))
+    .query(async ({ input }) => {
+      try {
+        const { getLoadAdviceBatch } = await import("../db");
+        const advice = await getLoadAdviceBatch(input.loadIds);
+        return Object.fromEntries(advice);
+      } catch (error) {
+        console.error("[loads.getLoadAdviceBatch] error:", error);
+        return {};
+      }
+    }),
 });
 
 // ─── Finance Router ───────────────────────────────────────────────────────────────────

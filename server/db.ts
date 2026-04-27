@@ -5311,3 +5311,214 @@ export async function processBankTransaction(
   }
 }
 
+
+
+/**
+ * AI Load Advisor - Analyze load profitability and recommend action
+ * 
+ * Uses deterministic financial rules to evaluate loads
+ * Recommendation: accept | negotiate | reject
+ */
+
+// Haversine formula to calculate distance between two coordinates (in miles)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Estimate fuel cost based on distance and truck type
+function estimateFuelCost(miles: number, fuelPrice: number = 3.5): number {
+  const mpg = 6; // Average truck MPG
+  return (miles / mpg) * fuelPrice;
+}
+
+export type LoadAdvice = {
+  recommendation: "accept" | "negotiate" | "reject";
+  confidence: number; // 0-100
+  suggestedRate: number;
+  reason: string[];
+  riskFlags: string[];
+  financials: {
+    miles: number;
+    ratePerMile: number;
+    estimatedProfit: number;
+    estimatedMargin: number;
+    fuelCost: number;
+    tolls: number;
+    totalCost: number;
+  };
+};
+
+export async function analyzeLoad(load: {
+  id: number;
+  price: number;
+  estimatedFuel?: number | null;
+  estimatedTolls?: number | null;
+  netMargin?: number | null;
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
+}): Promise<LoadAdvice> {
+  const reasons: string[] = [];
+  const riskFlags: string[] = [];
+
+  // Calculate or use provided mileage
+  let miles = 0;
+  if (
+    load.pickupLat &&
+    load.pickupLng &&
+    load.deliveryLat &&
+    load.deliveryLng
+  ) {
+    miles = calculateDistance(
+      Number(load.pickupLat),
+      Number(load.pickupLng),
+      Number(load.deliveryLat),
+      Number(load.deliveryLng)
+    );
+  } else {
+    riskFlags.push("Missing coordinates - cannot calculate exact distance");
+    miles = 0;
+  }
+
+  // Use provided fuel cost or estimate
+  const fuelCost = load.estimatedFuel
+    ? Number(load.estimatedFuel)
+    : estimateFuelCost(miles);
+
+  // Use provided tolls or default to 0
+  const tolls = load.estimatedTolls ? Number(load.estimatedTolls) : 0;
+
+  // Calculate financials
+  const totalCost = fuelCost + tolls;
+  const estimatedProfit = Number(load.price) - totalCost;
+  const estimatedMargin = estimatedProfit > 0 ? (estimatedProfit / Number(load.price)) * 100 : 0;
+  const ratePerMile = miles > 0 ? Number(load.price) / miles : 0;
+
+  // Apply decision rules
+  let recommendation: "accept" | "negotiate" | "reject" = "reject";
+  let confidence = 0;
+  let suggestedRate = Number(load.price);
+
+  // Rule 1: Check profit first
+  if (estimatedProfit <= 0) {
+    recommendation = "reject";
+    confidence = 95;
+    reasons.push(`Negative or zero profit: $${estimatedProfit.toFixed(2)}`);
+  }
+  // Rule 2: Check rate per mile
+  else if (ratePerMile < 1.5) {
+    recommendation = "reject";
+    confidence = 90;
+    reasons.push(`Rate per mile too low: $${ratePerMile.toFixed(2)}/mi (minimum: $1.50/mi)`);
+    suggestedRate = miles * 1.5;
+  } else if (ratePerMile >= 1.5 && ratePerMile < 2.0) {
+    recommendation = "negotiate";
+    confidence = 75;
+    reasons.push(`Rate per mile is acceptable but could be better: $${ratePerMile.toFixed(2)}/mi`);
+    suggestedRate = miles * 2.0;
+  } else if (ratePerMile >= 2.0) {
+    recommendation = "accept";
+    confidence = 85;
+    reasons.push(`Good rate per mile: $${ratePerMile.toFixed(2)}/mi`);
+  }
+
+  // Additional checks
+  if (miles === 0) {
+    riskFlags.push("Cannot verify distance - coordinates missing");
+    confidence = Math.max(confidence - 10, 50);
+  }
+
+  if (estimatedMargin < 10) {
+    riskFlags.push(`Low margin: ${estimatedMargin.toFixed(1)}% (healthy: >15%)`);
+  }
+
+  if (fuelCost > Number(load.price) * 0.4) {
+    riskFlags.push(`High fuel cost: ${((fuelCost / Number(load.price)) * 100).toFixed(1)}% of revenue`);
+  }
+
+  // Add margin info to reasons
+  if (estimatedMargin > 0) {
+    reasons.push(`Estimated margin: ${estimatedMargin.toFixed(1)}%`);
+  }
+
+  return {
+    recommendation,
+    confidence,
+    suggestedRate,
+    reason: reasons,
+    riskFlags,
+    financials: {
+      miles: Math.round(miles * 10) / 10,
+      ratePerMile: Math.round(ratePerMile * 100) / 100,
+      estimatedProfit: Math.round(estimatedProfit * 100) / 100,
+      estimatedMargin: Math.round(estimatedMargin * 100) / 100,
+      fuelCost: Math.round(fuelCost * 100) / 100,
+      tolls: Math.round(tolls * 100) / 100,
+      totalCost: Math.round(totalCost * 100) / 100,
+    },
+  };
+}
+
+/**
+ * Get advice for a single load by ID
+ */
+export async function getLoadAdvice(loadId: number): Promise<LoadAdvice | null> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    const load = await db
+      .select()
+      .from(loads)
+      .where(eq(loads.id, loadId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!load) {
+      return null;
+    }
+
+    return await analyzeLoad(load);
+  } catch (error) {
+    console.error("[LoadAdvisor] Error analyzing load:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get advice for multiple loads (batch)
+ */
+export async function getLoadAdviceBatch(loadIds: number[]): Promise<Map<number, LoadAdvice>> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    const loadList = await db
+      .select()
+      .from(loads)
+      .where(inArray(loads.id, loadIds));
+
+    const advice = new Map<number, LoadAdvice>();
+
+    for (const load of loadList) {
+      const loadAdvice = await analyzeLoad(load);
+      advice.set(load.id, loadAdvice);
+    }
+
+    return advice;
+  } catch (error) {
+    console.error("[LoadAdvisor] Error analyzing batch:", error);
+    throw error;
+  }
+}
