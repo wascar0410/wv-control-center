@@ -1,18 +1,21 @@
-import { useMemo, useState } from "react";
+import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Loader2, LayoutGrid, Table as TableIcon } from "lucide-react";
 import { useDispatchFilters } from "@/hooks/useDispatchFilters";
+import { useLoadAdvice } from "@/hooks/useLoadAdvice";
 import DispatchFilterPanel from "@/components/dispatch/DispatchFilterPanel";
 import DispatchKPIStrip from "@/components/dispatch/DispatchKPIStrip";
 import DispatchKanbanBoard from "@/components/dispatch/DispatchKanbanBoard";
 import DispatchTableView from "@/components/dispatch/DispatchTableView";
 
 type ViewMode = "kanban" | "table";
+type AIRecommendationFilter = "all" | "accept" | "negotiate" | "reject";
 
 export default function DispatchBoard() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
   const [selectedLoadId, setSelectedLoadId] = useState<number | null>(null);
+  const [aiFilter, setAIFilter] = useState<AIRecommendationFilter>("all");
 
   const { filters, setFilters, applyQuickView, isLoaded } = useDispatchFilters();
 
@@ -38,6 +41,10 @@ export default function DispatchBoard() {
     if (rawData && Array.isArray((rawData as any).items)) return (rawData as any).items;
     return [];
   }, [rawData]);
+
+  // Fetch AI advice for all loads
+  const loadIds = useMemo(() => loads.map((l: any) => l.id), [loads]);
+  const { adviceMap, isLoading: isLoadingAdvice } = useLoadAdvice(loadIds);
 
   const filteredLoads = useMemo(() => {
     console.log("[DispatchBoard] loads.length:", loads.length);
@@ -65,9 +72,17 @@ export default function DispatchBoard() {
       const matchesMargin =
         margin >= filters.marginRange[0] && margin <= filters.marginRange[1];
 
+      // Apply AI recommendation filter
+      if (aiFilter !== "all") {
+        const advice = adviceMap.get(load.id);
+        if (!advice || advice.recommendation !== aiFilter) {
+          return false;
+        }
+      }
+
       return matchesStatus && matchesSearch && matchesMargin;
     });
-  }, [loads, filters]);
+  }, [loads, filters, adviceMap, aiFilter]);
 
   // Log filtered results
   console.log("[DispatchBoard] filteredLoads.length:", filteredLoads.length);
@@ -154,6 +169,21 @@ export default function DispatchBoard() {
           </div>
         </div>
 
+        {/* AI Recommendation Filter Buttons */}
+        <div className="mb-4 flex gap-2 items-center">
+          <span className="text-sm font-medium text-muted-foreground">AI Advisor:</span>
+          {(["all", "accept", "negotiate", "reject"] as const).map((filter) => (
+            <Button
+              key={filter}
+              size="sm"
+              variant={aiFilter === filter ? "default" : "outline"}
+              onClick={() => setAIFilter(filter)}
+            >
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </Button>
+          ))}
+        </div>
+
         <DispatchKPIStrip loads={filteredLoads} />
 
         <div className="min-h-0 flex-1 overflow-hidden">
@@ -170,6 +200,8 @@ export default function DispatchBoard() {
               onLoadSelect={handleLoadSelect}
               onAssign={handleAssign}
               onReassign={handleReassign}
+              adviceMap={adviceMap}
+              isLoadingAdvice={isLoadingAdvice}
             />
           )}
         </div>

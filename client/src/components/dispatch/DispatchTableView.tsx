@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import LoadAdviceBadge from "./LoadAdviceBadge";
+import { useLoadAdvice } from "@/hooks/useLoadAdvice";
 import {
   formatMargin,
   formatProfit,
@@ -28,6 +30,8 @@ interface DispatchTableViewProps {
   onLoadSelect: (loadId: number) => void;
   onAssign: (loadId: number, driverId?: number) => void;
   onReassign: (loadId: number) => void;
+  adviceMap?: Map<number, any>;
+  isLoadingAdvice?: boolean;
 }
 
 const ROWS_PER_PAGE = 50;
@@ -37,6 +41,8 @@ export default function DispatchTableView({
   onLoadSelect,
   onAssign,
   onReassign,
+  adviceMap = new Map(),
+  isLoadingAdvice = false,
 }: DispatchTableViewProps) {
   const [sortBy, setSortBy] = useState<"id" | "margin" | "profit" | "date">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -97,6 +103,7 @@ export default function DispatchTableView({
                 Profit{getSortIndicator("profit")}
               </TableHead>
               <TableHead className="text-right">Rate/mi</TableHead>
+              <TableHead>AI Advisor</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -134,6 +141,12 @@ export default function DispatchTableView({
                     </TableCell>
                     <TableCell className="text-right text-sm">
                       {formatRate(snapshot.ratePerMile)}
+                    </TableCell>
+                    <TableCell>
+                      <LoadAdviceBadge
+                        advice={adviceMap.get(load.id)}
+                        isLoading={isLoadingAdvice}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
