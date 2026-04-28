@@ -5372,130 +5372,102 @@ export async function analyzeLoad(load: {
   const reasons: string[] = [];
   const riskFlags: string[] = [];
 
-  // 🔥 NORMALIZACIÓN TOTAL
-  const price = Number(load.price) || 0;
-  const fuel = Number(load.estimatedFuel) || 0;
-  const tolls = Number(load.estimatedTolls) || 0;
+  const price = Number(load.price);
+  const tolls = Number(load.estimatedTolls ?? 0);
 
-  // Coordenadas seguras
-  const pickupLat = Number(load.pickupLat);
-  const pickupLng = Number(load.pickupLng);
-  const deliveryLat = Number(load.deliveryLat);
-  const deliveryLng = Number(load.deliveryLng);
-
-  // Validación REAL (no superficial)
+  // ✅ VALIDACIÓN REAL DE COORDENADAS
   const hasValidCoords =
-    !isNaN(pickupLat) &&
-    !isNaN(pickupLng) &&
-    !isNaN(deliveryLat) &&
-    !isNaN(deliveryLng) &&
-    pickupLat !== 0 &&
-    pickupLng !== 0 &&
-    deliveryLat !== 0 &&
-    deliveryLng !== 0;
+    load.pickupLat != null &&
+    load.pickupLng != null &&
+    load.deliveryLat != null &&
+    load.deliveryLng != null;
 
   let miles = 0;
 
-  // 🧠 Cálculo SIEMPRE forzado
+  // ✅ USAR UNA SOLA FUNCIÓN (CONSISTENTE)
   if (hasValidCoords) {
-    const R = 3958.8;
-    const dLat = ((deliveryLat - pickupLat) * Math.PI) / 180;
-    const dLng = ((deliveryLng - pickupLng) * Math.PI) / 180;
+    miles = calculateDistance(
+      Number(load.pickupLat),
+      Number(load.pickupLng),
+      Number(load.deliveryLat),
+      Number(load.deliveryLng)
+    );
 
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((pickupLat * Math.PI) / 180) *
-        Math.cos((deliveryLat * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    miles = R * c;
-
-    // Ajuste trucking real
-    miles = miles * 1.15;
+    // Ajuste real trucking (roads ≠ línea recta)
+    miles *= 1.18;
   }
 
-  // 🚨 FALLBACK INTELIGENTE (CLAVE)
-  if (miles <= 0) {
-    miles = 100; // fallback conservador
+  // ✅ FALLBACK INTELIGENTE (NO HARDCODE)
+  if (miles <= 0 || !isFinite(miles)) {
+    miles = price / 2; // ~ $2/mi assumption
+    riskFlags.push("Distance estimated from price (no coordinates)");
   }
 
-  // SIEMPRE calcular RPM
+  // ✅ FUEL DINÁMICO SI NO VIENE
+  const fuel =
+    load.estimatedFuel != null
+      ? Number(load.estimatedFuel)
+      : estimateFuelCost(miles);
+
   const ratePerMile = price / miles;
-
-  // Profit real
   const estimatedProfit = price - fuel - tolls;
-  const estimatedMargin = estimatedProfit > 0 ? (estimatedProfit / price) * 100 : 0;
+  const estimatedMargin =
+    estimatedProfit > 0 ? (estimatedProfit / price) * 100 : 0;
   const totalCost = fuel + tolls;
-  const fuelCost = fuel;
 
-  // Apply decision rules
   let recommendation: "accept" | "negotiate" | "reject" = "reject";
   let confidence = 0;
-  let suggestedRate = Number(load.price);
+  let suggestedRate = price;
 
-  // Rule 1: Check profit first
+  // 🧠 DECISION ENGINE (MEJORADO)
   if (estimatedProfit <= 0) {
     recommendation = "reject";
     confidence = 95;
-    reasons.push(`Negative or zero profit: $${estimatedProfit.toFixed(2)}`);
-  }
-  // Rule 2: Check rate per mile
-  else if (ratePerMile < 1.5) {
+    reasons.push(`Loss detected: $${estimatedProfit.toFixed(2)}`);
+  } else if (ratePerMile < 1.6) {
     recommendation = "reject";
     confidence = 90;
-    reasons.push(`Rate per mile too low: $${ratePerMile.toFixed(2)}/mi (minimum: $1.50/mi)`);
-    suggestedRate = miles * 1.5;
-  } else if (ratePerMile >= 1.5 && ratePerMile < 2.0) {
+    reasons.push(`Low RPM: $${ratePerMile.toFixed(2)}/mi`);
+    suggestedRate = miles * 1.8;
+  } else if (ratePerMile < 2.2) {
     recommendation = "negotiate";
     confidence = 75;
-    reasons.push(`Rate per mile is acceptable but could be better: $${ratePerMile.toFixed(2)}/mi`);
-    suggestedRate = miles * 2.0;
-  } else if (ratePerMile >= 2.0) {
+    reasons.push(`Decent but improvable RPM: $${ratePerMile.toFixed(2)}/mi`);
+    suggestedRate = miles * 2.3;
+  } else {
     recommendation = "accept";
     confidence = 85;
-    reasons.push(`Good rate per mile: $${ratePerMile.toFixed(2)}/mi`);
+    reasons.push(`Strong RPM: $${ratePerMile.toFixed(2)}/mi`);
   }
 
-  // Log final recommendation
-  console.log(`[AI Load Advisor] Load ${load.id}: price=$${Number(load.price).toFixed(2)}, miles=${miles.toFixed(1)}, ratePerMile=$${ratePerMile.toFixed(2)}, recommendation=${recommendation}, confidence=${confidence}%`);
-
-  // Additional checks
-  if (miles === 0) {
-    riskFlags.push("Cannot verify distance - coordinates missing");
-    confidence = Math.max(confidence - 10, 50);
+  // ⚠️ RISK FLAGS
+  if (!hasValidCoords) {
+    riskFlags.push("Missing GPS coordinates");
+    confidence -= 10;
   }
 
-  if (estimatedMargin < 10) {
-    riskFlags.push(`Low margin: ${estimatedMargin.toFixed(1)}% (healthy: >15%)`);
+  if (estimatedMargin < 12) {
+    riskFlags.push(`Low margin: ${estimatedMargin.toFixed(1)}%`);
   }
 
-  if (fuelCost > Number(load.price) * 0.4) {
-    riskFlags.push(`High fuel cost: ${((fuelCost / Number(load.price)) * 100).toFixed(1)}% of revenue`);
+  if (fuel > price * 0.45) {
+    riskFlags.push("Fuel too high vs revenue");
   }
-
-  // Add margin info to reasons
-  if (estimatedMargin > 0) {
-    reasons.push(`Estimated margin: ${estimatedMargin.toFixed(1)}%`);
-  }
-
-  console.log(`[AI Load Advisor] Load ${load.id} analysis complete: ${recommendation.toUpperCase()}, confidence=${confidence}%, profit=$${estimatedProfit.toFixed(2)}, margin=${estimatedMargin.toFixed(1)}%`);
 
   return {
     recommendation,
-    confidence,
+    confidence: Math.max(50, confidence),
     suggestedRate,
     reason: reasons,
     riskFlags,
     financials: {
-      miles: Math.round(miles * 10) / 10,
-      ratePerMile: Math.round(ratePerMile * 100) / 100,
-      estimatedProfit: Math.round(estimatedProfit * 100) / 100,
-      estimatedMargin: Math.round(estimatedMargin * 100) / 100,
-      fuelCost: Math.round(fuelCost * 100) / 100,
-      tolls: Math.round(tolls * 100) / 100,
-      totalCost: Math.round(totalCost * 100) / 100,
+      miles: Math.round(miles),
+      ratePerMile: Number(ratePerMile.toFixed(2)),
+      estimatedProfit: Number(estimatedProfit.toFixed(2)),
+      estimatedMargin: Number(estimatedMargin.toFixed(2)),
+      fuelCost: Number(fuel.toFixed(2)),
+      tolls: Number(tolls.toFixed(2)),
+      totalCost: Number(totalCost.toFixed(2)),
     },
   };
 }
