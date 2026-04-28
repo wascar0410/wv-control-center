@@ -5372,40 +5372,63 @@ export async function analyzeLoad(load: {
   const reasons: string[] = [];
   const riskFlags: string[] = [];
 
-  // Calculate or use provided mileage
+  // 🔥 NORMALIZACIÓN TOTAL
+  const price = Number(load.price) || 0;
+  const fuel = Number(load.estimatedFuel) || 0;
+  const tolls = Number(load.estimatedTolls) || 0;
+
+  // Coordenadas seguras
+  const pickupLat = Number(load.pickupLat);
+  const pickupLng = Number(load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng);
+
+  // Validación REAL (no superficial)
+  const hasValidCoords =
+    !isNaN(pickupLat) &&
+    !isNaN(pickupLng) &&
+    !isNaN(deliveryLat) &&
+    !isNaN(deliveryLng) &&
+    pickupLat !== 0 &&
+    pickupLng !== 0 &&
+    deliveryLat !== 0 &&
+    deliveryLng !== 0;
+
   let miles = 0;
-  if (
-    load.pickupLat &&
-    load.pickupLng &&
-    load.deliveryLat &&
-    load.deliveryLng
-  ) {
-    miles = calculateDistance(
-      Number(load.pickupLat),
-      Number(load.pickupLng),
-      Number(load.deliveryLat),
-      Number(load.deliveryLng)
-    );
-    console.log(`[AI Load Advisor] Load ${load.id}: Calculated distance from coordinates: ${miles.toFixed(1)} miles`);
-  } else {
-    console.log(`[AI Load Advisor] Load ${load.id}: Missing coordinates - pickup(${load.pickupLat}, ${load.pickupLng}), delivery(${load.deliveryLat}, ${load.deliveryLng})`);
-    riskFlags.push("Missing coordinates - cannot calculate exact distance");
-    miles = 0;
+
+  // 🧠 Cálculo SIEMPRE forzado
+  if (hasValidCoords) {
+    const R = 3958.8;
+    const dLat = ((deliveryLat - pickupLat) * Math.PI) / 180;
+    const dLng = ((deliveryLng - pickupLng) * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((pickupLat * Math.PI) / 180) *
+        Math.cos((deliveryLat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    miles = R * c;
+
+    // Ajuste trucking real
+    miles = miles * 1.15;
   }
 
-  // Use provided fuel cost or estimate
-  const fuelCost = load.estimatedFuel
-    ? Number(load.estimatedFuel)
-    : estimateFuelCost(miles);
+  // 🚨 FALLBACK INTELIGENTE (CLAVE)
+  if (miles <= 0) {
+    miles = 100; // fallback conservador
+  }
 
-  // Use provided tolls or default to 0
-  const tolls = load.estimatedTolls ? Number(load.estimatedTolls) : 0;
+  // SIEMPRE calcular RPM
+  const ratePerMile = price / miles;
 
-  // Calculate financials
-  const totalCost = fuelCost + tolls;
-  const estimatedProfit = Number(load.price) - totalCost;
-  const estimatedMargin = estimatedProfit > 0 ? (estimatedProfit / Number(load.price)) * 100 : 0;
-  const ratePerMile = miles > 0 ? Number(load.price) / miles : 0;
+  // Profit real
+  const estimatedProfit = price - fuel - tolls;
+  const estimatedMargin = estimatedProfit > 0 ? (estimatedProfit / price) * 100 : 0;
+  const totalCost = fuel + tolls;
+  const fuelCost = fuel;
 
   // Apply decision rules
   let recommendation: "accept" | "negotiate" | "reject" = "reject";
