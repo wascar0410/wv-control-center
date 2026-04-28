@@ -5362,6 +5362,7 @@ function analyzeLoad(load: any) {
   const reasons: string[] = [];
   const riskFlags: string[] = [];
 
+<<<<<<< Updated upstream
   const price = Number(load.price || 0);
 
   let miles = Number(load.miles || load.distanceMiles || 0);
@@ -5402,6 +5403,62 @@ function analyzeLoad(load: any) {
       recommendation: "negotiate",
       confidence: "low",
       riskFlags,
+=======
+  // NORMALIZE ALL INPUTS FIRST
+  const pickupLatNum = Number(load.pickupLat);
+  const pickupLngNum = Number(load.pickupLng);
+  const deliveryLatNum = Number(load.deliveryLat);
+  const deliveryLngNum = Number(load.deliveryLng);
+  const priceNum = Number(load.price);
+
+  // FORCE COORDINATE-BASED MILES CALCULATION
+  let miles = 0;
+  let usedCoords = false;
+
+  const hasCoords =
+    pickupLatNum &&
+    pickupLngNum &&
+    deliveryLatNum &&
+    deliveryLngNum &&
+    !isNaN(pickupLatNum) &&
+    !isNaN(pickupLngNum) &&
+    !isNaN(deliveryLatNum) &&
+    !isNaN(deliveryLngNum);
+
+  if (hasCoords) {
+    try {
+      miles = calculateDistance(pickupLatNum, pickupLngNum, deliveryLatNum, deliveryLngNum);
+      usedCoords = true;
+      console.log(`[AI Load Advisor] Load ${load.id}: Calculated distance from coordinates: ${miles.toFixed(1)} miles`);
+    } catch (e) {
+      console.error(`[AI Load Advisor] Load ${load.id}: Error calculating distance:`, e);
+      riskFlags.push("Error calculating distance from coordinates");
+      miles = 0;
+    }
+  } else {
+    console.log(`[AI Load Advisor] Load ${load.id}: Missing/invalid coordinates - pickup(${pickupLatNum}, ${pickupLngNum}), delivery(${deliveryLatNum}, ${deliveryLngNum})`);
+    riskFlags.push("Missing coordinates - cannot calculate exact distance");
+  }
+
+  // HARD FAIL FALLBACK - MUST HAVE MILES
+  if (!miles || miles === 0) {
+    console.warn(`[AI Load Advisor] Load ${load.id}: HARD FAIL - miles = 0 or undefined`);
+    return {
+      recommendation: "negotiate",
+      confidence: 50,
+      suggestedRate: priceNum,
+      reason: ["Miles not available - cannot calculate rate per mile"],
+      riskFlags: ["missing_miles"],
+      financials: {
+        miles: 0,
+        ratePerMile: 0,
+        estimatedProfit: 0,
+        estimatedMargin: 0,
+        fuelCost: 0,
+        tolls: 0,
+        totalCost: 0,
+      },
+>>>>>>> Stashed changes
     };
   }
 
