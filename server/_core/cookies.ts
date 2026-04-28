@@ -16,14 +16,15 @@ function isSecureRequest(req: Request) {
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  const secure = isSecureRequest(req);
+  // TEMPORARY DEBUG: Force secure: false to test cookie handling
+  const secure = false; // isSecureRequest(req);
 
   return {
     // host-only cookie: más segura y evita problemas entre Railway / custom domains
     domain: undefined,
     httpOnly: true,
     path: "/",
-    sameSite: secure ? "none" : "lax",
+    sameSite: "lax", // secure ? "none" : "lax",
     secure,
   };
 }

@@ -1774,3 +1774,37 @@
 - [ ] Tests para validación de condiciones
 - [ ] Tests para logging
 - [ ] Checkpoint y entrega
+
+
+## AUDITORÍA CRÍTICA - Loads + Auth + AI Load Advisor
+### PRIORIDAD 1 - Auth Inconsistency
+- [ ] Verificar cookie handling en backend (session cookie setup)
+- [ ] Verificar credentials: "include" en tRPC client fetch
+- [ ] Eliminar logs [Auth] Missing session cookie
+- [ ] Validar que todos los endpoints reciben auth correctamente
+
+### PRIORIDAD 2 - analyzeLoad Inconsistency
+- [ ] Normalizar TODOS los inputs con Number()
+- [ ] Forzar cálculo de millas con Haversine si hay coordenadas
+- [ ] Nunca permitir ratePerMile = 0 si hay coords
+- [ ] Fallback seguro si faltan datos
+- [ ] Agregar logs [AI Load Advisor] con miles, ratePerMile, profit
+
+### PRIORIDAD 3 - Load Enrichment Pipeline
+- [ ] Revisar attachFinancialSnapshots
+- [ ] Revisar map() que puede devolver null
+- [ ] Revisar filtros accidentales
+- [ ] Confirmar enriched count = 48 (no 0)
+
+### PRIORIDAD 4 - Validation
+- [ ] Test load 630001: miles > 0, ratePerMile > 0
+- [ ] Test load 600020: miles > 0, ratePerMile > 0
+- [ ] Test load 660001: miles > 0, ratePerMile > 0
+- [ ] Verificar logs reales de AI Load Advisor
+
+### PRIORIDAD 5 - Hard Rules
+- [ ] NO tocar Wallet logic
+- [ ] NO tocar Ledger
+- [ ] NO tocar Plaid Sync
+- [ ] NO tocar Reserve system
+- [ ] SOLO fixes, estabilidad, consistencia

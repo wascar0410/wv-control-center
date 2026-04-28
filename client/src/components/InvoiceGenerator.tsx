@@ -28,6 +28,7 @@ export function InvoiceGenerator({ loadId, clientName, price, status }: InvoiceG
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ loadId, clientName, price }),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -64,6 +65,7 @@ export function InvoiceGenerator({ loadId, clientName, price, status }: InvoiceG
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ loadId, clientName, price }),
+        credentials: "include",
       });
 
       if (!response.ok) {
