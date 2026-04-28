@@ -153,6 +153,86 @@ export async function getDb() {
   }
 }
 
+// ─── LOAD FINANCIAL ENGINE (SOURCE OF TRUTH) ─────────────────
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 3959;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function estimateFuelCost(miles: number) {
+  const mpg = 12;
+  const fuelPrice = 4;
+  return (miles / mpg) * fuelPrice;
+}
+
+export function normalizeLoadFinancials(load: any) {
+  const price = Number(load.price || 0);
+  const tolls = Number(load.estimatedTolls || 0);
+
+  const hasCoords =
+    load.pickupLat &&
+    load.pickupLng &&
+    load.deliveryLat &&
+    load.deliveryLng;
+
+  let miles = 0;
+
+  if (hasCoords) {
+    miles = calculateDistance(
+      Number(load.pickupLat),
+      Number(load.pickupLng),
+      Number(load.deliveryLat),
+      Number(load.deliveryLng)
+    );
+
+    miles *= 1.18;
+  }
+
+  if (!miles || miles <= 0) {
+    miles = price / 2; // fallback inteligente
+  }
+
+  const fuel =
+    load.estimatedFuel != null
+      ? Number(load.estimatedFuel)
+      : estimateFuelCost(miles);
+
+  const profit = price - fuel - tolls;
+  const margin = price > 0 ? (profit / price) * 100 : 0;
+  const ratePerMile = miles > 0 ? price / miles : 0;
+
+  const result = {
+    ...load,
+    miles: Math.round(miles),
+    profit: Number(profit.toFixed(2)),
+    margin: Number(margin.toFixed(2)),
+    ratePerMile: Number(ratePerMile.toFixed(2)),
+    status_financial:
+      profit > 0 && ratePerMile > 2 ? "healthy" : "risk",
+  };
+
+  console.log("[LOAD NORMALIZED]", {
+    id: load.id,
+    price,
+    miles: result.miles,
+    ratePerMile: result.ratePerMile,
+    profit: result.profit,
+  });
+
+  return result;
+}
+
 // ─── Users ───────────────────────────────────────────────────────────────────
 
 export async function upsertUser(user: InsertUser): Promise<void> {
