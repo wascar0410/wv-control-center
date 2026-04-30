@@ -5416,9 +5416,9 @@ export async function analyzeLoad(load: {
     miles = miles * 1.15;
   }
 
-  // 🚨 FALLBACK INTELIGENTE (CLAVE)
-  if (miles <= 0) {
-    miles = 100; // fallback conservador
+  // 🚨 FALLBACK OBLIGATORIO: NUNCA 0
+  if (miles <= 0 || isNaN(miles)) {
+    miles = 120; // fallback conservador realista
   }
 
   // SIEMPRE calcular RPM
