@@ -46,7 +46,7 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
       ? parsedStoredNetMargin
       : computedProfit;
 
-  // Try to get miles from explicit fields first, then calculate from coordinates
+  // 🔥 Cálculo de miles: Intentar campos explícitos primero
   let miles =
     Number((load as any).estimatedMiles ?? 0) ||
     Number((load as any).miles ?? 0) ||
@@ -54,23 +54,44 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     Number((load as any).distanceMiles ?? 0) ||
     0;
 
-  // If no explicit miles, calculate from coordinates using Haversine formula
+  // Si no hay miles explícitos, calcular desde coordenadas con Haversine
   if (miles === 0 && load.pickupLat && load.pickupLng && load.deliveryLat && load.deliveryLng) {
-    miles = calculateDistance(
-      Number(load.pickupLat),
-      Number(load.pickupLng),
-      Number(load.deliveryLat),
-      Number(load.deliveryLng)
-    );
+    const pickupLat = Number(load.pickupLat);
+    const pickupLng = Number(load.pickupLng);
+    const deliveryLat = Number(load.deliveryLat);
+    const deliveryLng = Number(load.deliveryLng);
+
+    if (!isNaN(pickupLat) && !isNaN(pickupLng) && !isNaN(deliveryLat) && !isNaN(deliveryLng)) {
+      miles = calculateDistance(
+        pickupLat,
+        pickupLng,
+        deliveryLat,
+        deliveryLng
+      );
+      miles = miles * 1.15; // Ajuste trucking
+    }
+  }
+
+  // 🚨 FALLBACK OBLIGATORIO: NUNCA 0
+  if (miles <= 0 || isNaN(miles)) {
+    miles = 120; // Fallback conservador realista
   }
 
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
-  const ratePerMile = miles > 0 ? revenue / miles : 0;
+  const ratePerMile = revenue / miles; // SIEMPRE > 0 porque miles >= 120
 
   let status: "healthy" | "at_risk" | "loss";
   if (margin >= 15) status = "healthy";
   else if (margin >= 8) status = "at_risk";
   else status = "loss";
+
+  // 🔅 LOG DE DEBUG
+  console.log("[buildLoadFinancialSnapshot]", {
+    id: (load as any).id,
+    miles: Math.round(miles * 10) / 10,
+    ratePerMile: Math.round(ratePerMile * 100) / 100,
+    revenue,
+  });
 
   return {
     margin: round2(margin),

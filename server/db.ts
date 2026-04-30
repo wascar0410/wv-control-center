@@ -208,6 +208,79 @@ export async function createLoad(data: InsertLoad) {
   return result.insertId as number;
 }
 
+/**
+ * Normaliza financials de un load calculando miles y ratePerMile
+ * CRÍTICO: Asegura que TODOS los loads tengan valores válidos
+ */
+function normalizeLoadFinancials(load: any) {
+  // 🔥 NORMALIZACIÓN TOTAL
+  const price = Number(load.price) || 0;
+  const fuel = Number(load.estimatedFuel) || 0;
+  const tolls = Number(load.estimatedTolls) || 0;
+
+  // Coordenadas seguras
+  const pickupLat = Number(load.pickupLat);
+  const pickupLng = Number(load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng);
+
+  // Validación REAL
+  const hasValidCoords =
+    !isNaN(pickupLat) &&
+    !isNaN(pickupLng) &&
+    !isNaN(deliveryLat) &&
+    !isNaN(deliveryLng) &&
+    pickupLat !== 0 &&
+    pickupLng !== 0 &&
+    deliveryLat !== 0 &&
+    deliveryLng !== 0;
+
+  let miles = 0;
+
+  // 🧠 Cálculo Haversine
+  if (hasValidCoords) {
+    const R = 3958.8;
+    const dLat = ((deliveryLat - pickupLat) * Math.PI) / 180;
+    const dLng = ((deliveryLng - pickupLng) * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((pickupLat * Math.PI) / 180) *
+        Math.cos((deliveryLat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    miles = R * c * 1.15; // Ajuste trucking
+  }
+
+  // 🚨 FALLBACK OBLIGATORIO
+  if (miles <= 0 || isNaN(miles)) {
+    miles = 120; // Fallback realista
+  }
+
+  // SIEMPRE calcular
+  const ratePerMile = price / miles;
+  const profit = price - fuel - tolls;
+  const margin = profit > 0 ? (profit / price) * 100 : 0;
+
+  // LOG DE DEBUG
+  console.log("[FINAL LOAD CHECK]", {
+    id: load.id,
+    ratePerMile: Math.round(ratePerMile * 100) / 100,
+    miles: Math.round(miles * 10) / 10,
+    price,
+    hasValidCoords,
+  });
+
+  return {
+    ...load,
+    miles,
+    ratePerMile,
+    profit,
+    margin,
+  };
+}
+
 export async function getLoads(filters?: { status?: string; driverId?: number; includeUnassigned?: boolean }) {
   const db = await getDb();
   if (!db) return [];
@@ -234,14 +307,21 @@ export async function getLoads(filters?: { status?: string; driverId?: number; i
     .orderBy(desc(loads.createdAt));
 
   console.log("[getLoads] filters:", filters, "count:", result.length);
-  return result;
+
+  // 🔥 ENRIQUECIMIENTO OBLIGATORIO: Normalizar TODOS los loads
+  const enriched = result.map((load) => normalizeLoadFinancials(load));
+
+  return enriched;
 }
 
 export async function getLoadById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(loads).where(eq(loads.id, id)).limit(1);
-  return result[0];
+  const load = result[0];
+  if (!load) return undefined;
+  // 🔥 NORMALIZACIÓN OBLIGATORIA
+  return normalizeLoadFinancials(load);
 }
 
 export async function updateLoadStatus(id: number, status: string, extra?: Partial<InsertLoad>) {
