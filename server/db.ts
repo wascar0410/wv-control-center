@@ -218,39 +218,50 @@ function normalizeLoadFinancials(load: any) {
   const fuel = Number(load.estimatedFuel) || 0;
   const tolls = Number(load.estimatedTolls) || 0;
 
-  // Coordenadas seguras
-  const pickupLat = Number(load.pickupLat);
-  const pickupLng = Number(load.pickupLng);
-  const deliveryLat = Number(load.deliveryLat);
-  const deliveryLng = Number(load.deliveryLng);
+  // 🧭 Coordenadas seguras - Conversión EXPLÍCITA
+  const pickupLatNum = Number(load.pickupLat);
+  const pickupLngNum = Number(load.pickupLng);
+  const deliveryLatNum = Number(load.deliveryLat);
+  const deliveryLngNum = Number(load.deliveryLng);
 
-  // Validación REAL
+  // 🔍 LOG DE DEBUG CRÍTICO
+  console.log("[COORD CHECK]", {
+    id: load.id,
+    pickupLat: load.pickupLat,
+    pickupLatNum,
+    deliveryLat: load.deliveryLat,
+    deliveryLatNum,
+    rawType: typeof load.pickupLat,
+  });
+
+  // Validación REAL - Convertir nombres para claridad
   const hasValidCoords =
-    !isNaN(pickupLat) &&
-    !isNaN(pickupLng) &&
-    !isNaN(deliveryLat) &&
-    !isNaN(deliveryLng) &&
-    pickupLat !== 0 &&
-    pickupLng !== 0 &&
-    deliveryLat !== 0 &&
-    deliveryLng !== 0;
+    !isNaN(pickupLatNum) &&
+    !isNaN(pickupLngNum) &&
+    !isNaN(deliveryLatNum) &&
+    !isNaN(deliveryLngNum) &&
+    pickupLatNum !== 0 &&
+    pickupLngNum !== 0 &&
+    deliveryLatNum !== 0 &&
+    deliveryLngNum !== 0;
 
   let miles = 0;
 
-  // 🧠 Cálculo Haversine
+  // 🧠 Cálculo Haversine - SOLO si coordenadas válidas
   if (hasValidCoords) {
     const R = 3958.8;
-    const dLat = ((deliveryLat - pickupLat) * Math.PI) / 180;
-    const dLng = ((deliveryLng - pickupLng) * Math.PI) / 180;
+    const dLat = ((deliveryLatNum - pickupLatNum) * Math.PI) / 180;
+    const dLng = ((deliveryLngNum - pickupLngNum) * Math.PI) / 180;
 
     const a =
       Math.sin(dLat / 2) ** 2 +
-      Math.cos((pickupLat * Math.PI) / 180) *
-        Math.cos((deliveryLat * Math.PI) / 180) *
+      Math.cos((pickupLatNum * Math.PI) / 180) *
+        Math.cos((deliveryLatNum * Math.PI) / 180) *
         Math.sin(dLng / 2) ** 2;
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     miles = R * c * 1.15; // Ajuste trucking
+    console.log("[HAVERSINE CALC]", { id: load.id, miles: Math.round(miles * 10) / 10 });
   }
 
   // 🚨 FALLBACK OBLIGATORIO
@@ -5457,35 +5468,45 @@ export async function analyzeLoad(load: {
   const fuel = Number(load.estimatedFuel) || 0;
   const tolls = Number(load.estimatedTolls) || 0;
 
-  // Coordenadas seguras
-  const pickupLat = Number(load.pickupLat);
-  const pickupLng = Number(load.pickupLng);
-  const deliveryLat = Number(load.deliveryLat);
-  const deliveryLng = Number(load.deliveryLng);
+  // 🧭 Coordenadas seguras - Conversión EXPLÍCITA
+  const pickupLatNum = Number(load.pickupLat);
+  const pickupLngNum = Number(load.pickupLng);
+  const deliveryLatNum = Number(load.deliveryLat);
+  const deliveryLngNum = Number(load.deliveryLng);
+
+  // 🔍 LOG DE DEBUG CRÍTICO
+  console.log("[COORD CHECK - analyzeLoad]", {
+    id: load.id,
+    pickupLat: load.pickupLat,
+    pickupLatNum,
+    deliveryLat: load.deliveryLat,
+    deliveryLatNum,
+    rawType: typeof load.pickupLat,
+  });
 
   // Validación REAL (no superficial)
   const hasValidCoords =
-    !isNaN(pickupLat) &&
-    !isNaN(pickupLng) &&
-    !isNaN(deliveryLat) &&
-    !isNaN(deliveryLng) &&
-    pickupLat !== 0 &&
-    pickupLng !== 0 &&
-    deliveryLat !== 0 &&
-    deliveryLng !== 0;
+    !isNaN(pickupLatNum) &&
+    !isNaN(pickupLngNum) &&
+    !isNaN(deliveryLatNum) &&
+    !isNaN(deliveryLngNum) &&
+    pickupLatNum !== 0 &&
+    pickupLngNum !== 0 &&
+    deliveryLatNum !== 0 &&
+    deliveryLngNum !== 0;
 
   let miles = 0;
 
-  // 🧠 Cálculo SIEMPRE forzado
+  // 🧠 Cálculo Haversine - SOLO si coordenadas válidas
   if (hasValidCoords) {
     const R = 3958.8;
-    const dLat = ((deliveryLat - pickupLat) * Math.PI) / 180;
-    const dLng = ((deliveryLng - pickupLng) * Math.PI) / 180;
+    const dLat = ((deliveryLatNum - pickupLatNum) * Math.PI) / 180;
+    const dLng = ((deliveryLngNum - pickupLngNum) * Math.PI) / 180;
 
     const a =
       Math.sin(dLat / 2) ** 2 +
-      Math.cos((pickupLat * Math.PI) / 180) *
-        Math.cos((deliveryLat * Math.PI) / 180) *
+      Math.cos((pickupLatNum * Math.PI) / 180) *
+        Math.cos((deliveryLatNum * Math.PI) / 180) *
         Math.sin(dLng / 2) ** 2;
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
@@ -5494,6 +5515,7 @@ export async function analyzeLoad(load: {
 
     // Ajuste trucking real
     miles = miles * 1.15;
+    console.log("[HAVERSINE CALC - analyzeLoad]", { id: load.id, miles: Math.round(miles * 10) / 10 });
   }
 
   // 🚨 FALLBACK OBLIGATORIO: NUNCA 0

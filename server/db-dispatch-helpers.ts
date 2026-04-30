@@ -56,19 +56,30 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
 
   // Si no hay miles explícitos, calcular desde coordenadas con Haversine
   if (miles === 0 && load.pickupLat && load.pickupLng && load.deliveryLat && load.deliveryLng) {
-    const pickupLat = Number(load.pickupLat);
-    const pickupLng = Number(load.pickupLng);
-    const deliveryLat = Number(load.deliveryLat);
-    const deliveryLng = Number(load.deliveryLng);
+    const pickupLatNum = Number(load.pickupLat);
+    const pickupLngNum = Number(load.pickupLng);
+    const deliveryLatNum = Number(load.deliveryLat);
+    const deliveryLngNum = Number(load.deliveryLng);
 
-    if (!isNaN(pickupLat) && !isNaN(pickupLng) && !isNaN(deliveryLat) && !isNaN(deliveryLng)) {
+    // 🔍 LOG DE DEBUG CRÍTICO
+    console.log("[COORD CHECK - buildLoadFinancialSnapshot]", {
+      id: (load as any).id,
+      pickupLat: load.pickupLat,
+      pickupLatNum,
+      deliveryLat: load.deliveryLat,
+      deliveryLatNum,
+      rawType: typeof load.pickupLat,
+    });
+
+    if (!isNaN(pickupLatNum) && !isNaN(pickupLngNum) && !isNaN(deliveryLatNum) && !isNaN(deliveryLngNum)) {
       miles = calculateDistance(
-        pickupLat,
-        pickupLng,
-        deliveryLat,
-        deliveryLng
+        pickupLatNum,
+        pickupLngNum,
+        deliveryLatNum,
+        deliveryLngNum
       );
       miles = miles * 1.15; // Ajuste trucking
+      console.log("[HAVERSINE CALC - buildLoadFinancialSnapshot]", { id: (load as any).id, miles: Math.round(miles * 10) / 10 });
     }
   }
 
