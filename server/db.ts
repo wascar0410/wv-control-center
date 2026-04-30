@@ -5449,6 +5449,7 @@ export async function analyzeLoad(load: {
   deliveryLat?: number | null;
   deliveryLng?: number | null;
 }): Promise<LoadAdvice> {
+<<<<<<< Updated upstream
   const reasons: string[] = [];
   const riskFlags: string[] = [];
 
@@ -5461,9 +5462,30 @@ export async function analyzeLoad(load: {
     load.pickupLng != null &&
     load.deliveryLat != null &&
     load.deliveryLng != null;
+=======
+  // 🧠 NORMALIZACIÓN SEGURA
+  const price = Number(load.price) || 0;
+  const fuel = Number(load.estimatedFuel) || 0;
+  const tolls = Number(load.estimatedTolls) || 0;
 
+  // Coordenadas normalizadas
+  const pickupLat = Number(load.pickupLat);
+  const pickupLng = Number(load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng);
+
+  // Validación real
+  const hasValidCoords =
+    !isNaN(pickupLat) &&
+    !isNaN(pickupLng) &&
+    !isNaN(deliveryLat) &&
+    !isNaN(deliveryLng);
+>>>>>>> Stashed changes
+
+  // Inicialización obligatoria
   let miles = 0;
 
+<<<<<<< Updated upstream
   // ✅ USAR UNA SOLA FUNCIÓN (CONSISTENTE)
   if (hasValidCoords) {
     miles = calculateDistance(
@@ -5493,8 +5515,38 @@ export async function analyzeLoad(load: {
   const estimatedProfit = price - fuel - tolls;
   const estimatedMargin =
     estimatedProfit > 0 ? (estimatedProfit / price) * 100 : 0;
+=======
+  // Cálculo Haversine
+  if (hasValidCoords) {
+    const R = 3958.8;
+
+    const dLat = ((deliveryLat - pickupLat) * Math.PI) / 180;
+    const dLng = ((deliveryLng - pickupLng) * Math.PI) / 180;
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((pickupLat * Math.PI) / 180) *
+        Math.cos((deliveryLat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    miles = R * c * 1.15; // ajuste real trucking
+  }
+
+  // 🚨 FALLBACK OBLIGATORIO
+  if (!miles || miles <= 0 || isNaN(miles)) {
+    miles = 120; // fallback conservador realista
+  }
+
+  // Cálculos finales SIEMPRE válidos
+  const ratePerMile = price / miles;
+  const profit = price - fuel - tolls;
+  const estimatedMargin = profit > 0 ? (profit / price) * 100 : 0;
+>>>>>>> Stashed changes
   const totalCost = fuel + tolls;
 
+<<<<<<< Updated upstream
   let recommendation: "accept" | "negotiate" | "reject" = "reject";
   let confidence = 0;
   let suggestedRate = price;
@@ -5505,6 +5557,38 @@ export async function analyzeLoad(load: {
     confidence = 95;
     reasons.push(`Loss detected: $${estimatedProfit.toFixed(2)}`);
   } else if (ratePerMile < 1.6) {
+=======
+  // Confidence level
+  const confidenceLevel = hasValidCoords ? 85 : 50;
+
+  // LOG CRÍTICO
+  console.log("[AI Load Advisor]", {
+    loadId: load.id,
+    price,
+    miles,
+    ratePerMile,
+    profit,
+    confidence: confidenceLevel,
+    hasValidCoords
+  });
+
+  const reasons: string[] = [];
+  const riskFlags: string[] = [];
+
+  // Apply decision rules
+  let recommendation: "accept" | "negotiate" | "reject" = "reject";
+  let confidence = confidenceLevel;
+  let suggestedRate = Number(load.price);
+
+  // Rule 1: Check profit first
+  if (profit <= 0) {
+    recommendation = "reject";
+    confidence = 95;
+    reasons.push(`Negative or zero profit: $${profit.toFixed(2)}`);
+  }
+  // Rule 2: Check rate per mile
+  else if (ratePerMile < 1.5) {
+>>>>>>> Stashed changes
     recommendation = "reject";
     confidence = 90;
     reasons.push(`Low RPM: $${ratePerMile.toFixed(2)}/mi`);
@@ -5520,10 +5604,19 @@ export async function analyzeLoad(load: {
     reasons.push(`Strong RPM: $${ratePerMile.toFixed(2)}/mi`);
   }
 
+<<<<<<< Updated upstream
   // ⚠️ RISK FLAGS
   if (!hasValidCoords) {
     riskFlags.push("Missing GPS coordinates");
     confidence -= 10;
+=======
+  // Log final recommendation
+  console.log(`[AI Load Advisor] Load ${load.id}: price=$${Number(load.price).toFixed(2)}, miles=${miles.toFixed(1)}, ratePerMile=$${ratePerMile.toFixed(2)}, recommendation=${recommendation}, confidence=${confidence}%`);
+
+  // Additional checks
+  if (miles === 120 && !hasValidCoords) {
+    riskFlags.push("Cannot verify distance - coordinates missing (using fallback estimate)");
+>>>>>>> Stashed changes
   }
 
   if (estimatedMargin < 12) {
@@ -5534,6 +5627,16 @@ export async function analyzeLoad(load: {
     riskFlags.push("Fuel too high vs revenue");
   }
 
+<<<<<<< Updated upstream
+=======
+  // Add margin info to reasons
+  if (estimatedMargin > 0) {
+    reasons.push(`Estimated margin: ${estimatedMargin.toFixed(1)}%`);
+  }
+
+  console.log(`[AI Load Advisor] Load ${load.id} analysis complete: ${recommendation.toUpperCase()}, confidence=${confidence}%, profit=$${profit.toFixed(2)}, margin=${estimatedMargin.toFixed(1)}%`);
+
+>>>>>>> Stashed changes
   return {
     recommendation,
     confidence: Math.max(50, confidence),
@@ -5541,6 +5644,7 @@ export async function analyzeLoad(load: {
     reason: reasons,
     riskFlags,
     financials: {
+<<<<<<< Updated upstream
       miles: Math.round(miles),
       ratePerMile: Number(ratePerMile.toFixed(2)),
       estimatedProfit: Number(estimatedProfit.toFixed(2)),
@@ -5548,6 +5652,15 @@ export async function analyzeLoad(load: {
       fuelCost: Number(fuel.toFixed(2)),
       tolls: Number(tolls.toFixed(2)),
       totalCost: Number(totalCost.toFixed(2)),
+=======
+      miles: Math.round(miles * 10) / 10,
+      ratePerMile: Math.round(ratePerMile * 100) / 100,
+      estimatedProfit: Math.round(profit * 100) / 100,
+      estimatedMargin: Math.round(estimatedMargin * 100) / 100,
+      fuelCost: Math.round(fuelCost * 100) / 100,
+      tolls: Math.round(tolls * 100) / 100,
+      totalCost: Math.round(totalCost * 100) / 100,
+>>>>>>> Stashed changes
     },
   };
 }
