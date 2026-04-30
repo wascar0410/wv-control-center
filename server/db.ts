@@ -5425,8 +5425,8 @@ export async function analyzeLoad(load: {
   const ratePerMile = price / miles;
 
   // Profit real
-  const estimatedProfit = price - fuel - tolls;
-  const estimatedMargin = estimatedProfit > 0 ? (estimatedProfit / price) * 100 : 0;
+  const profit = price - fuel - tolls;
+  const estimatedMargin = profit > 0 ? (profit / price) * 100 : 0;
   const totalCost = fuel + tolls;
   const fuelCost = fuel;
 
@@ -5436,10 +5436,10 @@ export async function analyzeLoad(load: {
   let suggestedRate = Number(load.price);
 
   // Rule 1: Check profit first
-  if (estimatedProfit <= 0) {
+  if (profit <= 0) {
     recommendation = "reject";
     confidence = 95;
-    reasons.push(`Negative or zero profit: $${estimatedProfit.toFixed(2)}`);
+    reasons.push(`Negative or zero profit: $${profit.toFixed(2)}`);
   }
   // Rule 2: Check rate per mile
   else if (ratePerMile < 1.5) {
@@ -5461,9 +5461,9 @@ export async function analyzeLoad(load: {
   // Log final recommendation
   console.log(`[AI Load Advisor] Load ${load.id}: price=$${Number(load.price).toFixed(2)}, miles=${miles.toFixed(1)}, ratePerMile=$${ratePerMile.toFixed(2)}, recommendation=${recommendation}, confidence=${confidence}%`);
 
-  // Additional checks
-  if (miles === 0) {
-    riskFlags.push("Cannot verify distance - coordinates missing");
+  // Additional checks (miles nunca es 0 por fallback)
+  if (!hasValidCoords) {
+    riskFlags.push("Missing GPS coordinates (using fallback estimate)");
     confidence = Math.max(confidence - 10, 50);
   }
 
@@ -5480,7 +5480,7 @@ export async function analyzeLoad(load: {
     reasons.push(`Estimated margin: ${estimatedMargin.toFixed(1)}%`);
   }
 
-  console.log(`[AI Load Advisor] Load ${load.id} analysis complete: ${recommendation.toUpperCase()}, confidence=${confidence}%, profit=$${estimatedProfit.toFixed(2)}, margin=${estimatedMargin.toFixed(1)}%`);
+  console.log(`[AI Load Advisor] Load ${load.id} analysis complete: ${recommendation.toUpperCase()}, confidence=${confidence}%, profit=$${profit.toFixed(2)}, margin=${estimatedMargin.toFixed(1)}%`);
 
   return {
     recommendation,
@@ -5491,7 +5491,7 @@ export async function analyzeLoad(load: {
     financials: {
       miles: Math.round(miles * 10) / 10,
       ratePerMile: Math.round(ratePerMile * 100) / 100,
-      estimatedProfit: Math.round(estimatedProfit * 100) / 100,
+      estimatedProfit: Math.round(profit * 100) / 100,
       estimatedMargin: Math.round(estimatedMargin * 100) / 100,
       fuelCost: Math.round(fuelCost * 100) / 100,
       tolls: Math.round(tolls * 100) / 100,
