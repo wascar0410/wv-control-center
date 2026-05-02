@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { safeNumber } from "@/utils/safeNumber";
 
 interface Alert {
   id: number;
@@ -83,22 +84,22 @@ export function AlertBanner({ alerts, onDismiss }: AlertBannerProps) {
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
                     <span className="text-muted-foreground">Precio ofrecido:</span>
-                    <p className="font-semibold">${alert.offeredPrice.toFixed(2)}</p>
+                    <p className="font-semibold">${safeNumber(alert.offeredPrice).toFixed(2)}</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Tarifa por milla:</span>
                     <p className={`font-semibold ${alert.severity === "critical" ? "text-red-600 dark:text-red-400" : "text-yellow-600 dark:text-yellow-400"}`}>
-                      ${alert.ratePerLoadedMile.toFixed(2)}/mi
+                      ${safeNumber(alert.ratePerLoadedMile).toFixed(2)}/mi
                     </p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Mínimo deseado:</span>
-                    <p className="font-semibold">${alert.minimumProfitPerMile.toFixed(2)}/mi</p>
+                    <p className="font-semibold">${safeNumber(alert.minimumProfitPerMile).toFixed(2)}/mi</p>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Diferencia:</span>
-                    <p className={`font-semibold ${alert.differenceFromMinimum < 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
-                      ${alert.differenceFromMinimum.toFixed(2)}
+                    <p className={`font-semibold ${safeNumber(alert.differenceFromMinimum) < 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+                      ${safeNumber(alert.differenceFromMinimum).toFixed(2)}
                     </p>
                   </div>
                 </div>
