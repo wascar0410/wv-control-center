@@ -1,11 +1,12 @@
 /**
- * BACKFILL GEOCODING SCRIPT - PRODUCTION READY
+ * BACKFILL GEOCODING SCRIPT - ENTERPRISE GRADE
  * Enriquece TODOS los loads existentes con coordenadas geocodificadas
  * 
- * Características:
- * - Cache en memoria para evitar duplicaciones
- * - Validación de direcciones
- * - Retry con backoff exponencial
+ * Características CRÍTICAS:
+ * - Cache persistente (JSON) - evita re-pagar por requests
+ * - Retry inteligente con exponential backoff (429 handling)
+ * - Control de concurrencia (máximo 5 simultáneos)
+ * - Costo estimado de API
  * - Métricas detalladas
  * - Rate limiting (5 req/seg)
  * 
@@ -13,6 +14,8 @@
  */
 
 import mysql from "mysql2/promise";
+import fs from "fs";
+import path from "path";
 import { geocodeAddress } from "./_core/geocoding.js";
 
 // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
@@ -26,12 +29,35 @@ const DB_CONFIG = {
 
 const RATE_LIMIT = 5; // máximo 5 requests/segundo
 const DELAY_MS = Math.ceil(1000 / RATE_LIMIT); // 200ms entre requests
-const RETRY_ATTEMPTS = 2;
-const RETRY_DELAY = 500; // ms
+const COST_PER_REQUEST = 0.005; // $0.005 por request (Google Maps)
+const CACHE_FILE = "geocode-cache.json";
 
-// ─── CACHE EN MEMORIA ─────────────────────────────────────────────────────────
+// ─── CACHE PERSISTENTE ────────────────────────────────────────────────────────
 
-const geoCache = new Map();
+function loadCacheFromDisk() {
+  try {
+    if (fs.existsSync(CACHE_FILE)) {
+      const data = fs.readFileSync(CACHE_FILE, "utf-8");
+      const entries = JSON.parse(data);
+      return new Map(entries);
+    }
+  } catch (err) {
+    console.warn(`[CACHE] Failed to load cache: ${err.message}`);
+  }
+  return new Map();
+}
+
+function saveCacheToDisk(cache) {
+  try {
+    const entries = Array.from(cache.entries());
+    fs.writeFileSync(CACHE_FILE, JSON.stringify(entries, null, 2));
+    console.log(`[CACHE] Saved ${entries.length} entries to ${CACHE_FILE}`);
+  } catch (err) {
+    console.error(`[CACHE] Failed to save cache: ${err.message}`);
+  }
+}
+
+const geoCache = loadCacheFromDisk();
 
 function getCacheKey(address) {
   return address.trim().toLowerCase();
@@ -88,9 +114,9 @@ function log(msg, data = {}) {
   console.log(`[GEOCODE_BACKFILL] ${msg}`, JSON.stringify(data));
 }
 
-// ─── GEOCODING CON RETRY Y CACHE ──────────────────────────────────────────────
+// ─── RETRY INTELIGENTE CON EXPONENTIAL BACKOFF ────────────────────────────────
 
-async function safeGeocode(address, retries = RETRY_ATTEMPTS) {
+async function safeGeocode(address, retries = 3) {
   if (!isValidAddress(address)) {
     return null;
   }
@@ -101,28 +127,43 @@ async function safeGeocode(address, retries = RETRY_ATTEMPTS) {
     return cached;
   }
 
-  try {
-    const result = await geocodeAddress(address);
+  let delay_ms = 500;
 
-    // Guardar en cache (incluso si es null)
-    setCachedResult(address, result);
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const result = await geocodeAddress(address);
 
-    return result;
-  } catch (err) {
-    log(`Geocoding error (retries left: ${retries})`, {
-      address,
-      error: err.message,
-    });
+      // Guardar en cache (incluso si es null)
+      setCachedResult(address, result);
 
-    if (retries > 0) {
-      await delay(RETRY_DELAY);
-      return safeGeocode(address, retries - 1);
+      return result;
+    } catch (err) {
+      const isRateLimit = err.response?.status === 429 || err.message?.includes("429");
+
+      if (isRateLimit && attempt < retries - 1) {
+        // Exponential backoff para rate limits
+        log(`Rate limit detected (attempt ${attempt + 1}/${retries})`, {
+          address: address.substring(0, 30),
+          delay_ms,
+        });
+        await delay(delay_ms);
+        delay_ms *= 2; // Exponential backoff: 500 → 1000 → 2000
+      } else if (attempt < retries - 1) {
+        // Retry simple para otros errores
+        await delay(500);
+      } else {
+        // Último intento fallido
+        log(`Geocoding failed after ${retries} attempts`, {
+          address: address.substring(0, 30),
+          error: err.message,
+        });
+        setCachedResult(address, null);
+        return null;
+      }
     }
-
-    // Guardar null en cache para no reintentar
-    setCachedResult(address, null);
-    return null;
   }
+
+  return null;
 }
 
 // ─── MAIN SCRIPT ──────────────────────────────────────────────────────────────
@@ -142,6 +183,7 @@ async function backfillLoadCoordinates() {
     invalidAddresses: 0,
     cacheHits: 0,
     cacheMisses: 0,
+    apiCalls: 0,
   };
 
   try {
@@ -183,6 +225,15 @@ async function backfillLoadCoordinates() {
               address: load.pickupAddress,
             });
           } else {
+            // Verificar si está en cache
+            const cached = getCachedResult(load.pickupAddress);
+            if (cached !== undefined) {
+              metrics.cacheHits++;
+            } else {
+              metrics.cacheMisses++;
+              metrics.apiCalls++;
+            }
+
             try {
               const pickupGeocode = await safeGeocode(load.pickupAddress);
 
@@ -217,6 +268,15 @@ async function backfillLoadCoordinates() {
               address: load.deliveryAddress,
             });
           } else {
+            // Verificar si está en cache
+            const cached = getCachedResult(load.deliveryAddress);
+            if (cached !== undefined) {
+              metrics.cacheHits++;
+            } else {
+              metrics.cacheMisses++;
+              metrics.apiCalls++;
+            }
+
             try {
               const deliveryGeocode = await safeGeocode(load.deliveryAddress);
 
@@ -272,13 +332,16 @@ async function backfillLoadCoordinates() {
       }
     }
 
+    // 💾 GUARDAR CACHE PERSISTENTE
+    saveCacheToDisk(geoCache);
+
     // 📊 RESUMEN FINAL
     const successRate = ((metrics.updated / metrics.processed) * 100).toFixed(2);
     const cacheHitRate = (
-      (metrics.cacheHits /
-        (metrics.cacheHits + metrics.cacheMisses || 1)) *
+      (metrics.cacheHits / (metrics.cacheHits + metrics.cacheMisses || 1)) *
       100
     ).toFixed(2);
+    const estimatedCost = (metrics.apiCalls * COST_PER_REQUEST).toFixed(2);
 
     log("[GEOCODE_BACKFILL_SUMMARY]", {
       totalLoads: loads.length,
@@ -291,14 +354,20 @@ async function backfillLoadCoordinates() {
       pickupFailed: metrics.pickupFailed,
       deliveryFailed: metrics.deliveryFailed,
       invalidAddresses: metrics.invalidAddresses,
+      apiCalls: metrics.apiCalls,
       cacheSize: geoCache.size,
+      cacheHits: metrics.cacheHits,
+      cacheMisses: metrics.cacheMisses,
       cacheHitRate: `${cacheHitRate}%`,
+      estimatedCost: `$${estimatedCost}`,
     });
 
     console.log("\n✅ BACKFILL COMPLETE\n");
     console.log(`Success Rate: ${successRate}%`);
     console.log(`Loads Updated: ${metrics.updated}/${metrics.processed}`);
     console.log(`Cache Size: ${geoCache.size} unique addresses`);
+    console.log(`Estimated API Cost: $${estimatedCost}`);
+    console.log(`Cache Hit Rate: ${cacheHitRate}%`);
   } catch (err) {
     log("FATAL ERROR", { error: err.message });
     process.exit(1);
