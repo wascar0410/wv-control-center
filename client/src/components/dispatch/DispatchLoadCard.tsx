@@ -22,9 +22,11 @@ import {
   getFinancialStatusColor,
   calculateMarginColor,
 } from "@/utils/dispatchHelpers";
+import LoadAdviceBadge from "./LoadAdviceBadge";
 
 interface DispatchLoadCardProps {
   load: any;
+  advice?: any;
   onSelect: (loadId: number) => void;
   onAssign: (loadId: number, driverId?: number) => void;
   onReassign: (loadId: number) => void;
@@ -33,6 +35,7 @@ interface DispatchLoadCardProps {
 
 export default function DispatchLoadCard({
   load,
+  advice,
   onSelect,
   onAssign,
   onReassign,
@@ -85,6 +88,7 @@ export default function DispatchLoadCard({
           <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-lg">#{load.id}</span>
             <Badge className={statusColor}>{load.status}</Badge>
+            {advice && <LoadAdviceBadge advice={advice} />}
           </div>
           <div className="text-sm text-muted-foreground truncate">{load.clientName}</div>
         </div>

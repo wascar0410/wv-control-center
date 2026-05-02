@@ -190,6 +190,7 @@ export default function DispatchBoard() {
           {viewMode === "kanban" ? (
             <DispatchKanbanBoard
               loads={filteredLoads}
+              adviceMap={adviceMap}
               onLoadSelect={handleLoadSelect}
               onAssign={handleAssign}
               onReassign={handleReassign}
@@ -197,10 +198,10 @@ export default function DispatchBoard() {
           ) : (
             <DispatchTableView
               loads={filteredLoads}
+              adviceMap={adviceMap}
               onLoadSelect={handleLoadSelect}
               onAssign={handleAssign}
               onReassign={handleReassign}
-              adviceMap={adviceMap}
               isLoadingAdvice={isLoadingAdvice}
             />
           )}

@@ -8,6 +8,7 @@ import DispatchLoadCard from "./DispatchLoadCard";
 
 interface DispatchKanbanBoardProps {
   loads: any[];
+  adviceMap?: Map<number, any>;
   onLoadSelect: (loadId: number) => void;
   onAssign: (loadId: number, driverId?: number) => void;
   onReassign: (loadId: number) => void;
@@ -25,6 +26,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 
 export default function DispatchKanbanBoard({
   loads,
+  adviceMap,
   onLoadSelect,
   onAssign,
   onReassign,
@@ -56,6 +58,7 @@ export default function DispatchKanbanBoard({
                   <DispatchLoadCard
                     key={load.id}
                     load={load}
+                    advice={adviceMap?.get(load.id)}
                     onSelect={onLoadSelect}
                     onAssign={onAssign}
                     onReassign={onReassign}
