@@ -16,7 +16,11 @@
 import mysql from "mysql2/promise";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
+import pLimit from "p-limit";
 import { geocodeAddress } from "./_core/geocoding.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── CONFIGURACIÓN ────────────────────────────────────────────────────────────
 
@@ -30,7 +34,8 @@ const DB_CONFIG = {
 const RATE_LIMIT = 5; // máximo 5 requests/segundo
 const DELAY_MS = Math.ceil(1000 / RATE_LIMIT); // 200ms entre requests
 const COST_PER_REQUEST = 0.005; // $0.005 por request (Google Maps)
-const CACHE_FILE = "geocode-cache.json";
+const CACHE_FILE = path.join(__dirname, "geocode-cache.json");
+const CONCURRENCY_LIMIT = 5; // máximo 5 requests simultáneos
 
 // ─── CACHE PERSISTENTE ────────────────────────────────────────────────────────
 
@@ -111,10 +116,34 @@ async function delay(ms) {
 }
 
 function log(msg, data = {}) {
-  console.log(`[GEOCODE_BACKFILL] ${msg}`, JSON.stringify(data));
+  // Reducir verbosidad: solo logs importantes
+  const dataStr = Object.keys(data).length > 0 ? ` ${JSON.stringify(data)}` : "";
+  console.log(`[GEOCODE_BACKFILL] ${msg}${dataStr}`);
+}
+
+function logVerbose(msg, data = {}) {
+  // Logs detallados solo si DEBUG está activo
+  if (process.env.DEBUG_GEOCODE) {
+    const dataStr = Object.keys(data).length > 0 ? ` ${JSON.stringify(data)}` : "";
+    console.log(`[GEOCODE_BACKFILL_DEBUG] ${msg}${dataStr}`);
+  }
 }
 
 // ─── RETRY INTELIGENTE CON EXPONENTIAL BACKOFF ────────────────────────────────
+
+// Validar que coordenadas sean válidas
+function isValidCoordinate(lat, lng) {
+  return (
+    typeof lat === "number" &&
+    typeof lng === "number" &&
+    !isNaN(lat) &&
+    !isNaN(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
+}
 
 async function safeGeocode(address, retries = 3) {
   if (!isValidAddress(address)) {
@@ -133,16 +162,30 @@ async function safeGeocode(address, retries = 3) {
     try {
       const result = await geocodeAddress(address);
 
-      // Guardar en cache (incluso si es null)
-      setCachedResult(address, result);
+      // Validar coordenadas antes de guardar
+      if (result && isValidCoordinate(result.latitude, result.longitude)) {
+        setCachedResult(address, result);
+        return result;
+      } else if (result) {
+        // Coordenadas inválidas
+        logVerbose("Invalid coordinates returned", {
+          address: address.substring(0, 30),
+          lat: result.latitude,
+          lng: result.longitude,
+        });
+        setCachedResult(address, null);
+        return null;
+      }
 
-      return result;
+      // Guardar null en cache si no hay resultado
+      setCachedResult(address, null);
+      return null;
     } catch (err) {
       const isRateLimit = err.response?.status === 429 || err.message?.includes("429");
 
       if (isRateLimit && attempt < retries - 1) {
         // Exponential backoff para rate limits
-        log(`Rate limit detected (attempt ${attempt + 1}/${retries})`, {
+        logVerbose(`Rate limit detected (attempt ${attempt + 1}/${retries})`, {
           address: address.substring(0, 30),
           delay_ms,
         });
@@ -153,7 +196,7 @@ async function safeGeocode(address, retries = 3) {
         await delay(500);
       } else {
         // Último intento fallido
-        log(`Geocoding failed after ${retries} attempts`, {
+        logVerbose(`Geocoding failed after ${retries} attempts`, {
           address: address.substring(0, 30),
           error: err.message,
         });
@@ -208,6 +251,9 @@ async function backfillLoadCoordinates() {
       return;
     }
 
+    // Crear limiter para concurrencia
+    const limit = pLimit(CONCURRENCY_LIMIT);
+
     // Procesar cada load
     for (let i = 0; i < loads.length; i++) {
       const load = loads[i];
@@ -221,21 +267,17 @@ async function backfillLoadCoordinates() {
         if (!load.pickupLat && load.pickupAddress) {
           if (!isValidAddress(load.pickupAddress)) {
             metrics.invalidAddresses++;
-            log(`Invalid pickup address for load ${load.id}`, {
-              address: load.pickupAddress,
-            });
           } else {
-            // Verificar si está en cache
-            const cached = getCachedResult(load.pickupAddress);
-            if (cached !== undefined) {
-              metrics.cacheHits++;
-            } else {
-              metrics.cacheMisses++;
-              metrics.apiCalls++;
-            }
-
             try {
-              const pickupGeocode = await safeGeocode(load.pickupAddress);
+              const pickupGeocode = await limit(() => safeGeocode(load.pickupAddress));
+
+              // Contar cache hit/miss DESPUÉS de intentar geocodificar
+              if (getCachedResult(load.pickupAddress) !== undefined) {
+                metrics.cacheHits++;
+              } else {
+                metrics.cacheMisses++;
+                metrics.apiCalls++;
+              }
 
               if (pickupGeocode) {
                 updateData.pickupLat = pickupGeocode.latitude;
@@ -243,17 +285,13 @@ async function backfillLoadCoordinates() {
                 geocoded = true;
                 metrics.pickupGeocoded++;
 
-                log(`Pickup geocoded for load ${load.id}`, {
-                  address: load.pickupAddress,
-                  lat: pickupGeocode.latitude,
-                  lng: pickupGeocode.longitude,
-                });
+                logVerbose(`Pickup geocoded for load ${load.id}`);
               } else {
                 metrics.pickupFailed++;
               }
             } catch (err) {
               metrics.pickupFailed++;
-              log(`Pickup geocoding failed for load ${load.id}`, {
+              logVerbose(`Pickup geocoding failed for load ${load.id}`, {
                 error: err.message,
               });
             }
@@ -264,21 +302,17 @@ async function backfillLoadCoordinates() {
         if (!load.deliveryLat && load.deliveryAddress) {
           if (!isValidAddress(load.deliveryAddress)) {
             metrics.invalidAddresses++;
-            log(`Invalid delivery address for load ${load.id}`, {
-              address: load.deliveryAddress,
-            });
           } else {
-            // Verificar si está en cache
-            const cached = getCachedResult(load.deliveryAddress);
-            if (cached !== undefined) {
-              metrics.cacheHits++;
-            } else {
-              metrics.cacheMisses++;
-              metrics.apiCalls++;
-            }
-
             try {
-              const deliveryGeocode = await safeGeocode(load.deliveryAddress);
+              const deliveryGeocode = await limit(() => safeGeocode(load.deliveryAddress));
+
+              // Contar cache hit/miss DESPUÉS de intentar geocodificar
+              if (getCachedResult(load.deliveryAddress) !== undefined) {
+                metrics.cacheHits++;
+              } else {
+                metrics.cacheMisses++;
+                metrics.apiCalls++;
+              }
 
               if (deliveryGeocode) {
                 updateData.deliveryLat = deliveryGeocode.latitude;
@@ -286,17 +320,13 @@ async function backfillLoadCoordinates() {
                 geocoded = true;
                 metrics.deliveryGeocoded++;
 
-                log(`Delivery geocoded for load ${load.id}`, {
-                  address: load.deliveryAddress,
-                  lat: deliveryGeocode.latitude,
-                  lng: deliveryGeocode.longitude,
-                });
+                logVerbose(`Delivery geocoded for load ${load.id}`);
               } else {
                 metrics.deliveryFailed++;
               }
             } catch (err) {
               metrics.deliveryFailed++;
-              log(`Delivery geocoding failed for load ${load.id}`, {
+              logVerbose(`Delivery geocoding failed for load ${load.id}`, {
                 error: err.message,
               });
             }
@@ -316,7 +346,7 @@ async function backfillLoadCoordinates() {
           );
 
           metrics.updated++;
-          log(`Load ${load.id} updated`, updateData);
+          logVerbose(`Load ${load.id} updated`);
         }
 
         // Rate limiting
@@ -362,12 +392,10 @@ async function backfillLoadCoordinates() {
       estimatedCost: `$${estimatedCost}`,
     });
 
-    console.log("\n✅ BACKFILL COMPLETE\n");
-    console.log(`Success Rate: ${successRate}%`);
-    console.log(`Loads Updated: ${metrics.updated}/${metrics.processed}`);
-    console.log(`Cache Size: ${geoCache.size} unique addresses`);
-    console.log(`Estimated API Cost: $${estimatedCost}`);
-    console.log(`Cache Hit Rate: ${cacheHitRate}%`);
+    // Resumen conciso para producción
+    console.log("\n✅ BACKFILL COMPLETE");
+    console.log(`Success Rate: ${successRate}% | Loads: ${metrics.updated}/${metrics.processed}`);
+    console.log(`Cache: ${geoCache.size} addresses | Hit Rate: ${cacheHitRate}% | Cost: $${estimatedCost}\n`);
   } catch (err) {
     log("FATAL ERROR", { error: err.message });
     process.exit(1);

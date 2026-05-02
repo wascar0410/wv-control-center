@@ -76,6 +76,7 @@
     "node-schedule": "^2.1.1",
     "nodemailer": "^8.0.4",
     "openai": "^4.104.0",
+    "p-limit": "^7.3.0",
     "pdf-lib": "^1.17.1",
     "plaid": "^41.4.0",
     "react": "^19.2.1",
