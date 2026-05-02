@@ -204,8 +204,60 @@ export async function createLoad(data: InsertLoad) {
     parseFloat(String(data.estimatedFuel ?? 0)) -
     parseFloat(String(data.estimatedTolls ?? 0))
   ).toFixed(2);
-  const [result] = await db.insert(loads).values({ ...data, netMargin }).execute() as any;
-  return result.insertId as number;
+
+  // 🧭 ENRIQUECIMIENTO AUTOMÁTICO: Geocodificar direcciones si faltan coordenadas
+  let enrichedData = { ...data };
+  let geocodeLog = { pickupGeocoded: false, deliveryGeocoded: false };
+
+  try {
+    const { geocodeAddress } = await import("./\u005fcore/geocoding");
+
+    // Geocodificar pickup si falta pickupLat
+    if (!enrichedData.pickupLat && enrichedData.pickupAddress) {
+      try {
+        const pickupGeocode = await geocodeAddress(enrichedData.pickupAddress);
+        if (pickupGeocode) {
+          enrichedData.pickupLat = pickupGeocode.latitude as any;
+          enrichedData.pickupLng = pickupGeocode.longitude as any;
+          geocodeLog.pickupGeocoded = true;
+          console.log("[GEOCODE] Pickup geocoded:", {
+            address: enrichedData.pickupAddress,
+            lat: pickupGeocode.latitude,
+            lng: pickupGeocode.longitude,
+          });
+        }
+      } catch (err) {
+        console.error("[GEOCODE] Pickup geocoding failed:", err);
+      }
+    }
+
+    // Geocodificar delivery si falta deliveryLat
+    if (!enrichedData.deliveryLat && enrichedData.deliveryAddress) {
+      try {
+        const deliveryGeocode = await geocodeAddress(enrichedData.deliveryAddress);
+        if (deliveryGeocode) {
+          enrichedData.deliveryLat = deliveryGeocode.latitude as any;
+          enrichedData.deliveryLng = deliveryGeocode.longitude as any;
+          geocodeLog.deliveryGeocoded = true;
+          console.log("[GEOCODE] Delivery geocoded:", {
+            address: enrichedData.deliveryAddress,
+            lat: deliveryGeocode.latitude,
+            lng: deliveryGeocode.longitude,
+          });
+        }
+      } catch (err) {
+        console.error("[GEOCODE] Delivery geocoding failed:", err);
+      }
+    }
+  } catch (err) {
+    console.error("[GEOCODE] Import error:", err);
+  }
+
+  const [result] = await db.insert(loads).values({ ...enrichedData, netMargin }).execute() as any;
+  const loadId = result.insertId as number;
+
+  console.log("[GEOCODE] Load created:", { loadId, geocodeLog });
+  return loadId;
 }
 
 /**
@@ -345,6 +397,8 @@ export async function updateLoad(id: number, data: Partial<InsertLoad>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const updateData: Partial<InsertLoad> = { ...data };
+  
+  // Calcular netMargin si se actualiza precio/fuel/tolls
   if (data.price !== undefined || data.estimatedFuel !== undefined || data.estimatedTolls !== undefined) {
     const current = await getLoadById(id);
     if (current) {
@@ -354,6 +408,54 @@ export async function updateLoad(id: number, data: Partial<InsertLoad>) {
       updateData.netMargin = (price - fuel - tolls).toFixed(2) as any;
     }
   }
+
+  // 🧭 ENRIQUECIMIENTO AUTOMÁTICO: Geocodificar si se actualiza dirección
+  try {
+    const { geocodeAddress } = await import("./\u005fcore/geocoding");
+    const current = await getLoadById(id);
+    if (current) {
+      // Si se actualiza pickupAddress y pickupLat es null
+      if (data.pickupAddress && !current.pickupLat) {
+        try {
+          const pickupGeocode = await geocodeAddress(data.pickupAddress);
+          if (pickupGeocode) {
+            updateData.pickupLat = pickupGeocode.latitude as any;
+            updateData.pickupLng = pickupGeocode.longitude as any;
+            console.log("[GEOCODE] Pickup updated and geocoded:", {
+              loadId: id,
+              address: data.pickupAddress,
+              lat: pickupGeocode.latitude,
+              lng: pickupGeocode.longitude,
+            });
+          }
+        } catch (err) {
+          console.error("[GEOCODE] Pickup geocoding failed:", err);
+        }
+      }
+
+      // Si se actualiza deliveryAddress y deliveryLat es null
+      if (data.deliveryAddress && !current.deliveryLat) {
+        try {
+          const deliveryGeocode = await geocodeAddress(data.deliveryAddress);
+          if (deliveryGeocode) {
+            updateData.deliveryLat = deliveryGeocode.latitude as any;
+            updateData.deliveryLng = deliveryGeocode.longitude as any;
+            console.log("[GEOCODE] Delivery updated and geocoded:", {
+              loadId: id,
+              address: data.deliveryAddress,
+              lat: deliveryGeocode.latitude,
+              lng: deliveryGeocode.longitude,
+            });
+          }
+        } catch (err) {
+          console.error("[GEOCODE] Delivery geocoding failed:", err);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[GEOCODE] Import error in updateLoad:", err);
+  }
+
   await db.update(loads).set(updateData).where(eq(loads.id, id));
 }
 
