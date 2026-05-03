@@ -1,4 +1,15 @@
 import { useState } from "react";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -111,12 +122,12 @@ export default function QuotationResultsTable({
               <tbody>
                 <tr className="border-b border-border hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">Precio Ofrecido</td>
-                  <td className="text-right py-3 px-4 font-bold text-lg text-green-600">${totalPrice.toFixed(2)}</td>
+                  <td className="text-right py-3 px-4 font-bold text-lg text-green-600">${fixed(totalPrice, 2)}</td>
                   <td className="py-3 px-4 text-muted-foreground">Precio total ofrecido por el broker</td>
                 </tr>
                 <tr className="border-b border-border hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">Costo Operativo Estimado</td>
-                  <td className="text-right py-3 px-4 font-bold text-lg text-red-600">${estimatedOperatingCost.toFixed(2)}</td>
+                  <td className="text-right py-3 px-4 font-bold text-lg text-red-600">${fixed(estimatedOperatingCost, 2)}</td>
                   <td className="py-3 px-4 text-muted-foreground">Combustible + mantenimiento</td>
                 </tr>
                 {tollDataSource === "google" && (
@@ -126,7 +137,7 @@ export default function QuotationResultsTable({
                       <span className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1.5 py-0.5 rounded font-medium">Google Maps ✓</span>
                     </td>
                     <td className="text-right py-3 px-4 font-bold text-lg text-orange-600">
-                      {estimatedTollCost > 0 ? `$${estimatedTollCost.toFixed(2)}` : "$0.00"}
+                      {estimatedTollCost > 0 ? `$${fixed(estimatedTollCost, 2)}` : "$0.00"}
                     </td>
                     <td className="py-3 px-4 text-muted-foreground">
                       {estimatedTollCost > 0 ? "E-ZPass estimado (NJ/PA/NY)" : "Ruta sin peajes"}
@@ -136,29 +147,29 @@ export default function QuotationResultsTable({
                 <tr className="border-b border-border hover:bg-muted/50 bg-blue-50 dark:bg-blue-950">
                   <td className="py-3 px-4 font-bold">Ganancia Estimada</td>
                   <td className="text-right py-3 px-4 font-bold text-lg text-blue-600">
-                    ${estimatedProfit.toFixed(2)}
+                    ${fixed(estimatedProfit, 2)}
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">Precio - Costo operativo</td>
                 </tr>
                 <tr className="border-b border-border hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">Margen de Ganancia</td>
-                  <td className="text-right py-3 px-4 font-bold text-lg">{profitMarginPercent.toFixed(1)}%</td>
+                  <td className="text-right py-3 px-4 font-bold text-lg">{fixed(profitMarginPercent, 1)}%</td>
                   <td className="py-3 px-4 text-muted-foreground">Ganancia / Precio * 100</td>
                 </tr>
                 <tr className="border-b border-border hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">Tarifa por Milla Cargada</td>
-                  <td className="text-right py-3 px-4 font-bold text-lg">${ratePerLoadedMile.toFixed(2)}/mi</td>
+                  <td className="text-right py-3 px-4 font-bold text-lg">${fixed(ratePerLoadedMile, 2)}/mi</td>
                   <td className="py-3 px-4 text-muted-foreground">Precio / Millas cargadas</td>
                 </tr>
                 <tr className="border-b border-border hover:bg-muted/50">
                   <td className="py-3 px-4 font-medium">Ingreso Mínimo Recomendado</td>
-                  <td className="text-right py-3 px-4 font-bold text-lg">${minimumIncome.toFixed(2)}</td>
+                  <td className="text-right py-3 px-4 font-bold text-lg">${fixed(minimumIncome, 2)}</td>
                   <td className="py-3 px-4 text-muted-foreground">$2.50/mi × Millas cargadas</td>
                 </tr>
                 <tr className={`${differenceVsMinimum < 0 ? "bg-red-50 dark:bg-red-950" : "bg-green-50 dark:bg-green-950"}`}>
                   <td className="py-3 px-4 font-bold">Diferencia vs Mínimo</td>
                   <td className={`text-right py-3 px-4 font-bold text-lg ${differenceVsMinimum < 0 ? "text-red-600" : "text-green-600"}`}>
-                    ${differenceVsMinimum.toFixed(2)}
+                    ${fixed(differenceVsMinimum, 2)}
                   </td>
                   <td className="py-3 px-4 text-muted-foreground">
                     {differenceVsMinimum < 0 ? "⚠️ Por debajo del mínimo" : "✓ Por encima del mínimo"}
@@ -194,7 +205,7 @@ export default function QuotationResultsTable({
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: any) => `$${typeof value === 'number' ? value.toFixed(2) : value}`} />
+                <Tooltip formatter={(value: any) => `$${typeof value === 'number' ? fixed(value, 2) : value}`} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -211,7 +222,7 @@ export default function QuotationResultsTable({
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
-                <Tooltip formatter={(value: any) => `$${typeof value === 'number' ? value.toFixed(2) : value}`} />
+                <Tooltip formatter={(value: any) => `$${typeof value === 'number' ? fixed(value, 2) : value}`} />
                 <Legend />
                 <Bar dataKey="Precio Ofrecido" fill="#22c55e" />
                 <Bar dataKey="Ingreso Mínimo" fill="#f97316" />
@@ -326,7 +337,7 @@ export default function QuotationResultsTable({
             <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4">
               <p className="font-semibold text-green-900 dark:text-green-100">✓ Carga Rentable</p>
               <p className="text-sm text-green-800 dark:text-green-200 mt-1">
-                Con un margen de {profitMarginPercent.toFixed(1)}%, esta carga es muy rentable. Se recomienda aceptarla.
+                Con un margen de {fixed(profitMarginPercent, 1)}%, esta carga es muy rentable. Se recomienda aceptarla.
               </p>
             </div>
           )}
@@ -334,8 +345,8 @@ export default function QuotationResultsTable({
             <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
               <p className="font-semibold text-yellow-900 dark:text-yellow-100">⚠️ Negociar Precio</p>
               <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
-                El margen de {profitMarginPercent.toFixed(1)}% es aceptable pero bajo. Intenta negociar un precio más alto.
-                Mínimo recomendado: ${minimumIncome.toFixed(2)}
+                El margen de {fixed(profitMarginPercent, 1)}% es aceptable pero bajo. Intenta negociar un precio más alto.
+                Mínimo recomendado: ${fixed(minimumIncome, 2)}
               </p>
             </div>
           )}
@@ -343,8 +354,8 @@ export default function QuotationResultsTable({
             <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
               <p className="font-semibold text-red-900 dark:text-red-100">✗ No Rentable</p>
               <p className="text-sm text-red-800 dark:text-red-200 mt-1">
-                Con un margen de {profitMarginPercent.toFixed(1)}%, esta carga no es rentable. Se recomienda rechazarla o
-                negociar significativamente el precio. Mínimo recomendado: ${minimumIncome.toFixed(2)}
+                Con un margen de {fixed(profitMarginPercent, 1)}%, esta carga no es rentable. Se recomienda rechazarla o
+                negociar significativamente el precio. Mínimo recomendado: ${fixed(minimumIncome, 2)}
               </p>
             </div>
           )}

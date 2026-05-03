@@ -1,4 +1,15 @@
 import { useState } from "react";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -174,13 +185,13 @@ function MonthlyView({ data }: { data: HistoricalComparisonData }) {
               <div className="bg-background/50 rounded p-2">
                 <div className="text-foreground/60 text-xs mb-1">{previousMonthName}</div>
                 <div className="text-lg font-semibold text-green-600">
-                  ${data.previousMonth.profit.toFixed(2)}
+                  ${fixed(data.previousMonth.profit, 2)}
                 </div>
               </div>
               <div className="bg-background/50 rounded p-2">
                 <div className="text-foreground/60 text-xs mb-1">{currentMonthName}</div>
                 <div className="text-lg font-semibold text-green-600">
-                  ${data.currentMonth.profit.toFixed(2)}
+                  ${fixed(data.currentMonth.profit, 2)}
                 </div>
               </div>
             </div>
@@ -188,7 +199,7 @@ function MonthlyView({ data }: { data: HistoricalComparisonData }) {
               <span className="text-sm text-foreground/70">Variación</span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">
-                  {data.comparison.profitVariation >= 0 ? "+" : ""}${data.comparison.profitVariation.toFixed(2)}
+                  {data.comparison.profitVariation >= 0 ? "+" : ""}${fixed(data.comparison.profitVariation, 2)}
                 </span>
                 <VariationBadge 
                   value={data.comparison.profitVariation} 
@@ -238,13 +249,13 @@ function MonthlyView({ data }: { data: HistoricalComparisonData }) {
               <div className="bg-background/50 rounded p-2">
                 <div className="text-foreground/60 text-xs mb-1">{previousMonthName}</div>
                 <div className="text-lg font-semibold text-blue-600">
-                  ${data.previousMonth.averageProfitPerMile.toFixed(2)}/mi
+                  ${fixed(data.previousMonth.averageProfitPerMile, 2)}/mi
                 </div>
               </div>
               <div className="bg-background/50 rounded p-2">
                 <div className="text-foreground/60 text-xs mb-1">{currentMonthName}</div>
                 <div className="text-lg font-semibold text-blue-600">
-                  ${data.currentMonth.averageProfitPerMile.toFixed(2)}/mi
+                  ${fixed(data.currentMonth.averageProfitPerMile, 2)}/mi
                 </div>
               </div>
             </div>
@@ -252,7 +263,7 @@ function MonthlyView({ data }: { data: HistoricalComparisonData }) {
               <span className="text-sm text-foreground/70">Variación</span>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold">
-                  {data.comparison.profitPerMileVariation >= 0 ? "+" : ""}${data.comparison.profitPerMileVariation.toFixed(2)}
+                  {data.comparison.profitPerMileVariation >= 0 ? "+" : ""}${fixed(data.comparison.profitPerMileVariation, 2)}
                 </span>
                 <VariationBadge 
                   value={data.comparison.profitPerMileVariation} 
@@ -298,7 +309,7 @@ function MonthlyView({ data }: { data: HistoricalComparisonData }) {
               <XAxis dataKey="name" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" />
               <Tooltip 
-                formatter={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : value)}
+                formatter={(value) => (typeof value === 'number' ? `$${fixed(value, 2)}` : value)}
                 contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
               />
               <Legend />
@@ -341,7 +352,7 @@ function QuarterlyView({ data }: { data: QuarterlyComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Total Ganancia</span>
-                <span className="font-semibold text-green-600">${data.quarterlyTotals.totalProfit.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${fixed(data.quarterlyTotals.totalProfit, 2)}</span>
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Total Cotizaciones</span>
@@ -363,11 +374,11 @@ function QuarterlyView({ data }: { data: QuarterlyComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Promedio Ganancia/Mes</span>
-                <span className="font-semibold text-green-600">${data.quarterlyTotals.averageProfitPerMonth.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${fixed(data.quarterlyTotals.averageProfitPerMonth, 2)}</span>
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Ganancia/Milla Promedio</span>
-                <span className="font-semibold text-blue-600">${data.quarterlyTotals.averageProfitPerMile.toFixed(2)}</span>
+                <span className="font-semibold text-blue-600">${fixed(data.quarterlyTotals.averageProfitPerMile, 2)}</span>
               </div>
             </div>
           </CardContent>
@@ -389,7 +400,7 @@ function QuarterlyView({ data }: { data: QuarterlyComparisonData }) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-foreground/70">Ganancia</span>
-                  <span className="font-semibold text-green-600">${month.profit.toFixed(2)}</span>
+                  <span className="font-semibold text-green-600">${fixed(month.profit, 2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-foreground/70">Cotizaciones</span>
@@ -397,7 +408,7 @@ function QuarterlyView({ data }: { data: QuarterlyComparisonData }) {
                 </div>
                 <div className="flex justify-between pt-2 border-t border-border">
                   <span className="text-foreground/70">Ganancia/Milla</span>
-                  <span className="font-semibold text-blue-600">${month.averageProfitPerMile.toFixed(2)}</span>
+                  <span className="font-semibold text-blue-600">${fixed(month.averageProfitPerMile, 2)}</span>
                 </div>
               </div>
             </CardContent>
@@ -439,7 +450,7 @@ function QuarterlyView({ data }: { data: QuarterlyComparisonData }) {
               <XAxis dataKey="name" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" label={{ value: "Ganancia/Milla ($)", angle: -90, position: "insideLeft" }} />
               <Tooltip 
-                formatter={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : value)}
+                formatter={(value) => (typeof value === 'number' ? `$${fixed(value, 2)}` : value)}
                 contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
               />
               <Legend />
@@ -489,7 +500,7 @@ function QuarterlyView({ data }: { data: QuarterlyComparisonData }) {
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold">
-                    {data.comparison.profitVariation >= 0 ? "+" : ""}${data.comparison.profitVariation.toFixed(2)}
+                    {data.comparison.profitVariation >= 0 ? "+" : ""}${fixed(data.comparison.profitVariation, 2)}
                   </span>
                   <VariationBadge 
                     value={data.comparison.profitVariation} 
@@ -566,7 +577,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Total Ganancia</span>
-                <span className="font-semibold text-green-600">${data.annualTotals.totalProfit.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${fixed(data.annualTotals.totalProfit, 2)}</span>
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Total Cotizaciones</span>
@@ -574,7 +585,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Ganancia/Milla</span>
-                <span className="font-semibold text-blue-600">${data.annualTotals.averageProfitPerMile.toFixed(2)}</span>
+                <span className="font-semibold text-blue-600">${fixed(data.annualTotals.averageProfitPerMile, 2)}</span>
               </div>
             </div>
           </CardContent>
@@ -592,7 +603,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Promedio Ganancia/Mes</span>
-                <span className="font-semibold text-green-600">${data.annualTotals.averageProfitPerMonth.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${fixed(data.annualTotals.averageProfitPerMonth, 2)}</span>
               </div>
             </div>
           </CardContent>
@@ -617,7 +628,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Ganancia</span>
-                <span className="font-semibold text-green-600">${data.bestMonth.profit.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${fixed(data.bestMonth.profit, 2)}</span>
               </div>
             </div>
           </CardContent>
@@ -639,7 +650,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded">
                 <span className="text-foreground/70">Ganancia</span>
-                <span className="font-semibold text-red-600">${data.worstMonth.profit.toFixed(2)}</span>
+                <span className="font-semibold text-red-600">${fixed(data.worstMonth.profit, 2)}</span>
               </div>
             </div>
           </CardContent>
@@ -710,7 +721,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               <XAxis dataKey="name" stroke="#9ca3af" />
               <YAxis stroke="#9ca3af" label={{ value: "Ganancia/Milla ($)", angle: -90, position: "insideLeft" }} />
               <Tooltip 
-                formatter={(value) => (typeof value === 'number' ? `$${value.toFixed(2)}` : value)}
+                formatter={(value) => (typeof value === 'number' ? `$${fixed(value, 2)}` : value)}
                 contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151" }}
               />
               <Legend />
@@ -742,7 +753,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded text-sm">
                 <span className="text-foreground/70">Ganancia</span>
-                <span className="font-semibold text-green-600">${data.comparison.firstHalfProfit.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${fixed(data.comparison.firstHalfProfit, 2)}</span>
               </div>
             </div>
 
@@ -754,7 +765,7 @@ function AnnualView({ data }: { data: AnnualComparisonData }) {
               </div>
               <div className="flex justify-between p-2 bg-background/50 rounded text-sm">
                 <span className="text-foreground/70">Ganancia</span>
-                <span className="font-semibold text-green-600">${data.comparison.secondHalfProfit.toFixed(2)}</span>
+                <span className="font-semibold text-green-600">${fixed(data.comparison.secondHalfProfit, 2)}</span>
               </div>
             </div>
           </div>

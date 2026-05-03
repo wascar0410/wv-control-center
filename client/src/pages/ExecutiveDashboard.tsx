@@ -1,4 +1,15 @@
 import { useState, useMemo } from "react";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,12 +93,12 @@ function getLoadMiles(load: any) {
 
 function currency(value: number) {
   const num = toNumber(value);
-  return `$${num.toFixed(2)}`;
+  return `$${fixed(num, 2)}`;
 }
 
 function percent(value: number) {
   const num = toNumber(value);
-  return `${num.toFixed(1)}%`;
+  return `${fixed(num, 1)}%`;
 }
 
 function KPICard({
@@ -129,7 +140,7 @@ function KPICard({
                   <ArrowDownRight className="mr-1 h-4 w-4" />
                 )}
                 {isPositive ? "+" : ""}
-                {change.toFixed(1)}% vs período anterior
+                {fixed(change, 1)}% vs período anterior
               </div>
             )}
           </div>
@@ -583,7 +594,7 @@ export default function ExecutiveDashboard() {
           <KPICard
             title="Cargas Completadas"
             value={String(kpis.completedLoads)}
-            subtitle={`${kpis.loadsPerDay.toFixed(1)} cargas/día`}
+            subtitle={`${fixed(kpis.loadsPerDay, 1)} cargas/día`}
             icon={Truck}
             change={loadsChange}
             positiveColor="#123D7A"
@@ -627,7 +638,7 @@ export default function ExecutiveDashboard() {
                   <YAxis stroke="#64748B" />
                   <Tooltip
                     formatter={(value: any) =>
-                      `$${typeof value === "number" ? value.toFixed(2) : value}`
+                      `$${typeof value === "number" ? fixed(value, 2) : value}`
                     }
                     contentStyle={{
                       backgroundColor: "#FFFFFF",
@@ -717,7 +728,7 @@ export default function ExecutiveDashboard() {
                   <YAxis stroke="#64748B" />
                   <Tooltip
                     formatter={(value: any) =>
-                      `${typeof value === "number" ? value.toFixed(1) : value}%`
+                      `${typeof value === "number" ? fixed(value, 1) : value}%`
                     }
                     contentStyle={{
                       backgroundColor: "#FFFFFF",
@@ -753,7 +764,7 @@ export default function ExecutiveDashboard() {
                   <YAxis stroke="#64748B" />
                   <Tooltip
                     formatter={(value: any) =>
-                      `$${typeof value === "number" ? value.toFixed(2) : value}/mi`
+                      `$${typeof value === "number" ? fixed(value, 2) : value}/mi`
                     }
                     contentStyle={{
                       backgroundColor: "#FFFFFF",
@@ -841,7 +852,7 @@ export default function ExecutiveDashboard() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[#64748B]">Eficiencia</span>
                   <span className="font-semibold text-[#16A34A]">
-                    {efficiency.toFixed(1)}%
+                    {fixed(efficiency, 1)}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -936,7 +947,7 @@ export default function ExecutiveDashboard() {
                   ⚠ Margen por debajo de meta
                 </p>
                 <p className="mt-1 text-xs text-[#9A3412]">
-                  El margen promedio es {kpis.averageMargin.toFixed(1)}%, por debajo de la meta del 50%.
+                  El margen promedio es {fixed(kpis.averageMargin, 1)}%, por debajo de la meta del 50%.
                   Considera negociar tarifas más altas o reducir costos operativos.
                 </p>
               </div>
@@ -948,7 +959,7 @@ export default function ExecutiveDashboard() {
                   📊 Volumen bajo
                 </p>
                 <p className="mt-1 text-xs text-[#1E3A8A]">
-                  Promedio de {kpis.loadsPerDay.toFixed(1)} cargas/día.
+                  Promedio de {fixed(kpis.loadsPerDay, 1)} cargas/día.
                   Aumenta el volumen para mejorar ingresos.
                 </p>
               </div>

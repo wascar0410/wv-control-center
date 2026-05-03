@@ -1,4 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, AlertTriangle, CheckCircle2, TrendingUp, TrendingDown, Gauge, Fuel, Info } from "lucide-react";
@@ -74,13 +85,13 @@ export function LoadEvaluatorResults({ result, form }: LoadEvaluatorResultsProps
               Ganancia por milla por debajo del mínimo
             </p>
             <p className="text-xs text-amber-400/80 mt-0.5">
-              Esta carga genera <strong>${profitPerMile.toFixed(2)}/mi</strong> de ganancia, por debajo del mínimo recomendado de <strong>${MIN_PROFIT_PER_MILE.toFixed(2)}/mi</strong>.
+              Esta carga genera <strong>${fixed(profitPerMile, 2)}/mi</strong> de ganancia, por debajo del mínimo recomendado de <strong>${fixed(MIN_PROFIT_PER_MILE, 2)}/mi</strong>.
               Considera negociar un precio más alto o reducir costos antes de aceptar.
             </p>
             <p className="text-xs text-amber-400/60 mt-1">
-              Para alcanzar ${MIN_PROFIT_PER_MILE.toFixed(2)}/mi necesitas al menos{" "}
-              <strong>${((result.totalCostPerMile + MIN_PROFIT_PER_MILE) * result.totalMiles).toFixed(0)}</strong> de ingreso total
-              (actualmente ${(result.offeredRatePerMile * result.totalMiles).toFixed(0)}).
+              Para alcanzar ${fixed(MIN_PROFIT_PER_MILE, 2)}/mi necesitas al menos{" "}
+              <strong>${fixed(((result.totalCostPerMile + MIN_PROFIT_PER_MILE) * result.totalMiles), 0)}</strong> de ingreso total
+              (actualmente ${fixed((result.offeredRatePerMile * result.totalMiles), 0)}).
             </p>
           </div>
         </div>
@@ -90,7 +101,7 @@ export function LoadEvaluatorResults({ result, form }: LoadEvaluatorResultsProps
         <div className="flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
           <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" />
           <p className="text-sm font-medium text-emerald-300">
-            Excelente ganancia por milla: <strong>${profitPerMile.toFixed(2)}/mi</strong> — por encima del objetivo de $0.90/mi
+            Excelente ganancia por milla: <strong>${fixed(profitPerMile, 2)}/mi</strong> — por encima del objetivo de $0.90/mi
           </p>
         </div>
       )}
@@ -118,16 +129,16 @@ export function LoadEvaluatorResults({ result, form }: LoadEvaluatorResultsProps
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-background/50 p-3 rounded-lg text-center">
               <p className="text-xs text-muted-foreground mb-1">Ganancia Est.</p>
-              <p className="text-lg font-bold text-green-500">${result.estimatedProfit.toFixed(2)}</p>
+              <p className="text-lg font-bold text-green-500">${fixed(result.estimatedProfit, 2)}</p>
             </div>
             <div className="bg-background/50 p-3 rounded-lg text-center">
               <p className="text-xs text-muted-foreground mb-1">Margen</p>
-              <p className="text-lg font-bold">{result.estimatedMarginPercent.toFixed(1)}%</p>
+              <p className="text-lg font-bold">{fixed(result.estimatedMarginPercent, 1)}%</p>
             </div>
             <div className={`p-3 rounded-lg text-center ${isBelowMinimum ? "bg-amber-500/10 border border-amber-500/30" : isAboveTarget ? "bg-emerald-500/10 border border-emerald-500/30" : "bg-background/50"}`}>
               <p className="text-xs text-muted-foreground mb-1">Profit/Milla</p>
               <p className={`text-lg font-bold ${isBelowMinimum ? "text-amber-400" : isAboveTarget ? "text-emerald-400" : isGood ? "text-green-400" : "text-foreground"}`}>
-                ${profitPerMile.toFixed(2)}/mi
+                ${fixed(profitPerMile, 2)}/mi
               </p>
             </div>
           </div>
@@ -143,14 +154,14 @@ export function LoadEvaluatorResults({ result, form }: LoadEvaluatorResultsProps
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <MetricRow label="Millas totales" value={`${result.totalMiles.toFixed(0)} mi`} />
-          <MetricRow label="Tarifa ofrecida" value={`$${result.offeredRatePerMile.toFixed(2)}/mi`} />
-          <MetricRow label="Tarifa mínima recom." value={`$${result.recommendedMinRatePerMile.toFixed(2)}/mi`}
+          <MetricRow label="Millas totales" value={`${fixed(result.totalMiles, 0)} mi`} />
+          <MetricRow label="Tarifa ofrecida" value={`$${fixed(result.offeredRatePerMile, 2)}/mi`} />
+          <MetricRow label="Tarifa mínima recom." value={`$${fixed(result.recommendedMinRatePerMile, 2)}/mi`}
             highlight={result.offeredRatePerMile < result.recommendedMinRatePerMile} />
-          <MetricRow label="Costo total/mi" value={`$${result.totalCostPerMile.toFixed(2)}/mi`} />
+          <MetricRow label="Costo total/mi" value={`$${fixed(result.totalCostPerMile, 2)}/mi`} />
           <MetricRow
             label="Ganancia/mi"
-            value={`$${profitPerMile.toFixed(2)}/mi`}
+            value={`$${fixed(profitPerMile, 2)}/mi`}
             highlight={isBelowMinimum}
             positive={isAboveTarget || isGood}
             badge={isBelowMinimum ? "⚠ Bajo mínimo" : isAboveTarget ? "✓ Excelente" : isGood ? "✓ Bueno" : undefined}
@@ -167,13 +178,13 @@ export function LoadEvaluatorResults({ result, form }: LoadEvaluatorResultsProps
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          <MetricRow label="Costo combustible/mi" value={`$${result.fuelCostPerMile.toFixed(2)}`} />
-          <MetricRow label="Costo variable/mi" value={`$${result.variableCostPerMile.toFixed(2)}`} />
+          <MetricRow label="Costo combustible/mi" value={`$${fixed(result.fuelCostPerMile, 2)}`} />
+          <MetricRow label="Costo variable/mi" value={`$${fixed(result.variableCostPerMile, 2)}`} />
           <MetricRow label="Costo fijo/mi" value={`$${result.fixedCostPerMile.toFixed(2)}`} />
-          <MetricRow label="Recargo distancia/mi" value={`$${result.distanceSurchargePerMile.toFixed(2)}`} />
-          <MetricRow label="Recargo peso/mi" value={`$${result.weightSurchargePerMile.toFixed(2)}`} />
+          <MetricRow label="Recargo distancia/mi" value={`$${fixed(result.distanceSurchargePerMile, 2)}`} />
+          <MetricRow label="Recargo peso/mi" value={`$${fixed(result.weightSurchargePerMile, 2)}`} />
           <div className="border-t pt-2 mt-1">
-            <MetricRow label="Costo total estimado" value={`$${result.totalEstimatedCost.toFixed(2)}`} strong />
+            <MetricRow label="Costo total estimado" value={`$${fixed(result.totalEstimatedCost, 2)}`} strong />
           </div>
         </CardContent>
       </Card>

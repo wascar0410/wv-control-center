@@ -1,4 +1,15 @@
 import jsPDF from "jspdf";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import "jspdf-autotable";
 
 export interface FiscalReportData {
@@ -61,11 +72,11 @@ export function generateFiscalReportPDF(data: FiscalReportData) {
 
   doc.setFontSize(11);
   const summaryData = [
-    ["Total Income:", `$${data.totalIncome.toFixed(2)}`],
-    ["Total Expenses:", `$${data.totalExpenses.toFixed(2)}`],
-    ["Business Miles:", `${data.totalBusinessMiles.toFixed(1)}`],
-    ["Mileage Deduction (@ $0.67/mi):", `$${data.mileageDeduction.toFixed(2)}`],
-    ["Net Income:", `$${data.netIncome.toFixed(2)}`],
+    ["Total Income:", `$${fixed(data.totalIncome, 2)}`],
+    ["Total Expenses:", `$${fixed(data.totalExpenses, 2)}`],
+    ["Business Miles:", `${fixed(data.totalBusinessMiles, 1)}`],
+    ["Mileage Deduction (@ $0.67/mi):", `$${fixed(data.mileageDeduction, 2)}`],
+    ["Net Income:", `$${fixed(data.netIncome, 2)}`],
   ];
 
   summaryData.forEach((row) => {
@@ -102,7 +113,7 @@ export function generateFiscalReportPDF(data: FiscalReportData) {
       new Date(record.date).toLocaleDateString(),
       record.source,
       record.brokerName || "-",
-      `$${record.amount.toFixed(2)}`,
+      `$${fixed(record.amount, 2)}`,
     ]);
 
     (doc as any).autoTable({
@@ -133,7 +144,7 @@ export function generateFiscalReportPDF(data: FiscalReportData) {
       new Date(record.date).toLocaleDateString(),
       record.category,
       record.vendor,
-      `$${record.amount.toFixed(2)}`,
+      `$${fixed(record.amount, 2)}`,
     ]);
 
     (doc as any).autoTable({
@@ -159,9 +170,9 @@ export function generateFiscalReportPDF(data: FiscalReportData) {
 
     const mileageTableData = data.mileageRecords.map((record) => [
       new Date(record.date).toLocaleDateString(),
-      record.businessMiles.toFixed(1),
+      fixed(record.businessMiles, 1),
       record.purpose,
-      `$${(record.businessMiles * 0.67).toFixed(2)}`,
+      `$${fixed((record.businessMiles * 0.67), 2)}`,
     ]);
 
     (doc as any).autoTable({

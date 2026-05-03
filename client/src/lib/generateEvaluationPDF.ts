@@ -1,4 +1,15 @@
 import jsPDF from "jspdf";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { LoadEvaluatorFormData } from "@/hooks/useLoadEvaluatorForm";
 
 interface EvaluationResult {
@@ -128,10 +139,10 @@ export function generateEvaluationPDF(
   yPosition += 8;
 
   const financialSummary: Array<[string, string, boolean?]> = [
-    [`Pago Ofrecido:`, `$${parseFloat(form.offeredPrice).toFixed(2)}`],
-    [`Costo Total Estimado:`, `$${evaluation.totalEstimatedCost.toFixed(2)}`],
-    [`Ganancia Estimada:`, `$${evaluation.estimatedProfit.toFixed(2)}`, true],
-    [`Margen de Ganancia:`, `${evaluation.estimatedMarginPercent.toFixed(1)}%`, true],
+    [`Pago Ofrecido:`, `$${fixed(parseFloat(form.offeredPrice), 2)}`],
+    [`Costo Total Estimado:`, `$${fixed(evaluation.totalEstimatedCost, 2)}`],
+    [`Ganancia Estimada:`, `$${fixed(evaluation.estimatedProfit, 2)}`, true],
+    [`Margen de Ganancia:`, `${fixed(evaluation.estimatedMarginPercent, 1)}%`, true],
   ];
 
   doc.setFontSize(11);
@@ -161,11 +172,11 @@ export function generateEvaluationPDF(
   yPosition += 8;
 
   const metricsPerMile = [
-    [`Millas Totales:`, `${evaluation.totalMiles.toFixed(0)} mi`],
-    [`Tarifa Ofrecida:`, `$${evaluation.offeredRatePerMile.toFixed(2)}/mi`],
-    [`Tarifa Mínima Recomendada:`, `$${evaluation.recommendedMinRatePerMile.toFixed(2)}/mi`],
-    [`Costo Total:`, `$${evaluation.totalCostPerMile.toFixed(2)}/mi`],
-    [`Ganancia:`, `$${evaluation.estimatedProfitPerMile.toFixed(2)}/mi`],
+    [`Millas Totales:`, `${fixed(evaluation.totalMiles, 0)} mi`],
+    [`Tarifa Ofrecida:`, `$${fixed(evaluation.offeredRatePerMile, 2)}/mi`],
+    [`Tarifa Mínima Recomendada:`, `$${fixed(evaluation.recommendedMinRatePerMile, 2)}/mi`],
+    [`Costo Total:`, `$${fixed(evaluation.totalCostPerMile, 2)}/mi`],
+    [`Ganancia:`, `$${fixed(evaluation.estimatedProfitPerMile, 2)}/mi`],
   ];
 
   doc.setFontSize(11);
@@ -190,12 +201,12 @@ export function generateEvaluationPDF(
 
   const costBreakdown = [
     ["Concepto", "Costo/Milla"],
-    ["Combustible", `$${evaluation.fuelCostPerMile.toFixed(2)}`],
-    ["Mantenimiento", `$${(evaluation.variableCostPerMile - evaluation.fuelCostPerMile).toFixed(2)}`],
+    ["Combustible", `$${fixed(evaluation.fuelCostPerMile, 2)}`],
+    ["Mantenimiento", `$${fixed((evaluation.variableCostPerMile - evaluation.fuelCostPerMile), 2)}`],
     ["Costos Fijos", `$${evaluation.fixedCostPerMile.toFixed(2)}`],
-    ["Recargo Distancia", `$${evaluation.distanceSurchargePerMile.toFixed(2)}`],
-    ["Recargo Peso", `$${evaluation.weightSurchargePerMile.toFixed(2)}`],
-    ["TOTAL", `$${evaluation.totalCostPerMile.toFixed(2)}`],
+    ["Recargo Distancia", `$${fixed(evaluation.distanceSurchargePerMile, 2)}`],
+    ["Recargo Peso", `$${fixed(evaluation.weightSurchargePerMile, 2)}`],
+    ["TOTAL", `$${fixed(evaluation.totalCostPerMile, 2)}`],
   ];
 
   // Table header

@@ -3,6 +3,17 @@
  * Light theme compatible. Tabs: Overview, Transacciones (Plaid), P&L, Distribución, Alertas
  */
 import { useState, useMemo, useEffect, useCallback } from "react";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,8 +67,8 @@ function openPlaidLink(token: string, onSuccess: (publicToken: string) => void, 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 const fmt = (v: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(v);
-const fmtPct = (v: number) => `${v.toFixed(1)}%`;
-const fmtMile = (v: number) => `$${v.toFixed(2)}/mi`;
+const fmtPct = (v: number) => `${fixed(v, 1)}%`;
+const fmtMile = (v: number) => `$${fixed(v, 2)}/mi`;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const CATEGORY_LABELS: Record<string, string> = {
@@ -481,7 +492,7 @@ export default function Finance() {
       ["Fecha","Descripción","Tipo","Categoría","Monto","Deducible","Notas"],
       ...(transactions as any[]).map(t => [
         t.date, t.name, t.type==="income"?"Ingreso":"Gasto",
-        CATEGORY_LABELS[t.category]||t.category, t.amount.toFixed(2),
+        CATEGORY_LABELS[t.category]||t.category, fixed(t.amount, 2),
         t.isTaxDeductible?"Sí":"No", t.notes||"",
       ]),
     ];
@@ -571,7 +582,7 @@ export default function Finance() {
                       <p className="text-foreground text-sm font-medium">¿Cuánto entró?</p>
                       <p className="text-2xl font-bold text-green-600">{fmt(safePnl.totalRevenue)}</p>
                       <p className="text-xs text-muted-foreground">
-                        {safePnl.loadCount} cargas{safePnl.totalMiles>0?` · ${safePnl.totalMiles.toFixed(0)} millas`:""}
+                        {safePnl.loadCount} cargas{safePnl.totalMiles>0?` · ${fixed(safePnl.totalMiles, 0)} millas`:""}
                       </p>
                     </div>
                   </div>
@@ -683,7 +694,7 @@ export default function Finance() {
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="month" tick={{ fill: "#6b7280", fontSize: 11 }} />
-                    <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
+                    <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} tickFormatter={v => `$${fixed((v/1000), 0)}k`} />
                     <Tooltip
                       contentStyle={{ backgroundColor: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
                       labelStyle={{ color: "#111827" }}

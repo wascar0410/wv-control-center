@@ -1,4 +1,15 @@
 import { useState } from "react";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -93,7 +104,7 @@ export default function AccountingFinance() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Ingresos Totales</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">${metrics.totalIncome.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-green-600 mt-2">${fixed(metrics.totalIncome, 2)}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-green-500/10 flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-green-600" />
@@ -107,7 +118,7 @@ export default function AccountingFinance() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Gastos Totales</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">${metrics.totalExpenses.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-red-600 mt-2">${fixed(metrics.totalExpenses, 2)}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center">
                 <TrendingDown className="w-6 h-6 text-red-600" />
@@ -122,7 +133,7 @@ export default function AccountingFinance() {
               <div>
                 <p className="text-sm text-muted-foreground">Utilidad Neta</p>
                 <p className={`text-3xl font-bold mt-2 ${metrics.netProfit >= 0 ? "text-blue-600" : "text-red-600"}`}>
-                  ${metrics.netProfit.toFixed(2)}
+                  ${fixed(metrics.netProfit, 2)}
                 </p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center">
@@ -230,7 +241,7 @@ export default function AccountingFinance() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value }) => `${name}: $${value.toFixed(0)}`}
+                      label={({ name, value }) => `${name}: $${fixed(value, 0)}`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -239,7 +250,7 @@ export default function AccountingFinance() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: any) => `$${parseFloat(String(value)).toFixed(2)}`} />
+                    <Tooltip formatter={(value: any) => `$${fixed(parseFloat(String(value)), 2)}`} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -254,7 +265,7 @@ export default function AccountingFinance() {
                   {Object.entries(metrics.incomeByCategory).map(([category, amount]) => (
                     <div key={category} className="flex items-center justify-between p-3 border rounded-lg">
                       <span className="capitalize text-sm font-medium">{category}</span>
-                      <span className="text-green-600 font-semibold">${amount.toFixed(2)}</span>
+                      <span className="text-green-600 font-semibold">${fixed(amount, 2)}</span>
                     </div>
                   ))}
                   {Object.keys(metrics.incomeByCategory).length === 0 && (
@@ -282,7 +293,7 @@ export default function AccountingFinance() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, value }) => `${name}: $${value.toFixed(0)}`}
+                      label={({ name, value }) => `${name}: $${fixed(value, 0)}`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="value"
@@ -291,7 +302,7 @@ export default function AccountingFinance() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: any) => `$${parseFloat(String(value)).toFixed(2)}`} />
+                    <Tooltip formatter={(value: any) => `$${fixed(parseFloat(String(value)), 2)}`} />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -306,7 +317,7 @@ export default function AccountingFinance() {
                   {Object.entries(metrics.expenseByCategory).map(([category, amount]) => (
                     <div key={category} className="flex items-center justify-between p-3 border rounded-lg">
                       <span className="capitalize text-sm font-medium">{category}</span>
-                      <span className="text-red-600 font-semibold">${amount.toFixed(2)}</span>
+                      <span className="text-red-600 font-semibold">${fixed(amount, 2)}</span>
                     </div>
                   ))}
                   {Object.keys(metrics.expenseByCategory).length === 0 && (
@@ -352,7 +363,7 @@ export default function AccountingFinance() {
                           <td className="py-3 px-4 capitalize text-xs">{t.category}</td>
                           <td className="py-3 px-4 text-xs">{t.description}</td>
                           <td className={`py-3 px-4 text-right font-semibold ${t.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                            {t.type === "income" ? "+" : "-"}${parseFloat(String(t.amount)).toFixed(2)}
+                            {t.type === "income" ? "+" : "-"}${fixed(parseFloat(String(t.amount)), 2)}
                           </td>
                         </tr>
                       ))

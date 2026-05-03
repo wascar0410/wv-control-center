@@ -1,4 +1,15 @@
 import { useState } from "react";
+
+
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const percent = (v: any) => `${safeNum(v).toFixed(1)}%`;
+const fixed = (v: any, d = 2) => safeNum(v).toFixed(d);
+
 import { FileText, Download, Upload, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,10 +75,10 @@ export default function TaxCompliance() {
     yPosition += 10;
 
     const summaryData = [
-      ["Total Income:", `$${taxSummary.totalIncome.toFixed(2)}`],
-      ["Total Expenses:", `$${taxSummary.totalExpenses.toFixed(2)}`],
-      ["Net Profit:", `$${taxSummary.netProfit.toFixed(2)}`],
-      ["Estimated Taxes:", `$${taxSummary.estimatedTaxes.toFixed(2)}`],
+      ["Total Income:", `$${fixed(taxSummary.totalIncome, 2)}`],
+      ["Total Expenses:", `$${fixed(taxSummary.totalExpenses, 2)}`],
+      ["Net Profit:", `$${fixed(taxSummary.netProfit, 2)}`],
+      ["Estimated Taxes:", `$${fixed(taxSummary.estimatedTaxes, 2)}`],
       ["Effective Tax Rate:", `${taxSummary.effectiveTaxRate}%`],
     ];
 
@@ -89,10 +100,10 @@ export default function TaxCompliance() {
     yPosition += 10;
 
     const quarterlyData = [
-      [`Q1 (Jan-Mar):`, `$${taxSummary.quarterly.q1.toFixed(2)}`],
-      [`Q2 (Apr-Jun):`, `$${taxSummary.quarterly.q2.toFixed(2)}`],
-      [`Q3 (Jul-Sep):`, `$${taxSummary.quarterly.q3.toFixed(2)}`],
-      [`Q4 (Oct-Dec):`, `$${taxSummary.quarterly.q4.toFixed(2)}`],
+      [`Q1 (Jan-Mar):`, `$${fixed(taxSummary.quarterly.q1, 2)}`],
+      [`Q2 (Apr-Jun):`, `$${fixed(taxSummary.quarterly.q2, 2)}`],
+      [`Q3 (Jul-Sep):`, `$${fixed(taxSummary.quarterly.q3, 2)}`],
+      [`Q4 (Oct-Dec):`, `$${fixed(taxSummary.quarterly.q4, 2)}`],
     ];
 
     doc.setFontSize(11);
@@ -150,7 +161,7 @@ export default function TaxCompliance() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Estimated quarterly taxes for {selectedYear}: <strong>${taxSummary.estimatedTaxes.toFixed(2)}</strong>
+            Estimated quarterly taxes for {selectedYear}: <strong>${fixed(taxSummary.estimatedTaxes, 2)}</strong>
           </AlertDescription>
         </Alert>
       )}
@@ -176,7 +187,7 @@ export default function TaxCompliance() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-green-600">
-                    ${taxSummary.totalIncome.toFixed(2)}
+                    ${fixed(taxSummary.totalIncome, 2)}
                   </div>
                 </CardContent>
               </Card>
@@ -187,7 +198,7 @@ export default function TaxCompliance() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-red-600">
-                    ${taxSummary.totalExpenses.toFixed(2)}
+                    ${fixed(taxSummary.totalExpenses, 2)}
                   </div>
                 </CardContent>
               </Card>
@@ -198,7 +209,7 @@ export default function TaxCompliance() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-blue-600">
-                    ${taxSummary.netProfit.toFixed(2)}
+                    ${fixed(taxSummary.netProfit, 2)}
                   </div>
                 </CardContent>
               </Card>
@@ -209,7 +220,7 @@ export default function TaxCompliance() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-orange-600">
-                    ${taxSummary.estimatedTaxes.toFixed(2)}
+                    ${fixed(taxSummary.estimatedTaxes, 2)}
                   </div>
                 </CardContent>
               </Card>
@@ -243,7 +254,7 @@ export default function TaxCompliance() {
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">Total Income</p>
                       <p className="text-2xl font-bold text-green-600">
-                        ${incomeReport.totalIncome.toFixed(2)}
+                        ${fixed(incomeReport.totalIncome, 2)}
                       </p>
                     </div>
                     <Button onClick={generateTaxReport} className="w-full gap-2">
@@ -268,7 +279,7 @@ export default function TaxCompliance() {
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">Total Expenses</p>
                       <p className="text-2xl font-bold text-red-600">
-                        ${expenseReport.totalExpenses.toFixed(2)}
+                        ${fixed(expenseReport.totalExpenses, 2)}
                       </p>
                     </div>
                     <Button onClick={generateTaxReport} className="w-full gap-2">
@@ -303,7 +314,7 @@ export default function TaxCompliance() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-orange-600">
-                      ${quarter.value.toFixed(2)}
+                      ${fixed(quarter.value, 2)}
                     </div>
                   </CardContent>
                 </Card>
