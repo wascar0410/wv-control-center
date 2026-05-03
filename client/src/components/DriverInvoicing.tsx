@@ -5,6 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Download, FileText, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
+// 🔥 SAFE HELPERS
+const safeNum = (v: any) => {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};
+const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
+const rate = (v: any) => `${safeNum(v).toFixed(2)}`;
+
 interface Invoice {
   id: string;
   month: string;
@@ -204,7 +212,7 @@ export function DriverInvoicing() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">${invoice.netAmount.toFixed(2)}</p>
+                    <p className="font-semibold">{money(invoice.netAmount)}</p>
                     <Badge className={getStatusColor(invoice.status)}>
                       {getStatusLabel(invoice.status)}
                     </Badge>
@@ -291,9 +299,9 @@ export function DriverInvoicing() {
                             {load.pickupCity} → {load.deliveryCity}
                           </td>
                           <td className="text-right py-2 px-2">{load.miles}</td>
-                          <td className="text-right py-2 px-2">${load.rate.toFixed(2)}/mi</td>
-                          <td className="text-right py-2 px-2 font-semibold">
-                            ${load.earnings.toFixed(2)}
+                          <td className="text-right py-2 px-2">{rate(load.rate)}/mi</td>
+                        <td className="text-right py-2 px-2">
+                            {money(load.earnings)}
                           </td>
                         </tr>
                       ))}
@@ -314,15 +322,15 @@ export function DriverInvoicing() {
                 </div>
                 <div className="border-t pt-2 flex justify-between">
                   <span className="text-muted-foreground">Ingresos Brutos:</span>
-                  <span className="font-semibold">${selectedInvoice.totalEarnings.toFixed(2)}</span>
+                  <span className="font-semibold">{money(selectedInvoice.totalEarnings)}</span>
                 </div>
                 <div className="flex justify-between text-red-600">
                   <span className="text-muted-foreground">Deducciones:</span>
-                  <span className="font-semibold">-${selectedInvoice.totalDeductions.toFixed(2)}</span>
+                  <span className="font-semibold">-{money(selectedInvoice.totalDeductions)}</span>
                 </div>
                 <div className="border-t pt-2 flex justify-between text-lg">
                   <span className="font-semibold">Neto a Recibir:</span>
-                  <span className="font-bold text-green-600">${selectedInvoice.netAmount.toFixed(2)}</span>
+                  <span className="font-bold text-green-600">{money(selectedInvoice.netAmount)}</span>
                 </div>
               </div>
 

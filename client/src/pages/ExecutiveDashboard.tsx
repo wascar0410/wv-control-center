@@ -81,11 +81,13 @@ function getLoadMiles(load: any) {
 }
 
 function currency(value: number) {
-  return `$${value.toFixed(2)}`;
+  const num = toNumber(value);
+  return `$${num.toFixed(2)}`;
 }
 
 function percent(value: number) {
-  return `${value.toFixed(1)}%`;
+  const num = toNumber(value);
+  return `${num.toFixed(1)}%`;
 }
 
 function KPICard({
