@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Edit2, Save, X, Truck, MapPin, DollarSign, Calendar } from "lucide-react";
 import { ProfitPerLoadCard } from "@/components/ProfitPerLoadCard";
+import { toMoney, toDisplay } from "@/utils/number";
 
 const LOAD_STATUSES = [
   { value: "available", label: "Disponible", color: "bg-blue-500/20 text-blue-300" },
@@ -25,20 +26,8 @@ const LOAD_STATUSES = [
   { value: "paid", label: "Pagado", color: "bg-emerald-500/20 text-emerald-300" },
 ];
 
-// 🔥 SAFE HELPERS
-const safeNum = (v: any) => {
-  const n = Number(v);
-  return isNaN(n) ? 0 : n;
-};
-
 function formatCurrency(value: number | string) {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "$0.00";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-  }).format(num);
+  return `$${toMoney(value)}`;
 }
 
 function formatDate(date: string | Date | null) {

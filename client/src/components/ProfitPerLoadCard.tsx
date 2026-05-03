@@ -4,19 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { toMoney, toFixedSafe } from "@/utils/number";
 
 interface ProfitPerLoadCardProps {
   loadId: number;
 }
 
-// 🔥 SAFE HELPERS (CLAVE)
-const safe = (v: any) => {
-  const n = Number(v);
-  return isNaN(n) ? 0 : n;
-};
-
-const money = (v: any) => `$${safe(v).toFixed(2)}`;
-const percent = (v: any) => `${safe(v).toFixed(2)}%`;
+// 🔥 HELPERS - using structured number system
+const money = (v: any) => `$${toMoney(v)}`;
+const percent = (v: any) => `${toFixedSafe(v, 2)}%`;
 
 export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
   const { data: profitData, isLoading, error } =

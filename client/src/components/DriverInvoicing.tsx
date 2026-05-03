@@ -4,14 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Download, FileText, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { toMoney, toFixedSafe } from '@/utils/number';
 
-// 🔥 SAFE HELPERS
-const safeNum = (v: any) => {
-  const n = Number(v);
-  return isNaN(n) ? 0 : n;
-};
-const money = (v: any) => `$${safeNum(v).toFixed(2)}`;
-const rate = (v: any) => `${safeNum(v).toFixed(2)}`;
+// 🔥 HELPERS - using structured number system
+const money = (v: any) => `$${toMoney(v)}`;
+const rate = (v: any) => toFixedSafe(v, 2);
 
 interface Invoice {
   id: string;
