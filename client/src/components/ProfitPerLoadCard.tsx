@@ -48,23 +48,23 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
   }
 
   // 🔥 SAFE DATA
-  const revenue = safe(profitData.revenue);
+  const revenue = toFixedSafe(profitData.revenue, 2);
   const expenses = {
-    fuel: safe(profitData.expenses?.fuel),
-    tolls: safe(profitData.expenses?.tolls),
-    maintenance: safe(profitData.expenses?.maintenance),
-    driverPay: safe(profitData.expenses?.driverPay),
-    commissions: safe(profitData.expenses?.commissions),
-    other: safe(profitData.expenses?.other),
+    fuel: toFixedSafe(profitData.expenses?.fuel, 2),
+    tolls: toFixedSafe(profitData.expenses?.tolls, 2),
+    maintenance: toFixedSafe(profitData.expenses?.maintenance, 2),
+    driverPay: toFixedSafe(profitData.expenses?.driverPay, 2),
+    commissions: toFixedSafe(profitData.expenses?.commissions, 2),
+    other: toFixedSafe(profitData.expenses?.other, 2),
   };
 
-  const totalExpenses = safe(profitData.totalExpenses);
-  const actualProfit = safe(profitData.actualProfit);
-  const actualMargin = safe(profitData.actualMargin);
-  const profitPerMile = safe(profitData.profitPerMile);
-  const estimatedProfit = safe(profitData.estimatedProfit);
-  const variance = safe(profitData.variance);
-  const variancePercent = safe(profitData.variancePercent);
+  const totalExpenses = toFixedSafe(profitData.totalExpenses, 2);
+  const actualProfit = toFixedSafe(profitData.actualProfit, 2);
+  const actualMargin = toFixedSafe(profitData.actualMargin, 2);
+  const profitPerMile = toFixedSafe(profitData.profitPerMile, 2);
+  const estimatedProfit = toFixedSafe(profitData.estimatedProfit, 2);
+  const variance = toFixedSafe(profitData.variance, 2);
+  const variancePercent = toFixedSafe(profitData.variancePercent, 2);
 
   const isPositiveVariance = variance >= 0;
   const isPositiveProfit = actualProfit >= 0;
