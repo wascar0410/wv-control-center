@@ -197,6 +197,28 @@ export async function getAllDrivers() {
 // ─── Loads ────────────────────────────────────────────────────────────────────
 
 export async function createLoad(data: InsertLoad) {
+  // 🚨 VALIDACIÓN CRÍTICA: Direcciones requeridas
+  const pickupAddressStr = String(data.pickupAddress || "").trim();
+  const deliveryAddressStr = String(data.deliveryAddress || "").trim();
+
+  if (!pickupAddressStr || !deliveryAddressStr) {
+    const missingFields = [];
+    if (!pickupAddressStr) missingFields.push("pickupAddress");
+    if (!deliveryAddressStr) missingFields.push("deliveryAddress");
+    
+    console.error("🚨 [LOAD REJECTED] Missing required addresses", {
+      loadId: (data as any).id,
+      missing: missingFields,
+      pickupAddress: data.pickupAddress,
+      deliveryAddress: data.deliveryAddress,
+    });
+    
+    throw new Error(
+      `Load creation failed: Missing required addresses (${missingFields.join(", ")}). ` +
+      `Pickup and delivery addresses are mandatory for geocoding and routing.`
+    );
+  }
+
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const netMargin = (
