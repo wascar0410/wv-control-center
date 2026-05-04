@@ -6,6 +6,9 @@ import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toMoney, toFixedSafe } from "@/utils/number";
 
+// 🔥 FINANCIAL VALUES - use toMoney to expose backend errors
+// 📊 UI METRICS - use toFixedSafe for safe formatting
+
 interface ProfitPerLoadCardProps {
   loadId: number;
 }
@@ -47,22 +50,24 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
     );
   }
 
-  // 🔥 SAFE DATA
-  const revenue = toFixedSafe(profitData.revenue, 2);
+  // 💰 FINANCIAL VALUES - use toMoney to expose backend errors
+  const revenue = toMoney(profitData.revenue);
   const expenses = {
-    fuel: toFixedSafe(profitData.expenses?.fuel, 2),
-    tolls: toFixedSafe(profitData.expenses?.tolls, 2),
-    maintenance: toFixedSafe(profitData.expenses?.maintenance, 2),
-    driverPay: toFixedSafe(profitData.expenses?.driverPay, 2),
-    commissions: toFixedSafe(profitData.expenses?.commissions, 2),
-    other: toFixedSafe(profitData.expenses?.other, 2),
+    fuel: toMoney(profitData.expenses?.fuel),
+    tolls: toMoney(profitData.expenses?.tolls),
+    maintenance: toMoney(profitData.expenses?.maintenance),
+    driverPay: toMoney(profitData.expenses?.driverPay),
+    commissions: toMoney(profitData.expenses?.commissions),
+    other: toMoney(profitData.expenses?.other),
   };
 
-  const totalExpenses = toFixedSafe(profitData.totalExpenses, 2);
-  const actualProfit = toFixedSafe(profitData.actualProfit, 2);
+  const totalExpenses = toMoney(profitData.totalExpenses);
+  const actualProfit = toMoney(profitData.actualProfit);
+  const estimatedProfit = toMoney(profitData.estimatedProfit);
+  const profitPerMile = toMoney(profitData.profitPerMile);
+
+  // 📊 UI METRICS - use toFixedSafe for safe formatting
   const actualMargin = toFixedSafe(profitData.actualMargin, 2);
-  const profitPerMile = toFixedSafe(profitData.profitPerMile, 2);
-  const estimatedProfit = toFixedSafe(profitData.estimatedProfit, 2);
   const variance = toFixedSafe(profitData.variance, 2);
   const variancePercent = toFixedSafe(profitData.variancePercent, 2);
 
