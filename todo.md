@@ -1808,3 +1808,15 @@
 - [ ] NO tocar Plaid Sync
 - [ ] NO tocar Reserve system
 - [ ] SOLO fixes, estabilidad, consistencia
+
+
+## Fase 45: Data Integrity Audit - Load Creation Pipeline
+- [x] Audit load creation paths (API, seed scripts, direct SQL)
+- [x] Identify loads created without addresses (41 loads with city-only addresses)
+- [x] Root cause: server/seed-full-data.mjs bypasses createLoad() validation with direct SQL INSERT
+- [x] Fix: Updated server/seed-full-data.mjs to use full street addresses
+- [x] Verify: seed-loads.mjs and server/seed-loads.ts use full addresses
+- [ ] Refactor seed scripts to use validated createLoad() function instead of direct SQL
+- [ ] Execute geocoding backfill for existing loads without coordinates
+- [ ] Monitor logs for 🚨 [LOAD REJECTED] and [GEOCODE] events in production
+- [ ] Validate that all new loads created via API have valid addresses and coordinates

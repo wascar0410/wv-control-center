@@ -88,29 +88,32 @@ async function seedData() {
     );
     console.log(`✅ Wallet transactions created\n`);
 
-    // 6. Create Loads (using correct schema: clientName, pickupAddress, deliveryAddress, weight, merchandiseType, price, status)
+    // 6. Create Loads - MUST use full addresses to pass validation
+    // ⚠️  CRITICAL: City-only addresses (e.g., "Louisville, KY") are NOT ALLOWED
+    // All loads MUST have complete street addresses for geocoding pipeline
     console.log("📦 Creating loads...");
     const load1Result = await connection.execute(
       `INSERT INTO loads (clientName, pickupAddress, deliveryAddress, weight, weightUnit, merchandiseType, price, status, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      ["Broker A", "Atlanta, GA", "Charlotte, NC", 10000, "lbs", "General Cargo", 625, "available"]
+      ["Broker A", "1500 Peachtree St, Atlanta, GA 30309", "500 S Tryon St, Charlotte, NC 28202", 10000, "lbs", "General Cargo", 625, "available"]
     );
     const loadId1 = load1Result[0].insertId;
 
     const load2Result = await connection.execute(
       `INSERT INTO loads (clientName, pickupAddress, deliveryAddress, weight, weightUnit, merchandiseType, price, status, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      ["Broker B", "Nashville, TN", "Memphis, TN", 8000, "lbs", "General Cargo", 360, "available"]
+      ["Broker B", "300 Broadway, Nashville, TN 37201", "100 Front St, Memphis, TN 38103", 8000, "lbs", "General Cargo", 360, "available"]
     );
     const loadId2 = load2Result[0].insertId;
 
     const load3Result = await connection.execute(
       `INSERT INTO loads (clientName, pickupAddress, deliveryAddress, weight, weightUnit, merchandiseType, price, status, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      ["Broker C", "Louisville, KY", "Indianapolis, IN", 6000, "lbs", "General Cargo", 264, "available"]
+      ["Broker C", "500 W Main St, Louisville, KY 40202", "200 E Main St, Indianapolis, IN 46204", 6000, "lbs", "General Cargo", 264, "available"]
     );
     const loadId3 = load3Result[0].insertId;
     console.log(`✅ Loads created: ${loadId1}, ${loadId2}, ${loadId3}\n`);
+    console.log("⚠️  NOTE: These loads were created with direct SQL. In production, use createLoad() function for validation & geocoding.\n`);
 
     // 7. Create Quote Analyses
     console.log("📈 Creating quote analyses...");
