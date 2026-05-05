@@ -64,3 +64,13 @@ export const safeNumber = (value: any, defaultValue: number = 0): number => {
   const num = parseNumber(value);
   return num === null ? defaultValue : num;
 };
+
+/**
+ * TEMPORARY FALLBACK (remove after full cleanup)
+ * Prevents crashes if old code references safe()
+ */
+export const safe = (v: any) => {
+  console.warn("⚠️ DEPRECATED: safe() used - should use toMoney/toFixedSafe/toDisplay instead", v);
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+};

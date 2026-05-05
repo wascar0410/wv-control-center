@@ -1823,3 +1823,16 @@
 - [ ] Refactor seed scripts to use validated createLoad() function instead of direct SQL
 - [ ] Execute geocoding backfill for existing loads without coordinates
 - [ ] Monitor logs for 🚨 [LOAD REJECTED] and [GEOCODE] events in production
+
+
+## Fase 46: Runtime Error Fix - safe is not defined
+- [x] Search entire project for safe() usage
+- [x] Identified: safe() not in source code, but in old bundle
+- [x] Added safe() fallback to client/src/utils/number.ts
+- [x] Fallback logs warning: "DEPRECATED: safe() used"
+- [x] Clean build cache: rm -rf dist node_modules/.vite
+- [x] Rebuild project: pnpm build (9.92s)
+- [x] Restart dev server
+- [ ] Deploy to Railway
+- [ ] Verify: No "safe is not defined" crash in production
+- [ ] Monitor: Watch for "DEPRECATED" logs to find remaining safe() calls
