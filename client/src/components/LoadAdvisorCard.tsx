@@ -24,6 +24,41 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
   const color = getRecommendationColor(analysis.recommendation);
   const emoji = getRecommendationEmoji(analysis.recommendation);
 
+  // If load is blocked (missing coordinates), show warning
+  if (analysis.block) {
+    const blockColor = "bg-red-500/20 text-red-300 border-red-500/50";
+    if (compact) {
+      return (
+        <div className={`p-3 rounded-lg border ${blockColor}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">⚠️</span>
+              <div>
+                <p className="font-semibold text-sm">BLOCKED</p>
+                <p className="text-xs opacity-75">Missing route data</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <Card className={`border-2 ${blockColor}`}>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <span className="text-2xl">⚠️</span>
+            BLOCKED - Cannot Evaluate
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm">This load cannot be evaluated by AI because it is missing route coordinates.</p>
+          <p className="text-xs text-muted-foreground">Reason: {analysis.reasoning}</p>
+          <p className="text-xs text-muted-foreground mt-2">Action: Geocoding backfill required to populate coordinates.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const colorClasses = {
     green: "bg-green-500/20 text-green-300 border-green-500/50",
     yellow: "bg-yellow-500/20 text-yellow-300 border-yellow-500/50",

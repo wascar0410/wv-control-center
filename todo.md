@@ -1866,3 +1866,15 @@
 - [ ] Rebuild and redeploy to Railway
 - [ ] Test with real loads (verify profit-based filtering works)
 - [ ] Monitor: verify no negative-profit loads are recommended
+
+
+## Fase 49: AI Load Advisor - Block Invalid Loads
+- [x] Add block flag to LoadAnalysis interface
+- [x] Implement hasValidCoords check in analyzeLoadAdvanced()
+- [x] Set block=true when NO_COORDS detected (fallback miles=120)
+- [x] Add BLOCKED UI state to LoadAdvisorCard (full + compact modes)
+- [x] Show warning: "Missing route data - Geocoding backfill required"
+- [ ] Rebuild and redeploy to Railway
+- [ ] Verify old loads (600021, 600020, etc.) show BLOCKED status
+- [ ] Verify new loads (750001, etc.) show normal recommendations
+- [ ] Monitor: no AI decisions made on loads with miles=120 fallback

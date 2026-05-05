@@ -23,6 +23,7 @@ export interface LoadAnalysis {
   suggestedTarget: number;
   riskFlags: string[];
   reasoning: string;
+  block?: boolean; // If true, do not use this load for AI decisions
 }
 
 /**
@@ -144,7 +145,8 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
     deliveryAddress: load.deliveryAddress,
   });
 
-  // If no valid coordinates, cannot reliably analyze
+  // CRITICAL: If no valid coordinates, BLOCK this load from AI evaluation
+  // Using fallback miles (120) leads to incorrect recommendations
   if (riskFlags.includes("NO_COORDS")) {
     return {
       miles,
@@ -157,6 +159,7 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
       suggestedTarget: 0,
       riskFlags,
       reasoning: "Cannot evaluate: missing coordinates. Address validation required.",
+      block: true, // BLOCK: Do not use this load for AI decisions
     };
   }
 
