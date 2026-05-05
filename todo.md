@@ -1878,3 +1878,16 @@
 - [ ] Verify old loads (600021, 600020, etc.) show BLOCKED status
 - [ ] Verify new loads (750001, etc.) show normal recommendations
 - [ ] Monitor: no AI decisions made on loads with miles=120 fallback
+
+
+## Fase 50: Fix Financial Panel - Use Direct Load Data
+- [x] Create FinancialPanel.tsx component (NO backend dependency)
+- [x] Use SAME data as AI Advisor: price, estimatedFuel, estimatedTolls
+- [x] Calculate: revenue, expenses, profit, profitPerMile, marginPercent
+- [x] Validate: NO NaN, NO undefined, NO strings
+- [x] Use toMoney() for financial values
+- [x] Use toFixedSafe() for percentages
+- [x] Replace ProfitPerLoadCard with FinancialPanel in LoadDetailPage
+- [ ] Rebuild and redeploy to Railway
+- [ ] Verify financial values display correctly (NO ERR, NO 0)
+- [ ] Verify consistency with AI Advisor calculations

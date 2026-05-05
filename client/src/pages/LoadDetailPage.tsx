@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Edit2, Save, X, Truck, MapPin, DollarSign, Calendar } from "lucide-react";
-import { ProfitPerLoadCard } from "@/components/ProfitPerLoadCard";
+import { FinancialPanel } from "@/components/FinancialPanel";
 import LoadAdvisorCard from "@/components/LoadAdvisorCard";
 import { toMoney, toDisplay } from "@/utils/number";
 
@@ -204,7 +204,7 @@ export default function LoadDetailPage() {
           </Card>
 
           {/* Real Profit Per Load */}
-          <ProfitPerLoadCard loadId={loadId} />
+          <FinancialPanel load={load} />
 
           {/* Notes */}
           {load.notes && (
