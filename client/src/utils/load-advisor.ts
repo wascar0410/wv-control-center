@@ -2,8 +2,11 @@
  * load-advisor.ts
  * Professional AI Load Advisor - Broker/Dispatcher Level
  * 
+ * PRO VERSION: Profit-based analysis + Real cost calculations
+ * 
  * Analyzes loads with real market logic:
- * - Market-based RPM thresholds
+ * - Profit filtering (must be positive)
+ * - Real cost analysis (fuel + tolls)
  * - Dynamic pricing recommendations
  * - Risk detection
  * - Confidence scoring
@@ -13,6 +16,7 @@ export interface LoadAnalysis {
   miles: number;
   price: number;
   ratePerMile: number;
+  profit: number;
   recommendation: "GOOD" | "NEGOTIATE" | "REJECT" | "UNKNOWN";
   confidence: "high" | "medium" | "low";
   suggestedMinimum: number;
@@ -33,6 +37,15 @@ const MARKET_THRESHOLDS = {
 };
 
 /**
+ * Profit thresholds (minimum acceptable profit per load)
+ */
+const PROFIT_THRESHOLDS = {
+  MINIMUM: 50,     // Reject if profit < $50
+  NEGOTIATE: 100,  // Negotiate if profit < $100
+  GOOD: 200,       // Good if profit > $200
+};
+
+/**
  * Dynamic multiplier for pricing recommendations
  * Short loads command premium, long haul accepts lower margin
  */
@@ -50,10 +63,13 @@ function detectRisks(load: any): string[] {
 
   const rpm = load.ratePerMile || 0;
   const miles = load.miles || 0;
+  const profit = load.profit || 0;
   const hasCoords = load.pickupLat && load.deliveryLat;
 
   if (rpm < 2) risks.push("LOW_PAY");
   if (rpm < 1.8) risks.push("CRITICAL_LOW_PAY");
+  if (profit < 50) risks.push("LOW_PROFIT");
+  if (profit <= 0) risks.push("NEGATIVE_PROFIT");
   if (miles < 50) risks.push("SHORT_LOAD");
   if (miles > 500) risks.push("LONG_HAUL");
   if (!hasCoords) risks.push("NO_COORDS");
@@ -66,26 +82,31 @@ function detectRisks(load: any): string[] {
  * Generate human-readable reasoning
  */
 function generateReasoning(analysis: Partial<LoadAnalysis>, load: any): string {
-  const { recommendation, ratePerMile, miles } = analysis;
+  const { recommendation, ratePerMile, miles, profit } = analysis;
   const riskFlags = analysis.riskFlags || [];
 
   if (riskFlags.includes("NO_COORDS")) {
     return "Cannot evaluate: missing coordinates. Address validation required.";
   }
 
+  if (riskFlags.includes("NEGATIVE_PROFIT")) {
+    return `Load loses money. Profit: -$${Math.abs(profit || 0).toFixed(2)}. REJECT.`;
+  }
+
+  if (riskFlags.includes("LOW_PROFIT")) {
+    return `Profit too low ($${profit?.toFixed(2)}). Need at least $${PROFIT_THRESHOLDS.MINIMUM}.`;
+  }
+
   if (recommendation === "GOOD") {
-    return `Excellent rate at $${ratePerMile?.toFixed(2)}/mile for ${miles}mi. Accept or negotiate higher.`;
+    return `Excellent: $${ratePerMile?.toFixed(2)}/mi, $${profit?.toFixed(2)} profit on ${miles}mi. Accept or negotiate higher.`;
   }
 
   if (recommendation === "NEGOTIATE") {
-    return `Fair rate. Negotiate for higher price or look for better loads.`;
+    return `Fair deal: $${ratePerMile?.toFixed(2)}/mi, $${profit?.toFixed(2)} profit. Negotiate for better terms.`;
   }
 
   if (recommendation === "REJECT") {
-    if (riskFlags.includes("CRITICAL_LOW_PAY")) {
-      return `Rate too low ($${ratePerMile?.toFixed(2)}/mi). Reject and look for better opportunities.`;
-    }
-    return `Below market rate. Recommend rejection or significant negotiation.`;
+    return `Below market. Rate $${ratePerMile?.toFixed(2)}/mi, profit $${profit?.toFixed(2)}. Recommend rejection.`;
   }
 
   return "Unable to analyze load.";
@@ -93,8 +114,9 @@ function generateReasoning(analysis: Partial<LoadAnalysis>, load: any): string {
 
 /**
  * Main analysis function - Professional Load Advisor
+ * PRO VERSION: Profit-based + Real Cost Analysis
  * 
- * @param load Load object with miles, price, coordinates, addresses
+ * @param load Load object with miles, price, coordinates, addresses, costs
  * @returns Detailed load analysis with recommendation and pricing
  */
 export function analyzeLoadAdvanced(load: any): LoadAnalysis {
@@ -102,8 +124,25 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
   const price = Number(load.price) || 0;
   const ratePerMile = miles > 0 ? price / miles : 0;
 
+  // REAL COST ANALYSIS
+  const estimatedFuel = Number(load.estimatedFuel) || 0;
+  const estimatedTolls = Number(load.estimatedTolls) || 0;
+  const netMargin = Number(load.netMargin) || 0;
+  const profit = netMargin > 0 ? netMargin : price - estimatedFuel - estimatedTolls;
+
+  // Real costs for pricing recommendations
+  const totalCosts = estimatedFuel + estimatedTolls;
+
   // Detect risk flags first
-  const riskFlags = detectRisks({ ...load, ratePerMile });
+  const riskFlags = detectRisks({
+    ...load,
+    ratePerMile,
+    profit,
+    pickupLat: load.pickupLat,
+    deliveryLat: load.deliveryLat,
+    pickupAddress: load.pickupAddress,
+    deliveryAddress: load.deliveryAddress,
+  });
 
   // If no valid coordinates, cannot reliably analyze
   if (riskFlags.includes("NO_COORDS")) {
@@ -111,6 +150,7 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
       miles,
       price,
       ratePerMile,
+      profit,
       recommendation: "UNKNOWN",
       confidence: "low",
       suggestedMinimum: 0,
@@ -120,17 +160,27 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
     };
   }
 
-  // Market-based recommendation
+  // PROFIT-BASED RECOMMENDATION (PRO LOGIC)
   let recommendation: "GOOD" | "NEGOTIATE" | "REJECT" = "REJECT";
   let confidence: "high" | "medium" | "low" = "low";
 
-  if (ratePerMile >= MARKET_THRESHOLDS.PREMIUM) {
+  // First filter: profit must be positive
+  if (profit <= 0) {
+    recommendation = "REJECT";
+    confidence = "high";
+  } else if (profit < PROFIT_THRESHOLDS.MINIMUM) {
+    recommendation = "REJECT";
+    confidence = "high";
+  } else if (ratePerMile >= MARKET_THRESHOLDS.PREMIUM && profit > PROFIT_THRESHOLDS.GOOD) {
+    // GOOD: High RPM AND good profit
     recommendation = "GOOD";
     confidence = "high";
-  } else if (ratePerMile >= MARKET_THRESHOLDS.AVERAGE) {
+  } else if (ratePerMile >= MARKET_THRESHOLDS.AVERAGE && profit > PROFIT_THRESHOLDS.NEGOTIATE) {
+    // NEGOTIATE: Fair RPM AND acceptable profit
     recommendation = "NEGOTIATE";
     confidence = "medium";
-  } else if (ratePerMile >= MARKET_THRESHOLDS.FLOOR) {
+  } else if (ratePerMile >= MARKET_THRESHOLDS.FLOOR && profit > PROFIT_THRESHOLDS.MINIMUM) {
+    // REJECT: Low RPM, even with profit
     recommendation = "REJECT";
     confidence = "medium";
   } else {
@@ -138,13 +188,15 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
     confidence = "high";
   }
 
-  // Dynamic pricing calculation
+  // INTELLIGENT PRICING CALCULATION (based on real costs)
   const multiplier = getDynamicMultiplier(miles);
-  const minimum = miles * MARKET_THRESHOLDS.AVERAGE;
+  // Minimum: cover costs + 2.5x margin
+  const minimum = totalCosts > 0 ? totalCosts * 2.5 : miles * MARKET_THRESHOLDS.AVERAGE;
+  // Target: minimum + negotiation buffer
   const target = minimum * multiplier;
 
   const reasoning = generateReasoning(
-    { recommendation, ratePerMile, miles },
+    { recommendation, ratePerMile, miles, profit },
     load
   );
 
@@ -152,6 +204,7 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
     miles,
     price,
     ratePerMile: Number(ratePerMile.toFixed(2)),
+    profit: Number(profit.toFixed(2)),
     recommendation,
     confidence,
     suggestedMinimum: Number(minimum.toFixed(2)),
@@ -208,6 +261,8 @@ export function formatRiskFlags(flags: string[]): string {
   const riskLabels: Record<string, string> = {
     LOW_PAY: "⚠️ Low Pay",
     CRITICAL_LOW_PAY: "🚨 Critical Low Pay",
+    LOW_PROFIT: "💸 Low Profit",
+    NEGATIVE_PROFIT: "🚨 Negative Profit",
     SHORT_LOAD: "📦 Short Load",
     LONG_HAUL: "🛣️ Long Haul",
     NO_COORDS: "📍 No Coordinates",

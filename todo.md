@@ -1852,3 +1852,17 @@
 - [ ] Test with real loads (verify recommendations and pricing)
 - [ ] Monitor logs for edge cases
 - [ ] Fine-tune market thresholds based on user feedback
+
+
+## Fase 48: AI Load Advisor PRO - Profit-Based Logic
+- [x] Upgrade analyzeLoadAdvanced() with profit-based filtering
+- [x] Add real cost analysis (fuel + tolls) for pricing
+- [x] Implement profit thresholds (MINIMUM: $50, NEGOTIATE: $100, GOOD: $200)
+- [x] Filter out negative profit loads (REJECT automatically)
+- [x] Update pricing calculation: minimum = costs * 2.5 (not just RPM)
+- [x] Add profit display to LoadAdvisorCard (full + compact modes)
+- [x] Add NEGATIVE_PROFIT and LOW_PROFIT risk flags
+- [x] Improve reasoning to explain profit vs RPM decisions
+- [ ] Rebuild and redeploy to Railway
+- [ ] Test with real loads (verify profit-based filtering works)
+- [ ] Monitor: verify no negative-profit loads are recommended
