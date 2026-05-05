@@ -242,11 +242,6 @@ export async function createLoad(data: InsertLoad) {
           enrichedData.pickupLat = pickupGeocode.latitude as any;
           enrichedData.pickupLng = pickupGeocode.longitude as any;
           geocodeLog.pickupGeocoded = true;
-          console.log("[GEOCODE] Pickup geocoded:", {
-            address: enrichedData.pickupAddress,
-            lat: pickupGeocode.latitude,
-            lng: pickupGeocode.longitude,
-          });
         }
       } catch (err) {
         console.error("[GEOCODE] Pickup geocoding failed:", err);
@@ -261,11 +256,6 @@ export async function createLoad(data: InsertLoad) {
           enrichedData.deliveryLat = deliveryGeocode.latitude as any;
           enrichedData.deliveryLng = deliveryGeocode.longitude as any;
           geocodeLog.deliveryGeocoded = true;
-          console.log("[GEOCODE] Delivery geocoded:", {
-            address: enrichedData.deliveryAddress,
-            lat: deliveryGeocode.latitude,
-            lng: deliveryGeocode.longitude,
-          });
         }
       } catch (err) {
         console.error("[GEOCODE] Delivery geocoding failed:", err);
@@ -277,8 +267,6 @@ export async function createLoad(data: InsertLoad) {
 
   const [result] = await db.insert(loads).values({ ...enrichedData, netMargin }).execute() as any;
   const loadId = result.insertId as number;
-
-  console.log("[GEOCODE] Load created:", { loadId, geocodeLog });
   return loadId;
 }
 
@@ -298,15 +286,7 @@ function normalizeLoadFinancials(load: any) {
   const deliveryLatNum = Number(load.deliveryLat);
   const deliveryLngNum = Number(load.deliveryLng);
 
-  // 🔍 LOG DE DEBUG CRÍTICO
-  console.log("[COORD CHECK]", {
-    id: load.id,
-    pickupLat: load.pickupLat,
-    pickupLatNum,
-    deliveryLat: load.deliveryLat,
-    deliveryLatNum,
-    rawType: typeof load.pickupLat,
-  });
+  // 🔍 Validación de coordenadas (logs removidos para reducir ruido en Railway)
 
   // Validación REAL - Convertir nombres para claridad
   const hasValidCoords =
@@ -335,7 +315,6 @@ function normalizeLoadFinancials(load: any) {
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     miles = R * c * 1.15; // Ajuste trucking
-    console.log("[HAVERSINE CALC]", { id: load.id, miles: Math.round(miles * 10) / 10 });
   }
 
   // 🚨 FALLBACK OBLIGATORIO
@@ -348,14 +327,7 @@ function normalizeLoadFinancials(load: any) {
   const profit = price - fuel - tolls;
   const margin = profit > 0 ? (profit / price) * 100 : 0;
 
-  // LOG DE DEBUG
-  console.log("[FINAL LOAD CHECK]", {
-    id: load.id,
-    ratePerMile: Math.round(ratePerMile * 100) / 100,
-    miles: Math.round(miles * 10) / 10,
-    price,
-    hasValidCoords,
-  });
+  // Cálculos completados (logs removidos para reducir ruido en Railway)
 
   return {
     ...load,
@@ -443,12 +415,6 @@ export async function updateLoad(id: number, data: Partial<InsertLoad>) {
           if (pickupGeocode) {
             updateData.pickupLat = pickupGeocode.latitude as any;
             updateData.pickupLng = pickupGeocode.longitude as any;
-            console.log("[GEOCODE] Pickup updated and geocoded:", {
-              loadId: id,
-              address: data.pickupAddress,
-              lat: pickupGeocode.latitude,
-              lng: pickupGeocode.longitude,
-            });
           }
         } catch (err) {
           console.error("[GEOCODE] Pickup geocoding failed:", err);
@@ -462,12 +428,6 @@ export async function updateLoad(id: number, data: Partial<InsertLoad>) {
           if (deliveryGeocode) {
             updateData.deliveryLat = deliveryGeocode.latitude as any;
             updateData.deliveryLng = deliveryGeocode.longitude as any;
-            console.log("[GEOCODE] Delivery updated and geocoded:", {
-              loadId: id,
-              address: data.deliveryAddress,
-              lat: deliveryGeocode.latitude,
-              lng: deliveryGeocode.longitude,
-            });
           }
         } catch (err) {
           console.error("[GEOCODE] Delivery geocoding failed:", err);

@@ -1816,7 +1816,10 @@
 - [x] Root cause: server/seed-full-data.mjs bypasses createLoad() validation with direct SQL INSERT
 - [x] Fix: Updated server/seed-full-data.mjs to use full street addresses
 - [x] Verify: seed-loads.mjs and server/seed-loads.ts use full addresses
+- [x] Remove noisy logs: [COORD CHECK], [FINAL LOAD CHECK], [HAVERSINE CALC] removed from db.ts
+- [x] Keep error logs only: [LOAD REJECTED], [GEOCODE] errors retained
+- [x] Validate API validation: loads.create requires pickupAddress + deliveryAddress (Zod + DB)
+- [x] Validate frontend validation: CreateLoadModal passes addresses from quotation
 - [ ] Refactor seed scripts to use validated createLoad() function instead of direct SQL
 - [ ] Execute geocoding backfill for existing loads without coordinates
 - [ ] Monitor logs for 🚨 [LOAD REJECTED] and [GEOCODE] events in production
-- [ ] Validate that all new loads created via API have valid addresses and coordinates
