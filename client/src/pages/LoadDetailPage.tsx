@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { ArrowLeft, Edit2, Save, X, Truck, MapPin, DollarSign, Calendar } from "lucide-react";
 import { ProfitPerLoadCard } from "@/components/ProfitPerLoadCard";
+import LoadAdvisorCard from "@/components/LoadAdvisorCard";
 import { toMoney, toDisplay } from "@/utils/number";
 
 const LOAD_STATUSES = [
@@ -169,6 +170,9 @@ export default function LoadDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Load Advisor */}
+          <LoadAdvisorCard load={load} />
 
           {/* Financial */}
           <Card>

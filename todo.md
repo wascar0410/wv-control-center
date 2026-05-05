@@ -1836,3 +1836,19 @@
 - [ ] Deploy to Railway
 - [ ] Verify: No "safe is not defined" crash in production
 - [ ] Monitor: Watch for "DEPRECATED" logs to find remaining safe() calls
+
+
+## Fase 47: AI Load Advisor - Professional Broker/Dispatcher Level
+- [x] Create /utils/load-advisor.ts with analyzeLoadAdvanced()
+- [x] Implement market-based RPM thresholds (FLOOR, AVERAGE, GOOD, PREMIUM)
+- [x] Add dynamic pricing multiplier (short loads = 25%, medium = 15%, long haul = 8%)
+- [x] Implement risk detection (LOW_PAY, SHORT_LOAD, NO_COORDS, INCOMPLETE_ADDRESS)
+- [x] Add UNKNOWN recommendation if no valid coordinates
+- [x] Create LoadAdvisorCard.tsx component (full and compact modes)
+- [x] Add recommendation colors (🟢 GOOD, 🟡 NEGOTIATE, 🔴 REJECT, ⚪ UNKNOWN)
+- [x] Integrate LoadAdvisorCard into LoadDetailPage
+- [ ] Integrate LoadAdvisorCard into DispatchBoard (compact mode)
+- [ ] Add LoadAdvisorCard to Quotation page
+- [ ] Test with real loads (verify recommendations and pricing)
+- [ ] Monitor logs for edge cases
+- [ ] Fine-tune market thresholds based on user feedback
