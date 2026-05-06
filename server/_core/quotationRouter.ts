@@ -16,6 +16,7 @@ import {
   getApplicableWeightSurcharge,
 } from "../db-business-config";
 import { createPriceAlert } from "../db-price-alerts";
+import { calculateVehicleOperatingCost, type VehicleType } from "../vehicle-costs";
 
 // Haversine formula to calculate distance between two points
 export function calculateDistance(
@@ -47,27 +48,13 @@ async function calculateProfitability(
   totalMiles: number,
   loadedMiles: number,
   weight: number,
-  estimatedTollCost: number = 0
+  estimatedTollCost: number = 0,
+  vehicleType: VehicleType = "cargo_van"
 ) {
   const config = await getBusinessConfig(userId);
 
-  const fuelCostPerMile =
-    Number(config?.fuelPricePerGallon || 3.6) / Number(config?.vanMpg || 18);
-
-  const maintenancePerMile = Number(config?.maintenancePerMile || 0.12);
-  const tiresPerMile = Number(config?.tiresPerMile || 0.03);
-  const operatingCostPerMile =
-    fuelCostPerMile + maintenancePerMile + tiresPerMile;
-
-  const totalFixedMonthly =
-    Number(config?.insuranceMonthly || 450) +
-    Number(config?.phoneInternetMonthly || 70) +
-    Number(config?.loadBoardAppsMonthly || 45) +
-    Number(config?.accountingSoftwareMonthly || 30) +
-    Number(config?.otherFixedMonthly || 80);
-
-  const fixedCostPerMile =
-    totalFixedMonthly / Number(config?.targetMilesPerMonth || 4000);
+  // 🔥 USE UNIFIED VEHICLE COST ENGINE - SINGLE SOURCE OF TRUTH
+  const estimatedOperatingCost = calculateVehicleOperatingCost(vehicleType, totalMiles);
 
   const distanceSurcharge = await getApplicableDistanceSurcharge(
     userId,
@@ -75,11 +62,11 @@ async function calculateProfitability(
   );
   const weightSurcharge = await getApplicableWeightSurcharge(userId, weight);
 
-  const estimatedFuelCost = totalMiles * fuelCostPerMile;
-  const estimatedOperatingCost =
-    totalMiles * (operatingCostPerMile + fixedCostPerMile);
   // Include real toll cost in total operating cost
-  const totalOperatingCost = estimatedFuelCost + estimatedOperatingCost + estimatedTollCost;
+  const totalOperatingCost = estimatedOperatingCost + estimatedTollCost;
+
+  // Legacy fuel cost for display (kept for backward compatibility)
+  const estimatedFuelCost = estimatedOperatingCost * 0.5; // Approximate
 
   const estimatedProfit = totalPrice - totalOperatingCost;
   const profitMarginPercent =
@@ -191,7 +178,8 @@ export const quotationRouter = router({
         totalMiles,
         loadedMiles,
         input.weight,
-        estimatedTollCost
+        estimatedTollCost,
+        (input.vehicleType as VehicleType) || "cargo_van"
       );
 
       const quotationInsert: any = await createLoadQuotation({

@@ -1954,3 +1954,19 @@
 - [ ] Update LoadDetailPage to display vehicle type and costs
 - [ ] Rebuild and redeploy to Railway
 - [ ] Test vehicle type selector with different vehicle profiles
+
+
+## Fase 55: Unify Analyzer Cost Calculations - Single Source of Truth
+- [ ] Identify discrepancy: Header shows $958, Table shows $692 for same load
+- [ ] Root cause: Backend quotationRouter uses legacy formula (fuel + maintenance + tires + fixed costs)
+- [ ] Frontend vehicle-costs.ts uses different profile ($0.56/mile for cargo van)
+- [ ] Create unified calculateVehicleOperatingCost() function
+- [ ] Update backend quotationRouter to use vehicle-costs engine
+- [ ] Pass vehicleType to calculateProfitability() in backend
+- [ ] Update QuotationResultsTable to use unified calculation
+- [ ] Update decision engine to use same costs
+- [ ] Update pricing AI to use same costs
+- [ ] Verify ALL displayed costs match exactly
+- [ ] Test with multiple vehicle types
+- [ ] Rebuild and redeploy to Railway
+- [ ] Monitor for cost calculation consistency in production
