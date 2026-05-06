@@ -30,10 +30,11 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
   const revenue = Number(load.price ?? 0);
-  const estimatedFuel = Number(load.estimatedFuel ?? 0);
   const estimatedTolls = Number(load.estimatedTolls ?? 0);
-
-  const computedProfit = revenue - estimatedFuel - estimatedTolls;
+  
+  // 🚗 UNIFIED VEHICLE COST ENGINE - Use only this for all calculations
+  // Cargo van profile: $0.56/mile (fuel $0.28 + maintenance $0.08 + tires $0.03 + depreciation $0.12 + risk $0.05)
+  const VEHICLE_COST_PER_MILE = 0.56;
 
   const rawNetMargin = load.netMargin;
   const parsedStoredNetMargin =
@@ -41,12 +42,8 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
       ? null
       : Number(rawNetMargin);
 
-  const profit =
-    parsedStoredNetMargin !== null && Number.isFinite(parsedStoredNetMargin)
-      ? parsedStoredNetMargin
-      : computedProfit;
-
-  // 🔥 Cálculo de miles: Intentar campos explícitos primero
+  // Calculate operating costs using unified vehicle cost engine
+  // This replaces legacy estimatedFuel calculations
   let miles =
     Number((load as any).estimatedMiles ?? 0) ||
     Number((load as any).miles ?? 0) ||
@@ -54,22 +51,12 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     Number((load as any).distanceMiles ?? 0) ||
     0;
 
-  // Si no hay miles explícitos, calcular desde coordenadas con Haversine
+  // If no explicit miles, calculate from coordinates using Haversine
   if (miles === 0 && load.pickupLat && load.pickupLng && load.deliveryLat && load.deliveryLng) {
     const pickupLatNum = Number(load.pickupLat);
     const pickupLngNum = Number(load.pickupLng);
     const deliveryLatNum = Number(load.deliveryLat);
     const deliveryLngNum = Number(load.deliveryLng);
-
-    // 🔍 LOG DE DEBUG CRÍTICO
-    console.log("[COORD CHECK - buildLoadFinancialSnapshot]", {
-      id: (load as any).id,
-      pickupLat: load.pickupLat,
-      pickupLatNum,
-      deliveryLat: load.deliveryLat,
-      deliveryLatNum,
-      rawType: typeof load.pickupLat,
-    });
 
     if (!isNaN(pickupLatNum) && !isNaN(pickupLngNum) && !isNaN(deliveryLatNum) && !isNaN(deliveryLngNum)) {
       miles = calculateDistance(
@@ -78,15 +65,23 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
         deliveryLatNum,
         deliveryLngNum
       );
-      miles = miles * 1.15; // Ajuste trucking
-      console.log("[HAVERSINE CALC - buildLoadFinancialSnapshot]", { id: (load as any).id, miles: Math.round(miles * 10) / 10 });
+      miles = miles * 1.15; // Trucking adjustment
     }
   }
 
-  // 🚨 FALLBACK OBLIGATORIO: NUNCA 0
+  // Fallback: never use 0 miles
   if (miles <= 0 || isNaN(miles)) {
-    miles = 120; // Fallback conservador realista
+    miles = 120;
   }
+
+  // Calculate REAL profit using unified vehicle cost engine
+  const operatingCost = miles * VEHICLE_COST_PER_MILE;
+  const computedProfit = revenue - operatingCost - estimatedTolls;
+
+  const profit =
+    parsedStoredNetMargin !== null && Number.isFinite(parsedStoredNetMargin)
+      ? parsedStoredNetMargin
+      : computedProfit;
 
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
   const ratePerMile = revenue / miles; // SIEMPRE > 0 porque miles >= 120

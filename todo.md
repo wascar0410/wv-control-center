@@ -1922,3 +1922,19 @@
 - [ ] Test "Analizar Otra" button resets form
 - [ ] Rebuild and redeploy to Railway
 - [ ] Verify smooth operational flow without friction
+
+
+## Fase 53: Unify Vehicle Cost Engine - Eliminate Legacy Fuel Calculations
+- [x] Update buildLoadFinancialSnapshot() to use vehicle cost engine ($0.56/mile)
+- [x] Remove legacy estimatedFuel dependency
+- [x] Calculate profit = revenue - (miles × $0.56) - tolls
+- [x] Keep miles calculation (explicit fields or Haversine from coordinates)
+- [ ] Update AI Load Advisor profit calculations (already done in client)
+- [ ] Update FinancialPanel (already done in client)
+- [ ] Update Quotation Analyzer to use vehicle costs
+- [ ] Update LoadDetailPage financial display
+- [ ] Remove legacy estimatedFuel field from API responses (optional, keep for backward compat)
+- [ ] Verify all profit calculations use SAME engine
+- [ ] Test financial accuracy across all pages
+- [ ] Rebuild and redeploy to Railway
+- [ ] Monitor financial calculations in production
