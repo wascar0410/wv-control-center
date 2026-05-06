@@ -222,8 +222,11 @@ export default function Quotation() {
 
   const createLoadMutation = trpc.loads.create.useMutation({
     onSuccess: (data) => {
-      toast.success(`✅ Carga #${data.id} aprobada y enviada al pipeline`);
-      setLocation(`/loads-dispatch?created=1&loadId=${data.id}`);
+      toast.success(`✅ Carga #${data.id} creada y enviada al Command Center`, {
+        description: "La carga está highlighted para revisión rápida",
+      });
+      // Redirect to command-center with loadId for highlighting
+      setLocation(`/command-center?highlight=${data.id}`);
     },
     onError: (error) => {
       toast.error(error.message || "Error al crear la carga");

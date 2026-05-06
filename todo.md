@@ -1905,3 +1905,20 @@
 - [ ] Verify financial calculations use vehicle costs (not just fuel)
 - [ ] Verify AI recommendations reflect real operating costs
 - [ ] Test with different vehicle types
+
+
+## Fase 52: Post-Analysis Redirection Flow + Load Highlighting
+- [x] Update Quotation.tsx createLoadMutation to redirect to /command-center?highlight={loadId}
+- [x] Create useHighlightedLoad hook to extract and manage highlight param
+- [x] Create LoadHighlightWrapper component for visual highlighting (border, pulse, badge)
+- [x] Toast success message with description
+- [x] Use router navigation (setLocation) instead of window.location
+- [x] Maintain loading state during load creation
+- [x] Error handling without redirection
+- [ ] Integrate LoadHighlightWrapper into CommandCenter loads list
+- [ ] Integrate useHighlightedLoad hook into CommandCenter
+- [ ] Test redirection flow: Quotation → Approve → CommandCenter with highlight
+- [ ] Test highlight auto-clears after 5 seconds
+- [ ] Test "Analizar Otra" button resets form
+- [ ] Rebuild and redeploy to Railway
+- [ ] Verify smooth operational flow without friction
