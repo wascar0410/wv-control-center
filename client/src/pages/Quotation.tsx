@@ -291,6 +291,7 @@ export default function Quotation() {
         price: result.totalPrice,
         estimatedFuel: result.estimatedFuelCost,
         estimatedTolls: result.estimatedTollCost ?? 0,
+        vehicleType: formDataForLoad.vehicleType,
         assignedDriverId: formDataForLoad.assignedDriverId || undefined,
         notes: formDataForLoad.notes || undefined,
         pickupDate: formDataForLoad.pickupDate || undefined,

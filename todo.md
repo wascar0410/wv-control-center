@@ -1938,3 +1938,19 @@
 - [ ] Test financial accuracy across all pages
 - [ ] Rebuild and redeploy to Railway
 - [ ] Monitor financial calculations in production
+
+
+## Fase 54: Vehicle Type Selector in Quotation Analyzer
+- [x] Create VehicleTypeSelector component with 4 vehicle profiles
+- [x] Add vehicleType field to QuotationFormData interface
+- [x] Initialize vehicleType to "cargo_van" in formData state
+- [x] Integrate VehicleTypeSelector into QuotationForm
+- [x] Display operating cost breakdown (fuel, maintenance, tires, depreciation, risk)
+- [x] Pass vehicleType to createLoadMutation in Quotation page
+- [ ] Update backend routers.ts to accept vehicleType in loads.create
+- [ ] Store vehicleType in database loads table (if schema allows)
+- [ ] Display selected vehicle type in quotation results
+- [ ] Show cost comparison between vehicle types (optional)
+- [ ] Update LoadDetailPage to display vehicle type and costs
+- [ ] Rebuild and redeploy to Railway
+- [ ] Test vehicle type selector with different vehicle profiles

@@ -15,6 +15,7 @@ import { MapPin, Truck, Package, DollarSign, User, Calendar } from "lucide-react
 import { toast } from "sonner";
 import AddressInput from "./AddressInput";
 import { trpc } from "@/lib/trpc";
+import { VehicleTypeSelector, type VehicleType } from "./VehicleTypeSelector";
 
 interface QuotationFormProps {
   onSubmit: (data: QuotationFormData) => void;
@@ -40,6 +41,7 @@ export interface QuotationFormData {
   fuelSurcharge: number;
   offeredPrice?: number;
   includeReturnEmpty: boolean;
+  vehicleType: "cargo_van" | "sprinter" | "box_truck" | "semi_truck";
   // Load creation fields
   clientName: string;
   merchandiseType: string;
@@ -72,6 +74,7 @@ export default function QuotationForm({
     fuelSurcharge: 0,
     offeredPrice: undefined,
     includeReturnEmpty: false,
+    vehicleType: "cargo_van",
     clientName: "",
     merchandiseType: "",
     pickupDate: "",
@@ -521,6 +524,28 @@ export default function QuotationForm({
               Incluir millas de retorno vacío
             </Label>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Vehicle Type Selector */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Truck className="h-5 w-5" />
+            Tipo de Vehículo
+          </CardTitle>
+          <CardDescription>
+            Selecciona el tipo de vehículo para calcular costos operativos precisos
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <VehicleTypeSelector
+            value={formData.vehicleType}
+            onChange={(type: VehicleType) =>
+              handleInputChange("vehicleType", type)
+            }
+            showDetails={true}
+          />
         </CardContent>
       </Card>
 
