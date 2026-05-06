@@ -2,15 +2,17 @@
  * load-advisor.ts
  * Professional AI Load Advisor - Broker/Dispatcher Level
  * 
- * PRO VERSION: Profit-based analysis + Real cost calculations
+ * PRO VERSION: Profit-based analysis + Real cost calculations with vehicle operating costs
  * 
  * Analyzes loads with real market logic:
  * - Profit filtering (must be positive)
- * - Real cost analysis (fuel + tolls)
+ * - Real cost analysis (vehicle operating costs + tolls)
  * - Dynamic pricing recommendations
  * - Risk detection
  * - Confidence scoring
  */
+
+import { calculateOperatingCosts } from "./vehicle-costs";
 
 export interface LoadAnalysis {
   miles: number;
@@ -125,14 +127,14 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
   const price = Number(load.price) || 0;
   const ratePerMile = miles > 0 ? price / miles : 0;
 
-  // REAL COST ANALYSIS
-  const estimatedFuel = Number(load.estimatedFuel) || 0;
+  // 🚗 VEHICLE OPERATING COSTS - Professional calculation
+  const vehicleType = load.vehicleType || "cargo_van";
+  const operatingCosts = calculateOperatingCosts(miles, vehicleType);
   const estimatedTolls = Number(load.estimatedTolls) || 0;
-  const netMargin = Number(load.netMargin) || 0;
-  const profit = netMargin > 0 ? netMargin : price - estimatedFuel - estimatedTolls;
-
-  // Real costs for pricing recommendations
-  const totalCosts = estimatedFuel + estimatedTolls;
+  
+  // Calculate REAL profit with vehicle operating costs
+  const totalCosts = operatingCosts.totalForDistance + estimatedTolls;
+  const profit = price - totalCosts;
 
   // Detect risk flags first
   const riskFlags = detectRisks({

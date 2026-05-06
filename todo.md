@@ -1891,3 +1891,17 @@
 - [ ] Rebuild and redeploy to Railway
 - [ ] Verify financial values display correctly (NO ERR, NO 0)
 - [ ] Verify consistency with AI Advisor calculations
+
+
+## Fase 51: Vehicle Cost Engine - Realistic Operating Costs
+- [x] Create utils/vehicle-costs.ts with vehicle profiles
+- [x] Implement cargo_van profile: fuel, maintenance, tires, depreciation, risk buffer
+- [x] Calculate totalOperatingCostPerMile for each vehicle type
+- [x] Integrate into FinancialPanel component
+- [x] Update AI Load Advisor to use vehicle operating costs
+- [x] Calculate REAL profit = revenue - operatingCosts - tolls
+- [x] Display cost breakdown: Fuel, Maintenance, Tires, Depreciation, Risk Buffer
+- [ ] Rebuild and redeploy to Railway
+- [ ] Verify financial calculations use vehicle costs (not just fuel)
+- [ ] Verify AI recommendations reflect real operating costs
+- [ ] Test with different vehicle types

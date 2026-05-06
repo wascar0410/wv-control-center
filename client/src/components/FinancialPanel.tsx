@@ -1,6 +1,6 @@
 /**
  * FinancialPanel.tsx
- * Direct financial calculation from load data (NO backend dependency)
+ * Direct financial calculation from load data with vehicle operating costs
  * Uses SAME data as AI Advisor for consistency
  */
 
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { toMoney, toFixedSafe } from "@/utils/number";
+import { calculateOperatingCosts, getCostSummary } from "@/utils/vehicle-costs";
 
 interface FinancialPanelProps {
   load: any;
@@ -16,17 +17,16 @@ interface FinancialPanelProps {
 export function FinancialPanel({ load }: FinancialPanelProps) {
   // 💰 FINANCIAL VALUES - Direct from load data (same as AI Advisor)
   const revenue = Number(load?.price) || 0;
-  const estimatedFuel = Number(load?.estimatedFuel) || 0;
   const estimatedTolls = Number(load?.estimatedTolls) || 0;
   const miles = Number(load?.miles) || 120;
+  const vehicleType = load?.vehicleType || "cargo_van";
 
-  // Calculate expenses
-  const expenses = {
-    fuel: estimatedFuel,
-    tolls: estimatedTolls,
-  };
+  // 🚗 VEHICLE OPERATING COSTS - Professional calculation
+  const operatingCosts = calculateOperatingCosts(miles, vehicleType);
+  const costSummary = getCostSummary(miles, vehicleType);
 
-  const totalExpenses = estimatedFuel + estimatedTolls;
+  // Calculate REAL profit after all operating costs
+  const totalExpenses = operatingCosts.totalForDistance + estimatedTolls;
   const profit = revenue - totalExpenses;
   const profitPerMile = miles > 0 ? profit / miles : 0;
   const marginPercent = revenue > 0 ? (profit / revenue) * 100 : 0;
@@ -55,7 +55,7 @@ export function FinancialPanel({ load }: FinancialPanelProps) {
           <div>
             <CardTitle>Financial Summary</CardTitle>
             <CardDescription>
-              Direct calculation from load data (price, fuel, tolls)
+              Real profit calculation with vehicle operating costs
             </CardDescription>
           </div>
 
@@ -93,25 +93,36 @@ export function FinancialPanel({ load }: FinancialPanelProps) {
           </div>
         </div>
 
-        {/* Expenses */}
+        {/* Operating Costs */}
         <div className="space-y-3">
-          <h4 className="font-semibold text-sm">Expenses Breakdown</h4>
+          <h4 className="font-semibold text-sm">
+            Operating Costs (${toMoney(operatingCosts.totalPerMile)}/mi × {toDisplay(miles, 0)} mi)
+          </h4>
 
-          {expenses.fuel > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Fuel</span>
-              <span className="font-medium">${toMoney(expenses.fuel)}</span>
+          {costSummary.map((cost) => (
+            <div key={cost.label} className="flex justify-between text-sm">
+              <span className="text-muted-foreground">{cost.label}</span>
+              <span className="font-medium">${toMoney(cost.value)}</span>
             </div>
-          )}
-
-          {expenses.tolls > 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tolls</span>
-              <span className="font-medium">${toMoney(expenses.tolls)}</span>
-            </div>
-          )}
+          ))}
 
           <div className="border-t pt-2 flex justify-between text-sm font-semibold">
+            <span>Operating Costs Total</span>
+            <span className="text-orange-600">
+              ${toMoney(operatingCosts.totalForDistance)}
+            </span>
+          </div>
+
+          {estimatedTolls > 0 && (
+            <>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Tolls</span>
+                <span className="font-medium">${toMoney(estimatedTolls)}</span>
+              </div>
+            </>
+          )}
+
+          <div className="border-t pt-2 flex justify-between text-sm font-bold">
             <span>Total Expenses</span>
             <span className="text-red-600">
               ${toMoney(totalExpenses)}
@@ -153,11 +164,16 @@ export function FinancialPanel({ load }: FinancialPanelProps) {
 
         {/* Data Source Note */}
         <div className="text-xs text-muted-foreground p-3 bg-background/50 rounded">
-          <p>📊 <strong>Data Source:</strong> Direct calculation from load fields</p>
+          <p>📊 <strong>Data Source:</strong> Direct calculation from load fields + vehicle operating costs</p>
           <p>✅ <strong>Consistency:</strong> Uses same data as AI Load Advisor</p>
-          <p>🔄 <strong>Update:</strong> Real-time as load data changes</p>
+          <p>🚗 <strong>Vehicle:</strong> {vehicleType} at ${toMoney(operatingCosts.totalPerMile)}/mile</p>
         </div>
       </CardContent>
     </Card>
   );
+}
+
+// Helper function
+function toDisplay(value: number, decimals: number): string {
+  return toFixedSafe(value, decimals);
 }
