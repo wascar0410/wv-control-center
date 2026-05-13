@@ -1970,3 +1970,21 @@
 - [ ] Test with multiple vehicle types
 - [ ] Rebuild and redeploy to Railway
 - [ ] Monitor for cost calculation consistency in production
+
+
+## PHASE 0-1: CODEBASE INSPECTION + UNIFIED COST ENGINE
+- [x] Map all cost/fuel/profit calculation locations (40+ files)
+- [x] Identify duplicate formulas (5 major paths)
+- [x] Identify conflicting values ($958 vs $692 discrepancy)
+- [x] Create inspection map document
+- [x] Build vehicle-cost-engine.ts with 8 core functions
+- [x] Define 4 vehicle profiles with realistic costs
+- [x] Add safety guards and confidence tracking
+- [ ] Phase 2: Remove duplicates and rewire consumers
+- [ ] Phase 3: Add vehicle profile system
+- [ ] Phase 4: Ensure fuel is always automatic
+- [ ] Phase 5: Market intelligence MVP
+- [ ] Phase 6: Integrate market signals
+- [ ] Phase 7: Compact advisor in dispatch board
+- [ ] Phase 8: Command center highlight integration
+- [ ] Phase 9: Auth/cookie audit
