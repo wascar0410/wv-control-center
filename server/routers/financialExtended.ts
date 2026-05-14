@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { z } from "zod";
+import { businessConfig } from "../../drizzle/schema";
 
 /**
  * Financial Extended Router - Real Profit Per Load & Financial Alerts
@@ -557,7 +558,7 @@ export const financialExtendedRouter = router({
 
         if (existing) {
           await db
-            .update(db.schema.businessConfig)
+            .update(businessConfig)
             .set({
               operatingExpensesPercent: String(input.operatingExpensesPercent),
               vanFundPercent: String(input.vanFundPercent),
@@ -565,9 +566,9 @@ export const financialExtendedRouter = router({
               wascarDrawPercent: String(input.wascarDrawPercent),
               yisvelDrawPercent: String(input.yisvelDrawPercent),
             })
-            .where(eq(db.schema.businessConfig.userId, ctx.user.id));
+            .where(eq(businessConfig.userId, ctx.user.id));
         } else {
-          await db.insert(db.schema.businessConfig).values({
+          await db.insert(businessConfig).values({
             userId: ctx.user.id,
             operatingExpensesPercent: String(input.operatingExpensesPercent),
             vanFundPercent: String(input.vanFundPercent),

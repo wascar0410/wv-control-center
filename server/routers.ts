@@ -28,7 +28,7 @@ import { chatRouter } from "./_core/chatRouter";
 import { analyticsRouter } from "./_core/analyticsRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { users } from "../drizzle/schema";
-import { getDb } from "./db";
+import { getDb, getLoadAdvice, getLoadAdviceBatch } from "./db";
 import { users as usersTable, loads as loadsTable } from "../drizzle/schema";
 import { notifyOwner } from "./_core/notification";
 import { wsManager } from "./_core/websocket";
@@ -558,7 +558,6 @@ const loadsRouter = router({
     .input(z.object({ loadId: z.number() }))
     .query(async ({ input }) => {
       try {
-        const { getLoadAdvice } = await import("../db");
         return await getLoadAdvice(input.loadId);
       } catch (error) {
         console.error("[loads.getLoadAdvice] error:", error);
@@ -570,7 +569,6 @@ const loadsRouter = router({
     .input(z.object({ loadIds: z.array(z.number()) }))
     .query(async ({ input }) => {
       try {
-        const { getLoadAdviceBatch } = await import("../db");
         const advice = await getLoadAdviceBatch(input.loadIds);
         return Object.fromEntries(advice);
       } catch (error) {
