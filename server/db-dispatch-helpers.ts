@@ -1,4 +1,5 @@
-import type { getLoads } from "./db";
+import { getLoads } from "./db";
+import { calculateVehicleOperatingCost, type VehicleType } from "./core/financial/vehicle-cost-engine";
 
 export interface FinancialSnapshot {
   margin: number;
@@ -32,9 +33,9 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
   const revenue = Number(load.price ?? 0);
   const estimatedTolls = Number(load.estimatedTolls ?? 0);
   
-  // 🚗 UNIFIED VEHICLE COST ENGINE - Use only this for all calculations
-  // Cargo van profile: $0.56/mile (fuel $0.28 + maintenance $0.08 + tires $0.03 + depreciation $0.12 + risk $0.05)
-  const VEHICLE_COST_PER_MILE = 0.56;
+  // 🚗 UNIFIED VEHICLE COST ENGINE - Single source of truth for all calculations
+  // Uses realistic cargo van operating costs ($0.95/mile total)
+  const vehicleType: VehicleType = (load as any).vehicleType || "cargo_van";
 
   const rawNetMargin = load.netMargin;
   const parsedStoredNetMargin =
@@ -42,8 +43,7 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
       ? null
       : Number(rawNetMargin);
 
-  // Calculate operating costs using unified vehicle cost engine
-  // This replaces legacy estimatedFuel calculations
+  // Calculate miles from explicit fields or coordinates
   let miles =
     Number((load as any).estimatedMiles ?? 0) ||
     Number((load as any).miles ?? 0) ||
@@ -74,8 +74,8 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     miles = 120;
   }
 
-  // Calculate REAL profit using unified vehicle cost engine
-  const operatingCost = miles * VEHICLE_COST_PER_MILE;
+  // 🚗 USE UNIFIED VEHICLE COST ENGINE - Single source of truth
+  const operatingCost = calculateVehicleOperatingCost(miles, vehicleType);
   const computedProfit = revenue - operatingCost - estimatedTolls;
 
   const profit =
