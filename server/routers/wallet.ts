@@ -266,84 +266,110 @@ export const walletRouter = router({
   completeReserveSuggestion: protectedProcedure
     .input(z.object({ suggestionId: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+      try {
+        const db = await getDb();
+        if (!db) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Database not available",
+          });
+        }
 
-      const suggestion = await db
-        .select()
-        .from(reserveTransferSuggestions)
-        .where(eq(reserveTransferSuggestions.id, input.suggestionId))
-        .limit(1);
+        const suggestion = await db
+          .select()
+          .from(reserveTransferSuggestions)
+          .where(eq(reserveTransferSuggestions.id, input.suggestionId))
+          .limit(1);
 
-      if (!suggestion.length) {
-        throw new Error("Suggestion not found");
-      }
+        if (!suggestion.length) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Reserve suggestion not found",
+          });
+        }
 
-      const s = suggestion[0];
+        const s = suggestion[0];
 
-      if (s.status === "completed") {
-        return { success: true };
-      }
+        if (s.status === "completed") {
+          return { success: true, alreadyCompleted: true };
+        }
 
-      // 1. obtener wallet actual
-      let walletRaw = await getWalletByDriverId(ctx.user.id);
-      if (!walletRaw) {
-        walletRaw = await getOrCreateWallet(ctx.user.id);
-      }
+        if (s.status === "dismissed" || s.status === "cancelled") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Cannot complete a ${s.status} suggestion`,
+          });
+        }
 
-      const wallet = safeWallet(walletRaw);
-      if (!wallet || !wallet.id) {
+        const amount = Number(s.suggestedAmount || 0);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invalid suggested amount",
+          });
+        }
+
+        let walletRaw = await getWalletByDriverId(ctx.user.id);
+        if (!walletRaw) {
+          walletRaw = await getOrCreateWallet(ctx.user.id);
+        }
+
+        const wallet = safeWallet(walletRaw);
+        if (!wallet || !wallet.id) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Wallet not found",
+          });
+        }
+
+        const currentAvailable = Number(wallet.availableBalance || 0);
+        if (currentAvailable < amount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Insufficient available balance. Need: $${amount.toFixed(2)}, Available: $${currentAvailable.toFixed(2)}`,
+          });
+        }
+
+        const newAvailableBalance = currentAvailable - amount;
+        const newReservedBalance = Number(wallet.reservedBalance || 0) + amount;
+
+        await updateWalletBalance(wallet.id, {
+          availableBalance: String(newAvailableBalance),
+          reservedBalance: String(newReservedBalance),
+        });
+
+        await addWalletTransaction(wallet.id, ctx.user.id, {
+          type: "reserve_transfer",
+          amount: String(amount),
+          description: `Reserve transfer completed (Suggestion #${input.suggestionId})`,
+        });
+
+        await db
+          .update(reserveTransferSuggestions)
+          .set({
+            status: "completed",
+            updatedAt: new Date(),
+          })
+          .where(eq(reserveTransferSuggestions.id, input.suggestionId));
+
+        return {
+          success: true,
+          suggestionId: input.suggestionId,
+          amount,
+          previousAvailableBalance: currentAvailable,
+          newAvailableBalance,
+          previousReservedBalance: Number(wallet.reservedBalance || 0),
+          newReservedBalance,
+        };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        const message = err instanceof Error ? err.message : "Failed to complete reserve suggestion";
+        console.error("[wallet.completeReserveSuggestion]", message);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Wallet not found",
+          message,
         });
       }
-
-      // 2. calcular nuevo balance - mover de available a reserved
-      const amount = Number(s.suggestedAmount || 0);
-      const newAvailableBalance = Math.max(0, Number(wallet.availableBalance || 0) - amount);
-      const newReservedBalance = Number(wallet.reservedBalance || 0) + amount;
-
-      // 3. actualizar wallet - mover dinero
-      await updateWalletBalance(wallet.id, {
-        availableBalance: String(newAvailableBalance),
-        reservedBalance: String(newReservedBalance),
-      });
-
-      // 4. crear evento contable en wallet_transactions
-      await addWalletTransaction(wallet.id, ctx.user.id, {
-        type: "reserve_transfer",
-        amount: String(amount),
-        reserveSuggestionId: input.suggestionId,
-        externalTransactionId: s.externalTransactionId || undefined,
-        description: `Auto reserve completed (Suggestion #${input.suggestionId})`,
-        status: "completed",
-      });
-
-      // 5. marcar suggestion como completed
-      await db
-        .update(reserveTransferSuggestions)
-        .set({
-          status: "completed",
-          completedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(reserveTransferSuggestions.id, input.suggestionId));
-
-      // 6. log claro con trazabilidad contable
-      console.log("[Accounting] Reserve transfer completed", {
-        suggestionId: input.suggestionId,
-        externalTransactionId: s.externalTransactionId,
-        amount,
-        previousAvailableBalance: wallet.availableBalance,
-        newAvailableBalance,
-        previousReservedBalance: wallet.reservedBalance,
-        newReservedBalance,
-        userId: ctx.user.id,
-        timestamp: new Date().toISOString(),
-      });
-
-      return { success: true };
     }),
 
   /**
@@ -779,20 +805,24 @@ export const walletRouter = router({
 
   /**
    * Add wallet adjustment (admin only)
+   * Frontend sends: { driverId?, amount, reason }
+   * Defaults to credit (increases balance)
    */
   addAdjustment: protectedProcedure
     .input(
       z.object({
-        amount: z.number(),
-        reason: z.string(),
-        type: z.enum(["credit", "debit"]),
+        driverId: z.number().optional(),
+        amount: z.number().positive(),
+        reason: z.string().optional(),
+        type: z.enum(["credit", "debit"]).optional().default("credit"),
       })
     )
     .mutation(async ({ ctx, input }) => {
       try {
         ensureAdminOrOwner(ctx.user.role);
 
-        const wallet = await getOrCreateWallet(ctx.user.id);
+        const targetDriverId = input.driverId || ctx.user.id;
+        const wallet = await getOrCreateWallet(targetDriverId);
         if (!wallet) {
           throw new TRPCError({
             code: "NOT_FOUND",
@@ -801,25 +831,39 @@ export const walletRouter = router({
         }
 
         const adjustmentAmount = input.type === "credit" ? input.amount : -input.amount;
-        const newBalance = Number(wallet.availableBalance || 0) + adjustmentAmount;
+        const currentBalance = Number(wallet.availableBalance || 0);
+        const newBalance = currentBalance + adjustmentAmount;
 
-        await addWalletTransaction(wallet.id, ctx.user.id, {
+        if (input.type === "debit" && newBalance < 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Cannot debit $${input.amount.toFixed(2)}. Available: $${currentBalance.toFixed(2)}`,
+          });
+        }
+
+        await addWalletTransaction(wallet.id, targetDriverId, {
           type: "adjustment",
           amount: adjustmentAmount,
-          description: input.reason,
+          description: input.reason || `Manual ${input.type} adjustment`,
         });
 
         return {
           success: true,
+          walletId: wallet.id,
+          driverId: targetDriverId,
+          previousBalance: currentBalance,
           newBalance,
-          message: `Adjustment of $${Math.abs(input.amount).toFixed(2)} (${input.type}) applied`,
+          amount: input.amount,
+          type: input.type,
+          message: `${input.type === "credit" ? "Credited" : "Debited"} $${input.amount.toFixed(2)}`,
         };
       } catch (err) {
         if (err instanceof TRPCError) throw err;
-        console.error("[wallet.addAdjustment]", err);
+        const message = err instanceof Error ? err.message : "Failed to add adjustment";
+        console.error("[wallet.addAdjustment]", message);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to add adjustment",
+          message,
         });
       }
     }),
