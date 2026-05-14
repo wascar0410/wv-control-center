@@ -1,5 +1,6 @@
 import { getLoads } from "./db";
 import { calculateVehicleOperatingCost, type VehicleType } from "./core/financial/vehicle-cost-engine";
+import { resolveLoadDistance } from "./core/distance-resolver";
 
 export interface FinancialSnapshot {
   margin: number;
@@ -65,36 +66,11 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     deliveryLatNum !== 0 &&
     deliveryLngNum !== 0;
 
-  // Calculate miles from explicit fields or coordinates
-  let miles =
-    Number((load as any).estimatedMiles ?? 0) ||
-    Number((load as any).miles ?? 0) ||
-    Number((load as any).totalMiles ?? 0) ||
-    Number((load as any).distanceMiles ?? 0) ||
-    0;
-
-  let distanceSource: "fallback_120" | "calculated" | "explicit" = "explicit";
-  let distanceConfidence: "low" | "medium" | "high" = "high";
-
-  // If no explicit miles, calculate from coordinates using Haversine
-  if (miles === 0 && hasValidCoords) {
-    miles = calculateDistance(
-      pickupLatNum,
-      pickupLngNum,
-      deliveryLatNum,
-      deliveryLngNum
-    );
-    miles = miles * 1.15; // Trucking adjustment
-    distanceSource = "calculated";
-    distanceConfidence = "high";
-  }
-
-  // Fallback: never use 0 miles
-  if (miles <= 0 || isNaN(miles)) {
-    miles = 120;
-    distanceSource = "fallback_120";
-    distanceConfidence = "low";
-  }
+  // 🎯 USE CANONICAL DISTANCE RESOLVER - Single source of truth
+  const distanceResult = resolveLoadDistance(load);
+  const miles = distanceResult.miles;
+  const distanceSource = distanceResult.source;
+  const distanceConfidence = distanceResult.isReliable ? "high" : "low";
 
   // 🚗 USE UNIFIED VEHICLE COST ENGINE - Single source of truth
   const operatingCost = calculateVehicleOperatingCost(miles, vehicleType);
@@ -115,16 +91,11 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
 
   // 🚨 If using fallback distance, mark decision as blocked
   const isDecisionBlocked = distanceSource === "fallback_120";
-  const profitIsReliable = !isDecisionBlocked;
+  const profitIsReliable = distanceResult.isReliable;
 
-  // 🔅 LOG DE DEBUG - only log fallback distances
+  // 🔅 LOG - only log fallback distances
   if (distanceSource === "fallback_120") {
-    console.log("[buildLoadFinancialSnapshot] FALLBACK 120", {
-      id: (load as any).id,
-      routeStatus: hasValidCoords ? "valid_coords" : "missing_coords",
-      distanceSource,
-      distanceConfidence,
-    });
+    console.log(`[buildLoadFinancialSnapshot] FALLBACK 120 { loadId: ${load.id} }`);
   }
 
   return {
@@ -132,7 +103,7 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     profit: round2(profit),
     ratePerMile: round2(ratePerMile),
     status,
-    routeStatus: hasValidCoords ? "valid_coords" : "missing_coords",
+    routeStatus: distanceResult.hasValidCoordinates ? "valid_coords" : "missing_coords",
     distanceSource,
     distanceConfidence,
     isDecisionBlocked,

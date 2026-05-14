@@ -76,6 +76,7 @@ import {
   withdrawals,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { resolveLoadDistance } from "./core/distance-resolver";
 
 let _pool: mysql.Pool | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -5609,33 +5610,10 @@ export async function analyzeLoad(load: {
   // At this point, coordinates are guaranteed to be valid (checked above)
   const hasValidCoords = true;
 
-  let miles = 0;
-
-  // 🧠 Cálculo Haversine - SOLO si coordenadas válidas
-  if (hasValidCoords) {
-    const R = 3958.8;
-    const dLat = ((deliveryLatNum - pickupLatNum) * Math.PI) / 180;
-    const dLng = ((deliveryLngNum - pickupLngNum) * Math.PI) / 180;
-
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((pickupLatNum * Math.PI) / 180) *
-        Math.cos((deliveryLatNum * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    miles = R * c;
-
-    // Ajuste trucking real
-    miles = miles * 1.15;
-    console.log("[HAVERSINE CALC - analyzeLoad]", { id: load.id, miles: Math.round(miles * 10) / 10 });
-  }
-
-  // 🚨 FALLBACK OBLIGATORIO: NUNCA 0
-  if (miles <= 0 || isNaN(miles)) {
-    miles = 120; // fallback conservador realista
-  }
+  // 🎯 USE CANONICAL DISTANCE RESOLVER - Single source of truth
+  // Note: hasReliableRoute() already checked coordinates, but resolveLoadDistance handles all fields
+  const distanceResult = resolveLoadDistance(load);
+  let miles = distanceResult.miles;
 
   // SIEMPRE calcular RPM
   const ratePerMile = price / miles;
