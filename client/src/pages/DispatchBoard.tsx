@@ -55,6 +55,11 @@ export default function DispatchBoard() {
         profit: 0,
         ratePerMile: 0,
         status: "loss",
+        routeStatus: "missing_coords" as const,
+        distanceSource: "fallback_120" as const,
+        distanceConfidence: "low" as const,
+        isDecisionBlocked: true,
+        profitIsReliable: false,
       };
 
       const matchesStatus =
@@ -69,8 +74,10 @@ export default function DispatchBoard() {
         String(load.deliveryAddress || "").toLowerCase().includes(filters.search.toLowerCase());
 
       const margin = Number(snapshot.margin || 0);
-      const matchesMargin =
-        margin >= filters.marginRange[0] && margin <= filters.marginRange[1];
+      // 🚨 CRITICAL: Don't exclude fallback loads by margin filter
+      // Fallback loads have unreliable margins, so show them anyway with warning badge
+      const isUsingFallback = snapshot.distanceSource === "fallback_120";
+      const matchesMargin = isUsingFallback || (margin >= filters.marginRange[0] && margin <= filters.marginRange[1]);
 
       // Apply AI recommendation filter
       if (aiFilter !== "all") {

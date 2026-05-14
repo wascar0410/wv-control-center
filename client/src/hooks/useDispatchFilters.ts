@@ -15,7 +15,7 @@ export interface DispatchFilters {
 
 const DEFAULT_FILTERS: DispatchFilters = {
   status: ["available", "quoted", "assigned", "in_transit", "delivered", "invoiced", "paid"],
-  marginRange: [0, 150],
+  marginRange: [0, 100],
   search: "",
   sortBy: "date",
   sortOrder: "desc",
@@ -60,19 +60,19 @@ export function useDispatchFilters() {
       case "urgent":
         setFilters({
           status: ["available", "assigned"],
-          marginRange: [0, 8],
+          marginRange: [0, 10],
         });
         break;
       case "high_margin":
         setFilters({
           status: ["available", "quoted", "assigned"],
-          marginRange: [20, 50],
+          marginRange: [20, 100],
         });
         break;
       case "at_risk":
         setFilters({
           status: ["assigned", "in_transit"],
-          marginRange: [8, 15],
+          marginRange: [8, 20],
         });
         break;
       case "unassigned":
