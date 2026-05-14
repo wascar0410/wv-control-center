@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import LoadAdviceBadge from "./LoadAdviceBadge";
 import { useLoadAdvice } from "@/hooks/useLoadAdvice";
 import {
@@ -115,31 +115,60 @@ export default function DispatchTableView({
                   profit: 0,
                   ratePerMile: 0,
                   status: "loss",
+                  routeStatus: "missing_coords" as const,
+                  distanceSource: "fallback_120" as const,
+                  distanceConfidence: "low" as const,
+                  isDecisionBlocked: true,
+                  profitIsReliable: false,
                 };
+
+                const isUsingFallback = snapshot.distanceSource === "fallback_120";
                 const statusColor = getStatusColor(load.status);
 
                 return (
                   <TableRow
                     key={load.id}
-                    className="cursor-pointer hover:bg-accent"
+                    className={`cursor-pointer hover:bg-accent ${
+                      isUsingFallback ? "bg-orange-500/5 border-l-2 border-orange-500" : ""
+                    }`}
                     onClick={() => onLoadSelect(load.id)}
                   >
-                    <TableCell className="font-semibold">#{load.id}</TableCell>
+                    <TableCell className="font-semibold">
+                      {isUsingFallback && <AlertTriangle className="w-3 h-3 inline mr-1 text-orange-500" />}
+                      #{load.id}
+                    </TableCell>
                     <TableCell className="max-w-[150px] truncate">{load.clientName}</TableCell>
                     <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                       {load.pickupAddress?.split(",")[0]} → {load.deliveryAddress?.split(",")[0]}
                     </TableCell>
                     <TableCell>
                       <Badge className={statusColor}>{load.status}</Badge>
+                      {isUsingFallback && (
+                        <Badge className="ml-1 bg-orange-500/20 text-orange-400 border-orange-500/50">
+                          ⚠️ Fallback
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">{load.assignedDriverId || "-"}</TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell
+                      className={`text-right font-semibold ${
+                        isUsingFallback ? "text-orange-400" : ""
+                      }`}
+                    >
                       {formatMargin(snapshot.margin)}
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
+                    <TableCell
+                      className={`text-right font-semibold ${
+                        isUsingFallback ? "text-orange-400" : ""
+                      }`}
+                    >
                       {formatProfit(snapshot.profit)}
                     </TableCell>
-                    <TableCell className="text-right text-sm">
+                    <TableCell
+                      className={`text-right text-sm ${
+                        isUsingFallback ? "text-orange-400" : ""
+                      }`}
+                    >
                       {formatRate(snapshot.ratePerMile)}
                     </TableCell>
                     <TableCell>
@@ -165,7 +194,7 @@ export default function DispatchTableView({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   No loads found
                 </TableCell>
               </TableRow>

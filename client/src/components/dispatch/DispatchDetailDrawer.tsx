@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MapPin, DollarSign, Truck, ChevronDown, ExternalLink } from "lucide-react";
+import { MapPin, DollarSign, Truck, ChevronDown, ExternalLink, AlertTriangle } from "lucide-react";
 import {
   formatMargin,
   formatProfit,
@@ -47,18 +47,26 @@ export default function DispatchDetailDrawer({
     profit: 0,
     ratePerMile: 0,
     status: "loss",
+    routeStatus: "missing_coords" as const,
+    distanceSource: "fallback_120" as const,
+    distanceConfidence: "low" as const,
+    isDecisionBlocked: true,
+    profitIsReliable: false,
   };
 
+  const isUsingFallback = snapshot.distanceSource === "fallback_120";
   const statusColor = getStatusColor(load.status);
-  const financialStatusColor = getFinancialStatusColor(snapshot.status);
+  const financialStatusColor = isUsingFallback
+    ? "bg-orange-500/20 text-orange-400 border-orange-500/50"
+    : getFinancialStatusColor(snapshot.status);
 
   return (
     <Dialog
-  open={isOpen}
-  onOpenChange={(open) => {
-    if (!open) onClose();
-  }}
->
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Load #{load.id}</DialogTitle>
@@ -98,9 +106,22 @@ export default function DispatchDetailDrawer({
 
           <Separator />
 
+          {/* Fallback Distance Warning */}
+          {isUsingFallback && (
+            <div className="bg-orange-500/10 border border-orange-500/50 rounded p-3 text-xs text-orange-600 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div>
+                <strong>Fallback Distance:</strong> Using 120-mile estimate. Route coordinates missing.
+                Financial metrics are unreliable until geocoding is completed.
+              </div>
+            </div>
+          )}
+
           {/* Financial Section */}
           <div>
-            <h3 className="font-semibold text-sm mb-3">Financial</h3>
+            <h3 className="font-semibold text-sm mb-3">
+              Financial {isUsingFallback && "(Unreliable)"}
+            </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Price:</span>
@@ -108,19 +129,39 @@ export default function DispatchDetailDrawer({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Margin:</span>
-                <span className="font-semibold text-blue-400">{formatMargin(snapshot.margin)}</span>
+                <span
+                  className={`font-semibold ${isUsingFallback ? "text-orange-400" : "text-blue-400"}`}
+                >
+                  {formatMargin(snapshot.margin)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Profit:</span>
-                <span className="font-semibold">{formatProfit(snapshot.profit)}</span>
+                <span className={`font-semibold ${isUsingFallback ? "text-orange-400" : ""}`}>
+                  {formatProfit(snapshot.profit)}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Rate/Mile:</span>
-                <span className="font-semibold">{formatRate(snapshot.ratePerMile)}</span>
+                <span className={`font-semibold ${isUsingFallback ? "text-orange-400" : ""}`}>
+                  {formatRate(snapshot.ratePerMile)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Distance Source:</span>
+                <span className={snapshot.distanceConfidence === "low" ? "text-orange-400 font-semibold" : ""}>
+                  {snapshot.distanceSource === "fallback_120"
+                    ? "Fallback 120mi"
+                    : snapshot.distanceSource === "calculated"
+                      ? "Calculated"
+                      : "Explicit"}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status:</span>
-                <Badge className={financialStatusColor}>{snapshot.status}</Badge>
+                <Badge className={financialStatusColor}>
+                  {isUsingFallback ? "⚠️ Fallback" : snapshot.status}
+                </Badge>
               </div>
             </div>
           </div>

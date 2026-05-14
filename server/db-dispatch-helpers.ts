@@ -6,6 +6,12 @@ export interface FinancialSnapshot {
   profit: number;
   ratePerMile: number;
   status: "healthy" | "at_risk" | "loss";
+  // Metadata for fallback distance detection
+  routeStatus: "missing_coords" | "valid_coords";
+  distanceSource: "fallback_120" | "calculated" | "explicit";
+  distanceConfidence: "low" | "medium" | "high";
+  isDecisionBlocked: boolean;
+  profitIsReliable: boolean;
 }
 
 type LoadItem = Awaited<ReturnType<typeof getLoads>>[number];
@@ -43,6 +49,22 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
       ? null
       : Number(rawNetMargin);
 
+  // 🚨 CRITICAL: Detect if coordinates are reliable BEFORE any calculation
+  const pickupLatNum = Number(load.pickupLat);
+  const pickupLngNum = Number(load.pickupLng);
+  const deliveryLatNum = Number(load.deliveryLat);
+  const deliveryLngNum = Number(load.deliveryLng);
+
+  const hasValidCoords =
+    Number.isFinite(pickupLatNum) &&
+    Number.isFinite(pickupLngNum) &&
+    Number.isFinite(deliveryLatNum) &&
+    Number.isFinite(deliveryLngNum) &&
+    pickupLatNum !== 0 &&
+    pickupLngNum !== 0 &&
+    deliveryLatNum !== 0 &&
+    deliveryLngNum !== 0;
+
   // Calculate miles from explicit fields or coordinates
   let miles =
     Number((load as any).estimatedMiles ?? 0) ||
@@ -51,27 +73,27 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     Number((load as any).distanceMiles ?? 0) ||
     0;
 
-  // If no explicit miles, calculate from coordinates using Haversine
-  if (miles === 0 && load.pickupLat && load.pickupLng && load.deliveryLat && load.deliveryLng) {
-    const pickupLatNum = Number(load.pickupLat);
-    const pickupLngNum = Number(load.pickupLng);
-    const deliveryLatNum = Number(load.deliveryLat);
-    const deliveryLngNum = Number(load.deliveryLng);
+  let distanceSource: "fallback_120" | "calculated" | "explicit" = "explicit";
+  let distanceConfidence: "low" | "medium" | "high" = "high";
 
-    if (!isNaN(pickupLatNum) && !isNaN(pickupLngNum) && !isNaN(deliveryLatNum) && !isNaN(deliveryLngNum)) {
-      miles = calculateDistance(
-        pickupLatNum,
-        pickupLngNum,
-        deliveryLatNum,
-        deliveryLngNum
-      );
-      miles = miles * 1.15; // Trucking adjustment
-    }
+  // If no explicit miles, calculate from coordinates using Haversine
+  if (miles === 0 && hasValidCoords) {
+    miles = calculateDistance(
+      pickupLatNum,
+      pickupLngNum,
+      deliveryLatNum,
+      deliveryLngNum
+    );
+    miles = miles * 1.15; // Trucking adjustment
+    distanceSource = "calculated";
+    distanceConfidence = "high";
   }
 
   // Fallback: never use 0 miles
   if (miles <= 0 || isNaN(miles)) {
     miles = 120;
+    distanceSource = "fallback_120";
+    distanceConfidence = "low";
   }
 
   // 🚗 USE UNIFIED VEHICLE COST ENGINE - Single source of truth
@@ -91,19 +113,30 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
   else if (margin >= 8) status = "at_risk";
   else status = "loss";
 
-  // 🔅 LOG DE DEBUG
-  console.log("[buildLoadFinancialSnapshot]", {
-    id: (load as any).id,
-    miles: Math.round(miles * 10) / 10,
-    ratePerMile: Math.round(ratePerMile * 100) / 100,
-    revenue,
-  });
+  // 🚨 If using fallback distance, mark decision as blocked
+  const isDecisionBlocked = distanceSource === "fallback_120";
+  const profitIsReliable = !isDecisionBlocked;
+
+  // 🔅 LOG DE DEBUG - only log fallback distances
+  if (distanceSource === "fallback_120") {
+    console.log("[buildLoadFinancialSnapshot] FALLBACK 120", {
+      id: (load as any).id,
+      routeStatus: hasValidCoords ? "valid_coords" : "missing_coords",
+      distanceSource,
+      distanceConfidence,
+    });
+  }
 
   return {
     margin: round2(margin),
     profit: round2(profit),
     ratePerMile: round2(ratePerMile),
     status,
+    routeStatus: hasValidCoords ? "valid_coords" : "missing_coords",
+    distanceSource,
+    distanceConfidence,
+    isDecisionBlocked,
+    profitIsReliable,
   };
 }
 
@@ -142,20 +175,17 @@ export function attachFinancialSnapshots<T extends LoadItem>(loads: T[]) {
             profit: 0,
             ratePerMile: 0,
             status: "loss" as const,
+            routeStatus: "missing_coords" as const,
+            distanceSource: "fallback_120" as const,
+            distanceConfidence: "low" as const,
+            isDecisionBlocked: true,
+            profitIsReliable: false,
           },
         };
       }
     });
   } catch (err) {
     console.error("[attachFinancialSnapshots] Fatal error:", err);
-    return loads.map((load) => ({
-      ...load,
-      financialSnapshot: {
-        margin: 0,
-        profit: 0,
-        ratePerMile: 0,
-        status: "loss" as const,
-      },
-    }));
+    return loads;
   }
 }

@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MapPin, DollarSign, TrendingUp } from "lucide-react";
+import { ChevronDown, MapPin, DollarSign, TrendingUp, AlertTriangle } from "lucide-react";
 import {
   formatMargin,
   formatProfit,
@@ -47,7 +47,16 @@ export default function DispatchLoadCard({
     profit: 0,
     ratePerMile: 0,
     status: "loss",
+    routeStatus: "missing_coords" as const,
+    distanceSource: "fallback_120" as const,
+    distanceConfidence: "low" as const,
+    isDecisionBlocked: true,
+    profitIsReliable: false,
   };
+
+  // 🚨 Check if this load uses unreliable fallback distance
+  const isUsingFallback = snapshot.distanceSource === "fallback_120";
+  const profitWarning = !snapshot.profitIsReliable;
 
   const marginColor = calculateMarginColor(snapshot.margin);
   const financialStatusColor = getFinancialStatusColor(snapshot.status);
@@ -56,16 +65,30 @@ export default function DispatchLoadCard({
   if (compact) {
     return (
       <Card
-        className="p-3 cursor-pointer hover:bg-accent transition-colors"
+        className={`p-3 cursor-pointer hover:bg-accent transition-colors ${
+          isUsingFallback ? "border-orange-500/50 border" : ""
+        }`}
         onClick={() => onSelect(load.id)}
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-sm truncate">Load #{load.id}</div>
+            <div className="font-semibold text-sm truncate">
+              {isUsingFallback && "⚠️ "} Load #{load.id}
+            </div>
             <div className="text-xs text-muted-foreground truncate">{load.clientName}</div>
           </div>
           <div className="text-right">
-            <div className={`text-sm font-semibold ${marginColor === "green" ? "text-green-400" : marginColor === "yellow" ? "text-yellow-400" : "text-red-400"}`}>
+            <div
+              className={`text-sm font-semibold ${
+                isUsingFallback
+                  ? "text-orange-400"
+                  : marginColor === "green"
+                    ? "text-green-400"
+                    : marginColor === "yellow"
+                      ? "text-yellow-400"
+                      : "text-red-400"
+              }`}
+            >
               {formatMargin(snapshot.margin)}
             </div>
             <div className="text-xs text-muted-foreground">{formatProfit(snapshot.profit)}</div>
@@ -79,7 +102,7 @@ export default function DispatchLoadCard({
     <Card
       className={`p-4 cursor-pointer transition-all ${
         isExpanded ? "ring-2 ring-primary" : "hover:bg-accent"
-      }`}
+      } ${isUsingFallback ? "border-orange-500/50 border" : ""}`}
       onClick={() => setIsExpanded(!isExpanded)}
     >
       {/* Header */}
@@ -88,12 +111,27 @@ export default function DispatchLoadCard({
           <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-lg">#{load.id}</span>
             <Badge className={statusColor}>{load.status}</Badge>
+            {isUsingFallback && (
+              <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">
+                ⚠️ Fallback
+              </Badge>
+            )}
             {advice && <LoadAdviceBadge advice={advice} />}
           </div>
           <div className="text-sm text-muted-foreground truncate">{load.clientName}</div>
         </div>
         <div className="text-right">
-          <div className={`text-lg font-bold ${marginColor === "green" ? "text-green-400" : marginColor === "yellow" ? "text-yellow-400" : "text-red-400"}`}>
+          <div
+            className={`text-lg font-bold ${
+              isUsingFallback
+                ? "text-orange-400"
+                : marginColor === "green"
+                  ? "text-green-400"
+                  : marginColor === "yellow"
+                    ? "text-yellow-400"
+                    : "text-red-400"
+            }`}
+          >
             {formatMargin(snapshot.margin)}
           </div>
           <div className="text-xs text-muted-foreground">{formatProfit(snapshot.profit)}</div>
@@ -108,6 +146,17 @@ export default function DispatchLoadCard({
         </div>
       </div>
 
+      {/* Fallback Distance Warning */}
+      {isUsingFallback && (
+        <div className="bg-orange-500/10 border border-orange-500/50 rounded p-2 mb-3 text-xs text-orange-600 flex items-start gap-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div>
+            Using fallback 120-mile estimate. Route coordinates missing. Financial metrics unreliable
+            until geocoding is completed.
+          </div>
+        </div>
+      )}
+
       {/* Metrics Row */}
       <div className="grid grid-cols-3 gap-2 mb-3 text-xs">
         <div className="bg-secondary/50 rounded p-2">
@@ -118,9 +167,13 @@ export default function DispatchLoadCard({
           <div className="text-muted-foreground">Weight</div>
           <div className="font-semibold">{load.weight} lbs</div>
         </div>
-        <div className={`${financialStatusColor} rounded p-2`}>
+        <div
+          className={`${
+            isUsingFallback ? "bg-orange-500/20 border border-orange-500/50" : financialStatusColor
+          } rounded p-2`}
+        >
           <div className="text-muted-foreground">Status</div>
-          <div className="font-semibold capitalize">{snapshot.status}</div>
+          <div className="font-semibold capitalize">{isUsingFallback ? "⚠️ Fallback" : snapshot.status}</div>
         </div>
       </div>
 
@@ -135,6 +188,30 @@ export default function DispatchLoadCard({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Price:</span>
               <span className="font-semibold">${Number(load.price || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Distance Source:</span>
+              <span
+                className={
+                  snapshot.distanceConfidence === "low"
+                    ? "text-orange-400 font-semibold"
+                    : snapshot.distanceConfidence === "medium"
+                      ? "text-yellow-400"
+                      : ""
+                }
+              >
+                {snapshot.distanceSource === "fallback_120"
+                  ? "Fallback 120mi"
+                  : snapshot.distanceSource === "calculated"
+                    ? "Calculated"
+                    : "Explicit"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Profit Reliable:</span>
+              <span className={snapshot.profitIsReliable ? "text-green-400" : "text-orange-400"}>
+                {snapshot.profitIsReliable ? "✓ Yes" : "✗ No (fallback)"}
+              </span>
             </div>
             {load.assignedDriverId && (
               <div className="flex justify-between">
