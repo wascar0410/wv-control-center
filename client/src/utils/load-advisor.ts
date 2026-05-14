@@ -67,7 +67,19 @@ function detectRisks(load: any): string[] {
   const rpm = load.ratePerMile || 0;
   const miles = load.miles || 0;
   const profit = load.profit || 0;
-  const hasCoords = load.pickupLat && load.deliveryLat;
+  
+  // Check for VALID coordinates (not null, not 0, not NaN)
+  const pickupLat = Number(load.pickupLat);
+  const pickupLng = Number(load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng);
+  
+  const hasValidPickup = !isNaN(pickupLat) && pickupLat !== 0 && pickupLat !== null;
+  const hasValidDelivery = !isNaN(deliveryLat) && deliveryLat !== 0 && deliveryLat !== null;
+  const hasValidCoords = hasValidPickup && hasValidDelivery;
+  
+  // Fallback 120 miles is unreliable for decisions
+  const isFallbackDistance = miles === 120 && !hasValidCoords;
 
   if (rpm < 2) risks.push("LOW_PAY");
   if (rpm < 1.8) risks.push("CRITICAL_LOW_PAY");
@@ -75,7 +87,8 @@ function detectRisks(load: any): string[] {
   if (profit <= 0) risks.push("NEGATIVE_PROFIT");
   if (miles < 50) risks.push("SHORT_LOAD");
   if (miles > 500) risks.push("LONG_HAUL");
-  if (!hasCoords) risks.push("NO_COORDS");
+  if (!hasValidCoords) risks.push("NO_COORDS");
+  if (isFallbackDistance) risks.push("FALLBACK_DISTANCE");
   if (!load.pickupAddress || !load.deliveryAddress) risks.push("INCOMPLETE_ADDRESS");
 
   return risks;
@@ -147,9 +160,9 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
     deliveryAddress: load.deliveryAddress,
   });
 
-  // CRITICAL: If no valid coordinates, BLOCK this load from AI evaluation
+  // CRITICAL: If no valid coordinates or fallback distance, BLOCK this load from AI evaluation
   // Using fallback miles (120) leads to incorrect recommendations
-  if (riskFlags.includes("NO_COORDS")) {
+  if (riskFlags.includes("NO_COORDS") || riskFlags.includes("FALLBACK_DISTANCE")) {
     return {
       miles,
       price,
@@ -160,7 +173,9 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
       suggestedMinimum: 0,
       suggestedTarget: 0,
       riskFlags,
-      reasoning: "Cannot evaluate: missing coordinates. Address validation required.",
+      reasoning: riskFlags.includes("FALLBACK_DISTANCE") 
+        ? "Cannot evaluate: using fallback 120-mile distance. Route data unreliable."
+        : "Cannot evaluate: missing coordinates. Address validation required.",
       block: true, // BLOCK: Do not use this load for AI decisions
     };
   }

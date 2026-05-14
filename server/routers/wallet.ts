@@ -93,13 +93,36 @@ export const walletRouter = router({
     .input(z.object({ amount: z.number(), description: z.string().optional() }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const result = await requestWithdrawal(ctx.user.id, input.amount, input.description);
+        const wallet = await getOrCreateWallet(ctx.user.id);
+        if (!wallet) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Wallet not found",
+          });
+        }
+
+        const availableBalance = Number(wallet.availableBalance || 0);
+        if (availableBalance < input.amount) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Insufficient balance. Available: $${availableBalance.toFixed(2)}`,
+          });
+        }
+
+        const result = await requestWithdrawal(wallet.id, ctx.user.id, {
+          amount: input.amount,
+          notes: input.description,
+        });
         return result;
       } catch (err) {
-        console.error("[wallet.requestWithdrawal]", err);
+        if (err instanceof TRPCError) throw err;
+        
+        const message = err instanceof Error ? err.message : "Failed to request withdrawal";
+        console.error("[wallet.requestWithdrawal]", message);
+        
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Failed to request withdrawal",
+          message,
         });
       }
     }),
@@ -753,4 +776,75 @@ export const walletRouter = router({
       };
     }
   }),
+
+  /**
+   * Add wallet adjustment (admin only)
+   */
+  addAdjustment: protectedProcedure
+    .input(
+      z.object({
+        amount: z.number(),
+        reason: z.string(),
+        type: z.enum(["credit", "debit"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        ensureAdminOrOwner(ctx.user.role);
+
+        const wallet = await getOrCreateWallet(ctx.user.id);
+        if (!wallet) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Wallet not found",
+          });
+        }
+
+        const adjustmentAmount = input.type === "credit" ? input.amount : -input.amount;
+        const newBalance = Number(wallet.availableBalance || 0) + adjustmentAmount;
+
+        await addWalletTransaction(wallet.id, ctx.user.id, {
+          type: "adjustment",
+          amount: adjustmentAmount,
+          description: input.reason,
+        });
+
+        return {
+          success: true,
+          newBalance,
+          message: `Adjustment of $${Math.abs(input.amount).toFixed(2)} (${input.type}) applied`,
+        };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        console.error("[wallet.addAdjustment]", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add adjustment",
+        });
+      }
+    }),
+
+  /**
+   * Normalize legacy pending withdrawals
+   */
+  normalizeLegacyPendingWithdrawals: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      try {
+        ensureAdminOrOwner(ctx.user.role);
+
+        const result = await normalizeLegacyPendingWithdrawals();
+        return {
+          success: true,
+          message: "Legacy pending withdrawals normalized",
+          result,
+        };
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        console.error("[wallet.normalizeLegacyPendingWithdrawals]", err);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to normalize legacy withdrawals",
+        });
+      }
+    }),
 });
