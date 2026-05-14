@@ -6,6 +6,7 @@ import superjson from "superjson";
 import App from "./App";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AuthGuard } from "./components/AuthGuard";
+import { TooltipProvider } from "./components/ui/tooltip";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -34,11 +35,13 @@ const trpcClient = trpc.createClient({
 createRoot(document.getElementById("root")!).render(
   <trpc.Provider client={trpcClient} queryClient={queryClient}>
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <AuthGuard>
-          <App />
-        </AuthGuard>
-      </AuthProvider>
+      <TooltipProvider>
+        <AuthProvider>
+          <AuthGuard>
+            <App />
+          </AuthGuard>
+        </AuthProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   </trpc.Provider>
 );

@@ -192,18 +192,16 @@ export default function LoadAdviceBadge({
   );
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Badge className={`${style.className} cursor-help flex items-center gap-1`}>
-            <Icon className="w-3 h-3" />
-            {style.label}
-          </Badge>
-        </TooltipTrigger>
-        <TooltipContent side="left" className="bg-slate-900 text-white border-slate-700">
-          {tooltipContent}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge className={`${style.className} cursor-help flex items-center gap-1`}>
+          <Icon className="w-3 h-3" />
+          {style.label}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent side="left" className="bg-slate-900 text-white border-slate-700">
+        {tooltipContent}
+      </TooltipContent>
+    </Tooltip>
   );
 }
