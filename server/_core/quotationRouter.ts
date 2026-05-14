@@ -16,7 +16,7 @@ import {
   getApplicableWeightSurcharge,
 } from "../db-business-config";
 import { createPriceAlert } from "../db-price-alerts";
-import { calculateVehicleOperatingCost, type VehicleType } from "../vehicle-costs";
+import { calculateVehicleOperatingCost as calculateOperatingCost, type VehicleType } from "../core/financial/vehicle-cost-engine";
 
 // Haversine formula to calculate distance between two points
 export function calculateDistance(
@@ -54,7 +54,8 @@ async function calculateProfitability(
   const config = await getBusinessConfig(userId);
 
   // 🔥 USE UNIFIED VEHICLE COST ENGINE - SINGLE SOURCE OF TRUTH
-  const estimatedOperatingCost = calculateVehicleOperatingCost(vehicleType, totalMiles);
+  // Canonical signature: calculateVehicleOperatingCost(miles, vehicleType)
+  const estimatedOperatingCost = calculateOperatingCost(totalMiles, vehicleType);
 
   const distanceSurcharge = await getApplicableDistanceSurcharge(
     userId,
