@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { businessConfig } from "../../drizzle/schema";
+import { resolveLoadDistance } from "../core/distance-resolver";
 
 /**
  * Financial Extended Router - Real Profit Per Load & Financial Alerts
@@ -80,7 +81,9 @@ export const financialExtendedRouter = router({
 
         const revenue = paymentTx ? Number(paymentTx.amount) : 0;
 
-        const miles = Number((load as any).miles) || 0;
+        // 🎯 USE CANONICAL DISTANCE RESOLVER
+        const distanceResult = resolveLoadDistance(load);
+        const miles = distanceResult.miles;
         const fuelPrice = Number((load as any).fuelPrice) || 0;
         const mpg = Number((load as any).mpg) || 8;
         const maintenancePerMile = Number((load as any).maintenancePerMile) || 0.15;

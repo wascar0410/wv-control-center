@@ -5,6 +5,8 @@
  * Fallback 120-mile distance must NEVER be treated as reliable.
  */
 
+import { resolveLoadDistance } from "./distance-resolver";
+
 export interface RouteValidityResult {
   isReliable: boolean;
   routeStatus: "real" | "fallback" | "missing_coords" | "invalid";
@@ -14,11 +16,14 @@ export interface RouteValidityResult {
 }
 
 export function isRouteReliable(load: any): RouteValidityResult {
+  // 🎯 USE CANONICAL DISTANCE RESOLVER
+  const distanceResult = resolveLoadDistance(load);
+  const miles = distanceResult.miles;
+
   const pickupLat = Number(load.pickupLat);
   const pickupLng = Number(load.pickupLng);
   const deliveryLat = Number(load.deliveryLat);
   const deliveryLng = Number(load.deliveryLng);
-  const miles = Number(load.miles) || 0;
 
   // Check if coordinates are missing, null, zero, or invalid
   const hasValidPickup =
@@ -37,15 +42,15 @@ export function isRouteReliable(load: any): RouteValidityResult {
     deliveryLat !== null &&
     deliveryLng !== null;
 
-  // Fallback 120 miles is a UI placeholder, not reliable data
-  const isFallbackDistance = miles === 120 && (!hasValidPickup || !hasValidDelivery);
+  // 🎯 USE DISTANCE RESOLVER RELIABILITY FLAG
+  const isFallbackDistance = distanceResult.source === "fallback_120";
 
   if (!hasValidPickup || !hasValidDelivery) {
     return {
       isReliable: false,
       routeStatus: "missing_coords",
       distanceConfidence: "low",
-      distanceSource: isFallbackDistance ? "fallback_120" : "unknown",
+      distanceSource: distanceResult.source as any,
       blockedReason: "Missing route coordinates. Run geocoding backfill before decision.",
     };
   }
