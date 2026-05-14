@@ -59,6 +59,28 @@ function getDynamicMultiplier(miles: number): number {
 }
 
 /**
+ * Helper: Check if load has reliable route coordinates
+ * CRITICAL: Must be called BEFORE any recommendation logic
+ */
+function hasReliableRoute(load: any): boolean {
+  const pickupLat = Number(load.pickupLat);
+  const pickupLng = Number(load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng);
+
+  return (
+    Number.isFinite(pickupLat) &&
+    Number.isFinite(pickupLng) &&
+    Number.isFinite(deliveryLat) &&
+    Number.isFinite(deliveryLng) &&
+    pickupLat !== 0 &&
+    pickupLng !== 0 &&
+    deliveryLat !== 0 &&
+    deliveryLng !== 0
+  );
+}
+
+/**
  * Detect risk flags in load
  */
 function detectRisks(load: any): string[] {
@@ -67,19 +89,6 @@ function detectRisks(load: any): string[] {
   const rpm = load.ratePerMile || 0;
   const miles = load.miles || 0;
   const profit = load.profit || 0;
-  
-  // Check for VALID coordinates (not null, not 0, not NaN)
-  const pickupLat = Number(load.pickupLat);
-  const pickupLng = Number(load.pickupLng);
-  const deliveryLat = Number(load.deliveryLat);
-  const deliveryLng = Number(load.deliveryLng);
-  
-  const hasValidPickup = !isNaN(pickupLat) && pickupLat !== 0 && pickupLat !== null;
-  const hasValidDelivery = !isNaN(deliveryLat) && deliveryLat !== 0 && deliveryLat !== null;
-  const hasValidCoords = hasValidPickup && hasValidDelivery;
-  
-  // Fallback 120 miles is unreliable for decisions
-  const isFallbackDistance = miles === 120 && !hasValidCoords;
 
   if (rpm < 2) risks.push("LOW_PAY");
   if (rpm < 1.8) risks.push("CRITICAL_LOW_PAY");
@@ -87,8 +96,6 @@ function detectRisks(load: any): string[] {
   if (profit <= 0) risks.push("NEGATIVE_PROFIT");
   if (miles < 50) risks.push("SHORT_LOAD");
   if (miles > 500) risks.push("LONG_HAUL");
-  if (!hasValidCoords) risks.push("NO_COORDS");
-  if (isFallbackDistance) risks.push("FALLBACK_DISTANCE");
   if (!load.pickupAddress || !load.deliveryAddress) risks.push("INCOMPLETE_ADDRESS");
 
   return risks;
@@ -100,10 +107,6 @@ function detectRisks(load: any): string[] {
 function generateReasoning(analysis: Partial<LoadAnalysis>, load: any): string {
   const { recommendation, ratePerMile, miles, profit } = analysis;
   const riskFlags = analysis.riskFlags || [];
-
-  if (riskFlags.includes("NO_COORDS")) {
-    return "Cannot evaluate: missing coordinates. Address validation required.";
-  }
 
   if (riskFlags.includes("NEGATIVE_PROFIT")) {
     return `Load loses money. Profit: -$${Math.abs(profit || 0).toFixed(2)}. REJECT.`;
@@ -136,6 +139,23 @@ function generateReasoning(analysis: Partial<LoadAnalysis>, load: any): string {
  * @returns Detailed load analysis with recommendation and pricing
  */
 export function analyzeLoadAdvanced(load: any): LoadAnalysis {
+  // 🚨 CRITICAL: BLOCK loads without reliable coordinates BEFORE any calculation
+  if (!hasReliableRoute(load)) {
+    return {
+      miles: 120,
+      price: Number(load.price) || 0,
+      ratePerMile: 0,
+      profit: 0,
+      recommendation: "REJECT",
+      confidence: "low",
+      suggestedMinimum: 0,
+      suggestedTarget: 0,
+      riskFlags: ["NO_COORDS", "FALLBACK_DISTANCE"],
+      reasoning: "BLOCKED: Missing route coordinates. Cannot evaluate without reliable distance data. Run geocoding backfill.",
+      block: true, // BLOCK: Do not use this load for AI decisions
+    };
+  }
+
   const miles = Number(load.miles) || 120;
   const price = Number(load.price) || 0;
   const ratePerMile = miles > 0 ? price / miles : 0;
@@ -146,39 +166,18 @@ export function analyzeLoadAdvanced(load: any): LoadAnalysis {
   const estimatedTolls = Number(load.estimatedTolls) || 0;
   
   // Calculate REAL profit with vehicle operating costs
-  const totalCosts = operatingCosts.totalForDistance + estimatedTolls;
+  // FIX: operatingCosts.total is the correct property (not totalForDistance)
+  const totalCosts = operatingCosts.total + estimatedTolls;
   const profit = price - totalCosts;
 
-  // Detect risk flags first
+  // Detect risk flags (for informational purposes only, not for blocking)
   const riskFlags = detectRisks({
-    ...load,
     ratePerMile,
     profit,
-    pickupLat: load.pickupLat,
-    deliveryLat: load.deliveryLat,
+    miles,
     pickupAddress: load.pickupAddress,
     deliveryAddress: load.deliveryAddress,
   });
-
-  // CRITICAL: If no valid coordinates or fallback distance, BLOCK this load from AI evaluation
-  // Using fallback miles (120) leads to incorrect recommendations
-  if (riskFlags.includes("NO_COORDS") || riskFlags.includes("FALLBACK_DISTANCE")) {
-    return {
-      miles,
-      price,
-      ratePerMile,
-      profit,
-      recommendation: "UNKNOWN",
-      confidence: "low",
-      suggestedMinimum: 0,
-      suggestedTarget: 0,
-      riskFlags,
-      reasoning: riskFlags.includes("FALLBACK_DISTANCE") 
-        ? "Cannot evaluate: using fallback 120-mile distance. Route data unreliable."
-        : "Cannot evaluate: missing coordinates. Address validation required.",
-      block: true, // BLOCK: Do not use this load for AI decisions
-    };
-  }
 
   // PROFIT-BASED RECOMMENDATION (PRO LOGIC)
   let recommendation: "GOOD" | "NEGOTIATE" | "REJECT" = "REJECT";

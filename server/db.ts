@@ -5533,6 +5533,33 @@ export type LoadAdvice = {
   };
 };
 
+/**
+ * Helper: Check if load has reliable route coordinates
+ * CRITICAL: Must be called BEFORE any recommendation logic
+ */
+function hasReliableRoute(load: {
+  pickupLat?: number | null;
+  pickupLng?: number | null;
+  deliveryLat?: number | null;
+  deliveryLng?: number | null;
+}): boolean {
+  const pickupLat = Number(load.pickupLat);
+  const pickupLng = Number(load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng);
+
+  return (
+    Number.isFinite(pickupLat) &&
+    Number.isFinite(pickupLng) &&
+    Number.isFinite(deliveryLat) &&
+    Number.isFinite(deliveryLng) &&
+    pickupLat !== 0 &&
+    pickupLng !== 0 &&
+    deliveryLat !== 0 &&
+    deliveryLng !== 0
+  );
+}
+
 export async function analyzeLoad(load: {
   id: number;
   price: number;
@@ -5544,6 +5571,27 @@ export async function analyzeLoad(load: {
   deliveryLat?: number | null;
   deliveryLng?: number | null;
 }): Promise<LoadAdvice> {
+  // 🚨 CRITICAL: BLOCK loads without reliable coordinates BEFORE any calculation
+  if (!hasReliableRoute(load)) {
+    console.log(`[Advisor] BLOCKED missing route coords { loadId: ${load.id} }`);
+    return {
+      recommendation: "reject",
+      confidence: 10,
+      suggestedRate: 0,
+      reason: ["BLOCKED: Missing route coordinates. Cannot evaluate without reliable distance data. Run geocoding backfill."],
+      riskFlags: ["Missing GPS coordinates (fallback 120-mile estimate unreliable)"],
+      financials: {
+        miles: 120,
+        ratePerMile: 0,
+        estimatedProfit: 0,
+        estimatedMargin: 0,
+        fuelCost: 0,
+        tolls: 0,
+        totalCost: 0,
+      },
+    };
+  }
+
   const reasons: string[] = [];
   const riskFlags: string[] = [];
 
@@ -5558,26 +5606,8 @@ export async function analyzeLoad(load: {
   const deliveryLatNum = Number(load.deliveryLat);
   const deliveryLngNum = Number(load.deliveryLng);
 
-  // 🔍 LOG DE DEBUG CRÍTICO
-  console.log("[COORD CHECK - analyzeLoad]", {
-    id: load.id,
-    pickupLat: load.pickupLat,
-    pickupLatNum,
-    deliveryLat: load.deliveryLat,
-    deliveryLatNum,
-    rawType: typeof load.pickupLat,
-  });
-
-  // Validación REAL (no superficial)
-  const hasValidCoords =
-    !isNaN(pickupLatNum) &&
-    !isNaN(pickupLngNum) &&
-    !isNaN(deliveryLatNum) &&
-    !isNaN(deliveryLngNum) &&
-    pickupLatNum !== 0 &&
-    pickupLngNum !== 0 &&
-    deliveryLatNum !== 0 &&
-    deliveryLngNum !== 0;
+  // At this point, coordinates are guaranteed to be valid (checked above)
+  const hasValidCoords = true;
 
   let miles = 0;
 
@@ -5645,13 +5675,10 @@ export async function analyzeLoad(load: {
   }
 
   // Log final recommendation
-  console.log(`[AI Load Advisor] Load ${load.id}: price=$${Number(load.price).toFixed(2)}, miles=${miles.toFixed(1)}, ratePerMile=$${ratePerMile.toFixed(2)}, recommendation=${recommendation}, confidence=${confidence}%`);
+  // Log only recommendation (not per-coordinate details)
+  console.log(`[AI Advisor] Load ${load.id}: recommendation=${recommendation}, confidence=${confidence}%`);
 
-  // Additional checks (miles nunca es 0 por fallback)
-  if (!hasValidCoords) {
-    riskFlags.push("Missing GPS coordinates (using fallback estimate)");
-    confidence = Math.max(confidence - 10, 50);
-  }
+  // Note: hasValidCoords is always true at this point (blocked above if false)
 
   if (estimatedMargin < 10) {
     riskFlags.push(`Low margin: ${estimatedMargin.toFixed(1)}% (healthy: >15%)`);
@@ -5666,7 +5693,10 @@ export async function analyzeLoad(load: {
     reasons.push(`Estimated margin: ${estimatedMargin.toFixed(1)}%`);
   }
 
-  console.log(`[AI Load Advisor] Load ${load.id} analysis complete: ${recommendation.toUpperCase()}, confidence=${confidence}%, profit=$${profit.toFixed(2)}, margin=${estimatedMargin.toFixed(1)}%`);
+  // Analysis complete - only log if recommendation is not reject
+  if (recommendation !== "reject") {
+    console.log(`[AI Advisor] Load ${load.id} analysis: ${recommendation.toUpperCase()}, confidence=${confidence}%`);
+  }
 
   return {
     recommendation,
