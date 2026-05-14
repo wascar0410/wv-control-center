@@ -1988,3 +1988,15 @@
 - [ ] Phase 7: Compact advisor in dispatch board
 - [ ] Phase 8: Command center highlight integration
 - [ ] Phase 9: Auth/cookie audit
+
+
+## Critical Bug Fixes - May 14, 2026
+
+### toMoney(undefined) Error in Quotation Page
+- [x] Root cause identified: VehicleProfile missing costPerMile property
+- [x] Added costPerMile to VehicleProfile interface
+- [x] Calculated costPerMile for all 4 vehicle types (cargo_van: $0.95, sprinter: $1.03, box_truck: $1.33, semi_truck: $1.83)
+- [x] Fixed prop name from showDetails to showBreakdown in QuotationForm
+- [x] Exported VehicleType from VehicleTypeSelector
+- [x] Verified: No more toMoney(undefined) errors in console
+- [x] UI displays correctly: Vehicle Type Selector shows cost breakdown

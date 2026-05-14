@@ -21,6 +21,7 @@ export interface VehicleProfile {
   depreciationPerMile: number;
   insuranceExposurePerMile: number;
   riskBufferPerMile: number;
+  costPerMile: number; // Total operating cost per mile
   maxWeightLbs: number;
   capacityDescription: string;
 }
@@ -61,6 +62,7 @@ export const VEHICLE_PROFILES: Record<VehicleType, VehicleProfile> = {
     depreciationPerMile: 0.35,
     insuranceExposurePerMile: 0.10,
     riskBufferPerMile: 0.05,
+    costPerMile: 0.95, // Total: 0.28 + 0.12 + 0.05 + 0.35 + 0.10 + 0.05
     maxWeightLbs: 3500,
     capacityDescription: "500-1500 lbs",
   },
@@ -74,6 +76,7 @@ export const VEHICLE_PROFILES: Record<VehicleType, VehicleProfile> = {
     depreciationPerMile: 0.42,
     insuranceExposurePerMile: 0.12,
     riskBufferPerMile: 0.06,
+    costPerMile: 1.03, // Total: 0.23 + 0.14 + 0.06 + 0.42 + 0.12 + 0.06
     maxWeightLbs: 5000,
     capacityDescription: "1500-3000 lbs",
   },
@@ -87,6 +90,7 @@ export const VEHICLE_PROFILES: Record<VehicleType, VehicleProfile> = {
     depreciationPerMile: 0.50,
     insuranceExposurePerMile: 0.15,
     riskBufferPerMile: 0.08,
+    costPerMile: 1.33, // Total: 0.34 + 0.18 + 0.08 + 0.50 + 0.15 + 0.08
     maxWeightLbs: 10000,
     capacityDescription: "3000-8000 lbs",
   },
@@ -100,6 +104,7 @@ export const VEHICLE_PROFILES: Record<VehicleType, VehicleProfile> = {
     depreciationPerMile: 0.65,
     insuranceExposurePerMile: 0.20,
     riskBufferPerMile: 0.10,
+    costPerMile: 1.83, // Total: 0.51 + 0.25 + 0.12 + 0.65 + 0.20 + 0.10
     maxWeightLbs: 80000,
     capacityDescription: "40000+ lbs",
   },

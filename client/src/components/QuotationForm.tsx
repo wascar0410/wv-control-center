@@ -544,7 +544,7 @@ export default function QuotationForm({
             onChange={(type: VehicleType) =>
               handleInputChange("vehicleType", type)
             }
-            showDetails={true}
+            showBreakdown={true}
           />
         </CardContent>
       </Card>

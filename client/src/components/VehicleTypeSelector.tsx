@@ -17,13 +17,17 @@ import { Truck } from "lucide-react";
 import { toMoney } from "@/utils/number";
 import { VEHICLE_PROFILES, type VehicleType } from "@/utils/vehicle-costs";
 
+export type { VehicleType };
+
 interface VehicleTypeSelectorProps {
   value: VehicleType;
   onChange: (type: VehicleType) => void;
   showBreakdown?: boolean;
 }
 
-export function VehicleTypeSelector({
+export { VehicleTypeSelector };
+
+function VehicleTypeSelector({
   value,
   onChange,
   showBreakdown = true,
