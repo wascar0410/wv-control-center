@@ -175,6 +175,24 @@ export function calculateOperatingCosts(
 }
 
 /**
+ * Get cost breakdown array for display
+ */
+export function getCostBreakdown(
+  miles: number,
+  vehicleType: VehicleType = "cargo_van"
+): Array<{ label: string; value: number }> {
+  const costs = calculateOperatingCosts(miles, vehicleType);
+  return [
+    { label: "Fuel", value: costs.fuel },
+    { label: "Maintenance", value: costs.maintenance },
+    { label: "Tires", value: costs.tires },
+    { label: "Depreciation", value: costs.depreciation },
+    { label: "Insurance", value: costs.insurance },
+    { label: "Risk Buffer", value: costs.riskBuffer },
+  ];
+}
+
+/**
  * Get cost summary for display
  */
 export function getCostSummary(

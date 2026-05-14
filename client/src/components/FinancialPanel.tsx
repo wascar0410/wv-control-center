@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { toMoney, toFixedSafe } from "@/utils/number";
-import { calculateOperatingCosts, getCostSummary } from "@/utils/vehicle-costs";
+import { calculateOperatingCosts, getCostSummary, getCostBreakdown } from "@/utils/vehicle-costs";
 
 interface FinancialPanelProps {
   load: any;
@@ -24,9 +24,10 @@ export function FinancialPanel({ load }: FinancialPanelProps) {
   // 🚗 VEHICLE OPERATING COSTS - Professional calculation
   const operatingCosts = calculateOperatingCosts(miles, vehicleType);
   const costSummary = getCostSummary(miles, vehicleType);
+  const costBreakdown = getCostBreakdown(miles, vehicleType);
 
   // Calculate REAL profit after all operating costs
-  const totalExpenses = operatingCosts.totalForDistance + estimatedTolls;
+  const totalExpenses = operatingCosts.total + estimatedTolls;
   const profit = revenue - totalExpenses;
   const profitPerMile = miles > 0 ? profit / miles : 0;
   const marginPercent = revenue > 0 ? (profit / revenue) * 100 : 0;
@@ -96,10 +97,10 @@ export function FinancialPanel({ load }: FinancialPanelProps) {
         {/* Operating Costs */}
         <div className="space-y-3">
           <h4 className="font-semibold text-sm">
-            Operating Costs (${toMoney(operatingCosts.totalPerMile)}/mi × {toDisplay(miles, 0)} mi)
+            Operating Costs (${toMoney(operatingCosts.costPerMile)}/mi × {toDisplay(miles, 0)} mi)
           </h4>
 
-          {costSummary.map((cost) => (
+          {costBreakdown.map((cost) => (
             <div key={cost.label} className="flex justify-between text-sm">
               <span className="text-muted-foreground">{cost.label}</span>
               <span className="font-medium">${toMoney(cost.value)}</span>
@@ -109,7 +110,7 @@ export function FinancialPanel({ load }: FinancialPanelProps) {
           <div className="border-t pt-2 flex justify-between text-sm font-semibold">
             <span>Operating Costs Total</span>
             <span className="text-orange-600">
-              ${toMoney(operatingCosts.totalForDistance)}
+              ${toMoney(operatingCosts.total)}
             </span>
           </div>
 
@@ -166,7 +167,7 @@ export function FinancialPanel({ load }: FinancialPanelProps) {
         <div className="text-xs text-muted-foreground p-3 bg-background/50 rounded">
           <p>📊 <strong>Data Source:</strong> Direct calculation from load fields + vehicle operating costs</p>
           <p>✅ <strong>Consistency:</strong> Uses same data as AI Load Advisor</p>
-          <p>🚗 <strong>Vehicle:</strong> {vehicleType} at ${toMoney(operatingCosts.totalPerMile)}/mile</p>
+          <p>🚗 <strong>Vehicle:</strong> {vehicleType} at ${toMoney(operatingCosts.costPerMile)}/mile</p>
         </div>
       </CardContent>
     </Card>
