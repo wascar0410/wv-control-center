@@ -25,7 +25,7 @@ describe("resolveLoadDistance", () => {
 
       const result = resolveLoadDistance(load);
       expect(result.miles).toBe(204.73);
-      expect(result.source).toBe("explicit");
+      expect(result.source).toBe("explicit_miles");
       expect(result.isReliable).toBe(true);
       expect(result.hasValidCoordinates).toBe(true);
     });
@@ -45,7 +45,7 @@ describe("resolveLoadDistance", () => {
 
       const result = resolveLoadDistance(load);
       expect(result.miles).toBe(89.15);
-      expect(result.source).toBe("explicit");
+      expect(result.source).toBe("explicit_miles");
       expect(result.isReliable).toBe(true);
     });
 
@@ -347,7 +347,7 @@ describe("resolveLoadDistance", () => {
 
       const result = resolveLoadDistance(load);
       expect(result.miles).toBeCloseTo(204.74, 1);
-      expect(result.source).toBe("explicit");
+      expect(result.source).toBe("explicit_miles");
       expect(result.isReliable).toBe(true);
       expect(result.hasValidCoordinates).toBe(true);
     });
@@ -369,7 +369,7 @@ describe("resolveLoadDistance", () => {
 
       const result = resolveLoadDistance(load);
       expect(result.miles).toBeCloseTo(89.16, 1);
-      expect(result.source).toBe("explicit");
+      expect(result.source).toBe("explicit_miles");
       expect(result.isReliable).toBe(true);
     });
 

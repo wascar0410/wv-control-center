@@ -14,7 +14,7 @@
 
 export interface LoadDistanceResult {
   miles: number;
-  source: "calculated" | "explicit" | "fallback_120";
+  source: "calculated" | "explicit" | "explicit_miles" | "fallback_120";
   isReliable: boolean;
   hasValidCoordinates: boolean;
 }
@@ -30,7 +30,7 @@ export function resolveLoadDistance(load: any): LoadDistanceResult {
   if (Number.isFinite(miles) && miles > 0) {
     return {
       miles,
-      source: "explicit",
+      source: "explicit_miles",
       isReliable: true,
       hasValidCoordinates: hasValidCoordinates(load),
     };
@@ -81,16 +81,26 @@ export function resolveLoadDistance(load: any): LoadDistanceResult {
     };
   }
 
-  // Has coordinates but no distance field = should not happen
-  // Log warning and return fallback
-  console.warn("[resolveLoadDistance] Load has coordinates but no distance field", {
+  // Has coordinates but no valid distance field = should not happen
+  // Log with full debug info to understand why all distance fields failed validation
+  const debugInfo = {
     loadId: load?.id,
+    miles: load?.miles,
+    totalMiles: load?.totalMiles,
+    distanceMiles: load?.distanceMiles,
+    estimatedMiles: load?.estimatedMiles,
+    milesFinite: Number.isFinite(Number(load?.miles)),
+    totalMilesFinite: Number.isFinite(Number(load?.totalMiles)),
+    distanceMilesFinite: Number.isFinite(Number(load?.distanceMiles)),
+    estimatedMilesFinite: Number.isFinite(Number(load?.estimatedMiles)),
     pickupLat: load?.pickupLat,
     pickupLng: load?.pickupLng,
     deliveryLat: load?.deliveryLat,
     deliveryLng: load?.deliveryLng,
-  });
+  };
+  console.debug("[resolveLoadDistance] Load has valid coordinates but no valid distance field", debugInfo);
 
+  // Return fallback 120 with debug info
   return {
     miles: 120,
     source: "fallback_120",
