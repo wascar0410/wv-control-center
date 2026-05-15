@@ -6,16 +6,9 @@ import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toMoney, toFixedSafe } from "@/utils/number";
 
-// 🔥 FINANCIAL VALUES - use toMoney to expose backend errors
-// 📊 UI METRICS - use toFixedSafe for safe formatting
-
 interface ProfitPerLoadCardProps {
   loadId: number;
 }
-
-// 🔥 HELPERS - using structured number system
-const money = (v: any) => `$${toMoney(v)}`;
-const percent = (v: any) => `${toFixedSafe(v, 2)}%`;
 
 export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
   const { data: profitData, isLoading, error } =
@@ -52,6 +45,12 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
 
   // 💰 KEEP RAW NUMBERS for logic, format only for display
   const rawRevenue = profitData.revenue ?? 0;
+  const rawFuel = profitData.expenses?.fuel ?? 0;
+  const rawTolls = profitData.expenses?.tolls ?? 0;
+  const rawMaintenance = profitData.expenses?.maintenance ?? 0;
+  const rawDriverPay = profitData.expenses?.driverPay ?? 0;
+  const rawCommissions = profitData.expenses?.commissions ?? 0;
+  const rawOther = profitData.expenses?.other ?? 0;
   const rawTotalExpenses = profitData.totalExpenses ?? 0;
   const rawActualProfit = profitData.actualProfit ?? 0;
   const rawEstimatedProfit = profitData.estimatedProfit ?? 0;
@@ -60,27 +59,7 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
   const rawVariance = profitData.variance ?? 0;
   const rawVariancePercent = profitData.variancePercent ?? 0;
 
-  // 💰 FORMAT FOR DISPLAY
-  const revenue = toMoney(rawRevenue);
-  const expenses = {
-    fuel: toMoney(profitData.expenses?.fuel ?? 0),
-    tolls: toMoney(profitData.expenses?.tolls ?? 0),
-    maintenance: toMoney(profitData.expenses?.maintenance ?? 0),
-    driverPay: toMoney(profitData.expenses?.driverPay ?? 0),
-    commissions: toMoney(profitData.expenses?.commissions ?? 0),
-    other: toMoney(profitData.expenses?.other ?? 0),
-  };
-
-  const totalExpenses = toMoney(rawTotalExpenses);
-  const actualProfit = toMoney(rawActualProfit);
-  const estimatedProfit = toMoney(rawEstimatedProfit);
-  const profitPerMile = toMoney(rawProfitPerMile);
-
-  // 📊 UI METRICS - use raw numbers for logic
-  const actualMargin = toFixedSafe(rawActualMargin, 2);
-  const variance = toFixedSafe(rawVariance, 2);
-  const variancePercent = toFixedSafe(rawVariancePercent, 2);
-
+  // 📊 UI LOGIC - use raw numbers for comparisons
   const isPositiveVariance = rawVariance >= 0;
   const isPositiveProfit = rawActualProfit >= 0;
   const isHealthyMargin = rawActualMargin >= 15;
@@ -125,7 +104,7 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
               Total Revenue
             </span>
             <span className="font-semibold text-lg text-green-600">
-              {money(revenue)}
+              ${toMoney(rawRevenue)}
             </span>
           </div>
         </div>
@@ -134,24 +113,52 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
         <div className="space-y-3">
           <h4 className="font-semibold text-sm">Expenses Breakdown</h4>
 
-          {Object.entries(expenses).map(([key, value]) =>
-            value > 0 ? (
-              <div
-                key={key}
-                className="flex justify-between text-sm"
-              >
-                <span className="text-muted-foreground capitalize">
-                  {key}
-                </span>
-                <span className="font-medium">{money(value)}</span>
-              </div>
-            ) : null
+          {rawFuel > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Fuel</span>
+              <span className="font-medium">${toMoney(rawFuel)}</span>
+            </div>
+          )}
+
+          {rawTolls > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Tolls</span>
+              <span className="font-medium">${toMoney(rawTolls)}</span>
+            </div>
+          )}
+
+          {rawMaintenance > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Maintenance</span>
+              <span className="font-medium">${toMoney(rawMaintenance)}</span>
+            </div>
+          )}
+
+          {rawDriverPay > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Driver Pay</span>
+              <span className="font-medium">${toMoney(rawDriverPay)}</span>
+            </div>
+          )}
+
+          {rawCommissions > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Commissions</span>
+              <span className="font-medium">${toMoney(rawCommissions)}</span>
+            </div>
+          )}
+
+          {rawOther > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Other</span>
+              <span className="font-medium">${toMoney(rawOther)}</span>
+            </div>
           )}
 
           <div className="border-t pt-2 flex justify-between text-sm font-semibold">
             <span>Total Expenses</span>
             <span className="text-red-600">
-              {money(totalExpenses)}
+              ${toMoney(rawTotalExpenses)}
             </span>
           </div>
         </div>
@@ -165,7 +172,7 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
                 isPositiveProfit ? "text-green-600" : "text-red-600"
               }`}
             >
-              {money(actualProfit)}
+              ${toMoney(rawActualProfit)}
             </span>
           </div>
 
@@ -176,14 +183,14 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
                 isHealthyMargin ? "text-green-600" : "text-yellow-600"
               }`}
             >
-              {percent(actualMargin)}
+              {toFixedSafe(rawActualMargin, 2)}%
             </span>
           </div>
 
           <div className="flex justify-between">
             <span>Profit Per Mile</span>
             <span className="font-semibold">
-              {money(profitPerMile)}/mi
+              ${toMoney(rawProfitPerMile)}/mi
             </span>
           </div>
         </div>
@@ -196,12 +203,12 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
 
           <div className="flex justify-between text-sm">
             <span>Estimated Profit</span>
-            <span>{money(estimatedProfit)}</span>
+            <span>${toMoney(rawEstimatedProfit)}</span>
           </div>
 
           <div className="flex justify-between text-sm">
             <span>Actual Profit</span>
-            <span>{money(actualProfit)}</span>
+            <span>${toMoney(rawActualProfit)}</span>
           </div>
 
           <div className="border-t pt-2 flex justify-between font-semibold">
@@ -212,7 +219,7 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
               }
             >
               {isPositiveVariance ? "+" : ""}
-              {money(variance)} ({percent(variancePercent)})
+              ${toMoney(rawVariance)} ({toFixedSafe(rawVariancePercent, 2)}%)
             </span>
           </div>
         </div>
