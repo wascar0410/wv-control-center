@@ -1,0 +1,54 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [
+    "db",
+    "server",
+    "user"
+  ],
+  "dev_command": "pnpm run dev",
+  "env_vars": {
+    "DATABASE_URL": "mysql://3gBRrZJZTHzqmGr.root:Y9uGW491kh52LoBtQtkg@gateway05.us-east-1.prod.aws.tidbcloud.com:4000/mSbbvEPZCkmEtZbYVdHD74?ssl={\"rejectUnauthorized\":true}"
+  },
+  "experiments": [
+    "no_db_push"
+  ],
+  "git_remote": {
+    "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663480481606/mSbbvEPZCkmEtZbYVdHD74",
+    "access_key_id": "ASIAZV3A2ECZCA7AMVNQ",
+    "secret_access_key": "F7PcU/fDuFp6Z5XIfYtMlkTVkxBo7jrD53JEROTe",
+    "session_token": "IQoJb3JpZ2luX2VjEKL//////////wEaCXVzLWVhc3QtMSJGMEQCIEBfk8bv6AjoW/pLLL+ArGBaeSepjiWpzWTkJnggKNypAiAR+05BkPSN2sMXnILAntFIK01+0S4/YQQmXzflAQruYSr2AwhrEAQaDDY2NTM4NjA5ODg2NiIM3VQnrRh99SDmd/XHKtMDMR2VzIL27h+eY+lVyXXIZ8gWSX0k6SxB+B7uFpXDZ88KUoOv81aaR3pJRGP3ii0MUjLhw7l1TvADJwXK5aRcB+kf3H99oxeUoRZvrNhEMEzVE9jNVp2EcEBcLPoYpT4zAMoMLNn07wpmifjE4ZjnadRAhvatOR3oSQIBeYk8+VYZachPWcG75JW7/u1gJgfogd/25FzILiMoFRGn9yyP0yVuEWhBToOW6fcLXaKAU6u7lEmc6dIalbj93oX4kI0Je1sZX+ljFjZcA6tXGUVk+nMAHerbVurqzM3IdcYF6RrkdpfsI0JNQFBHr5oBXgZp+sjDfEtZmHbMGIF36Oq3QWnl5WTsaDnXUROwngcO4E9Jd4vf3LVrsGW2onx0Cs3cn6Q5evx+/pHbcawRdRcxOUhVon8YhJJV8qRRToiHzyO0GyswUhz+wr/H8KDY7WPv60g0o8XfC0sYeCYPVDLzELdAz0FSwe+s+epRmfB9e8Ri/i8LQuY+p0rr/wc41oUvaJa5GtrgpT4BZJWPDDjkVWJb5zpOdnAs6tj9T752cD3PGOtAWYAem0uQy5++Jvv/1NbHct7TiwEDG1HGMs3rKYuTv92GWO7HjKPYqxNtmAzB9fkwxuuZ0AY6ngFGKLKV/BfOo5MTxlVqSjB8/H8q8bDyr592Dbrtw8kLHwWCCkP05oInHgb8eFfriFCd+huxTVSQpPVWl+UP+ofVncfRt0YnI4Bi/Yv0GOTZmHENEZ2aF31P5Szksh4+XfNgqKYWfGgTP/NuqNPRY3OEJHnJiOMwcH2uqyHKbdkzXCqXg0jNeUG7ebGtrgabuOjqKYWd5IihVrh0zTwvLg==",
+    "expiration": "2026-05-15T13:24:22.000Z"
+  },
+  "name": "wv-control-center",
+  "path": "/home/ubuntu/wv-control-center",
+  "port": 3000,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "Zpj4GuGjksVPwgDhwCCuRK",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "GOOGLE_MAPS_API_KEY": "AIzaSyDppsnqmFWV496SNpvlpyNTLVE-GFaEhWQ",
+    "JWT_SECRET": "CwBiXfm8N3q9wK7KSZw4o3",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "Wascar Ortiz",
+    "OWNER_OPEN_ID": "8PnFiKyUrtXwxo8RxNWkEP",
+    "PLAID_CLIENT_ID": "69c592fb032d85000ebf90f3",
+    "PLAID_ENV": "sandbox",
+    "PLAID_SECRET": "cf87ea874b5f50e04a5b59c8eaaea6",
+    "SMTP_HOST": "smtp.gmail.com",
+    "SMTP_PASSWORD": "pmxeweiyeljuqnax",
+    "SMTP_PORT": "587",
+    "SMTP_USER": "wascardely@gmail.com",
+    "TWILIO_ACCOUNT_SID": "AC804690df31d0d6212c755c98d62ba25e",
+    "TWILIO_AUTH_TOKEN": "d5290a05d8d8d5f44d52a71836a78766",
+    "TWILIO_MESSAGING_SERVICE_SID": "MG797ce3c032bf24aeb5586a21116aac5b",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "38c7639b-33bd-47cc-bd44-aa37be6bf684",
+    "VITE_APP_ID": "mSbbvEPZCkmEtZbYVdHD74",
+    "VITE_APP_LOGO": "https://files.manuscdn.com/user_upload_by_module/web_dev_logo/310519663480481606/oZuIPJkLwUEOsBHw.png",
+    "VITE_APP_TITLE": "WV Control Center",
+    "VITE_FRONTEND_FORGE_API_KEY": "5NWtFEoSBn9TWzUb9kJm7y",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-db-user",
+  "test_command": "pnpm test"
+}

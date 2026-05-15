@@ -50,30 +50,40 @@ export function ProfitPerLoadCard({ loadId }: ProfitPerLoadCardProps) {
     );
   }
 
-  // 💰 FINANCIAL VALUES - use toMoney to expose backend errors
-  const revenue = toMoney(profitData.revenue);
+  // 💰 KEEP RAW NUMBERS for logic, format only for display
+  const rawRevenue = profitData.revenue ?? 0;
+  const rawTotalExpenses = profitData.totalExpenses ?? 0;
+  const rawActualProfit = profitData.actualProfit ?? 0;
+  const rawEstimatedProfit = profitData.estimatedProfit ?? 0;
+  const rawProfitPerMile = profitData.profitPerMile ?? 0;
+  const rawActualMargin = profitData.actualMargin ?? 0;
+  const rawVariance = profitData.variance ?? 0;
+  const rawVariancePercent = profitData.variancePercent ?? 0;
+
+  // 💰 FORMAT FOR DISPLAY
+  const revenue = toMoney(rawRevenue);
   const expenses = {
-    fuel: toMoney(profitData.expenses?.fuel),
-    tolls: toMoney(profitData.expenses?.tolls),
-    maintenance: toMoney(profitData.expenses?.maintenance),
-    driverPay: toMoney(profitData.expenses?.driverPay),
-    commissions: toMoney(profitData.expenses?.commissions),
-    other: toMoney(profitData.expenses?.other),
+    fuel: toMoney(profitData.expenses?.fuel ?? 0),
+    tolls: toMoney(profitData.expenses?.tolls ?? 0),
+    maintenance: toMoney(profitData.expenses?.maintenance ?? 0),
+    driverPay: toMoney(profitData.expenses?.driverPay ?? 0),
+    commissions: toMoney(profitData.expenses?.commissions ?? 0),
+    other: toMoney(profitData.expenses?.other ?? 0),
   };
 
-  const totalExpenses = toMoney(profitData.totalExpenses);
-  const actualProfit = toMoney(profitData.actualProfit);
-  const estimatedProfit = toMoney(profitData.estimatedProfit);
-  const profitPerMile = toMoney(profitData.profitPerMile);
+  const totalExpenses = toMoney(rawTotalExpenses);
+  const actualProfit = toMoney(rawActualProfit);
+  const estimatedProfit = toMoney(rawEstimatedProfit);
+  const profitPerMile = toMoney(rawProfitPerMile);
 
-  // 📊 UI METRICS - use toFixedSafe for safe formatting
-  const actualMargin = toFixedSafe(profitData.actualMargin, 2);
-  const variance = toFixedSafe(profitData.variance, 2);
-  const variancePercent = toFixedSafe(profitData.variancePercent, 2);
+  // 📊 UI METRICS - use raw numbers for logic
+  const actualMargin = toFixedSafe(rawActualMargin, 2);
+  const variance = toFixedSafe(rawVariance, 2);
+  const variancePercent = toFixedSafe(rawVariancePercent, 2);
 
-  const isPositiveVariance = variance >= 0;
-  const isPositiveProfit = actualProfit >= 0;
-  const isHealthyMargin = actualMargin >= 15;
+  const isPositiveVariance = rawVariance >= 0;
+  const isPositiveProfit = rawActualProfit >= 0;
+  const isHealthyMargin = rawActualMargin >= 15;
 
   return (
     <Card>

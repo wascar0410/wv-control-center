@@ -23,6 +23,13 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
   const analysis = analyzeLoadAdvanced(load);
   const color = getRecommendationColor(analysis.recommendation);
   const emoji = getRecommendationEmoji(analysis.recommendation);
+  
+  // 💰 Keep raw numbers for logic, format only for display
+  const rawProfit = analysis.profit ?? 0;
+  const rawRatePerMile = analysis.ratePerMile ?? 0;
+  const rawPrice = analysis.price ?? 0;
+  const rawSuggestedMinimum = analysis.suggestedMinimum ?? 0;
+  const rawSuggestedTarget = analysis.suggestedTarget ?? 0;
 
   // If load is blocked (missing coordinates), show warning
   if (analysis.block) {
@@ -83,11 +90,11 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
             <span className="text-xl">{emoji}</span>
             <div>
               <p className="font-semibold text-sm">{analysis.recommendation}</p>
-              <p className="text-xs opacity-75">${toMoney(analysis.ratePerMile)}/mi • ${toMoney(analysis.profit)} profit</p>
+              <p className="text-xs opacity-75">${toMoney(rawRatePerMile)}/mi • ${toMoney(rawProfit)} profit</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="font-semibold text-sm">${toMoney(analysis.suggestedTarget)}</p>
+            <p className="font-semibold text-sm">${toMoney(rawSuggestedTarget)}</p>
             <p className="text-xs opacity-75">Target</p>
           </div>
         </div>
@@ -114,7 +121,7 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
         <div className="grid grid-cols-4 gap-3">
           <div className="p-2 bg-background/50 rounded">
             <p className="text-xs text-muted-foreground">Rate/Mile</p>
-            <p className="font-semibold text-sm">${toMoney(analysis.ratePerMile)}</p>
+            <p className="font-semibold text-sm">${toMoney(rawRatePerMile)}</p>
           </div>
           <div className="p-2 bg-background/50 rounded">
             <p className="text-xs text-muted-foreground">Miles</p>
@@ -122,12 +129,12 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
           </div>
           <div className="p-2 bg-background/50 rounded">
             <p className="text-xs text-muted-foreground">Price</p>
-            <p className="font-semibold text-sm">${toMoney(analysis.price)}</p>
+            <p className="font-semibold text-sm">${toMoney(rawPrice)}</p>
           </div>
-          <div className={`p-2 rounded ${analysis.profit > 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
+          <div className={`p-2 rounded ${rawProfit > 0 ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
             <p className="text-xs text-muted-foreground">Profit</p>
-            <p className={`font-bold text-sm ${analysis.profit > 0 ? 'text-green-400' : 'text-red-400'}`}>
-              ${toMoney(analysis.profit)}
+            <p className={`font-bold text-sm ${rawProfit > 0 ? 'text-green-400' : 'text-red-400'}`}>
+              ${toMoney(rawProfit)}
             </p>
           </div>
         </div>
@@ -139,11 +146,11 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <p className="text-xs text-muted-foreground">Minimum</p>
-                <p className="font-bold text-green-400">${toMoney(analysis.suggestedMinimum)}</p>
+                <p className="font-bold text-green-400">${toMoney(rawSuggestedMinimum)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Target (Negotiate)</p>
-                <p className="font-bold text-yellow-400">${toMoney(analysis.suggestedTarget)}</p>
+                <p className="font-bold text-yellow-400">${toMoney(rawSuggestedTarget)}</p>
               </div>
             </div>
           </div>
