@@ -263,7 +263,13 @@ export const quotationRouter = router({
         weight: input.weight,
         estimatedTollCost,
         tollDataSource,
-      };
+        // Financial aliases for frontend compatibility
+        operatingCost: profitability.totalOperatingCost,
+        fuelCost: profitability.estimatedFuelCost,
+        profit: profitability.estimatedProfit,
+        margin: profitability.profitMarginPercent,
+        revenue: totalPrice,
+      }
     }),
 
   getQuotation: protectedProcedure
