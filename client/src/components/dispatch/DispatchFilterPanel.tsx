@@ -39,11 +39,16 @@ export default function DispatchFilterPanel({
     onFilterChange({ search: value });
   };
 
+  const handleDataQualityChange = (quality: "all" | "reliable" | "missing") => {
+    onFilterChange({ dataQuality: quality });
+  };
+
   const handleClearFilters = () => {
     onFilterChange({
       status: [],
       marginRange: [0, 50],
       search: "",
+      dataQuality: "all",
     });
   };
 
@@ -120,6 +125,29 @@ export default function DispatchFilterPanel({
               />
               <Label htmlFor={`status-${status}`} className="text-sm capitalize cursor-pointer">
                 {status}
+              </Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Data Quality Filter */}
+      <div>
+        <Label className="text-sm font-semibold mb-2 block">Route Data</Label>
+        <div className="space-y-2">
+          {[
+            { value: "all" as const, label: "All Routes" },
+            { value: "reliable" as const, label: "✓ Reliable" },
+            { value: "missing" as const, label: "⚠️ Missing/Fallback" },
+          ].map((option) => (
+            <div key={option.value} className="flex items-center gap-2">
+              <Checkbox
+                id={`quality-${option.value}`}
+                checked={filters.dataQuality === option.value}
+                onCheckedChange={() => handleDataQualityChange(option.value)}
+              />
+              <Label htmlFor={`quality-${option.value}`} className="text-sm cursor-pointer">
+                {option.label}
               </Label>
             </div>
           ))}

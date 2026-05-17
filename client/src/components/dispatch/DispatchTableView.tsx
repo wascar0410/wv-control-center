@@ -143,9 +143,9 @@ export default function DispatchTableView({
                     </TableCell>
                     <TableCell>
                       <Badge className={statusColor}>{load.status}</Badge>
-                      {isUsingFallback && (
+                      {(snapshot.isDecisionBlocked || isUsingFallback || snapshot.distanceConfidence === "low") && (
                         <Badge className="ml-1 bg-orange-500/20 text-orange-400 border-orange-500/50">
-                          ⚠️ Fallback
+                          📍 Needs Backfill
                         </Badge>
                       )}
                     </TableCell>

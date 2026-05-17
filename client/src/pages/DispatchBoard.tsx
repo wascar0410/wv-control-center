@@ -10,7 +10,7 @@ import DispatchKanbanBoard from "@/components/dispatch/DispatchKanbanBoard";
 import DispatchTableView from "@/components/dispatch/DispatchTableView";
 
 type ViewMode = "kanban" | "table";
-type AIRecommendationFilter = "all" | "accept" | "negotiate" | "reject";
+type AIRecommendationFilter = "all" | "accept" | "negotiate" | "reject" | "blocked";
 
 export default function DispatchBoard() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -79,15 +79,30 @@ export default function DispatchBoard() {
       const isUsingFallback = snapshot.distanceSource === "fallback_120";
       const matchesMargin = isUsingFallback || (margin >= filters.marginRange[0] && margin <= filters.marginRange[1]);
 
+      // Apply data quality filter
+      const isMissingRoute = snapshot.isDecisionBlocked || isUsingFallback || snapshot.distanceConfidence === "low";
+      const matchesDataQuality = 
+        filters.dataQuality === "all" ||
+        (filters.dataQuality === "reliable" && !isMissingRoute) ||
+        (filters.dataQuality === "missing" && isMissingRoute);
+
       // Apply AI recommendation filter
       if (aiFilter !== "all") {
         const advice = adviceMap.get(load.id);
-        if (!advice || advice.recommendation !== aiFilter) {
-          return false;
+        if (aiFilter === "blocked") {
+          // Show blocked loads (missing coordinates or decision blocked)
+          if (!snapshot.isDecisionBlocked && snapshot.routeStatus !== "missing_coords") {
+            return false;
+          }
+        } else {
+          // Show loads matching the recommendation
+          if (!advice || advice.recommendation !== aiFilter) {
+            return false;
+          }
         }
       }
 
-      return matchesStatus && matchesSearch && matchesMargin;
+      return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality;
     });
   }, [loads, filters, adviceMap, aiFilter]);
 
@@ -177,16 +192,16 @@ export default function DispatchBoard() {
         </div>
 
         {/* AI Recommendation Filter Buttons */}
-        <div className="mb-4 flex gap-2 items-center">
+        <div className="mb-4 flex gap-2 items-center flex-wrap">
           <span className="text-sm font-medium text-muted-foreground">AI Advisor:</span>
-          {(["all", "accept", "negotiate", "reject"] as const).map((filter) => (
+          {(["all", "accept", "negotiate", "reject", "blocked"] as const).map((filter) => (
             <Button
               key={filter}
               size="sm"
               variant={aiFilter === filter ? "default" : "outline"}
               onClick={() => setAIFilter(filter)}
             >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              {filter === "blocked" ? "🚫 Blocked" : filter.charAt(0).toUpperCase() + filter.slice(1)}
             </Button>
           ))}
         </div>

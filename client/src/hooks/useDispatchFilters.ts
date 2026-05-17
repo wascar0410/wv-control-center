@@ -11,6 +11,7 @@ export interface DispatchFilters {
   search: string;
   sortBy: "id" | "margin" | "profit" | "date";
   sortOrder: "asc" | "desc";
+  dataQuality: "all" | "reliable" | "missing";
 }
 
 const DEFAULT_FILTERS: DispatchFilters = {
@@ -19,6 +20,7 @@ const DEFAULT_FILTERS: DispatchFilters = {
   search: "",
   sortBy: "date",
   sortOrder: "desc",
+  dataQuality: "all",
 };
 
 const STORAGE_KEY = "dispatch_filters";

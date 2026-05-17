@@ -63,35 +63,80 @@ export default function DispatchLoadCard({
   const statusColor = getStatusColor(load.status);
 
   if (compact) {
+    // Show blocked/fallback warning in compact mode
+    if (snapshot.isDecisionBlocked || isUsingFallback) {
+      return (
+        <Card
+          className={`p-3 cursor-pointer hover:bg-accent transition-colors border-orange-500/50 border`}
+          onClick={() => onSelect(load.id)}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-sm truncate">
+                ⚠️ Load #{load.id}
+              </div>
+              <div className="text-xs text-orange-400 truncate">Route Missing</div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs font-semibold text-orange-400">BLOCKED</div>
+              <div className="text-xs text-muted-foreground">Needs backfill</div>
+            </div>
+          </div>
+        </Card>
+      );
+    }
+
+    // Normal compact card with advisor info
     return (
       <Card
-        className={`p-3 cursor-pointer hover:bg-accent transition-colors ${
-          isUsingFallback ? "border-orange-500/50 border" : ""
-        }`}
+        className={`p-3 cursor-pointer hover:bg-accent transition-colors`}
         onClick={() => onSelect(load.id)}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-sm truncate">
-              {isUsingFallback && "⚠️ "} Load #{load.id}
+        <div className="space-y-2">
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-sm truncate">Load #{load.id}</div>
+              <div className="text-xs text-muted-foreground truncate">{load.clientName}</div>
             </div>
-            <div className="text-xs text-muted-foreground truncate">{load.clientName}</div>
+            {advice && (
+              <div className="text-right">
+                <div className={`text-xs font-bold ${
+                  advice.recommendation === 'accept' ? 'text-green-400' :
+                  advice.recommendation === 'negotiate' ? 'text-yellow-400' :
+                  'text-red-400'
+                }`}>
+                  {advice.recommendation.toUpperCase()}
+                </div>
+                <div className="text-xs text-muted-foreground">{advice.confidence}% conf</div>
+              </div>
+            )}
           </div>
-          <div className="text-right">
-            <div
-              className={`text-sm font-semibold ${
-                isUsingFallback
-                  ? "text-orange-400"
-                  : marginColor === "green"
-                    ? "text-green-400"
-                    : marginColor === "yellow"
-                      ? "text-yellow-400"
-                      : "text-red-400"
-              }`}
-            >
-              {formatMargin(snapshot.margin)}
+
+          {/* Financial metrics */}
+          <div className="grid grid-cols-3 gap-1 text-xs">
+            <div>
+              <span className="text-muted-foreground">Rate:</span>
+              <div className="font-semibold">${(snapshot.ratePerMile || 0).toFixed(2)}/mi</div>
             </div>
-            <div className="text-xs text-muted-foreground">{formatProfit(snapshot.profit)}</div>
+            <div>
+              <span className="text-muted-foreground">Margin:</span>
+              <div className={`font-semibold ${
+                marginColor === 'green' ? 'text-green-400' :
+                marginColor === 'yellow' ? 'text-yellow-400' :
+                'text-red-400'
+              }`}>
+                {formatMargin(snapshot.margin)}
+              </div>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Profit:</span>
+              <div className={`font-semibold ${
+                (snapshot.profit || 0) > 0 ? 'text-green-400' : 'text-red-400'
+              }`}>
+                {formatProfit(snapshot.profit)}
+              </div>
+            </div>
           </div>
         </div>
       </Card>
@@ -108,12 +153,12 @@ export default function DispatchLoadCard({
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="font-bold text-lg">#{load.id}</span>
             <Badge className={statusColor}>{load.status}</Badge>
-            {isUsingFallback && (
+            {(snapshot.isDecisionBlocked || isUsingFallback || snapshot.distanceConfidence === "low") && (
               <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/50">
-                ⚠️ Fallback
+                📍 Needs Backfill
               </Badge>
             )}
             {advice && <LoadAdviceBadge advice={advice} />}

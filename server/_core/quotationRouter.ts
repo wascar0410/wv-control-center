@@ -241,34 +241,58 @@ export const quotationRouter = router({
         } as any);
       }
 
+      // Calculate additional metrics for completeness
+      const ratePerMile = baseRatePerMile;
+      const maintenanceCost = profitability.estimatedOperatingCost * 0.15; // ~15% of operating cost
+      const costPerMile = profitability.totalOperatingCost / (totalMiles > 0 ? totalMiles : 1);
+      const confidence = 95; // High confidence for calculated quotations
+
       return {
+        // Core identifiers
         quotationId,
+        vehicleType: (input.vehicleType as VehicleType) || "cargo_van",
+        
+        // Distance metrics
         emptyMiles,
         loadedMiles,
         returnEmptyMiles,
         totalMiles,
+        
+        // Price metrics
         totalPrice,
-        estimatedFuelCost: profitability.estimatedFuelCost,
-        estimatedOperatingCost: profitability.estimatedOperatingCost,
-        totalOperatingCost: profitability.totalOperatingCost,
-        estimatedProfit: profitability.estimatedProfit,
-        profitMarginPercent: profitability.profitMarginPercent,
-        minimumIncome: profitability.minimumIncome,
+        revenue: totalPrice,
+        ratePerMile,
         ratePerLoadedMile: profitability.ratePerLoadedMile,
+        costPerMile,
+        
+        // Cost breakdown
+        estimatedFuelCost: profitability.estimatedFuelCost,
+        fuelCost: profitability.estimatedFuelCost,
+        maintenanceCost: roundTo2(maintenanceCost),
+        estimatedOperatingCost: profitability.estimatedOperatingCost,
+        operatingCost: profitability.totalOperatingCost,
+        totalOperatingCost: profitability.totalOperatingCost,
+        estimatedTollCost,
+        tolls: estimatedTollCost,
+        
+        // Profitability
+        estimatedProfit: profitability.estimatedProfit,
+        profit: profitability.estimatedProfit,
+        profitMarginPercent: profitability.profitMarginPercent,
+        margin: profitability.profitMarginPercent,
+        minimumIncome: profitability.minimumIncome,
         minimumRatePerMile: profitability.minimumRatePerMile,
         differenceVsMinimum: profitability.differenceVsMinimum,
+        
+        // Decision metrics
         verdict: profitability.verdict,
+        confidence,
+        
+        // Location info
         pickupAddress: input.pickupAddress,
         deliveryAddress: input.deliveryAddress,
         weight: input.weight,
-        estimatedTollCost,
         tollDataSource,
-        // Financial aliases for frontend compatibility
-        operatingCost: profitability.totalOperatingCost,
-        fuelCost: profitability.estimatedFuelCost,
-        profit: profitability.estimatedProfit,
-        margin: profitability.profitMarginPercent,
-        revenue: totalPrice,
       }
     }),
 
