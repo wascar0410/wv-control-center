@@ -90,13 +90,22 @@ export default function DispatchBoard() {
       if (aiFilter !== "all") {
         const advice = adviceMap.get(load.id);
         if (aiFilter === "blocked") {
-          // Show blocked loads (missing coordinates or decision blocked)
-          if (!snapshot.isDecisionBlocked && snapshot.routeStatus !== "missing_coords") {
+          // Show blocked loads: missing coordinates, fallback distance, low confidence, or decision blocked
+          const isBlocked = 
+            snapshot.isDecisionBlocked ||
+            snapshot.routeStatus === "missing_coords" ||
+            snapshot.distanceSource === "fallback_120" ||
+            snapshot.distanceConfidence === "low" ||
+            advice?.recommendation === "BLOCKED" ||
+            advice?.recommendation === "UNKNOWN" ||
+            advice?.status === "blocked";
+          
+          if (!isBlocked) {
             return false;
           }
         } else {
-          // Show loads matching the recommendation
-          if (!advice || advice.recommendation !== aiFilter) {
+          // Show loads matching the recommendation (ACCEPT, NEGOTIATE, REJECT)
+          if (!advice || advice.recommendation !== aiFilter.toUpperCase()) {
             return false;
           }
         }
