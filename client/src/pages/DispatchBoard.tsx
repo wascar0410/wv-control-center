@@ -105,7 +105,12 @@ export default function DispatchBoard() {
           }
         } else {
           // Show loads matching the recommendation (ACCEPT, NEGOTIATE, REJECT)
-          if (!advice || advice.recommendation !== aiFilter.toUpperCase()) {
+          if (!advice || !advice.recommendation) {
+            return false;
+          }
+          const normalizedRecommendation = advice.recommendation.toUpperCase();
+          const normalizedFilter = aiFilter.toUpperCase();
+          if (normalizedRecommendation !== normalizedFilter) {
             return false;
           }
         }
