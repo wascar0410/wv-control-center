@@ -50,6 +50,8 @@ export default function DispatchBoard() {
   const filteredLoads = useMemo(() => {
     console.log("[DispatchBoard] loads.length:", loads.length);
     console.log("[DispatchBoard] loads sample:", loads.slice(0, 3).map((l: any) => ({ id: l.id, status: l.status, price: l.price })));
+    console.log("[DispatchBoard] aiFilter:", aiFilter);
+    console.log("[DispatchBoard] adviceMap size:", adviceMap.size);
     return loads.filter((load: any) => {
       const snapshot = load.financialSnapshot || {
         margin: 0,
@@ -90,9 +92,27 @@ export default function DispatchBoard() {
       // Apply AI recommendation filter
       if (aiFilter !== "all") {
         const advice = adviceMap.get(load.id);
+        const computedIsRouteBlocked = isLoadRouteBlocked(load, advice);
+        
+        // DEBUG: Log first 3 loads when filter is active
+        if (loads.indexOf(load) < 3) {
+          console.log("[DispatchBoard Filter Debug]", {
+            loadId: load.id,
+            aiFilter,
+            adviceRecommendation: advice?.recommendation,
+            adviceStatus: advice?.status,
+            blockedReason: advice?.blockedReason,
+            snapshotIsDecisionBlocked: snapshot?.isDecisionBlocked,
+            routeStatus: snapshot?.routeStatus,
+            distanceSource: snapshot?.distanceSource,
+            distanceConfidence: snapshot?.distanceConfidence,
+            computedIsRouteBlocked,
+          });
+        }
+        
         if (aiFilter === "blocked") {
           // Show ONLY route/data blocked loads (not economically rejected)
-          if (!isLoadRouteBlocked(load, advice)) {
+          if (!computedIsRouteBlocked) {
             return false;
           }
         } else {
@@ -104,7 +124,7 @@ export default function DispatchBoard() {
           const normalizedFilter = aiFilter.toUpperCase();
           
           // Reject filter should NOT show route-blocked loads
-          if (normalizedFilter === "REJECT" && isLoadRouteBlocked(load, advice)) {
+          if (normalizedFilter === "REJECT" && computedIsRouteBlocked) {
             return false;
           }
           
