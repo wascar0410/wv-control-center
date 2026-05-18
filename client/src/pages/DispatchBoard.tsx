@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+"use client";
+
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Loader2, LayoutGrid, Table as TableIcon } from "lucide-react";
@@ -8,9 +9,55 @@ import DispatchFilterPanel from "@/components/dispatch/DispatchFilterPanel";
 import DispatchKPIStrip from "@/components/dispatch/DispatchKPIStrip";
 import DispatchKanbanBoard from "@/components/dispatch/DispatchKanbanBoard";
 import DispatchTableView from "@/components/dispatch/DispatchTableView";
+import { useMemo, useState } from "react";
 
 type ViewMode = "kanban" | "table";
 type AIRecommendationFilter = "all" | "accept" | "negotiate" | "reject" | "blocked";
+
+/**
+ * Determine if a load's route/data is blocked or unreliable
+ */
+function getRouteQuality(load: any, advice: any) {
+  const snapshot = load.financialSnapshot;
+
+  // Check if coordinates are valid and non-zero
+  const hasValidCoords =
+    Number.isFinite(Number(load.pickupLat)) &&
+    Number.isFinite(Number(load.pickupLng)) &&
+    Number.isFinite(Number(load.deliveryLat)) &&
+    Number.isFinite(Number(load.deliveryLng)) &&
+    Number(load.pickupLat) !== 0 &&
+    Number(load.pickupLng) !== 0 &&
+    Number(load.deliveryLat) !== 0 &&
+    Number(load.deliveryLng) !== 0;
+
+  // Check snapshot for route blocking indicators
+  const snapshotBlocked =
+    snapshot?.isDecisionBlocked === true ||
+    snapshot?.routeStatus === "missing_coords" ||
+    snapshot?.routeStatus === "invalid" ||
+    snapshot?.routeStatus === "fallback" ||
+    snapshot?.distanceSource === "fallback_120" ||
+    snapshot?.distanceConfidence === "low";
+
+  // Check advice for route blocking indicators
+  const adviceBlocked =
+    advice?.recommendation === "BLOCKED" ||
+    advice?.recommendation === "UNKNOWN" ||
+    advice?.recommendation === "blocked" ||
+    advice?.recommendation === "unknown" ||
+    advice?.status === "blocked" ||
+    Boolean(advice?.blockedReason);
+
+  // Route is blocked if any indicator is true
+  const routeBlocked = adviceBlocked || snapshotBlocked || !hasValidCoords;
+
+  return {
+    hasValidCoords,
+    routeBlocked,
+    routeStatus: routeBlocked ? "missing_or_unreliable" : "reliable",
+  };
+}
 
 export default function DispatchBoard() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -31,10 +78,6 @@ export default function DispatchBoard() {
 
   const rawData = query.data;
 
-  // DIAGNOSTIC LOGGING
-  console.log("[DispatchBoard] rawData:", rawData);
-  console.log("[DispatchBoard] filters:", filters);
-
   const loads = useMemo(() => {
     if (Array.isArray(rawData)) return rawData;
     if (rawData && Array.isArray((rawData as any).loads)) return (rawData as any).loads;
@@ -46,25 +89,25 @@ export default function DispatchBoard() {
   const loadIds = useMemo(() => loads.map((l: any) => l.id), [loads]);
   const { adviceMap, isLoading: isLoadingAdvice } = useLoadAdvice(loadIds);
 
-  const filteredLoads = useMemo(() => {
-    console.log("[DispatchBoard] loads.length:", loads.length);
-    console.log("[DispatchBoard] loads sample:", loads.slice(0, 3).map((l: any) => ({ id: l.id, status: l.status, price: l.price })));
-    return loads.filter((load: any) => {
-      const snapshot = load.financialSnapshot || {
-        margin: 0,
-        profit: 0,
-        ratePerMile: 0,
-        status: "loss",
-        routeStatus: "real" as const,
-        distanceSource: "haversine" as const,
-        distanceConfidence: "high" as const,
-        isDecisionBlocked: false,
-        profitIsReliable: false,
-      };
+  // Safe fallback snapshot for display only (no route metadata)
+  const safeSnapshot = {
+    margin: 0,
+    profit: 0,
+    ratePerMile: 0,
+    status: "loss" as const,
+    profitIsReliable: false,
+  };
 
+  const filteredLoads = useMemo(() => {
+    return loads.filter((load: any) => {
+      // Get snapshot for display values only
+      const snapshot = load.financialSnapshot || safeSnapshot;
+
+      // Check status filter
       const matchesStatus =
         filters.status.length === 0 || filters.status.includes(String(load.status || ""));
 
+      // Check search filter
       const matchesSearch =
         !filters.search ||
         String(load.id || "").toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -73,131 +116,103 @@ export default function DispatchBoard() {
         String(load.pickupAddress || "").toLowerCase().includes(filters.search.toLowerCase()) ||
         String(load.deliveryAddress || "").toLowerCase().includes(filters.search.toLowerCase());
 
+      // Check margin filter
       const margin = Number(snapshot.margin || 0);
-      // 🚨 CRITICAL: Don't exclude fallback loads by margin filter
-      // Fallback loads have unreliable margins, so show them anyway with warning badge
-      const isUsingFallback = snapshot.distanceSource === "fallback_120";
-      const matchesMargin = isUsingFallback || (margin >= filters.marginRange[0] && margin <= filters.marginRange[1]);
+      const matchesMargin = margin >= filters.marginRange[0] && margin <= filters.marginRange[1];
 
-      // Apply data quality filter
-      const isMissingRoute = snapshot.isDecisionBlocked || isUsingFallback || snapshot.distanceConfidence === "low";
-      const matchesDataQuality = 
+      // Get route quality
+      const advice = adviceMap.get(load.id);
+      const routeQuality = getRouteQuality(load, advice);
+
+      // Check data quality filter
+      const matchesDataQuality =
         filters.dataQuality === "all" ||
-        (filters.dataQuality === "reliable" && !isMissingRoute) ||
-        (filters.dataQuality === "missing" && isMissingRoute);
+        (filters.dataQuality === "reliable" && !routeQuality.routeBlocked) ||
+        (filters.dataQuality === "missing" && routeQuality.routeBlocked);
 
       // Apply AI recommendation filter
       if (aiFilter !== "all") {
-        const advice = adviceMap.get(load.id);
+        const rec = String(advice?.recommendation || "").toLowerCase();
+
         if (aiFilter === "blocked") {
-          // Show blocked loads: missing coordinates, fallback distance, low confidence, or decision blocked
-          const isBlocked = 
-            snapshot.isDecisionBlocked ||
-            snapshot.routeStatus === "missing_coords" ||
-            snapshot.distanceSource === "fallback_120" ||
-            snapshot.distanceConfidence === "low" ||
-            advice?.recommendation === "blocked" ||
-            advice?.recommendation === "unknown" ||
-            advice?.status === "blocked";
-          
-          if (!isBlocked) {
-            return false;
-          }
-        } else {
-          // Show loads matching the recommendation (accept, negotiate, reject)
-          if (!advice || advice.recommendation !== aiFilter) {
-            return false;
-          }
+          // Show only route-blocked loads
+          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && routeQuality.routeBlocked;
+        }
+
+        if (aiFilter === "reject") {
+          // Show only economic REJECT loads (not route-blocked)
+          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && !routeQuality.routeBlocked && rec === "reject";
+        }
+
+        if (aiFilter === "accept") {
+          // Show only ACCEPT loads (not route-blocked)
+          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && !routeQuality.routeBlocked && rec === "accept";
+        }
+
+        if (aiFilter === "negotiate") {
+          // Show only NEGOTIATE loads (not route-blocked)
+          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && !routeQuality.routeBlocked && rec === "negotiate";
         }
       }
 
+      // All filter or no AI filter
       return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality;
     });
   }, [loads, filters, adviceMap, aiFilter]);
 
-  // Log filtered results
-  console.log("[DispatchBoard] filteredLoads.length:", filteredLoads.length);
-  console.log("[DispatchBoard] filters.status:", filters.status);
-  console.log("[DispatchBoard] filters.marginRange:", filters.marginRange);
+  // Calculate KPIs
+  const blockedCount = useMemo(() => {
+    return loads.filter((load: any) => {
+      const advice = adviceMap.get(load.id);
+      const routeQuality = getRouteQuality(load, advice);
+      return routeQuality.routeBlocked;
+    }).length;
+  }, [loads, adviceMap]);
 
-  const handleLoadSelect = (loadId: number) => {
-    setSelectedLoadId(loadId);
-    window.location.href = `/loads/${loadId}`;
-  };
-
-  const handleAssign = (loadId: number) => {
-    console.log("[DispatchBoard] Assign load:", loadId);
-    window.location.href = `/loads/${loadId}`;
-  };
-
-  const handleReassign = (loadId: number) => {
-    console.log("[DispatchBoard] Reassign load:", loadId);
-    window.location.href = `/loads/${loadId}`;
-  };
+  const isLoading = query.isLoading || isLoadingAdvice;
 
   if (!isLoaded) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (query.isLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (query.error) {
-    return (
-      <div className="p-6">
-        <h1 className="mb-4 text-2xl font-bold">Dispatch Board</h1>
-        <div className="rounded border border-red-500 p-4">
-          <p className="font-semibold">Error loading loads</p>
-          <pre className="mt-2 whitespace-pre-wrap text-sm">{query.error.message}</pre>
-        </div>
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-      <DispatchFilterPanel
-        filters={filters}
-        onFilterChange={setFilters}
-        onApplyQuickView={applyQuickView}
-      />
+    <div className="flex h-screen gap-4 p-4 bg-background">
+      {/* Left Panel - Filters */}
+      <div className="w-80 flex flex-col gap-4 overflow-y-auto">
+        <DispatchFilterPanel filters={filters} setFilters={setFilters} applyQuickView={applyQuickView} />
+      </div>
 
-      <div className="flex flex-1 flex-col overflow-hidden p-6">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Dispatch Board</h1>
-            <p className="text-sm text-muted-foreground">
-              Centro operacional para monitorear cargas, márgenes y estado de dispatch.
-            </p>
-          </div>
+      {/* Right Panel - Main Content */}
+      <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Dispatch Board</h1>
+          <p className="text-sm text-muted-foreground">Centro operacional para monitorear cargas, márgenes y estado de dispatch.</p>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === "kanban" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("kanban")}
-            >
-              <LayoutGrid className="mr-2 h-4 w-4" />
-              Kanban
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-            >
-              <TableIcon className="mr-2 h-4 w-4" />
-              Table
-            </Button>
-          </div>
+        {/* View Mode Toggle */}
+        <div className="flex gap-2 items-center">
+          <span className="text-sm font-medium text-muted-foreground">View:</span>
+          <Button
+            size="sm"
+            variant={viewMode === "kanban" ? "default" : "outline"}
+            onClick={() => setViewMode("kanban")}
+          >
+            <LayoutGrid className="w-4 h-4 mr-2" />
+            Kanban
+          </Button>
+          <Button
+            size="sm"
+            variant={viewMode === "table" ? "default" : "outline"}
+            onClick={() => setViewMode("table")}
+          >
+            <TableIcon className="w-4 h-4 mr-2" />
+            Table
+          </Button>
         </div>
 
         {/* AI Recommendation Filter Buttons */}
@@ -215,25 +230,28 @@ export default function DispatchBoard() {
           ))}
         </div>
 
-        <DispatchKPIStrip loads={filteredLoads} />
+        <DispatchKPIStrip loads={filteredLoads} blockedCount={blockedCount} />
 
         <div className="min-h-0 flex-1 overflow-hidden">
-          {viewMode === "kanban" ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+          ) : viewMode === "kanban" ? (
             <DispatchKanbanBoard
               loads={filteredLoads}
               adviceMap={adviceMap}
-              onLoadSelect={handleLoadSelect}
-              onAssign={handleAssign}
-              onReassign={handleReassign}
+              selectedLoadId={selectedLoadId}
+              onSelectLoad={setSelectedLoadId}
+              getRouteQuality={getRouteQuality}
             />
           ) : (
             <DispatchTableView
               loads={filteredLoads}
               adviceMap={adviceMap}
-              onLoadSelect={handleLoadSelect}
-              onAssign={handleAssign}
-              onReassign={handleReassign}
-              isLoadingAdvice={isLoadingAdvice}
+              selectedLoadId={selectedLoadId}
+              onSelectLoad={setSelectedLoadId}
+              getRouteQuality={getRouteQuality}
             />
           )}
         </div>
