@@ -104,8 +104,8 @@ export default function DispatchBoard() {
             return false;
           }
         } else {
-          // Show loads matching the recommendation (ACCEPT, NEGOTIATE, REJECT)
-          if (!advice || advice.recommendation !== aiFilter.toUpperCase()) {
+          // Show loads matching the recommendation (accept, negotiate, reject)
+          if (!advice || advice.recommendation !== aiFilter) {
             return false;
           }
         }
