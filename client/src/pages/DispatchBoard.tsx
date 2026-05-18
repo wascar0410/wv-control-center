@@ -1,5 +1,3 @@
-"use client";
-
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Loader2, LayoutGrid, Table as TableIcon } from "lucide-react";
@@ -14,50 +12,72 @@ import { useMemo, useState } from "react";
 type ViewMode = "kanban" | "table";
 type AIRecommendationFilter = "all" | "accept" | "negotiate" | "reject" | "blocked";
 
-/**
- * Determine if a load's route/data is blocked or unreliable
- */
-function getRouteQuality(load: any, advice: any) {
+// ============================================================
+// STEP 1: NORMALIZED HELPERS
+// ============================================================
+
+function normalizeRecommendation(advice: any): string {
+  return String(advice?.recommendation || "")
+    .trim()
+    .toLowerCase();
+}
+
+function hasValidCoordinates(load: any): boolean {
+  const pickupLat = Number(load.pickupLat);
+  const pickupLng = Number(load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng);
+
+  return (
+    Number.isFinite(pickupLat) &&
+    Number.isFinite(pickupLng) &&
+    Number.isFinite(deliveryLat) &&
+    Number.isFinite(deliveryLng) &&
+    pickupLat !== 0 &&
+    pickupLng !== 0 &&
+    deliveryLat !== 0 &&
+    deliveryLng !== 0
+  );
+}
+
+function isRouteBlocked(load: any, advice: any): boolean {
   const snapshot = load.financialSnapshot;
+  const rec = normalizeRecommendation(advice);
 
-  // Check if coordinates are valid and non-zero
-  const hasValidCoords =
-    Number.isFinite(Number(load.pickupLat)) &&
-    Number.isFinite(Number(load.pickupLng)) &&
-    Number.isFinite(Number(load.deliveryLat)) &&
-    Number.isFinite(Number(load.deliveryLng)) &&
-    Number(load.pickupLat) !== 0 &&
-    Number(load.pickupLng) !== 0 &&
-    Number(load.deliveryLat) !== 0 &&
-    Number(load.deliveryLng) !== 0;
-
-  // Check snapshot for route blocking indicators
-  const snapshotBlocked =
+  return Boolean(
+    rec === "blocked" ||
+    rec === "unknown" ||
+    advice?.status === "blocked" ||
+    Boolean(advice?.blockedReason) ||
     snapshot?.isDecisionBlocked === true ||
     snapshot?.routeStatus === "missing_coords" ||
     snapshot?.routeStatus === "invalid" ||
     snapshot?.routeStatus === "fallback" ||
     snapshot?.distanceSource === "fallback_120" ||
-    snapshot?.distanceConfidence === "low";
-
-  // Check advice for route blocking indicators
-  const adviceBlocked =
-    advice?.recommendation === "BLOCKED" ||
-    advice?.recommendation === "UNKNOWN" ||
-    advice?.recommendation === "blocked" ||
-    advice?.recommendation === "unknown" ||
-    advice?.status === "blocked" ||
-    Boolean(advice?.blockedReason);
-
-  // Route is blocked if any indicator is true
-  const routeBlocked = adviceBlocked || snapshotBlocked || !hasValidCoords;
-
-  return {
-    hasValidCoords,
-    routeBlocked,
-    routeStatus: routeBlocked ? "missing_or_unreliable" : "reliable",
-  };
+    snapshot?.distanceConfidence === "low" ||
+    !hasValidCoordinates(load)
+  );
 }
+
+function getEconomicRecommendation(advice: any): string {
+  const rec = normalizeRecommendation(advice);
+
+  if (rec === "accept") return "accept";
+  if (rec === "negotiate") return "negotiate";
+  if (rec === "reject") return "reject";
+
+  return "unknown";
+}
+
+function getAdviceForLoad(adviceMap: any, loadId: any): any {
+  if (!adviceMap) return undefined;
+  if (typeof adviceMap.get === "function") return adviceMap.get(loadId);
+  return adviceMap[loadId] || adviceMap[String(loadId)];
+}
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 
 export default function DispatchBoard() {
   const [viewMode, setViewMode] = useState<ViewMode>("kanban");
@@ -98,17 +118,19 @@ export default function DispatchBoard() {
     profitIsReliable: false,
   };
 
+  // ============================================================
+  // STEP 2: EXPLICIT STATE MACHINE FILTER LOGIC
+  // ============================================================
+
   const filteredLoads = useMemo(() => {
-    console.log('[DispatchBoard] Computing filteredLoads with aiFilter:', aiFilter);
     return loads.filter((load: any) => {
       // Get snapshot for display values only
       const snapshot = load.financialSnapshot || safeSnapshot;
 
-      // Check status filter
+      // BASE FILTERS: Check these first
       const matchesStatus =
         filters.status.length === 0 || filters.status.includes(String(load.status || ""));
 
-      // Check search filter
       const matchesSearch =
         !filters.search ||
         String(load.id || "").toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -117,59 +139,53 @@ export default function DispatchBoard() {
         String(load.pickupAddress || "").toLowerCase().includes(filters.search.toLowerCase()) ||
         String(load.deliveryAddress || "").toLowerCase().includes(filters.search.toLowerCase());
 
-      // Check margin filter
       const margin = Number(snapshot.margin || 0);
       const matchesMargin = margin >= filters.marginRange[0] && margin <= filters.marginRange[1];
 
-      // Get route quality
-      const advice = adviceMap.get(load.id);
-      const routeQuality = getRouteQuality(load, advice);
+      // Compute route quality once
+      const advice = getAdviceForLoad(adviceMap, load.id);
+      const routeBlocked = isRouteBlocked(load, advice);
+      const economicRecommendation = getEconomicRecommendation(advice);
 
-      // Check data quality filter
+      // Data quality filter
       const matchesDataQuality =
         filters.dataQuality === "all" ||
-        (filters.dataQuality === "reliable" && !routeQuality.routeBlocked) ||
-        (filters.dataQuality === "missing" && routeQuality.routeBlocked);
+        (filters.dataQuality === "reliable" && !routeBlocked) ||
+        (filters.dataQuality === "missing" && routeBlocked);
 
-      // Apply AI recommendation filter
-      if (aiFilter !== "all") {
-        const rec = String(advice?.recommendation || "").toLowerCase();
-        if (load.id === 600020) console.log('[DispatchBoard] Load 600020 - aiFilter:', aiFilter, 'rec:', rec, 'routeBlocked:', routeQuality.routeBlocked);
+      // Apply base filters first
+      const baseMatches = matchesStatus && matchesSearch && matchesMargin && matchesDataQuality;
 
-        if (aiFilter === "blocked") {
-          // Show only route-blocked loads
-          const result = matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && routeQuality.routeBlocked;
-          if (load.id === 600020) console.log('[DispatchBoard] Load 600020 blocked filter result:', result);
-          return result;
-        }
+      if (!baseMatches) return false;
 
-        if (aiFilter === "reject") {
-          // Show only economic REJECT loads (not route-blocked)
-          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && !routeQuality.routeBlocked && rec === "reject";
-        }
+      // EXPLICIT STATE MACHINE: Apply AI recommendation filter
+      switch (aiFilter) {
+        case "all":
+          return true;
 
-        if (aiFilter === "accept") {
-          // Show only ACCEPT loads (not route-blocked)
-          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && !routeQuality.routeBlocked && rec === "accept";
-        }
+        case "blocked":
+          return routeBlocked === true;
 
-        if (aiFilter === "negotiate") {
-          // Show only NEGOTIATE loads (not route-blocked)
-          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && !routeQuality.routeBlocked && rec === "negotiate";
-        }
+        case "accept":
+          return routeBlocked === false && economicRecommendation === "accept";
+
+        case "negotiate":
+          return routeBlocked === false && economicRecommendation === "negotiate";
+
+        case "reject":
+          return routeBlocked === false && economicRecommendation === "reject";
+
+        default:
+          return true;
       }
-
-      // All filter or no AI filter
-      return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality;
     });
   }, [loads, filters, adviceMap, aiFilter]);
 
   // Calculate KPIs
   const blockedCount = useMemo(() => {
     return loads.filter((load: any) => {
-      const advice = adviceMap.get(load.id);
-      const routeQuality = getRouteQuality(load, advice);
-      return routeQuality.routeBlocked;
+      const advice = getAdviceForLoad(adviceMap, load.id);
+      return isRouteBlocked(load, advice);
     }).length;
   }, [loads, adviceMap]);
 
@@ -198,20 +214,22 @@ export default function DispatchBoard() {
           <p className="text-sm text-muted-foreground">Centro operacional para monitorear cargas, márgenes y estado de dispatch.</p>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex gap-2 items-center">
-          <span className="text-sm font-medium text-muted-foreground">View:</span>
+        {/* KPI Strip */}
+        <DispatchKPIStrip loads={filteredLoads} blockedCount={blockedCount} />
+
+        {/* View Toggle */}
+        <div className="flex gap-2">
           <Button
-            size="sm"
             variant={viewMode === "kanban" ? "default" : "outline"}
+            size="sm"
             onClick={() => setViewMode("kanban")}
           >
             <LayoutGrid className="w-4 h-4 mr-2" />
             Kanban
           </Button>
           <Button
-            size="sm"
             variant={viewMode === "table" ? "default" : "outline"}
+            size="sm"
             onClick={() => setViewMode("table")}
           >
             <TableIcon className="w-4 h-4 mr-2" />
@@ -219,14 +237,14 @@ export default function DispatchBoard() {
           </Button>
         </div>
 
-        {/* AI Recommendation Filter Buttons */}
-        <div className="mb-4 flex gap-2 items-center flex-wrap">
-          <span className="text-sm font-medium text-muted-foreground">AI Advisor:</span>
+        {/* AI Advisor Filter */}
+        <div className="flex gap-2 items-center">
+          <span className="text-sm font-medium">AI Advisor:</span>
           {(["all", "accept", "negotiate", "reject", "blocked"] as const).map((filter) => (
             <Button
               key={filter}
-              size="sm"
               variant={aiFilter === filter ? "default" : "outline"}
+              size="sm"
               onClick={() => setAIFilter(filter)}
             >
               {filter === "blocked" ? "🚫 Blocked" : filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -234,29 +252,16 @@ export default function DispatchBoard() {
           ))}
         </div>
 
-        <DispatchKPIStrip loads={filteredLoads} blockedCount={blockedCount} />
-
-        <div className="min-h-0 flex-1 overflow-hidden">
+        {/* Content Area */}
+        <div className="flex-1 overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
           ) : viewMode === "kanban" ? (
-            <DispatchKanbanBoard
-              loads={filteredLoads}
-              adviceMap={adviceMap}
-              selectedLoadId={selectedLoadId}
-              onSelectLoad={setSelectedLoadId}
-              getRouteQuality={getRouteQuality}
-            />
+            <DispatchKanbanBoard loads={filteredLoads} selectedLoadId={selectedLoadId} onSelectLoad={setSelectedLoadId} />
           ) : (
-            <DispatchTableView
-              loads={filteredLoads}
-              adviceMap={adviceMap}
-              selectedLoadId={selectedLoadId}
-              onSelectLoad={setSelectedLoadId}
-              getRouteQuality={getRouteQuality}
-            />
+            <DispatchTableView loads={filteredLoads} selectedLoadId={selectedLoadId} onSelectLoad={setSelectedLoadId} />
           )}
         </div>
       </div>
