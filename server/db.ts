@@ -5518,11 +5518,13 @@ function estimateFuelCost(miles: number, fuelPrice: number = 3.5): number {
 }
 
 export type LoadAdvice = {
-  recommendation: "accept" | "negotiate" | "reject";
+  recommendation: "accept" | "negotiate" | "reject" | "blocked";
   confidence: number; // 0-100
   suggestedRate: number;
   reason: string[];
   riskFlags: string[];
+  status?: "blocked" | "financial_loss" | "acceptable" | "good";
+  blockedReason?: string;
   financials: {
     miles: number;
     ratePerMile: number;
@@ -5576,7 +5578,9 @@ export async function analyzeLoad(load: {
   if (!hasReliableRoute(load)) {
     console.log(`[Advisor] BLOCKED missing route coords { loadId: ${load.id} }`);
     return {
-      recommendation: "reject",
+      recommendation: "blocked",
+      status: "blocked",
+      blockedReason: "Missing route coordinates. Cannot evaluate without reliable distance data. Run geocoding backfill.",
       confidence: 10,
       suggestedRate: 0,
       reason: ["BLOCKED: Missing route coordinates. Cannot evaluate without reliable distance data. Run geocoding backfill."],
@@ -5614,6 +5618,29 @@ export async function analyzeLoad(load: {
   // Note: hasReliableRoute() already checked coordinates, but resolveLoadDistance handles all fields
   const distanceResult = resolveLoadDistance(load);
   let miles = distanceResult.miles;
+  
+  // 🚨 BLOCK if using fallback distance (unreliable)
+  if (distanceResult.source === "fallback_120") {
+    console.log(`[Advisor] BLOCKED using fallback 120-mile distance { loadId: ${load.id} }`);
+    return {
+      recommendation: "blocked",
+      status: "blocked",
+      blockedReason: "Using fallback 120-mile distance. Route data unreliable. Requires geocoding backfill.",
+      confidence: 10,
+      suggestedRate: 0,
+      reason: ["BLOCKED: Using fallback 120-mile distance. Route data unreliable. Requires geocoding backfill."],
+      riskFlags: ["Fallback distance (120 miles) - not actual route"],
+      financials: {
+        miles: 120,
+        ratePerMile: 0,
+        estimatedProfit: 0,
+        estimatedMargin: 0,
+        fuelCost: 0,
+        tolls: 0,
+        totalCost: 0,
+      },
+    };
+  }
 
   // SIEMPRE calcular RPM
   const ratePerMile = price / miles;
@@ -5678,6 +5705,7 @@ export async function analyzeLoad(load: {
 
   return {
     recommendation,
+    status: recommendation === "reject" ? "financial_loss" : recommendation === "negotiate" ? "acceptable" : "good",
     confidence,
     suggestedRate,
     reason: reasons,
