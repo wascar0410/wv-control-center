@@ -90,7 +90,7 @@ export default function DispatchBoard() {
       if (aiFilter !== "all") {
         const advice = adviceMap.get(load.id);
         if (aiFilter === "blocked") {
-          // Show blocked loads: missing coordinates, fallback distance, low confidence, or decision blocked
+          // Show ONLY blocked loads: missing coordinates, fallback distance, low confidence, or decision blocked
           const isBlocked = 
             snapshot.isDecisionBlocked ||
             snapshot.routeStatus === "missing_coords" ||
@@ -100,9 +100,12 @@ export default function DispatchBoard() {
             advice?.recommendation === "UNKNOWN" ||
             advice?.status === "blocked";
           
+          // If NOT blocked, exclude this load
           if (!isBlocked) {
             return false;
           }
+          // If blocked, include it (don't check other filters)
+          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality;
         } else {
           // Show loads matching the recommendation (ACCEPT, NEGOTIATE, REJECT)
           if (!advice || !advice.recommendation) {
