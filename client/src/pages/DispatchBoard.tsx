@@ -183,7 +183,7 @@ export default function DispatchBoard() {
     <div className="flex h-screen gap-4 p-4 bg-background">
       {/* Left Panel - Filters */}
       <div className="w-80 flex flex-col gap-4 overflow-y-auto">
-        <DispatchFilterPanel filters={filters} setFilters={setFilters} applyQuickView={applyQuickView} />
+        <DispatchFilterPanel filters={filters} onFilterChange={setFilters} onApplyQuickView={applyQuickView} />
       </div>
 
       {/* Right Panel - Main Content */}
