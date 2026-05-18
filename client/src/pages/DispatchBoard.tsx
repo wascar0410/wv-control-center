@@ -55,10 +55,10 @@ export default function DispatchBoard() {
         profit: 0,
         ratePerMile: 0,
         status: "loss",
-        routeStatus: "missing_coords" as const,
-        distanceSource: "fallback_120" as const,
-        distanceConfidence: "low" as const,
-        isDecisionBlocked: true,
+        routeStatus: "real" as const,
+        distanceSource: "haversine" as const,
+        distanceConfidence: "high" as const,
+        isDecisionBlocked: false,
         profitIsReliable: false,
       };
 
