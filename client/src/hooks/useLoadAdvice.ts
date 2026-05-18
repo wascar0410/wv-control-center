@@ -2,8 +2,10 @@ import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 
 interface LoadAdviceData {
-  recommendation: "accept" | "negotiate" | "reject";
+  recommendation: "accept" | "negotiate" | "reject" | "blocked" | "unknown";
   confidence: number;
+  status?: string;
+  blockedReason?: string;
   suggestedRate: number;
   reason: string[];
   riskFlags: string[];
