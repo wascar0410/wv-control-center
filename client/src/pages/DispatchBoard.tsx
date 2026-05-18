@@ -96,8 +96,8 @@ export default function DispatchBoard() {
             snapshot.routeStatus === "missing_coords" ||
             snapshot.distanceSource === "fallback_120" ||
             snapshot.distanceConfidence === "low" ||
-            advice?.recommendation === "BLOCKED" ||
-            advice?.recommendation === "UNKNOWN" ||
+            advice?.recommendation === "blocked" ||
+            advice?.recommendation === "unknown" ||
             advice?.status === "blocked";
           
           if (!isBlocked) {
