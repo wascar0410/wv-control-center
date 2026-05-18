@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { isLoadRouteBlocked } from "@/lib/load-route-helpers";
 import { Button } from "@/components/ui/button";
 import { Loader2, LayoutGrid, Table as TableIcon } from "lucide-react";
 import { useDispatchFilters } from "@/hooks/useDispatchFilters";
@@ -50,8 +49,6 @@ export default function DispatchBoard() {
   const filteredLoads = useMemo(() => {
     console.log("[DispatchBoard] loads.length:", loads.length);
     console.log("[DispatchBoard] loads sample:", loads.slice(0, 3).map((l: any) => ({ id: l.id, status: l.status, price: l.price })));
-    console.log("[DispatchBoard] aiFilter:", aiFilter);
-    console.log("[DispatchBoard] adviceMap size:", adviceMap.size);
     return loads.filter((load: any) => {
       const snapshot = load.financialSnapshot || {
         margin: 0,
@@ -92,43 +89,23 @@ export default function DispatchBoard() {
       // Apply AI recommendation filter
       if (aiFilter !== "all") {
         const advice = adviceMap.get(load.id);
-        const computedIsRouteBlocked = isLoadRouteBlocked(load, advice);
-        
-        // DEBUG: Log first 3 loads when filter is active
-        if (loads.indexOf(load) < 3) {
-          console.log("[DispatchBoard Filter Debug]", {
-            loadId: load.id,
-            aiFilter,
-            adviceRecommendation: advice?.recommendation,
-            adviceStatus: advice?.status,
-            blockedReason: advice?.blockedReason,
-            snapshotIsDecisionBlocked: snapshot?.isDecisionBlocked,
-            routeStatus: snapshot?.routeStatus,
-            distanceSource: snapshot?.distanceSource,
-            distanceConfidence: snapshot?.distanceConfidence,
-            computedIsRouteBlocked,
-          });
-        }
-        
         if (aiFilter === "blocked") {
-          // Show ONLY route/data blocked loads (not economically rejected)
-          if (!computedIsRouteBlocked) {
+          // Show blocked loads: missing coordinates, fallback distance, low confidence, or decision blocked
+          const isBlocked = 
+            snapshot.isDecisionBlocked ||
+            snapshot.routeStatus === "missing_coords" ||
+            snapshot.distanceSource === "fallback_120" ||
+            snapshot.distanceConfidence === "low" ||
+            advice?.recommendation === "BLOCKED" ||
+            advice?.recommendation === "UNKNOWN" ||
+            advice?.status === "blocked";
+          
+          if (!isBlocked) {
             return false;
           }
         } else {
           // Show loads matching the recommendation (ACCEPT, NEGOTIATE, REJECT)
-          if (!advice || !advice.recommendation) {
-            return false;
-          }
-          const normalizedRecommendation = advice.recommendation.toUpperCase();
-          const normalizedFilter = aiFilter.toUpperCase();
-          
-          // Reject filter should NOT show route-blocked loads
-          if (normalizedFilter === "REJECT" && computedIsRouteBlocked) {
-            return false;
-          }
-          
-          if (normalizedRecommendation !== normalizedFilter) {
+          if (!advice || advice.recommendation !== aiFilter.toUpperCase()) {
             return false;
           }
         }
@@ -143,93 +120,73 @@ export default function DispatchBoard() {
   console.log("[DispatchBoard] filters.status:", filters.status);
   console.log("[DispatchBoard] filters.marginRange:", filters.marginRange);
 
-  // Compute KPI metrics
-  const totalLoads = filteredLoads.length;
-  const avgMargin = totalLoads > 0
-    ? filteredLoads.reduce((sum: number, load: any) => sum + (Number(load.financialSnapshot?.margin || 0)), 0) / totalLoads
-    : 0;
+  const handleLoadSelect = (loadId: number) => {
+    setSelectedLoadId(loadId);
+    window.location.href = `/loads/${loadId}`;
+  };
 
-  const atRiskCount = filteredLoads.filter((load: any) => {
-    const margin = Number(load.financialSnapshot?.margin || 0);
-    return margin < 15 && margin >= 0;
-  }).length;
+  const handleAssign = (loadId: number) => {
+    console.log("[DispatchBoard] Assign load:", loadId);
+    window.location.href = `/loads/${loadId}`;
+  };
 
-  const blockedCount = filteredLoads.filter((load: any) => {
-    const advice = adviceMap.get(load.id);
-    return isLoadRouteBlocked(load, advice);
-  }).length;
+  const handleReassign = (loadId: number) => {
+    console.log("[DispatchBoard] Reassign load:", loadId);
+    window.location.href = `/loads/${loadId}`;
+  };
 
-  const pendingCount = filteredLoads.filter((load: any) => load.status === "quoted").length;
-
-  const alertCount = atRiskCount + blockedCount;
-
-  if (!isLoaded || query.isLoading) {
+  if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (query.isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (query.error) {
+    return (
+      <div className="p-6">
+        <h1 className="mb-4 text-2xl font-bold">Dispatch Board</h1>
+        <div className="rounded border border-red-500 p-4">
+          <p className="font-semibold">Error loading loads</p>
+          <pre className="mt-2 whitespace-pre-wrap text-sm">{query.error.message}</pre>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <DispatchFilterPanel filters={filters} setFilters={setFilters} />
-
-      <DispatchKPIStrip
-        totalLoads={totalLoads}
-        avgMargin={avgMargin}
-        atRisk={atRiskCount}
-        blocked={blockedCount}
-        pending={pendingCount}
-        alerts={alertCount}
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+      <DispatchFilterPanel
+        filters={filters}
+        onFilterChange={setFilters}
+        onApplyQuickView={applyQuickView}
       />
 
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="flex items-center gap-2 px-6 py-3 border-b">
-          <span className="text-sm font-medium text-muted-foreground">AI Advisor:</span>
-          <Button
-            variant={aiFilter === "all" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAIFilter("all")}
-          >
-            All
-          </Button>
-          <Button
-            variant={aiFilter === "accept" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAIFilter("accept")}
-          >
-            Accept
-          </Button>
-          <Button
-            variant={aiFilter === "negotiate" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAIFilter("negotiate")}
-          >
-            Negotiate
-          </Button>
-          <Button
-            variant={aiFilter === "reject" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAIFilter("reject")}
-          >
-            Reject
-          </Button>
-          <Button
-            variant={aiFilter === "blocked" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAIFilter("blocked")}
-          >
-            🚫 Blocked
-          </Button>
+      <div className="flex flex-1 flex-col overflow-hidden p-6">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Dispatch Board</h1>
+            <p className="text-sm text-muted-foreground">
+              Centro operacional para monitorear cargas, márgenes y estado de dispatch.
+            </p>
+          </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <Button
               variant={viewMode === "kanban" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("kanban")}
             >
-              <LayoutGrid className="h-4 w-4" />
+              <LayoutGrid className="mr-2 h-4 w-4" />
               Kanban
             </Button>
             <Button
@@ -237,26 +194,46 @@ export default function DispatchBoard() {
               size="sm"
               onClick={() => setViewMode("table")}
             >
-              <TableIcon className="h-4 w-4" />
+              <TableIcon className="mr-2 h-4 w-4" />
               Table
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        {/* AI Recommendation Filter Buttons */}
+        <div className="mb-4 flex gap-2 items-center flex-wrap">
+          <span className="text-sm font-medium text-muted-foreground">AI Advisor:</span>
+          {(["all", "accept", "negotiate", "reject", "blocked"] as const).map((filter) => (
+            <Button
+              key={filter}
+              size="sm"
+              variant={aiFilter === filter ? "default" : "outline"}
+              onClick={() => setAIFilter(filter)}
+            >
+              {filter === "blocked" ? "🚫 Blocked" : filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </Button>
+          ))}
+        </div>
+
+        <DispatchKPIStrip loads={filteredLoads} />
+
+        <div className="min-h-0 flex-1 overflow-hidden">
           {viewMode === "kanban" ? (
             <DispatchKanbanBoard
               loads={filteredLoads}
-              selectedLoadId={selectedLoadId}
-              onSelectLoad={setSelectedLoadId}
               adviceMap={adviceMap}
+              onLoadSelect={handleLoadSelect}
+              onAssign={handleAssign}
+              onReassign={handleReassign}
             />
           ) : (
             <DispatchTableView
               loads={filteredLoads}
-              selectedLoadId={selectedLoadId}
-              onSelectLoad={setSelectedLoadId}
               adviceMap={adviceMap}
+              onLoadSelect={handleLoadSelect}
+              onAssign={handleAssign}
+              onReassign={handleReassign}
+              isLoadingAdvice={isLoadingAdvice}
             />
           )}
         </div>
