@@ -99,6 +99,7 @@ export default function DispatchBoard() {
   };
 
   const filteredLoads = useMemo(() => {
+    console.log('[DispatchBoard] Computing filteredLoads with aiFilter:', aiFilter);
     return loads.filter((load: any) => {
       // Get snapshot for display values only
       const snapshot = load.financialSnapshot || safeSnapshot;
@@ -133,10 +134,13 @@ export default function DispatchBoard() {
       // Apply AI recommendation filter
       if (aiFilter !== "all") {
         const rec = String(advice?.recommendation || "").toLowerCase();
+        if (load.id === 600020) console.log('[DispatchBoard] Load 600020 - aiFilter:', aiFilter, 'rec:', rec, 'routeBlocked:', routeQuality.routeBlocked);
 
         if (aiFilter === "blocked") {
           // Show only route-blocked loads
-          return matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && routeQuality.routeBlocked;
+          const result = matchesStatus && matchesSearch && matchesMargin && matchesDataQuality && routeQuality.routeBlocked;
+          if (load.id === 600020) console.log('[DispatchBoard] Load 600020 blocked filter result:', result);
+          return result;
         }
 
         if (aiFilter === "reject") {
