@@ -43,30 +43,40 @@ function hasValidCoordinates(load: any): boolean {
 function isRouteBlocked(load: any, advice: any): boolean {
   const rec = normalizeRecommendation(advice);
   const hasValidCoords = hasValidCoordinates(load);
-  const result = Boolean(
-    rec === "blocked" ||
-    rec === "unknown" ||
-    advice?.status === "blocked" ||
-    !hasValidCoords
-  );
+  
+  // Determine which condition triggered routeBlocked
+  let routeBlockedReason: string | null = null;
+  
+  if (rec === "blocked") routeBlockedReason = "recommendation_blocked";
+  else if (rec === "unknown") routeBlockedReason = "recommendation_unknown";
+  else if (advice?.status === "blocked") routeBlockedReason = "advice_status_blocked";
+  else if (!hasValidCoords) routeBlockedReason = "missing_coordinates";
+  
+  const result = Boolean(routeBlockedReason);
 
-  // DEBUG: Log load #600020 to identify why it's marked as blocked
+  // DEBUG: Log load #600020 with exact diagnosis
   if (load?.id === 600020) {
-    console.log("[DEBUG #600020] isRouteBlocked:", {
+    window.__DEBUG_600020 = {
       loadId: load.id,
-      rec,
+      adviceRecommendation: advice?.recommendation,
       adviceStatus: advice?.status,
-      hasValidCoords,
-      result,
-      advice,
-      load: {
+      blockedReason: advice?.blockedReason,
+      hasValidCoordinates: hasValidCoords,
+      snapshotIsDecisionBlocked: load.financialSnapshot?.isDecisionBlocked,
+      routeStatus: load.financialSnapshot?.routeStatus,
+      distanceSource: load.financialSnapshot?.distanceSource,
+      distanceConfidence: load.financialSnapshot?.distanceConfidence,
+      profitIsReliable: load.financialSnapshot?.profitIsReliable,
+      routeBlocked: result,
+      routeBlockedReason,
+      coordinates: {
         pickupLat: load.pickupLat,
         pickupLng: load.pickupLng,
         deliveryLat: load.deliveryLat,
         deliveryLng: load.deliveryLng,
-        financialSnapshot: load.financialSnapshot,
       }
-    });
+    };
+    console.log("[DEBUG #600020] Full diagnosis:", window.__DEBUG_600020);
   }
 
   return result;
