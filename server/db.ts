@@ -5539,15 +5539,16 @@ export type LoadAdvice = {
  * CRITICAL: Must be called BEFORE any recommendation logic
  */
 function hasReliableRoute(load: {
-  pickupLat?: number | null;
-  pickupLng?: number | null;
-  deliveryLat?: number | null;
-  deliveryLng?: number | null;
+  pickupLat?: number | null | any;
+  pickupLng?: number | null | any;
+  deliveryLat?: number | null | any;
+  deliveryLng?: number | null | any;
 }): boolean {
-  const pickupLat = Number(load.pickupLat);
-  const pickupLng = Number(load.pickupLng);
-  const deliveryLat = Number(load.deliveryLat);
-  const deliveryLng = Number(load.deliveryLng);
+  // Handle Drizzle Decimal objects by converting to string then number
+  const pickupLat = Number(load.pickupLat?.toString?.() ?? load.pickupLat);
+  const pickupLng = Number(load.pickupLng?.toString?.() ?? load.pickupLng);
+  const deliveryLat = Number(load.deliveryLat?.toString?.() ?? load.deliveryLat);
+  const deliveryLng = Number(load.deliveryLng?.toString?.() ?? load.deliveryLng);
 
   return (
     Number.isFinite(pickupLat) &&
