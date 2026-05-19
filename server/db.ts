@@ -5544,34 +5544,29 @@ function hasReliableRoute(load: {
   deliveryLat?: number | null | any;
   deliveryLng?: number | null | any;
 }): boolean {
-  // Check if all coordinates exist and are not null/undefined
-  if (!load.pickupLat || !load.pickupLng || !load.deliveryLat || !load.deliveryLng) {
-    console.log(`[DEBUG] Coordinates missing for load ${load.id}: lat=${load.pickupLat}, lng=${load.pickupLng}, dlat=${load.deliveryLat}, dlng=${load.deliveryLng}`);
+  try {
+    // Convert all coordinates to numbers (handles Decimal objects)
+    const pickupLat = Number(load?.pickupLat ?? NaN);
+    const pickupLng = Number(load?.pickupLng ?? NaN);
+    const deliveryLat = Number(load?.deliveryLat ?? NaN);
+    const deliveryLng = Number(load?.deliveryLng ?? NaN);
+
+    // Check if all are valid finite numbers and not zero
+    const isValid = (
+      Number.isFinite(pickupLat) &&
+      Number.isFinite(pickupLng) &&
+      Number.isFinite(deliveryLat) &&
+      Number.isFinite(deliveryLng) &&
+      pickupLat !== 0 &&
+      pickupLng !== 0 &&
+      deliveryLat !== 0 &&
+      deliveryLng !== 0
+    );
+
+    return isValid;
+  } catch (e) {
     return false;
   }
-
-  // Convert to numbers (handles Decimal objects via toString)
-  const pickupLat = Number(load.pickupLat);
-  const pickupLng = Number(load.pickupLng);
-  const deliveryLat = Number(load.deliveryLat);
-  const deliveryLng = Number(load.deliveryLng);
-
-  const isValid = (
-    Number.isFinite(pickupLat) &&
-    Number.isFinite(pickupLng) &&
-    Number.isFinite(deliveryLat) &&
-    Number.isFinite(deliveryLng) &&
-    pickupLat !== 0 &&
-    pickupLng !== 0 &&
-    deliveryLat !== 0 &&
-    deliveryLng !== 0
-  );
-
-  if (!isValid) {
-    console.log(`[DEBUG] Invalid coordinates for load ${load.id}: lat=${pickupLat}, lng=${pickupLng}, dlat=${deliveryLat}, dlng=${deliveryLng}`);
-  }
-
-  return isValid;
 }
 
 export async function analyzeLoad(load: {
