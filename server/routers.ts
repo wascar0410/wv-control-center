@@ -570,7 +570,7 @@ const loadsRouter = router({
     .query(async ({ input }) => {
       try {
         const advice = await getLoadAdviceBatch(input.loadIds);
-        return Object.fromEntries(advice);
+        return Object.fromEntries(Array.from(advice));
       } catch (error) {
         console.error("[loads.getLoadAdviceBatch] error:", error);
         return {};
