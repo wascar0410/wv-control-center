@@ -5,10 +5,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CheckCircle2, AlertCircle, XCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, XCircle, AlertTriangle } from "lucide-react";
 
 interface LoadAdviceData {
-  recommendation: "accept" | "negotiate" | "reject";
+  recommendation: "accept" | "negotiate" | "reject" | "blocked";
   confidence: number;
   financials: {
     miles: number;
@@ -19,6 +19,7 @@ interface LoadAdviceData {
     tolls: number;
   };
   currentPrice?: number;
+  blockedReason?: string;
 }
 
 interface PriceSuggestions {
@@ -74,6 +75,12 @@ export default function LoadAdviceBadge({
           icon: XCircle,
           label: "REJECT",
         };
+      case "blocked":
+        return {
+          className: "bg-purple-100 text-purple-800 border-purple-300",
+          icon: AlertTriangle,
+          label: "BLOCKED",
+        };
       default:
         return {
           className: "bg-gray-100 text-gray-800 border-gray-300",
@@ -109,6 +116,9 @@ export default function LoadAdviceBadge({
 
   // Get contextual insight text
   const getInsightText = (): string => {
+    if (advice.recommendation === "blocked") {
+      return advice.blockedReason || "Route data missing or unreliable - needs backfill";
+    }
     const ratePerMile = advice.financials.ratePerMile || 0;
     if (ratePerMile < 1.8) {
       return "Low rate, consider rejecting or renegotiating";
@@ -119,7 +129,7 @@ export default function LoadAdviceBadge({
     }
   };
 
-  const prices = getPriceSuggestions();
+  const prices = advice.recommendation !== "blocked" ? getPriceSuggestions() : null;
   const insight = getInsightText();
 
   const tooltipContent = (
@@ -130,6 +140,8 @@ export default function LoadAdviceBadge({
         <div className="text-xs text-gray-400 mt-1">{insight}</div>
       </div>
 
+      {advice.recommendation !== "blocked" && prices && (
+      <>
       {/* Current & Suggested Prices */}
       <div className="border-t border-gray-600 pt-2">
         <div className="font-semibold text-xs text-gray-300 mb-2">PRICING ANALYSIS</div>
@@ -158,6 +170,8 @@ export default function LoadAdviceBadge({
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Financial Metrics */}
       <div className="border-t border-gray-600 pt-2 space-y-1">
@@ -188,6 +202,12 @@ export default function LoadAdviceBadge({
           <span className="font-semibold">{advice.confidence}%</span>
         </div>
       </div>
+      {advice.recommendation === "blocked" && (
+        <div className="border-t border-gray-600 pt-2">
+          <div className="text-xs text-yellow-400 font-semibold">⚠️ NEEDS BACKFILL</div>
+          <div className="text-xs text-gray-400 mt-1">Route coordinates or distance data is missing or unreliable.</div>
+        </div>
+      )}
     </div>
   );
 

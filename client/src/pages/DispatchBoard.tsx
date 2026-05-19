@@ -65,6 +65,21 @@ function getEconomicRecommendation(advice: any): string {
   return "unknown";
 }
 
+/**
+ * Get the display recommendation for UI rendering.
+ * CRITICAL: Route-blocked loads must ALWAYS show BLOCKED badge,
+ * never REJECT, even if profit is low.
+ */
+function getDisplayRecommendation(load: any, advice: any): string {
+  // If route is blocked, ALWAYS show "blocked" regardless of economics
+  if (isRouteBlocked(load, advice)) {
+    return "blocked";
+  }
+
+  // Otherwise, show the economic recommendation
+  return getEconomicRecommendation(advice);
+}
+
 function getAdviceForLoad(adviceMap: any, loadId: any): any {
   if (!adviceMap) return undefined;
   if (typeof adviceMap.get === "function") return adviceMap.get(loadId);
