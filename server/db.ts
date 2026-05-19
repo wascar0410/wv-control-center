@@ -5544,11 +5544,21 @@ function hasReliableRoute(load: {
   deliveryLat?: number | null | any;
   deliveryLng?: number | null | any;
 }): boolean {
-  // Handle Drizzle Decimal objects by converting to string then number
-  const pickupLat = Number(load.pickupLat?.toString?.() ?? load.pickupLat);
-  const pickupLng = Number(load.pickupLng?.toString?.() ?? load.pickupLng);
-  const deliveryLat = Number(load.deliveryLat?.toString?.() ?? load.deliveryLat);
-  const deliveryLng = Number(load.deliveryLng?.toString?.() ?? load.deliveryLng);
+  // Handle Drizzle Decimal objects - they have a toString() method
+  let pickupLat: number;
+  let pickupLng: number;
+  let deliveryLat: number;
+  let deliveryLng: number;
+
+  try {
+    // Try toString() first for Decimal objects
+    pickupLat = load.pickupLat ? Number(String(load.pickupLat)) : NaN;
+    pickupLng = load.pickupLng ? Number(String(load.pickupLng)) : NaN;
+    deliveryLat = load.deliveryLat ? Number(String(load.deliveryLat)) : NaN;
+    deliveryLng = load.deliveryLng ? Number(String(load.deliveryLng)) : NaN;
+  } catch (e) {
+    return false;
+  }
 
   return (
     Number.isFinite(pickupLat) &&
