@@ -5518,7 +5518,7 @@ function estimateFuelCost(miles: number, fuelPrice: number = 3.5): number {
 }
 
 export type LoadAdvice = {
-  recommendation: "accept" | "negotiate" | "reject";
+  recommendation: "accept" | "negotiate" | "reject" | "blocked";
   confidence: number; // 0-100
   suggestedRate: number;
   reason: string[];
@@ -5576,7 +5576,7 @@ export async function analyzeLoad(load: {
   if (!hasReliableRoute(load)) {
     console.log(`[Advisor] BLOCKED missing route coords { loadId: ${load.id} }`);
     return {
-      recommendation: "reject",
+      recommendation: "blocked",
       confidence: 10,
       suggestedRate: 0,
       reason: ["BLOCKED: Missing route coordinates. Cannot evaluate without reliable distance data. Run geocoding backfill."],
@@ -5625,7 +5625,7 @@ export async function analyzeLoad(load: {
   const fuelCost = fuel;
 
   // Apply decision rules
-  let recommendation: "accept" | "negotiate" | "reject" = "reject";
+  let recommendation: "accept" | "negotiate" | "reject" | "blocked" = "reject";
   let confidence = 0;
   let suggestedRate = Number(load.price);
 

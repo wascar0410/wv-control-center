@@ -41,20 +41,15 @@ function hasValidCoordinates(load: any): boolean {
 }
 
 function isRouteBlocked(load: any, advice: any): boolean {
-  const snapshot = load.financialSnapshot;
   const rec = normalizeRecommendation(advice);
 
+  // ONLY return true if recommendation is explicitly "blocked" from backend
+  // OR if coordinates are completely missing/invalid
   return Boolean(
     rec === "blocked" ||
     rec === "unknown" ||
     advice?.status === "blocked" ||
     Boolean(advice?.blockedReason) ||
-    snapshot?.isDecisionBlocked === true ||
-    snapshot?.routeStatus === "missing_coords" ||
-    snapshot?.routeStatus === "invalid" ||
-    snapshot?.routeStatus === "fallback" ||
-    snapshot?.distanceSource === "fallback_120" ||
-    snapshot?.distanceConfidence === "low" ||
     !hasValidCoordinates(load)
   );
 }
@@ -65,6 +60,7 @@ function getEconomicRecommendation(advice: any): string {
   if (rec === "accept") return "accept";
   if (rec === "negotiate") return "negotiate";
   if (rec === "reject") return "reject";
+  if (rec === "blocked") return "blocked";
 
   return "unknown";
 }
@@ -189,6 +185,34 @@ export default function DispatchBoard() {
     }).length;
   }, [loads, adviceMap]);
 
+  // DEBUG: Calculate counts for each filter
+  const debugCounts = useMemo(() => {
+    const allCount = loads.length;
+    const acceptCount = loads.filter((load: any) => {
+      const advice = getAdviceForLoad(adviceMap, load.id);
+      const routeBlocked = isRouteBlocked(load, advice);
+      const economicRecommendation = getEconomicRecommendation(advice);
+      return routeBlocked === false && economicRecommendation === "accept";
+    }).length;
+    const negotiateCount = loads.filter((load: any) => {
+      const advice = getAdviceForLoad(adviceMap, load.id);
+      const routeBlocked = isRouteBlocked(load, advice);
+      const economicRecommendation = getEconomicRecommendation(advice);
+      return routeBlocked === false && economicRecommendation === "negotiate";
+    }).length;
+    const rejectCount = loads.filter((load: any) => {
+      const advice = getAdviceForLoad(adviceMap, load.id);
+      const routeBlocked = isRouteBlocked(load, advice);
+      const economicRecommendation = getEconomicRecommendation(advice);
+      return routeBlocked === false && economicRecommendation === "reject";
+    }).length;
+    const blockedCountDebug = loads.filter((load: any) => {
+      const advice = getAdviceForLoad(adviceMap, load.id);
+      return isRouteBlocked(load, advice);
+    }).length;
+    return { allCount, acceptCount, negotiateCount, rejectCount, blockedCountDebug };
+  }, [loads, adviceMap]);
+
   const isLoading = query.isLoading || isLoadingAdvice;
 
   if (!isLoaded) {
@@ -235,6 +259,17 @@ export default function DispatchBoard() {
             <TableIcon className="w-4 h-4 mr-2" />
             Table
           </Button>
+        </div>
+
+        {/* DEBUG: Filter Counts Display */}
+        <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-xs font-mono">
+          <div>Active AI Filter: <strong>{aiFilter}</strong></div>
+          <div>Counts:</div>
+          <div>All: {debugCounts.allCount}</div>
+          <div>Accept: {debugCounts.acceptCount}</div>
+          <div>Negotiate: {debugCounts.negotiateCount}</div>
+          <div>Reject: {debugCounts.rejectCount}</div>
+          <div>Blocked: {debugCounts.blockedCountDebug}</div>
         </div>
 
         {/* AI Advisor Filter */}
