@@ -14,10 +14,10 @@
   ],
   "git_remote": {
     "repo_url": "s3://vida-prod-gitrepo/webdev-git/310519663480481606/mSbbvEPZCkmEtZbYVdHD74",
-    "access_key_id": "ASIAZV3A2ECZCA7AMVNQ",
-    "secret_access_key": "F7PcU/fDuFp6Z5XIfYtMlkTVkxBo7jrD53JEROTe",
-    "session_token": "IQoJb3JpZ2luX2VjEKL//////////wEaCXVzLWVhc3QtMSJGMEQCIEBfk8bv6AjoW/pLLL+ArGBaeSepjiWpzWTkJnggKNypAiAR+05BkPSN2sMXnILAntFIK01+0S4/YQQmXzflAQruYSr2AwhrEAQaDDY2NTM4NjA5ODg2NiIM3VQnrRh99SDmd/XHKtMDMR2VzIL27h+eY+lVyXXIZ8gWSX0k6SxB+B7uFpXDZ88KUoOv81aaR3pJRGP3ii0MUjLhw7l1TvADJwXK5aRcB+kf3H99oxeUoRZvrNhEMEzVE9jNVp2EcEBcLPoYpT4zAMoMLNn07wpmifjE4ZjnadRAhvatOR3oSQIBeYk8+VYZachPWcG75JW7/u1gJgfogd/25FzILiMoFRGn9yyP0yVuEWhBToOW6fcLXaKAU6u7lEmc6dIalbj93oX4kI0Je1sZX+ljFjZcA6tXGUVk+nMAHerbVurqzM3IdcYF6RrkdpfsI0JNQFBHr5oBXgZp+sjDfEtZmHbMGIF36Oq3QWnl5WTsaDnXUROwngcO4E9Jd4vf3LVrsGW2onx0Cs3cn6Q5evx+/pHbcawRdRcxOUhVon8YhJJV8qRRToiHzyO0GyswUhz+wr/H8KDY7WPv60g0o8XfC0sYeCYPVDLzELdAz0FSwe+s+epRmfB9e8Ri/i8LQuY+p0rr/wc41oUvaJa5GtrgpT4BZJWPDDjkVWJb5zpOdnAs6tj9T752cD3PGOtAWYAem0uQy5++Jvv/1NbHct7TiwEDG1HGMs3rKYuTv92GWO7HjKPYqxNtmAzB9fkwxuuZ0AY6ngFGKLKV/BfOo5MTxlVqSjB8/H8q8bDyr592Dbrtw8kLHwWCCkP05oInHgb8eFfriFCd+huxTVSQpPVWl+UP+ofVncfRt0YnI4Bi/Yv0GOTZmHENEZ2aF31P5Szksh4+XfNgqKYWfGgTP/NuqNPRY3OEJHnJiOMwcH2uqyHKbdkzXCqXg0jNeUG7ebGtrgabuOjqKYWd5IihVrh0zTwvLg==",
-    "expiration": "2026-05-15T13:24:22.000Z"
+    "access_key_id": "ASIAZV3A2ECZCFNQBKIK",
+    "secret_access_key": "iwvDIQ5SMUaCr9XO0fyI7BZsCfBMZ95hDrGcQARL",
+    "session_token": "IQoJb3JpZ2luX2VjEPb//////////wEaCXVzLWVhc3QtMSJIMEYCIQD42HYM+Os6tTE+y4dGTfLRBk4zlOwG5vqQjgmRNZ/DWwIhANkRSP5AuTlocOqbaD0/yD+mTkHFaJZytm5W4/An69TgKv8DCL///////////wEQBBoMNjY1Mzg2MDk4ODY2IgzBRxzkebxHgi8UBaIq0wM8Mf/PFjB9S5CsnxPSZRK05qCPgl4esfktqVX/oJJI7/VqqNU+neq5Kwv0L83uQqrACC/9puOuX/dydf0xUm7bGxwehyiNiku8XsaI1tvOl91p4ILfjxLceG3vpk7eX58hsFetf1CAYS2H5l2jpuZBvzA4SqHYGsSXji7x63f5CNAy66up2r8ccsqxqGqxHQUiw3+PHJk6WKq3uPcbzu8YDtAodUivHf7vfWv3Ai74WNjZMMEWDKrDExbmdQK1DeGR46W6DPMeq4L+LFzaSJY9WS00ctR6va2CVumwSzofDeRSbBoLpdM846mclbd328FUIKF85kmQQm6zlYxCC2MzAzdEN9x105qVd4cMEgb3UA/liLe0UVyTCfU/LoG9SIDbkvWe4z8OUFl4yqLp66upnPWCX4VnppiRXEGKSse5lKcmkscO8C/YilHaKxUCXD3etfuNhMzPe9+rGllFT+M+QjByFdE5Vg0Nqcrb8Ez5Aeaa/R0MuJF1z+wtXTxMQVba5iAOJFfnUrs1Gxv0seL6qZwXdr94+r6HsDMv2yorbGW9+6yKS71vpRPtqAyFmCynntit1Eh19j3PGQRvlHCMuwaXLqj6UhvAVqTkZJVsBuY8ODDMqqzQBjqcATl00dapVX6bmXrshecUAJgw3WslWBnemR9aATrKuzPLsvkNlvenh4wdo5gliPwEKzYn0Vb5t/ro2NZyayNGFXgOPCa2CjmY4/oOJid1p8nzLKYdBtL02k4/aQAfhqiwFqOoTxGR+3E8DPGsXm3ElP++X3E6vcXx1q1oMuHciW5ar+nlX9rpz6YU/DQbe5KRTLFq7+RiKm7IpTOGrg==",
+    "expiration": "2026-05-19T01:34:04.000Z"
   },
   "name": "wv-control-center",
   "path": "/home/ubuntu/wv-control-center",
