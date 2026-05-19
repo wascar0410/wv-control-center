@@ -42,16 +42,34 @@ function hasValidCoordinates(load: any): boolean {
 
 function isRouteBlocked(load: any, advice: any): boolean {
   const rec = normalizeRecommendation(advice);
-
-  // ONLY return true if recommendation is explicitly "blocked" from backend
-  // OR if coordinates are completely missing/invalid
-  // NOTE: Do NOT check blockedReason - it's not part of the backend LoadAdvice type
-  return Boolean(
+  const hasValidCoords = hasValidCoordinates(load);
+  const result = Boolean(
     rec === "blocked" ||
     rec === "unknown" ||
     advice?.status === "blocked" ||
-    !hasValidCoordinates(load)
+    !hasValidCoords
   );
+
+  // DEBUG: Log load #600020 to identify why it's marked as blocked
+  if (load?.id === 600020) {
+    console.log("[DEBUG #600020] isRouteBlocked:", {
+      loadId: load.id,
+      rec,
+      adviceStatus: advice?.status,
+      hasValidCoords,
+      result,
+      advice,
+      load: {
+        pickupLat: load.pickupLat,
+        pickupLng: load.pickupLng,
+        deliveryLat: load.deliveryLat,
+        deliveryLng: load.deliveryLng,
+        financialSnapshot: load.financialSnapshot,
+      }
+    });
+  }
+
+  return result;
 }
 
 function getEconomicRecommendation(advice: any): string {
