@@ -61,7 +61,9 @@ export function isRouteReliable(load: any): RouteValidityResult {
       routeStatus: "fallback",
       distanceConfidence: "low",
       distanceSource: "fallback_120",
-      blockedReason: "Using fallback 120-mile distance. Route data unreliable.",
+      // NOTE: Do NOT set blockedReason for fallback distances
+      // The frontend uses blockedReason to mark loads as blocked
+      // But fallback distances are acceptable for analysis
     };
   }
 
