@@ -47,6 +47,21 @@ function getRouteBlockedReason(load: any, advice: any): string | null {
   const hasValidCoords = hasValidCoordinates(load);
   const snapshot = load?.financialSnapshot;
 
+  // CRITICAL PRECEDENCE FIX:
+  // If we have reliable distance source AND reliable profit, do NOT mark as blocked
+  // even if snapshot.routeStatus is stale/wrong.
+  const reliableDistanceSource =
+    snapshot?.distanceSource === "explicit_miles" ||
+    snapshot?.distanceSource === "haversine" ||
+    snapshot?.distanceSource === "manual" ||
+    snapshot?.distanceSource === "calculated";
+
+  if (reliableDistanceSource && snapshot?.profitIsReliable === true) {
+    // This load has reliable distance and profit data - do NOT mark as route-blocked
+    // even if snapshot.routeStatus says otherwise (it's stale)
+    return null;
+  }
+
   if (rec === "blocked") return "advice_recommendation_blocked";
   if (rec === "unknown") return "advice_recommendation_unknown";
   if (advice?.status === "blocked") return "advice_status_blocked";
