@@ -5546,6 +5546,7 @@ function hasReliableRoute(load: {
 }): boolean {
   // Check if all coordinates exist and are not null/undefined
   if (!load.pickupLat || !load.pickupLng || !load.deliveryLat || !load.deliveryLng) {
+    console.log(`[DEBUG] Coordinates missing for load ${load.id}: lat=${load.pickupLat}, lng=${load.pickupLng}, dlat=${load.deliveryLat}, dlng=${load.deliveryLng}`);
     return false;
   }
 
@@ -5555,7 +5556,7 @@ function hasReliableRoute(load: {
   const deliveryLat = Number(load.deliveryLat);
   const deliveryLng = Number(load.deliveryLng);
 
-  return (
+  const isValid = (
     Number.isFinite(pickupLat) &&
     Number.isFinite(pickupLng) &&
     Number.isFinite(deliveryLat) &&
@@ -5565,6 +5566,12 @@ function hasReliableRoute(load: {
     deliveryLat !== 0 &&
     deliveryLng !== 0
   );
+
+  if (!isValid) {
+    console.log(`[DEBUG] Invalid coordinates for load ${load.id}: lat=${pickupLat}, lng=${pickupLng}, dlat=${deliveryLat}, dlng=${deliveryLng}`);
+  }
+
+  return isValid;
 }
 
 export async function analyzeLoad(load: {
