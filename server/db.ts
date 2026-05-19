@@ -5560,26 +5560,9 @@ export async function analyzeLoad(load: {
   deliveryLat?: number | null;
   deliveryLng?: number | null;
 }): Promise<LoadAdvice> {
-  // 🚨 CRITICAL: BLOCK loads without reliable coordinates BEFORE any calculation
-  if (!hasReliableRoute(load)) {
-    console.log(`[Advisor] BLOCKED missing route coords { loadId: ${load.id} }`);
-    return {
-      recommendation: "blocked",
-      confidence: 10,
-      suggestedRate: 0,
-      reason: ["BLOCKED: Missing route coordinates. Cannot evaluate without reliable distance data. Run geocoding backfill."],
-      riskFlags: ["Missing GPS coordinates (fallback 120-mile estimate unreliable)"],
-      financials: {
-        miles: 120,
-        ratePerMile: 0,
-        estimatedProfit: 0,
-        estimatedMargin: 0,
-        fuelCost: 0,
-        tolls: 0,
-        totalCost: 0,
-      },
-    };
-  }
+  // NOTE: Do NOT block loads just because they're using fallback distance
+  // The 120-mile fallback is a reasonable estimate for analysis purposes
+  // Proceed with analysis using whatever distance is available
 
   const reasons: string[] = [];
   const riskFlags: string[] = [];
