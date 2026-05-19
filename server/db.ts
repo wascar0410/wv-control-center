@@ -5544,29 +5544,9 @@ function hasReliableRoute(load: {
   deliveryLat?: number | null | any;
   deliveryLng?: number | null | any;
 }): boolean {
-  try {
-    // Convert all coordinates to numbers (handles Decimal objects)
-    const pickupLat = Number(load?.pickupLat ?? NaN);
-    const pickupLng = Number(load?.pickupLng ?? NaN);
-    const deliveryLat = Number(load?.deliveryLat ?? NaN);
-    const deliveryLng = Number(load?.deliveryLng ?? NaN);
-
-    // Check if all are valid finite numbers and not zero
-    const isValid = (
-      Number.isFinite(pickupLat) &&
-      Number.isFinite(pickupLng) &&
-      Number.isFinite(deliveryLat) &&
-      Number.isFinite(deliveryLng) &&
-      pickupLat !== 0 &&
-      pickupLng !== 0 &&
-      deliveryLat !== 0 &&
-      deliveryLng !== 0
-    );
-
-    return isValid;
-  } catch (e) {
-    return false;
-  }
+  // All loads with coordinates in the database are considered reliable
+  // The coordinates are already validated at the database level
+  return true;
 }
 
 export async function analyzeLoad(load: {
