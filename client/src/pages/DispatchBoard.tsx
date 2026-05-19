@@ -12,6 +12,8 @@ import { useMemo, useState } from "react";
 type ViewMode = "kanban" | "table";
 type AIRecommendationFilter = "all" | "accept" | "negotiate" | "reject" | "blocked";
 
+const DISPATCH_DEBUG_VERSION = "filter-debug-v2-first5loads";
+
 // ============================================================
 // STEP 1: NORMALIZED HELPERS
 // ============================================================
@@ -40,46 +42,29 @@ function hasValidCoordinates(load: any): boolean {
   );
 }
 
-function isRouteBlocked(load: any, advice: any): boolean {
+function getRouteBlockedReason(load: any, advice: any): string | null {
   const rec = normalizeRecommendation(advice);
   const hasValidCoords = hasValidCoordinates(load);
-  
-  // Determine which condition triggered routeBlocked
-  let routeBlockedReason: string | null = null;
-  
-  if (rec === "blocked") routeBlockedReason = "recommendation_blocked";
-  else if (rec === "unknown") routeBlockedReason = "recommendation_unknown";
-  else if (advice?.status === "blocked") routeBlockedReason = "advice_status_blocked";
-  else if (!hasValidCoords) routeBlockedReason = "missing_coordinates";
-  
-  const result = Boolean(routeBlockedReason);
+  const snapshot = load?.financialSnapshot;
 
-  // DEBUG: Log load #600020 with exact diagnosis
-  if (load?.id === 600020) {
-    window.__DEBUG_600020 = {
-      loadId: load.id,
-      adviceRecommendation: advice?.recommendation,
-      adviceStatus: advice?.status,
-      blockedReason: advice?.blockedReason,
-      hasValidCoordinates: hasValidCoords,
-      snapshotIsDecisionBlocked: load.financialSnapshot?.isDecisionBlocked,
-      routeStatus: load.financialSnapshot?.routeStatus,
-      distanceSource: load.financialSnapshot?.distanceSource,
-      distanceConfidence: load.financialSnapshot?.distanceConfidence,
-      profitIsReliable: load.financialSnapshot?.profitIsReliable,
-      routeBlocked: result,
-      routeBlockedReason,
-      coordinates: {
-        pickupLat: load.pickupLat,
-        pickupLng: load.pickupLng,
-        deliveryLat: load.deliveryLat,
-        deliveryLng: load.deliveryLng,
-      }
-    };
-    console.log("[DEBUG #600020] Full diagnosis:", window.__DEBUG_600020);
-  }
+  if (rec === "blocked") return "advice_recommendation_blocked";
+  if (rec === "unknown") return "advice_recommendation_unknown";
+  if (advice?.status === "blocked") return "advice_status_blocked";
+  if (advice?.blockedReason) return "advice_blockedReason";
+  if (snapshot?.isDecisionBlocked === true) return "snapshot_isDecisionBlocked";
+  if (snapshot?.routeStatus === "missing_coords") return "snapshot_routeStatus_missing_coords";
+  if (snapshot?.routeStatus === "invalid") return "snapshot_routeStatus_invalid";
+  if (snapshot?.routeStatus === "fallback") return "snapshot_routeStatus_fallback";
+  if (snapshot?.distanceSource === "fallback_120") return "snapshot_distanceSource_fallback_120";
+  if (snapshot?.distanceConfidence === "low") return "snapshot_distanceConfidence_low";
+  if (!hasValidCoords && !snapshot?.profitIsReliable) return "missing_coords_without_reliable_snapshot";
 
-  return result;
+  return null;
+}
+
+function isRouteBlocked(load: any, advice: any): boolean {
+  const reason = getRouteBlockedReason(load, advice);
+  return reason !== null;
 }
 
 function getEconomicRecommendation(advice: any): string {
@@ -304,6 +289,11 @@ export default function DispatchBoard() {
           </Button>
         </div>
 
+        {/* DEBUG: Version Marker */}
+        <div className="text-xs text-muted-foreground">
+          Dispatch Debug Version: <strong>{DISPATCH_DEBUG_VERSION}</strong>
+        </div>
+
         {/* DEBUG: Filter Counts Display */}
         <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-xs font-mono">
           <div>Active AI Filter: <strong>{aiFilter}</strong></div>
@@ -314,6 +304,24 @@ export default function DispatchBoard() {
           <div>Reject: {debugCounts.rejectCount}</div>
           <div>Blocked: {debugCounts.blockedCountDebug}</div>
         </div>
+
+        {/* DEBUG: First 5 Filtered Loads Debug */}
+        {filteredLoads.slice(0, 5).length > 0 && (
+          <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs font-mono overflow-x-auto">
+            <div className="font-bold mb-2">First 5 Filtered Loads:</div>
+            {filteredLoads.slice(0, 5).map((load: any) => {
+              const advice = getAdviceForLoad(adviceMap, load.id);
+              const reason = getRouteBlockedReason(load, advice);
+              const rec = getEconomicRecommendation(advice);
+              return (
+                <div key={load.id} className="mb-2 pb-2 border-b border-blue-200">
+                  <div>#{load.id}: blocked={String(reason !== null)} reason={reason || "none"} rec={rec}</div>
+                  <div>  distSrc={load.financialSnapshot?.distanceSource} profitRel={load.financialSnapshot?.profitIsReliable}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* AI Advisor Filter */}
         <div className="flex gap-2 items-center">
