@@ -45,11 +45,11 @@ function isRouteBlocked(load: any, advice: any): boolean {
 
   // ONLY return true if recommendation is explicitly "blocked" from backend
   // OR if coordinates are completely missing/invalid
+  // NOTE: Do NOT check blockedReason - it's not part of the backend LoadAdvice type
   return Boolean(
     rec === "blocked" ||
     rec === "unknown" ||
     advice?.status === "blocked" ||
-    Boolean(advice?.blockedReason) ||
     !hasValidCoordinates(load)
   );
 }
