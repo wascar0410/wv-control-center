@@ -89,24 +89,9 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
   else if (margin >= 8) status = "at_risk";
   else status = "loss";
 
-  // 🚨 CRITICAL FIX: Explicit miles is enough for financial decision
-  // Do NOT block decision just because coordinates are missing
-  // Only block if we're using unreliable fallback distance
+  // 🚨 If using fallback distance, mark decision as blocked
   const isDecisionBlocked = distanceSource === "fallback_120";
   const profitIsReliable = distanceResult.isReliable;
-
-  // 🔅 Determine routeStatus based on distance reliability, not coordinates
-  // - If explicit miles: "real" (reliable for financial decision)
-  // - If fallback 120: "fallback" (unreliable)
-  // - If coordinates exist: "real" (can calculate via haversine)
-  let routeStatus: "missing_coords" | "valid_coords";
-  if (distanceSource === "fallback_120") {
-    routeStatus = "missing_coords"; // Only mark as missing if using fallback
-  } else if (distanceResult.source === "explicit_miles" || distanceResult.source === "explicit") {
-    routeStatus = "valid_coords"; // Explicit miles = valid for financial decision
-  } else {
-    routeStatus = distanceResult.hasValidCoordinates ? "valid_coords" : "missing_coords";
-  }
 
   // 🔅 LOG - only log fallback distances
   if (distanceSource === "fallback_120") {
@@ -118,7 +103,7 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     profit: round2(profit),
     ratePerMile: round2(ratePerMile),
     status,
-    routeStatus,
+    routeStatus: distanceResult.hasValidCoordinates ? "valid_coords" : "missing_coords",
     distanceSource,
     distanceConfidence,
     isDecisionBlocked,
