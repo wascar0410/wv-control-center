@@ -62,6 +62,7 @@ const adminMenuItems = [
   // ===== 1. COMMAND CENTER =====
   { icon: LayoutDashboard, label: "Command Center", path: "/command-center", description: "Control total del negocio" },
   { icon: Truck, label: "Dispatch Board", path: "/dispatch-board", description: "Centro operacional de dispatch" },
+  { icon: Truck, label: "Driver Operations", path: "/driver", description: "Portal de operaciones del chofer" },
 
   // ===== OPERATIONS =====
   { icon: Package, label: "Loads & Dispatch", path: "/loads-dispatch", description: "Cargas, cotización y dispatch" },
@@ -163,6 +164,30 @@ const getFilteredMenuItems = (role?: string) => {
         filtered.splice(invoicingIndex, 0, bankingCashFlowItem as any);
       } else {
         filtered.push(bankingCashFlowItem as any);
+      }
+    }
+  }
+
+  // Guarantee Driver Operations visibility for owner (who may also be a driver)
+  const canSeeDriverOps = role === "owner";
+  const hasDriverOps = filtered.some(
+    (item: any) => item.path === "/driver"
+  );
+
+  if (!hasDriverOps && canSeeDriverOps) {
+    const driverOpsItem = baseItems.find(
+      (item) => item.path === "/driver"
+    );
+
+    if (driverOpsItem) {
+      const dispatchBoardIndex = filtered.findIndex(
+        (item: any) => item.path === "/dispatch-board"
+      );
+
+      if (dispatchBoardIndex >= 0) {
+        filtered.splice(dispatchBoardIndex + 1, 0, driverOpsItem as any);
+      } else {
+        filtered.unshift(driverOpsItem as any);
       }
     }
   }
