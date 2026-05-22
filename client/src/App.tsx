@@ -155,7 +155,10 @@ export default function App() {
         {/* ===== DEFAULTS ===== */}
         <Route path="/">
           {() => {
-            const { user } = useAuth();
+            const { user, loading: isLoading } = useAuth();
+            if (isLoading) {
+              return <PageLoader />;
+            }
             if (user?.role === 'driver') {
               return <Redirect to="/driver" />;
             }
@@ -164,7 +167,10 @@ export default function App() {
         </Route>
         <Route>
           {() => {
-            const { user } = useAuth();
+            const { user, loading: isLoading } = useAuth();
+            if (isLoading) {
+              return <PageLoader />;
+            }
             if (user?.role === 'driver') {
               return <Redirect to="/driver" />;
             }
