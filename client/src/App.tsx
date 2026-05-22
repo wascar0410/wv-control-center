@@ -85,7 +85,7 @@ export default function App() {
       <Switch>
         {/* ===== PUBLIC ROUTES ===== */}
         <Route path="/login" component={LoginPage} />
-        <Route path="/quotation" component={withSuspense(Quotation)} />
+        <Route path="/quotation" component={withRoleGuard(Quotation, ["owner", "admin"])} />
         <Route
           path="/plaid-oauth-return"
           component={withSuspense(PlaidOAuthReturn)}
