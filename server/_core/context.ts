@@ -18,18 +18,19 @@ export async function createContext(
 ): Promise<TrpcContext> {
 
   // ─── DEV MODE (local development only) ────────────────────────────────────
-  if (process.env.NODE_ENV !== "production") {
-    return {
-      req: opts.req,
-      res: opts.res,
-      user: {
-        id: 1,
-        name: "WV Admin (Dev)",
-        email: "wascar.ortiz0410@gmail.com",
-        role: "owner",
-      } as any,
-    };
-  }
+  // NOTE: This dev mode check is disabled in production. Use proper auth instead.
+  // if (process.env.NODE_ENV !== "production") {
+  //   return {
+  //     req: opts.req,
+  //     res: opts.res,
+  //     user: {
+  //       id: 1,
+  //       name: "WV Admin (Dev)",
+  //       email: "wascar.ortiz0410@gmail.com",
+  //       role: "owner",
+  //     } as any,
+  //   };
+  // }
 
   // ─── PRODUCTION AUTH ───────────────────────────────────────────────────────
   let user: User | null = null;
