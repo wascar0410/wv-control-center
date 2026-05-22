@@ -8,9 +8,9 @@ export interface FinancialSnapshot {
   ratePerMile: number;
   status: "healthy" | "at_risk" | "loss";
   // Metadata for fallback distance detection
-  routeStatus: "missing_coords" | "valid_coords";
-  distanceSource: "fallback_120" | "calculated" | "explicit";
-  distanceConfidence: "low" | "medium" | "high";
+  routeStatus: "missing_coords" | "valid_coords" | "real";
+  distanceSource: "fallback_120" | "calculated" | "explicit" | "explicit_miles" | "haversine" | "manual";
+  distanceConfidence: "low" | "medium" | "high" | "unknown";
   isDecisionBlocked: boolean;
   profitIsReliable: boolean;
 }
