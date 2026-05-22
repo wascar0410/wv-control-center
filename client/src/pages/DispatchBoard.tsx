@@ -13,6 +13,7 @@ type ViewMode = "kanban" | "table";
 type AIRecommendationFilter = "all" | "accept" | "negotiate" | "reject" | "blocked";
 
 const DISPATCH_DEBUG_VERSION = "filter-debug-v2-first5loads";
+const isDebugMode = typeof window !== "undefined" && localStorage.getItem("debugDispatchFilters") === "1";
 
 // ============================================================
 // STEP 1: NORMALIZED HELPERS
@@ -304,38 +305,42 @@ export default function DispatchBoard() {
           </Button>
         </div>
 
-        {/* DEBUG: Version Marker */}
-        <div className="text-xs text-muted-foreground">
-          Dispatch Debug Version: <strong>{DISPATCH_DEBUG_VERSION}</strong>
-        </div>
+        {/* DEBUG: Version Marker - Hidden by default, enable with localStorage.debugDispatchFilters="1" */}
+        {isDebugMode && (
+          <>
+            <div className="text-xs text-muted-foreground">
+              Dispatch Debug Version: <strong>{DISPATCH_DEBUG_VERSION}</strong>
+            </div>
 
-        {/* DEBUG: Filter Counts Display */}
-        <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-xs font-mono">
-          <div>Active AI Filter: <strong>{aiFilter}</strong></div>
-          <div>Counts:</div>
-          <div>All: {debugCounts.allCount}</div>
-          <div>Accept: {debugCounts.acceptCount}</div>
-          <div>Negotiate: {debugCounts.negotiateCount}</div>
-          <div>Reject: {debugCounts.rejectCount}</div>
-          <div>Blocked: {debugCounts.blockedCountDebug}</div>
-        </div>
+            {/* DEBUG: Filter Counts Display */}
+            <div className="p-2 bg-yellow-100 border border-yellow-300 rounded text-xs font-mono">
+              <div>Active AI Filter: <strong>{aiFilter}</strong></div>
+              <div>Counts:</div>
+              <div>All: {debugCounts.allCount}</div>
+              <div>Accept: {debugCounts.acceptCount}</div>
+              <div>Negotiate: {debugCounts.negotiateCount}</div>
+              <div>Reject: {debugCounts.rejectCount}</div>
+              <div>Blocked: {debugCounts.blockedCountDebug}</div>
+            </div>
 
-        {/* DEBUG: First 5 Filtered Loads Debug */}
-        {filteredLoads.slice(0, 5).length > 0 && (
-          <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs font-mono overflow-x-auto">
-            <div className="font-bold mb-2">First 5 Filtered Loads:</div>
-            {filteredLoads.slice(0, 5).map((load: any) => {
-              const advice = getAdviceForLoad(adviceMap, load.id);
-              const reason = getRouteBlockedReason(load, advice);
-              const rec = getEconomicRecommendation(advice);
-              return (
-                <div key={load.id} className="mb-2 pb-2 border-b border-blue-200">
-                  <div>#{load.id}: blocked={String(reason !== null)} reason={reason || "none"} rec={rec}</div>
-                  <div>  distSrc={load.financialSnapshot?.distanceSource} profitRel={load.financialSnapshot?.profitIsReliable}</div>
-                </div>
-              );
-            })}
-          </div>
+            {/* DEBUG: First 5 Filtered Loads Debug */}
+            {filteredLoads.slice(0, 5).length > 0 && (
+              <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs font-mono overflow-x-auto">
+                <div className="font-bold mb-2">First 5 Filtered Loads:</div>
+                {filteredLoads.slice(0, 5).map((load: any) => {
+                  const advice = getAdviceForLoad(adviceMap, load.id);
+                  const reason = getRouteBlockedReason(load, advice);
+                  const rec = getEconomicRecommendation(advice);
+                  return (
+                    <div key={load.id} className="mb-2 pb-2 border-b border-blue-200">
+                      <div>#{load.id}: blocked={String(reason !== null)} reason={reason || "none"} rec={rec}</div>
+                      <div>  distSrc={load.financialSnapshot?.distanceSource} profitRel={load.financialSnapshot?.profitIsReliable}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
 
         {/* AI Advisor Filter */}
