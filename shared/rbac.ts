@@ -64,7 +64,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     
     // Fleet & Drivers (view only)
     "fleet-tracking": true,
-    "driver-ops": false,
+    "driver-ops": true,
     
     // Team & Company
     "user-management": true,
