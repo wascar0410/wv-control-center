@@ -118,8 +118,8 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
   const isDecisionBlocked = isFallback || !hasReliableDistance;
   const profitIsReliable = !isDecisionBlocked;
 
-  // 🔅 LOG - only log fallback distances
-  if (isFallback) {
+  // 🔅 LOG - only log fallback distances in debug mode
+  if (isFallback && process.env.DEBUG_FINANCIAL_SNAPSHOT === "1") {
     console.log(`[buildLoadFinancialSnapshot] FALLBACK 120 { loadId: ${load.id} }`);
   }
 
@@ -139,8 +139,8 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
 export function attachFinancialSnapshots<T extends LoadItem>(loads: T[]) {
   try {
     return loads.map((load, idx) => {
-      // Log first load to see actual field values
-      if (idx === 0) {
+      // Log first load to see actual field values (debug mode only)
+      if (idx === 0 && process.env.DEBUG_FINANCIAL_SNAPSHOT === "1") {
         console.log("[attachFinancialSnapshots] Sample load fields:", {
           id: load.id,
           price: load.price,

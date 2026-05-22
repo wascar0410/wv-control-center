@@ -31,8 +31,12 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
   const rawSuggestedMinimum = analysis.suggestedMinimum ?? 0;
   const rawSuggestedTarget = analysis.suggestedTarget ?? 0;
 
-  // If load is blocked (missing coordinates), show warning
-  if (analysis.block) {
+  // 💰 CANONICAL RULE: Use backend's financial snapshot if available
+  // This ensures consistency between Dispatch Board and Load Detail
+  const isBlockedByBackend = load.financialSnapshot?.isDecisionBlocked === true;
+  
+  // If load is blocked by backend financial snapshot, show warning
+  if (isBlockedByBackend || analysis.block) {
     const blockColor = "bg-red-500/20 text-red-300 border-red-500/50";
     if (compact) {
       return (

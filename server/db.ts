@@ -364,7 +364,9 @@ export async function getLoads(filters?: { status?: string; driverId?: number; i
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(loads.createdAt));
 
-  console.log("[getLoads] filters:", filters, "count:", result.length);
+  if (process.env.DEBUG_LOADS === "1") {
+    console.log("[getLoads] filters:", filters, "count:", result.length);
+  }
 
   // 🔥 ENRIQUECIMIENTO OBLIGATORIO: Normalizar TODOS los loads
   const enriched = result.map((load) => normalizeLoadFinancials(load));
@@ -379,7 +381,18 @@ export async function getLoadById(id: number) {
   const load = result[0];
   if (!load) return undefined;
   // 🔥 NORMALIZACIÓN OBLIGATORIA
-  return normalizeLoadFinancials(load);
+  const normalized = normalizeLoadFinancials(load);
+  // 💰 ATTACH FINANCIAL SNAPSHOT for UI consistency
+  try {
+    const { buildLoadFinancialSnapshot } = await import("./db-dispatch-helpers");
+    return {
+      ...normalized,
+      financialSnapshot: buildLoadFinancialSnapshot(normalized),
+    };
+  } catch (err) {
+    console.error("[getLoadById] Error attaching financial snapshot:", err);
+    return normalized;
+  }
 }
 
 export async function updateLoadStatus(id: number, status: string, extra?: Partial<InsertLoad>) {
