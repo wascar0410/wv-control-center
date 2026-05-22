@@ -2,7 +2,7 @@ import { Suspense, lazy, type ComponentType } from "react";
 import { Router, Route, Switch, Redirect, useLocation } from "wouter";
 import LoginPage from "./pages/LoginPage";
 import DashboardLayout from "./components/DashboardLayout";
-import { useAuth } from "./lib/trpc";
+import { useAuth } from "./contexts/AuthContext";
 
 // Lazy load pages
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
