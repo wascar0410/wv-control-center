@@ -1,6 +1,12 @@
 -- Seed Data for WV Control Center
--- Insert test data for end-to-end flow validation
+-- DISABLED IN PRODUCTION: This seed file creates demo users
+-- To enable, set ENABLE_DEMO_SEED=true environment variable
+-- INSERT INTO users (name, email, role, openId, loginMethod, createdAt, updatedAt, lastSignedIn)
+-- VALUES ('Test Admin', 'admin@test.com', 'admin', CONCAT('admin-', UNIX_TIMESTAMP()), 'oauth', NOW(), NOW(), NOW());
 
+-- Insert test data for end-to-end flow validation
+-- PRODUCTION DISABLED
+/*
 -- 1. Create Company
 INSERT INTO companies (name, dotNumber, mcNumber, email, phone, website, address, city, state, zipCode, complianceStatus, ownerId, createdAt, updatedAt)
 VALUES ('WV Logistics Test', FLOOR(RAND() * 9000000 + 1000000), CONCAT('MC-', FLOOR(RAND() * 900000 + 100000)), 'test@wvlogistics.com', '555-0100', 'https://wvlogistics.com', '123 Main St', 'Charleston', 'WV', '25301', 'active', 1, NOW(), NOW());
@@ -83,7 +89,8 @@ INSERT INTO alerts (type, title, message, severity, recipientUserId, isRead, isA
 VALUES ('wallet_low', 'Wallet Balance Low', 'Your wallet balance is below minimum threshold', 'warning', @driverId, false, false, NOW());
 
 -- Summary
-SELECT CONCAT('✅ Seed data created successfully!
+*/
+SELECT CONCAT('⚠️ Seed data DISABLED in production. Set ENABLE_DEMO_SEED=true to enable.
 Company ID: ', @companyId, '
 Admin ID: ', @adminId, '
 Dispatcher ID: ', @dispatcherId, '
