@@ -1,5 +1,5 @@
 import { Suspense, lazy, type ComponentType } from "react";
-import { Router, Route, Switch, Redirect } from "wouter";
+import { Router, Route, Switch, Redirect, useLocation } from "wouter";
 import LoginPage from "./pages/LoginPage";
 import DashboardLayout from "./components/DashboardLayout";
 import { useAuth } from "./lib/trpc";
@@ -52,6 +52,33 @@ const withSuspense = (Component: ComponentType<any>) => (props: any) => (
   </Suspense>
 );
 
+// Role-based route wrapper - enforces role restrictions
+const withRoleGuard = (
+  Component: ComponentType<any>,
+  allowedRoles: string[]
+) => (props: any) => {
+  const { user, isLoading } = useAuth();
+  const [, navigate] = useLocation();
+
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
+  if (!user || !allowedRoles.includes(user.role)) {
+    // Redirect driver to /driver, others to /command-center
+    navigate(user?.role === "driver" ? "/driver" : "/command-center");
+    return null;
+  }
+
+  return (
+    <DashboardLayout>
+      <Suspense fallback={<PageLoader />}>
+        <Component {...props} />
+      </Suspense>
+    </DashboardLayout>
+  );
+};
+
 export default function App() {
   return (
     <Router>
@@ -65,42 +92,43 @@ export default function App() {
         />
 
         {/* ===== ROUTES WITH LAYOUT ===== */}
-        <Route path="/command-center" component={withLayout(CommandCenter)} />
-        <Route path="/dispatch-board" component={withLayout(DispatchBoard)} />
+        {/* Owner/Admin only routes */}
+        <Route path="/command-center" component={withRoleGuard(CommandCenter, ["owner", "admin"])} />
+        <Route path="/dispatch-board" component={withRoleGuard(DispatchBoard, ["owner", "admin", "dispatcher"])} />
 
         {/* Operations */}
-        <Route path="/loads-dispatch" component={withLayout(LoadsDispatch)} />
+        <Route path="/loads-dispatch" component={withRoleGuard(LoadsDispatch, ["owner", "admin", "dispatcher"])} />
         <Route path="/loads/:id" component={withLayout(LoadDetailPage)} />
-        <Route path="/quote-analyzer" component={withLayout(QuoteAnalyzer)} />
+        <Route path="/quote-analyzer" component={withRoleGuard(QuoteAnalyzer, ["owner", "admin"])} />
 
-        {/* Finance */}
+        {/* Finance - Owner/Admin only */}
         <Route
           path="/finance-dashboard"
-          component={withLayout(FinanceDashboard)}
+          component={withRoleGuard(FinanceDashboard, ["owner", "admin"])}
         />
         <Route path="/finance-wallet" component={withLayout(WalletDashboard)} />
         <Route
           path="/finance-settlements"
-          component={withLayout(SettlementsPage)}
+          component={withRoleGuard(SettlementsPage, ["owner", "admin"])}
         />
-        <Route path="/invoicing" component={withLayout(InvoicingPage)} />
-        <Route path="/banking-cashflow" component={withLayout(BankingCashFlow)} />
+        <Route path="/invoicing" component={withRoleGuard(InvoicingPage, ["owner", "admin"])} />
+        <Route path="/banking-cashflow" component={withRoleGuard(BankingCashFlow, ["owner", "admin"])} />
 
         {/* Fleet & Drivers */}
-        <Route path="/fleet-tracking" component={withLayout(FleetTracking)} />
+        <Route path="/fleet-tracking" component={withRoleGuard(FleetTracking, ["owner", "admin"])} />
         <Route path="/driver" component={withLayout(DriverOps)} />
 
-        {/* Team & Company */}
-        <Route path="/team" component={withLayout(UserManagement)} />
+        {/* Team & Company - Owner/Admin only */}
+        <Route path="/team" component={withRoleGuard(UserManagement, ["owner", "admin"])} />
         <Route path="/company" component={withLayout(Company)} />
-        <Route path="/company-management" component={withLayout(CompanyManagement)} />
+        <Route path="/company-management" component={withRoleGuard(CompanyManagement, ["owner", "admin"])} />
         <Route path="/chat" component={withLayout(Chat)} />
         <Route path="/profile" component={withLayout(UserProfile)} />
-        <Route path="/settings" component={withLayout(BusinessSettings)} />
+        <Route path="/settings" component={withRoleGuard(BusinessSettings, ["owner", "admin"])} />
         <Route path="/partnership" component={withLayout(Partnership)} />
 
-        {/* Coordination */}
-        <Route path="/alerts-tasks" component={withLayout(AlertsTasksPage)} />
+        {/* Coordination - Owner/Admin only */}
+        <Route path="/alerts-tasks" component={withRoleGuard(AlertsTasksPage, ["owner", "admin"])} />
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
         <Route path="/about">{() => <Redirect to="/company" />}</Route>
