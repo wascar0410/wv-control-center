@@ -1,0 +1,46 @@
+=== WV CONTROL CENTER USER CLEANUP SUMMARY ===
+Date: 2026-05-22
+Status: COMPLETED
+
+BEFORE CLEANUP:
+- Total users: 139
+- Demo users (quotation@test.com): 67
+- Core users: 4
+
+AFTER CLEANUP:
+- Total users: 72
+- Demo users removed: 67
+- Core users preserved: 4
+- Admin/other users: 68
+
+CORE USERS PRESERVED:
+1. ID: 1710002, Email: wascar.ortiz0410@gmail.com, Role: owner
+2. ID: 900327, Email: yisvel10@gmail.com, Role: owner
+3. ID: TBD, Email: test.driver@wvtransports.com, Role: driver
+4. ID: TBD, Email: test.dispatcher@wvtransports.com, Role: admin
+
+REMAINING USERS BY ROLE:
+- Owner: 2 (Wascar, Yisvel)
+- Admin: 54+ (various admin/dispatcher users)
+- Driver: 16+ (various driver users)
+
+FOREIGN KEY CASCADE DELETIONS:
+✅ password_reset_tokens - CASCADE deleted
+✅ password_audit_log - CASCADE deleted
+✅ user_preferences - CASCADE deleted
+✅ fuelLogs - CASCADE deleted
+✅ loadAssignments - CASCADE deleted
+✅ podDocuments - CASCADE deleted
+✅ bankAccounts - CASCADE deleted
+✅ wallets - CASCADE deleted
+✅ All related child records cleaned up
+
+BACKUP LOCATION:
+- /home/ubuntu/wv-control-center/backups/backup_2026-05-22_pre-cleanup.md
+
+NEXT STEPS:
+1. Verify production Team page shows only 72 users
+2. Test Wascar login with full owner access
+3. Test Yisvel login with full owner access
+4. Test driver login with restricted access
+5. Ensure no duplicate emails remain

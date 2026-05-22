@@ -1896,7 +1896,7 @@ const adminRouter = router({
       await db.update(usersTable).set({ role: input.role }).where(eq(usersTable.id, input.userId));
       return { success: true, message: `Rol de ${target.name || target.email} actualizado a ${input.role}` };
     }),
-  // List all users (owner/admin only)
+  // List all users (owner/admin only) - excludes archived demo users
   listAllUsers: protectedProcedure
     .query(async ({ ctx }) => {
       if (ctx.user.role !== "owner" && ctx.user.role !== "admin") {
@@ -1904,13 +1904,15 @@ const adminRouter = router({
       }
       const db = await getDb();
       if (!db) return [];
+      // Exclude archived demo users (emails starting with 'archived+')
       const allUsers = await db.select({
         id: usersTable.id,
         name: usersTable.name,
         email: usersTable.email,
         role: usersTable.role,
         lastSignedIn: usersTable.lastSignedIn,
-      }).from(usersTable);
+      }).from(usersTable)
+        .where(sql`email NOT LIKE 'archived+%'`);
       return allUsers;
     }),
 });
