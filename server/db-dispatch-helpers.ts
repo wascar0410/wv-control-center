@@ -89,27 +89,37 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
   else if (margin >= 8) status = "at_risk";
   else status = "loss";
 
-  // 🚨 CRITICAL FIX: Explicit miles is enough for financial decision
-  // Do NOT block decision just because coordinates are missing
-  // Only block if we're using unreliable fallback distance
-  const isDecisionBlocked = distanceSource === "fallback_120";
-  const profitIsReliable = distanceResult.isReliable;
+  // 🚨 CRITICAL FIX: Determine reliability based on distance source, not coordinates
+  // Explicit miles (or haversine/manual/calculated) = reliable for financial decision
+  // Fallback 120 = unreliable
+  // Missing coordinates alone should NOT block if we have reliable distance
+  const hasReliableDistance =
+    distanceResult.source === "explicit_miles" ||
+    distanceResult.source === "haversine" ||
+    distanceResult.source === "manual" ||
+    distanceResult.source === "calculated";
 
-  // 🔅 Determine routeStatus based on distance reliability, not coordinates
-  // - If explicit miles: "valid_coords" (reliable for financial decision)
-  // - If fallback 120: "missing_coords" (unreliable)
-  // - If coordinates exist: "valid_coords" (can calculate via haversine)
-  let routeStatus: "missing_coords" | "valid_coords";
-  if (distanceSource === "fallback_120") {
-    routeStatus = "missing_coords"; // Only mark as missing if using fallback
-  } else if (distanceResult.source === "explicit_miles" || distanceResult.source === "explicit") {
-    routeStatus = "valid_coords"; // Explicit miles = valid for financial decision
-  } else {
-    routeStatus = distanceResult.hasValidCoordinates ? "valid_coords" : "missing_coords";
-  }
+  const isFallback = distanceResult.source === "fallback_120";
+
+  const routeStatus = isFallback
+    ? "missing_coords"
+    : hasReliableDistance
+      ? "real"
+      : distanceResult.hasValidCoordinates
+        ? "real"
+        : "missing_coords";
+
+  const computedDistanceConfidence = isFallback
+    ? "low"
+    : hasReliableDistance
+      ? "high"
+      : "unknown";
+
+  const isDecisionBlocked = isFallback || !hasReliableDistance;
+  const profitIsReliable = !isDecisionBlocked;
 
   // 🔅 LOG - only log fallback distances
-  if (distanceSource === "fallback_120") {
+  if (isFallback) {
     console.log(`[buildLoadFinancialSnapshot] FALLBACK 120 { loadId: ${load.id} }`);
   }
 
@@ -120,7 +130,7 @@ export function buildLoadFinancialSnapshot(load: LoadItem): FinancialSnapshot {
     status,
     routeStatus,
     distanceSource,
-    distanceConfidence,
+    distanceConfidence: computedDistanceConfidence,
     isDecisionBlocked,
     profitIsReliable,
   };
