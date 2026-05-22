@@ -33,10 +33,18 @@ export default function LoadAdvisorCard({ load, compact = false }: LoadAdvisorCa
 
   // 💰 CANONICAL RULE: Use backend's financial snapshot if available
   // This ensures consistency between Dispatch Board and Load Detail
-  const isBlockedByBackend = load.financialSnapshot?.isDecisionBlocked === true;
+  const snapshot = load?.financialSnapshot;
+  
+  const hasReliableFinancialSnapshot =
+    snapshot?.profitIsReliable === true ||
+    snapshot?.distanceSource === "explicit_miles" ||
+    snapshot?.isDecisionBlocked === false;
+  
+  const shouldShowBlocked =
+    !hasReliableFinancialSnapshot && analysis?.block === true;
   
   // If load is blocked by backend financial snapshot, show warning
-  if (isBlockedByBackend || analysis.block) {
+  if (shouldShowBlocked) {
     const blockColor = "bg-red-500/20 text-red-300 border-red-500/50";
     if (compact) {
       return (
