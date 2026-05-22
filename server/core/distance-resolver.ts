@@ -98,7 +98,9 @@ export function resolveLoadDistance(load: any): LoadDistanceResult {
     deliveryLat: load?.deliveryLat,
     deliveryLng: load?.deliveryLng,
   };
-  console.debug("[resolveLoadDistance] Load has valid coordinates but no valid distance field", debugInfo);
+  if (process.env.DEBUG_DISTANCE_RESOLVER === "1") {
+    console.debug("[resolveLoadDistance] Load has valid coordinates but no valid distance field", debugInfo);
+  }
 
   // Return fallback 120 with debug info
   return {

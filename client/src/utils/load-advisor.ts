@@ -63,6 +63,23 @@ function getDynamicMultiplier(miles: number): number {
  * CRITICAL: Must be called BEFORE any recommendation logic
  */
 function hasReliableRoute(load: any): boolean {
+  // Check for explicit miles first - if we have explicit miles, we can calculate profit reliably
+  const miles = Number(load.miles);
+  const estimatedMiles = Number(load.estimatedMiles);
+  const distanceMiles = Number(load.distanceMiles);
+  const totalMiles = Number(load.totalMiles);
+  
+  const hasExplicitMiles = 
+    (Number.isFinite(miles) && miles > 0) ||
+    (Number.isFinite(estimatedMiles) && estimatedMiles > 0) ||
+    (Number.isFinite(distanceMiles) && distanceMiles > 0) ||
+    (Number.isFinite(totalMiles) && totalMiles > 0);
+  
+  if (hasExplicitMiles) {
+    return true; // Explicit miles are reliable for financial decisions
+  }
+  
+  // Fall back to checking coordinates
   const pickupLat = Number(load.pickupLat);
   const pickupLng = Number(load.pickupLng);
   const deliveryLat = Number(load.deliveryLat);

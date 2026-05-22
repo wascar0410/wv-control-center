@@ -5625,7 +5625,9 @@ export async function analyzeLoad(load: {
 
   // Log final recommendation
   // Log only recommendation (not per-coordinate details)
-  console.log(`[AI Advisor] Load ${load.id}: recommendation=${recommendation}, confidence=${confidence}%`);
+  if (process.env.DEBUG_AI_ADVISOR === "1") {
+    console.log(`[AI Advisor] Load ${load.id}: recommendation=${recommendation}, confidence=${confidence}%`);
+  }
 
   // Note: hasValidCoords is always true at this point (blocked above if false)
 
@@ -5642,8 +5644,8 @@ export async function analyzeLoad(load: {
     reasons.push(`Estimated margin: ${estimatedMargin.toFixed(1)}%`);
   }
 
-  // Analysis complete - only log if recommendation is not reject
-  if (recommendation !== "reject") {
+  // Analysis complete - only log if recommendation is not reject and debug mode is enabled
+  if (recommendation !== "reject" && process.env.DEBUG_AI_ADVISOR === "1") {
     console.log(`[AI Advisor] Load ${load.id} analysis: ${recommendation.toUpperCase()}, confidence=${confidence}%`);
   }
 
