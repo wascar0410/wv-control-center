@@ -2,6 +2,7 @@ import { Suspense, lazy, type ComponentType } from "react";
 import { Router, Route, Switch, Redirect } from "wouter";
 import LoginPage from "./pages/LoginPage";
 import DashboardLayout from "./components/DashboardLayout";
+import { useAuth } from "./lib/trpc";
 
 // Lazy load pages
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
@@ -124,8 +125,24 @@ export default function App() {
         </Route>
 
         {/* ===== DEFAULTS ===== */}
-        <Route path="/">{() => <Redirect to="/command-center" />}</Route>
-        <Route>{() => <Redirect to="/command-center" />}</Route>
+        <Route path="/">
+          {() => {
+            const { user } = useAuth();
+            if (user?.role === 'driver') {
+              return <Redirect to="/driver" />;
+            }
+            return <Redirect to="/command-center" />;
+          }}
+        </Route>
+        <Route>
+          {() => {
+            const { user } = useAuth();
+            if (user?.role === 'driver') {
+              return <Redirect to="/driver" />;
+            }
+            return <Redirect to="/command-center" />;
+          }}
+        </Route>
       </Switch>
     </Router>
   );
