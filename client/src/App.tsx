@@ -189,6 +189,41 @@ export default function App() {
               true
             );
             
+            // Debug panel (visible only when localStorage.debugRoleRedirect === "1")
+            const showDebug = typeof window !== 'undefined' && localStorage.getItem('debugRoleRedirect') === '1';
+            
+            if (showDebug) {
+              return (
+                <div style={{
+                  position: 'fixed',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: '#1a1a1a',
+                  color: '#00ff00',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  zIndex: 9999,
+                  border: '2px solid #00ff00',
+                  maxWidth: '500px',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word'
+                }}>
+                  <div style={{ marginBottom: '10px', fontWeight: 'bold' }}>ROOT REDIRECT DEBUG</div>
+                  <div>component: "RootRedirect"</div>
+                  <div>path: "{location.pathname}"</div>
+                  <div>loading: {isLoading ? 'true' : 'false'}</div>
+                  <div>userEmail: "{user?.email || 'undefined'}"</div>
+                  <div>userRole: "{user?.role || 'undefined'}"</div>
+                  <div>computedDefaultRoute: "{defaultRoute}"</div>
+                  <div>willRedirectTo: "{defaultRoute}"</div>
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#ffff00' }}>Redirecting in 3 seconds...</div>
+                </div>
+              );
+            }
+            
             return <Redirect to={defaultRoute} />;
           }}
         </Route>
