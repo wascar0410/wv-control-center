@@ -2631,12 +2631,10 @@ export const appRouter = router({
     });
 
     return {
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role
-      }
+      token,
+      role: user.role,
+      name: user.name || user.email,
+      email: user.email
     };
   }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {
