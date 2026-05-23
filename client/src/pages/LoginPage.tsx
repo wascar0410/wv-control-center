@@ -26,6 +26,16 @@ export default function LoginPage() {
 
       // Use full page reload so the new session is sent on the first request
       // (client-side navigate() reuses the stale tRPC cache and misses the new cookie)
+      // Clear any previous session data to prevent cache contamination
+      localStorage.removeItem("wv_token");
+      localStorage.removeItem("wv_user_role");
+      localStorage.removeItem("wv_user_email");
+      
+      // Set new session data
+      localStorage.setItem("wv_token", data.token);
+      localStorage.setItem("wv_user_role", data.role);
+      localStorage.setItem("wv_user_email", data.email);
+      
       if (data.role === "owner" || data.role === "admin") {
         window.location.href = "/dashboard";
       } else {

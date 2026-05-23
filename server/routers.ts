@@ -2517,6 +2517,7 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       // Also clear the email/password session cookie
       ctx.res.clearCookie("wv_session", { path: "/", maxAge: -1 });
+      ctx.res.clearCookie("wv_token", { path: "/", maxAge: -1 });
       return { success: true } as const;
     }),
     requestPasswordReset: publicProcedure
