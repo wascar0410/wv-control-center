@@ -32,8 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const { data: user, isLoading } = trpc.auth.me.useQuery(undefined, {
     retry: false,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchOnWindowFocus: false,
+    staleTime: 1000 * 60, // 1 minute - reduce stale time to catch role changes faster
+    refetchOnWindowFocus: true, // refetch when window regains focus
+    refetchInterval: 1000 * 60 * 2, // refetch every 2 minutes as fallback
   });
 
   const refetch = () => setRefetchKey((k) => k + 1);

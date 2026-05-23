@@ -1,6 +1,6 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Redirect } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -308,9 +308,23 @@ function QuickAction({
 
 // ─── Main Command Center Component ────────────────────────────────────────────
 export default function CommandCenter() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [, setLocation] = useLocation();
   const today = new Date();
+
+  // Explicit guard: drivers cannot access command center
+  if (!loading && user?.role === "driver") {
+    return <Redirect to="/driver" replace />;
+  }
+
+  // Show loading state while auth is being verified
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div>Cargando...</div>
+      </div>
+    );
+  }
 
   // Date range state
   const [dateRange, setDateRange] = useState<DateRangeType>({
