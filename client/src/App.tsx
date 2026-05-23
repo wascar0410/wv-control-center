@@ -150,6 +150,8 @@ export default function App() {
         <Route>
           {() => {
             const { user, loading: isLoading } = useAuth();
+            const showDebug = typeof localStorage !== 'undefined' && localStorage.getItem('debugRoleRedirect') === '1';
+            
             if (isLoading) {
               return <PageLoader />;
             }
@@ -159,6 +161,57 @@ export default function App() {
             }
             
             const defaultRoute = getDefaultRouteForRole(user);
+            
+            if (showDebug) {
+              const debugInfo = {
+                component: 'RootRedirect',
+                path: '/',
+                loading: isLoading,
+                userEmail: user?.email,
+                userRole: user?.role,
+                computedDefaultRoute: defaultRoute,
+                willRedirectTo: defaultRoute
+              };
+              window.__rootRedirectDebug = debugInfo;
+              
+              return (
+                <div style={{
+                  position: 'fixed',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  backgroundColor: '#fff',
+                  border: '2px solid #f00',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  zIndex: 9999,
+                  maxWidth: '500px',
+                  fontFamily: 'monospace',
+                  fontSize: '12px',
+                  lineHeight: '1.6'
+                }}>
+                  <h2 style={{ marginTop: 0, color: '#f00' }}>ROOT REDIRECT DEBUG</h2>
+                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                    {JSON.stringify(debugInfo, null, 2)}
+                  </pre>
+                  <button onClick={() => {
+                    localStorage.removeItem('debugRoleRedirect');
+                    window.location.href = defaultRoute;
+                  }} style={{
+                    marginTop: '10px',
+                    padding: '10px 20px',
+                    backgroundColor: '#007bff',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}>
+                    Continue to {defaultRoute}
+                  </button>
+                </div>
+              );
+            }
+            
             return <Redirect to={defaultRoute} />;
           }}
         </Route>
