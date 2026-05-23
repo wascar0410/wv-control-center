@@ -3,6 +3,7 @@ import { Router, Route, Switch, Redirect, useLocation } from "wouter";
 import LoginPage from "./pages/LoginPage";
 import DashboardLayout from "./components/DashboardLayout";
 import { useAuth } from "./contexts/AuthContext";
+import { getDefaultRouteForRole, logRouteGuardDecision, getDriverRedirectTarget } from "./lib/routeUtils";
 
 // Lazy load pages
 const CommandCenter = lazy(() => import("./pages/CommandCenter"));
@@ -65,10 +66,27 @@ const withRoleGuard = (
   }
 
   if (!user || !allowedRoles.includes(user.role)) {
-    // Redirect driver to /driver, others to /command-center
-    navigate(user?.role === "driver" ? "/driver" : "/command-center");
+    // Log the guard decision for debugging
+    logRouteGuardDecision(
+      user?.role,
+      window.location.pathname,
+      getDriverRedirectTarget(user),
+      false
+    );
+    
+    // Redirect using central logic
+    const redirectTarget = getDriverRedirectTarget(user);
+    navigate(redirectTarget, { replace: true });
     return null;
   }
+
+  // Log successful access
+  logRouteGuardDecision(
+    user?.role,
+    window.location.pathname,
+    window.location.pathname,
+    true
+  );
 
   return (
     <DashboardLayout>
@@ -159,10 +177,19 @@ export default function App() {
             if (isLoading) {
               return <PageLoader />;
             }
-            if (user?.role === 'driver') {
-              return <Redirect to="/driver" />;
-            }
-            return <Redirect to="/command-center" />;
+            
+            // Use central route logic
+            const defaultRoute = getDefaultRouteForRole(user);
+            
+            // Log the redirect decision
+            logRouteGuardDecision(
+              user?.role,
+              "/",
+              defaultRoute,
+              true
+            );
+            
+            return <Redirect to={defaultRoute} />;
           }}
         </Route>
         <Route>
@@ -171,10 +198,19 @@ export default function App() {
             if (isLoading) {
               return <PageLoader />;
             }
-            if (user?.role === 'driver') {
-              return <Redirect to="/driver" />;
-            }
-            return <Redirect to="/command-center" />;
+            
+            // Use central route logic for unknown routes
+            const defaultRoute = getDefaultRouteForRole(user);
+            
+            // Log the redirect decision
+            logRouteGuardDecision(
+              user?.role,
+              window.location.pathname,
+              defaultRoute,
+              true
+            );
+            
+            return <Redirect to={defaultRoute} />;
           }}
         </Route>
       </Switch>
