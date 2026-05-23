@@ -1,152 +1,58 @@
-import { Suspense, lazy, type ComponentType } from "react";
-import { Router, Route, Switch, Redirect, useLocation } from "wouter";
-import LoginPage from "./pages/LoginPage";
-import DashboardLayout from "./components/DashboardLayout";
-import { useAuth } from "./contexts/AuthContext";
-import { getDefaultRouteForRole, logRouteGuardDecision, getDriverRedirectTarget } from "./lib/routeUtils";
+import { Router, Route, Redirect } from "wouter";
+import { Suspense, lazy } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { getDefaultRouteForRole, logRouteGuardDecision } from "@/lib/routeUtils";
+import { PageLoader } from "@/components/PageLoader";
+import { withRoleGuard, withSuspense } from "@/lib/routeGuards";
 
 // Lazy load pages
-const CommandCenter = lazy(() => import("./pages/CommandCenter"));
-const DispatchBoard = lazy(() => import("./pages/DispatchBoard"));
-const LoadsDispatch = lazy(() => import("./pages/LoadsDispatch"));
-const LoadDetailPage = lazy(() => import("./pages/LoadDetailPage"));
-const FleetTracking = lazy(() => import("./pages/FleetTracking"));
-const DriverOps = lazy(() => import("./pages/DriverOps"));
-const UserManagement = lazy(() => import("./pages/UserManagement"));
-const Company = lazy(() => import("./pages/Company"));
-const CompanyManagement = lazy(() => import("./pages/CompanyManagement"));
-const BusinessSettings = lazy(() => import("./pages/BusinessSettings"));
-const WalletDashboard = lazy(() => import("./pages/WalletDashboard"));
-const SettlementsPage = lazy(() => import("./pages/SettlementsPage"));
-const QuoteAnalyzer = lazy(() => import("./pages/QuoteAnalyzer"));
-const InvoicingPage = lazy(() => import("./pages/InvoicingPage"));
-const FinanceDashboard = lazy(() => import("./pages/FinanceDashboard"));
-const BankingCashFlow = lazy(() => import("./pages/BankingCashFlow"));
-const AlertsTasksPage = lazy(() => import("./pages/AlertsTasksPage"));
-const Chat = lazy(() =>
-  import("./pages/Chat").then((m) => ({ default: m.Chat }))
-);
-const UserProfile = lazy(() => import("./pages/UserProfile"));
-const Quotation = lazy(() => import("./pages/Quotation"));
-const PlaidOAuthReturn = lazy(() => import("./pages/PlaidOAuthReturn"));
-const Partnership = lazy(() => import("./pages/Partnership"));
-
-function PageLoader() {
-  return (
-    <div className="flex h-screen items-center justify-center">
-      Cargando...
-    </div>
-  );
-}
-
-const withLayout = (Component: ComponentType<any>) => (props: any) => (
-  <DashboardLayout>
-    <Suspense fallback={<PageLoader />}>
-      <Component {...props} />
-    </Suspense>
-  </DashboardLayout>
-);
-
-const withSuspense = (Component: ComponentType<any>) => (props: any) => (
-  <Suspense fallback={<PageLoader />}>
-    <Component {...props} />
-  </Suspense>
-);
-
-// Role-based route wrapper - enforces role restrictions
-const withRoleGuard = (
-  Component: ComponentType<any>,
-  allowedRoles: string[]
-) => (props: any) => {
-  const { user, isLoading } = useAuth();
-  const [, navigate] = useLocation();
-
-  if (isLoading) {
-    return <PageLoader />;
-  }
-
-  if (!user || !allowedRoles.includes(user.role)) {
-    // Log the guard decision for debugging
-    logRouteGuardDecision(
-      user?.role,
-      window.location.pathname,
-      getDriverRedirectTarget(user),
-      false
-    );
-    
-    // Redirect using central logic
-    const redirectTarget = getDriverRedirectTarget(user);
-    navigate(redirectTarget, { replace: true });
-    return null;
-  }
-
-  // Log successful access
-  logRouteGuardDecision(
-    user?.role,
-    window.location.pathname,
-    window.location.pathname,
-    true
-  );
-
-  return (
-    <DashboardLayout>
-      <Suspense fallback={<PageLoader />}>
-        <Component {...props} />
-      </Suspense>
-    </DashboardLayout>
-  );
-};
+const Home = lazy(() => import("@/pages/Home"));
+const LoginPage = lazy(() => import("@/pages/LoginPage"));
+const DriverPage = lazy(() => import("@/pages/DriverPage"));
+const CommandCenter = lazy(() => import("@/pages/CommandCenter"));
+const Team = lazy(() => import("@/pages/Team"));
+const Wallet = lazy(() => import("@/pages/Wallet"));
+const FinanceDashboard = lazy(() => import("@/pages/FinanceDashboard"));
+const DispatchBoard = lazy(() => import("@/pages/DispatchBoard"));
+const LoadAnalyzer = lazy(() => import("@/pages/LoadAnalyzer"));
+const Quotation = lazy(() => import("@/pages/Quotation"));
+const Partners = lazy(() => import("@/pages/Partners"));
+const Settings = lazy(() => import("@/pages/Settings"));
+const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
+const BankAccounts = lazy(() => import("@/pages/BankAccounts"));
+const PlaidIntegration = lazy(() => import("@/pages/PlaidIntegration"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const AddDriver = lazy(() => import("@/pages/AddDriver"));
+const Profile = lazy(() => import("@/pages/Profile"));
 
 export default function App() {
   return (
     <Router>
-      <Switch>
+      <Suspense fallback={<PageLoader />}>
         {/* ===== PUBLIC ROUTES ===== */}
-        <Route path="/login" component={LoginPage} />
-        <Route path="/quotation" component={withRoleGuard(Quotation, ["owner", "admin"])} />
-        <Route
-          path="/plaid-oauth-return"
-          component={withSuspense(PlaidOAuthReturn)}
-        />
+        <Route path="/login" component={withSuspense(LoginPage)} />
+        <Route path="/home" component={withSuspense(Home)} />
 
-        {/* ===== ROUTES WITH LAYOUT ===== */}
-        {/* Owner/Admin only routes */}
+        {/* ===== DRIVER ROUTES ===== */}
+        <Route path="/driver" component={withRoleGuard(DriverPage, ["driver"])} />
+        <Route path="/finance-wallet" component={withRoleGuard(Wallet, ["driver"])} />
+        <Route path="/profile" component={withSuspense(Profile)} />
+
+        {/* ===== OWNER/ADMIN ROUTES ===== */}
         <Route path="/command-center" component={withRoleGuard(CommandCenter, ["owner", "admin"])} />
-        <Route path="/dispatch-board" component={withRoleGuard(DispatchBoard, ["owner", "admin", "dispatcher"])} />
-
-        {/* Operations */}
-        <Route path="/loads-dispatch" component={withRoleGuard(LoadsDispatch, ["owner", "admin", "dispatcher"])} />
-        <Route path="/loads/:id" component={withLayout(LoadDetailPage)} />
-        <Route path="/quote-analyzer" component={withRoleGuard(QuoteAnalyzer, ["owner", "admin"])} />
-
-        {/* Finance - Owner/Admin only */}
-        <Route
-          path="/finance-dashboard"
-          component={withRoleGuard(FinanceDashboard, ["owner", "admin"])}
-        />
-        <Route path="/finance-wallet" component={withLayout(WalletDashboard)} />
-        <Route
-          path="/finance-settlements"
-          component={withRoleGuard(SettlementsPage, ["owner", "admin"])}
-        />
-        <Route path="/invoicing" component={withRoleGuard(InvoicingPage, ["owner", "admin"])} />
-        <Route path="/banking-cashflow" component={withRoleGuard(BankingCashFlow, ["owner", "admin"])} />
-
-        {/* Fleet & Drivers */}
-        <Route path="/fleet-tracking" component={withRoleGuard(FleetTracking, ["owner", "admin"])} />
-        <Route path="/driver" component={withLayout(DriverOps)} />
-
-        {/* Team & Company - Owner/Admin only */}
-        <Route path="/team" component={withRoleGuard(UserManagement, ["owner", "admin"])} />
-        <Route path="/company" component={withLayout(Company)} />
-        <Route path="/company-management" component={withRoleGuard(CompanyManagement, ["owner", "admin"])} />
-        <Route path="/chat" component={withLayout(Chat)} />
-        <Route path="/profile" component={withLayout(UserProfile)} />
-        <Route path="/settings" component={withRoleGuard(BusinessSettings, ["owner", "admin"])} />
-        <Route path="/partnership" component={withLayout(Partnership)} />
-
-        {/* Coordination - Owner/Admin only */}
-        <Route path="/alerts-tasks" component={withRoleGuard(AlertsTasksPage, ["owner", "admin"])} />
+        <Route path="/team" component={withRoleGuard(Team, ["owner", "admin"])} />
+        <Route path="/wallet" component={withRoleGuard(Wallet, ["owner", "admin"])} />
+        <Route path="/finance-dashboard" component={withRoleGuard(FinanceDashboard, ["owner", "admin"])} />
+        <Route path="/dispatch-board" component={withRoleGuard(DispatchBoard, ["owner", "admin"])} />
+        <Route path="/load-analyzer" component={withRoleGuard(LoadAnalyzer, ["owner", "admin"])} />
+        <Route path="/quotation" component={withRoleGuard(Quotation, ["owner", "admin"])} />
+        <Route path="/partners" component={withRoleGuard(Partners, ["owner", "admin"])} />
+        <Route path="/settings" component={withRoleGuard(Settings, ["owner", "admin"])} />
+        <Route path="/admin" component={withRoleGuard(AdminPanel, ["owner", "admin"])} />
+        <Route path="/bank-accounts" component={withRoleGuard(BankAccounts, ["owner", "admin"])} />
+        <Route path="/plaid" component={withRoleGuard(PlaidIntegration, ["owner", "admin"])} />
+        <Route path="/reports" component={withRoleGuard(Reports, ["owner", "admin"])} />
+        <Route path="/drivers/add" component={withRoleGuard(AddDriver, ["owner", "admin"])} />
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
         <Route path="/about">{() => <Redirect to="/company" />}</Route>
@@ -193,33 +99,47 @@ export default function App() {
             const showDebug = typeof window !== 'undefined' && localStorage.getItem('debugRoleRedirect') === '1';
             
             if (showDebug) {
+              const debugInfo = {
+                component: 'RootRedirect',
+                path: location.pathname,
+                loading: isLoading,
+                userEmail: user?.email || 'undefined',
+                userRole: user?.role || 'undefined',
+                computedDefaultRoute: defaultRoute,
+                willRedirectTo: defaultRoute
+              };
+              if (typeof window !== 'undefined') {
+                (window as any).__rootRedirectDebug = debugInfo;
+                console.log('ROOT REDIRECT DEBUG:', debugInfo);
+              }
+              
               return (
                 <div style={{
                   position: 'fixed',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
+                  top: '20px',
+                  right: '20px',
                   backgroundColor: '#1a1a1a',
                   color: '#00ff00',
                   padding: '20px',
                   borderRadius: '8px',
                   fontFamily: 'monospace',
-                  fontSize: '14px',
+                  fontSize: '13px',
                   zIndex: 9999,
-                  border: '2px solid #00ff00',
-                  maxWidth: '500px',
+                  border: '3px solid #00ff00',
+                  maxWidth: '600px',
                   whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
+                  wordBreak: 'break-word',
+                  boxShadow: '0 0 20px rgba(0, 255, 0, 0.5)'
                 }}>
-                  <div style={{ marginBottom: '10px', fontWeight: 'bold' }}>ROOT REDIRECT DEBUG</div>
+                  <div style={{ marginBottom: '10px', fontWeight: 'bold', fontSize: '16px' }}>🔍 ROOT REDIRECT DEBUG</div>
                   <div>component: "RootRedirect"</div>
                   <div>path: "{location.pathname}"</div>
-                  <div>loading: {isLoading ? 'true' : 'false'}</div>
+                  <div>loading: {isLoading}</div>
                   <div>userEmail: "{user?.email || 'undefined'}"</div>
                   <div>userRole: "{user?.role || 'undefined'}"</div>
                   <div>computedDefaultRoute: "{defaultRoute}"</div>
                   <div>willRedirectTo: "{defaultRoute}"</div>
-                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#ffff00' }}>Redirecting in 3 seconds...</div>
+                  <div style={{ marginTop: '15px', fontSize: '12px', color: '#ffff00', fontWeight: 'bold' }}>⏱️ Redirecting in 10 seconds...</div>
                 </div>
               );
             }
@@ -234,21 +154,15 @@ export default function App() {
               return <PageLoader />;
             }
             
-            // Use central route logic for unknown routes
+            if (!user) {
+              return <Redirect to="/login" />;
+            }
+            
             const defaultRoute = getDefaultRouteForRole(user);
-            
-            // Log the redirect decision
-            logRouteGuardDecision(
-              user?.role,
-              window.location.pathname,
-              defaultRoute,
-              true
-            );
-            
             return <Redirect to={defaultRoute} />;
           }}
         </Route>
-      </Switch>
+      </Suspense>
     </Router>
   );
 }
