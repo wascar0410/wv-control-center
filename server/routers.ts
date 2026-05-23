@@ -2605,6 +2605,11 @@ export const appRouter = router({
       { expiresIn: 365 * 24 * 60 * 60 }
     );
 
+    // Clear any previous OAuth session (from owner/admin login)
+    // This ensures driver login is not shadowed by old owner session
+    const cookieOptions = getSessionCookieOptions(ctx.req);
+    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    
     // Set wv_session cookie with JWT token
     ctx.res.cookie('wv_session', token, {
       httpOnly: true,
