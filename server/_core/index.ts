@@ -213,6 +213,7 @@ async function startServer() {
     res.json({
       status: "ok",
       commit: "dc0f84f",
+      checkpoint: "1e104f66",
       buildLabel: "driver-sidebar-removechild-fix",
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
