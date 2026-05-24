@@ -2,7 +2,7 @@ import { Router, Route, Redirect } from "wouter";
 import { Suspense, lazy } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDefaultRouteForRole, logRouteGuardDecision } from "@/lib/routeUtils";
-import { PageLoader } from "@/components/PageLoader";
+import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
 import { withRoleGuard, withSuspense } from "@/lib/routeGuards";
 
 // Lazy load pages
@@ -28,7 +28,7 @@ const Profile = lazy(() => import("@/pages/Profile"));
 export default function App() {
   return (
     <Router>
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<DashboardLayoutSkeleton />}>
         {/* ===== PUBLIC ROUTES ===== */}
         <Route path="/login" component={withSuspense(LoginPage)} />
         <Route path="/home" component={withSuspense(Home)} />
