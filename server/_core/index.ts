@@ -208,6 +208,17 @@ async function startServer() {
     });
   });
 
+  // Health/Build marker endpoint
+  app.get("/api/health/build", (_req, res) => {
+    res.json({
+      status: "ok",
+      commit: "dc0f84f",
+      buildLabel: "driver-sidebar-removechild-fix",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development",
+    });
+  });
+
   if (process.env.NODE_ENV === "production") {
     app.use("/api", adaptiveRateLimiter);
   }
