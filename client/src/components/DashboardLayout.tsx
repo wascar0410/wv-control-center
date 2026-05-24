@@ -113,6 +113,16 @@ const getMenuItems = (role?: string) => {
 const getFilteredMenuItems = (role?: string) => {
   const baseItems = getMenuItems(role);
 
+  // For drivers, return menu items directly without RBAC filtering
+  // driverMenuItems is a safe whitelist that should not be filtered
+  if (role === "driver") {
+    return baseItems.map((item) => ({
+      ...item,
+      moduleKey: item.path.replace("/", ""),
+      key: item.path,
+    }));
+  }
+
   const itemsWithModuleKey = baseItems.map((item) => ({
     ...item,
     moduleKey: item.path.replace("/", ""),
@@ -171,7 +181,7 @@ const getFilteredMenuItems = (role?: string) => {
   }
 
   // Guarantee Driver Operations visibility for owner (who may also be a driver)
-  // NOTE: Drivers already have Driver Operations from RBAC filtering, so we only add it back for owners if missing
+  // NOTE: Drivers already have Driver Operations from direct return above, so we only add it back for owners if missing
   const canSeeDriverOps = role === "owner";
   const hasDriverOps = filtered.some(
     (item: any) => item.path === "/driver"
