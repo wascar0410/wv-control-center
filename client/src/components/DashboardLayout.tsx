@@ -96,11 +96,11 @@ const adminMenuItems = [
   { icon: UserIcon, label: "Profile", path: "/profile", description: "Perfil del usuario" },
 ];
 const driverMenuItems = [
-  { icon: LayoutDashboard, label: "Driver Operations", path: "/driver", description: "Dashboard + operaciones" },
-  { icon: Package, label: "Mis Cargas", path: "/driver?tab=loads", description: "Mis cargas y entregas" },
-  { icon: Wallet, label: "Mi Billetera", path: "/finance-wallet", description: "Mis pagos y liquidaciones" },
-  { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
-  { icon: UserIcon, label: "Mi Perfil", path: "/profile", description: "Perfil del usuario" },
+  { icon: LayoutDashboard, label: "Driver Operations", path: "/driver", description: "Dashboard + operaciones", moduleKey: "driver" },
+  { icon: Package, label: "Mis Cargas", path: "/driver?tab=loads", description: "Mis cargas y entregas", moduleKey: "driver-loads" },
+  { icon: Wallet, label: "Mi Billetera", path: "/finance-wallet", description: "Mis pagos y liquidaciones", moduleKey: "finance-wallet" },
+  { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes", moduleKey: "chat" },
+  { icon: UserIcon, label: "Mi Perfil", path: "/profile", description: "Perfil del usuario", moduleKey: "profile" },
 ];
 
 // Note: "Mis Cargas" tab is also available within /driver page for direct navigation
@@ -380,11 +380,11 @@ function DashboardLayoutContent({
                   (item.path === "/driver" && location.startsWith("/driver/"));
 
                 return (
-                  <SidebarMenuItem key={item.path}>
+                  <SidebarMenuItem key={item.moduleKey || item.path}>
                     <SidebarMenuButton
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
+                      tooltip={user?.role === "driver" ? undefined : item.label}
                       className="h-10 rounded-lg transition-all"
                       style={{
                         backgroundColor: isActive ? colors.accent : "transparent",
@@ -460,7 +460,10 @@ function DashboardLayoutContent({
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem onClick={() => setLocation("/profile")} className="cursor-pointer">
+                <DropdownMenuItem onClick={() => {
+                  // Close dropdown first, then navigate
+                  setTimeout(() => setLocation("/profile"), 0);
+                }} className="cursor-pointer">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Mi Perfil
                 </DropdownMenuItem>
