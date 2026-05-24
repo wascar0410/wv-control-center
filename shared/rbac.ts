@@ -31,7 +31,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     
     // Fleet & Drivers
     "fleet-tracking": true,
-    "driver-ops": true,
+    "driver": true,
     
     // Team & Company
     "user-management": true,
@@ -64,7 +64,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     
     // Fleet & Drivers (view only)
     "fleet-tracking": true,
-    "driver-ops": true,
+    "driver": true,
     
     // Team & Company
     "user-management": true,
@@ -96,7 +96,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     
     // Fleet & Drivers (full access)
     "fleet-tracking": true,
-    "driver-ops": true,
+    "driver": true,
     
     // Team & Company (limited)
     "user-management": false,
@@ -128,7 +128,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     
     // Fleet & Drivers (own data only)
     "fleet-tracking": false,
-    "driver-ops": true,
+    "driver": true,
     
     // Team & Company (no access)
     "user-management": false,
@@ -160,7 +160,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions> = {
     
     // Fleet & Drivers (no access)
     "fleet-tracking": false,
-    "driver-ops": false,
+    "driver": false,
     
     // Team & Company (limited)
     "user-management": false,
