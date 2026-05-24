@@ -6,7 +6,7 @@
 
 import { Suspense, lazy } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
-import { PageLoader } from "@/components/PageLoader";
+import { DashboardLayoutSkeleton as PageLoader } from "@/components/DashboardLayoutSkeleton";
 
 const DriverOps = lazy(() => import("./DriverOps"));
 

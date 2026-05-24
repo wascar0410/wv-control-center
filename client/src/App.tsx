@@ -10,20 +10,11 @@ const Home = lazy(() => import("@/pages/Home"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const DriverPage = lazy(() => import("@/pages/DriverPage"));
 const CommandCenter = lazy(() => import("@/pages/CommandCenter"));
-const Team = lazy(() => import("@/pages/Team"));
-const Wallet = lazy(() => import("@/pages/Wallet"));
 const FinanceDashboard = lazy(() => import("@/pages/FinanceDashboard"));
 const DispatchBoard = lazy(() => import("@/pages/DispatchBoard"));
-const LoadAnalyzer = lazy(() => import("@/pages/LoadAnalyzer"));
 const Quotation = lazy(() => import("@/pages/Quotation"));
-const Partners = lazy(() => import("@/pages/Partners"));
-const Settings = lazy(() => import("@/pages/Settings"));
-const AdminPanel = lazy(() => import("@/pages/AdminPanel"));
-const BankAccounts = lazy(() => import("@/pages/BankAccounts"));
-const PlaidIntegration = lazy(() => import("@/pages/PlaidIntegration"));
-const Reports = lazy(() => import("@/pages/Reports"));
-const AddDriver = lazy(() => import("@/pages/AddDriver"));
-const Profile = lazy(() => import("@/pages/Profile"));
+const Profile = lazy(() => import("@/pages/UserProfile"));
+const WalletDashboard = lazy(() => import("@/pages/WalletDashboard"));
 
 export default function App() {
   return (
@@ -35,24 +26,14 @@ export default function App() {
 
         {/* ===== DRIVER ROUTES ===== */}
         <Route path="/driver" component={withRoleGuard(DriverPage, ["driver"])} />
-        <Route path="/finance-wallet" component={withRoleGuard(Wallet, ["driver"])} />
+        <Route path="/finance-wallet" component={withRoleGuard(WalletDashboard, ["driver"])} />
         <Route path="/profile" component={withSuspense(Profile)} />
 
         {/* ===== OWNER/ADMIN ROUTES ===== */}
         <Route path="/command-center" component={withRoleGuard(CommandCenter, ["owner", "admin"])} />
-        <Route path="/team" component={withRoleGuard(Team, ["owner", "admin"])} />
-        <Route path="/wallet" component={withRoleGuard(Wallet, ["owner", "admin"])} />
         <Route path="/finance-dashboard" component={withRoleGuard(FinanceDashboard, ["owner", "admin"])} />
         <Route path="/dispatch-board" component={withRoleGuard(DispatchBoard, ["owner", "admin"])} />
-        <Route path="/load-analyzer" component={withRoleGuard(LoadAnalyzer, ["owner", "admin"])} />
         <Route path="/quotation" component={withRoleGuard(Quotation, ["owner", "admin"])} />
-        <Route path="/partners" component={withRoleGuard(Partners, ["owner", "admin"])} />
-        <Route path="/settings" component={withRoleGuard(Settings, ["owner", "admin"])} />
-        <Route path="/admin" component={withRoleGuard(AdminPanel, ["owner", "admin"])} />
-        <Route path="/bank-accounts" component={withRoleGuard(BankAccounts, ["owner", "admin"])} />
-        <Route path="/plaid" component={withRoleGuard(PlaidIntegration, ["owner", "admin"])} />
-        <Route path="/reports" component={withRoleGuard(Reports, ["owner", "admin"])} />
-        <Route path="/drivers/add" component={withRoleGuard(AddDriver, ["owner", "admin"])} />
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
         <Route path="/about">{() => <Redirect to="/company" />}</Route>

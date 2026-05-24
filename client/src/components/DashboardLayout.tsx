@@ -97,12 +97,13 @@ const adminMenuItems = [
 ];
 const driverMenuItems = [
   { icon: LayoutDashboard, label: "Driver Operations", path: "/driver", description: "Dashboard + operaciones" },
+  { icon: Package, label: "Mis Cargas", path: "/driver?tab=loads", description: "Mis cargas y entregas" },
   { icon: Wallet, label: "Mi Billetera", path: "/finance-wallet", description: "Mis pagos y liquidaciones" },
   { icon: MessageSquare, label: "Chat", path: "/chat", description: "Mensajes" },
   { icon: UserIcon, label: "Mi Perfil", path: "/profile", description: "Perfil del usuario" },
 ];
 
-// Note: "Mis Cargas" is available as a tab within /driver page
+// Note: "Mis Cargas" tab is also available within /driver page for direct navigation
 
 const getMenuItems = (role?: string) => {
   if (role === "driver") return driverMenuItems;
