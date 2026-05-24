@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Truck, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import { getDefaultRouteForRole } from "@/lib/routeUtils";
 
 export default function LoginPage() {
   const [, navigate] = useLocation();
@@ -36,11 +37,16 @@ export default function LoginPage() {
       localStorage.setItem("wv_user_role", data.role);
       localStorage.setItem("wv_user_email", data.email);
       
-      if (data.role === "owner" || data.role === "admin") {
-        window.location.href = "/dashboard";
-      } else {
-        window.location.href = "/driver";
-      }
+      // Use central route logic to determine default route based on role
+      const defaultRoute = getDefaultRouteForRole({
+        id: 0,
+        name: data.name,
+        email: data.email,
+        role: data.role as any,
+        profileImageUrl: null
+      });
+      
+      window.location.href = defaultRoute
     },
     onError: (err) => {
       const msg = err.message || "Error al iniciar sesión";
