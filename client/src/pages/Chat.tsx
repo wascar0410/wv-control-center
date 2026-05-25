@@ -15,7 +15,7 @@ type ChatProps = {
   onlineDriversCount?: number;
 };
 
-export function Chat({
+export default function Chat({
   activeConversationsCount = 0,
   onlineDriversCount = 0,
 }: ChatProps) {

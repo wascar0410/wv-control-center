@@ -1,0 +1,212 @@
+{
+  "user": "Wascar Ortiz",
+  "role": "Propietario (Owner)",
+  "checkpoint": "a618fb8b",
+  "timestamp": "2026-05-25T12:36:05Z",
+  "environment": "Railway Production",
+  "baseUrl": "https://wv-control-center-production.up.railway.app",
+  "totalRoutes": 18,
+  "passed": 0,
+  "blank": 0,
+  "failed": 18,
+  "routes": [
+    {
+      "label": "Command Center",
+      "path": "/command-center",
+      "finalPath": "/command-center",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Dispatch Board",
+      "path": "/dispatch-board",
+      "finalPath": "/dispatch-board",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Driver Operations",
+      "path": "/driver",
+      "finalPath": "/driver",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Loads & Dispatch",
+      "path": "/loads-dispatch",
+      "finalPath": "/loads-dispatch",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Quote Analyzer",
+      "path": "/quote-analyzer",
+      "finalPath": "/quote-analyzer",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Finance Dashboard",
+      "path": "/finance-dashboard",
+      "finalPath": "/finance-dashboard",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Wallet",
+      "path": "/finance-wallet",
+      "finalPath": "/finance-wallet",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Settlements",
+      "path": "/finance-settlements",
+      "finalPath": "/finance-settlements",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Banking Cash Flow",
+      "path": "/banking-cashflow",
+      "finalPath": "/banking-cashflow",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Invoicing",
+      "path": "/invoicing",
+      "finalPath": "/invoicing",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Fleet & Drivers",
+      "path": "/fleet-tracking",
+      "finalPath": "/fleet-tracking",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Team",
+      "path": "/team",
+      "finalPath": "/team",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Chat",
+      "path": "/chat",
+      "finalPath": "/chat",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Company",
+      "path": "/company",
+      "finalPath": "/company",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Company Management",
+      "path": "/company-management",
+      "finalPath": "/company-management",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Alerts & Tasks",
+      "path": "/alerts-tasks",
+      "finalPath": "/alerts-tasks",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Settings",
+      "path": "/settings",
+      "finalPath": "/settings",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    },
+    {
+      "label": "Profile",
+      "path": "/profile",
+      "finalPath": "/profile",
+      "statusCode": 200,
+      "loads": true,
+      "blankPage": false,
+      "requiresDoubleClick": false,
+      "consoleError": "TypeError detected",
+      "status": "fail"
+    }
+  ]
+}
