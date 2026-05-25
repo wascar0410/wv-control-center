@@ -3,7 +3,7 @@
  * Wraps components with role checking and suspense handling
  */
 
-import React, { ComponentType, Suspense, useRef, useEffect } from "react";
+import React, { ComponentType, Suspense } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Redirect } from "wouter";
 import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
@@ -20,43 +20,23 @@ export function withRoleGuard<P extends object>(
 ) {
   return function RoleGuardedComponent(props: P) {
     const { user, loading } = useAuth();
-    const previousUserRef = useRef<any>(null);
-    const hasRedirectedRef = useRef(false);
-
-    // Track the previous user to detect auth state changes
-    useEffect(() => {
-      if (!loading && user) {
-        previousUserRef.current = user;
-        hasRedirectedRef.current = false;
-      }
-    }, [user, loading]);
 
     // If loading, show skeleton
     if (loading) {
       return <DashboardLayoutSkeleton />;
     }
 
-    // If user is not loaded yet (null) but we had a previous user, show skeleton
+    // If user is not loaded yet (null), show skeleton instead of redirecting
     // This prevents redirect loops during route transitions
-    if (!user && previousUserRef.current) {
-      return <DashboardLayoutSkeleton />;
-    }
-
-    // If user is null and we never had a previous user, they're not logged in
     if (!user) {
-      return <Redirect to="/login" />;
+      return <DashboardLayoutSkeleton />;
     }
 
     // Now that user is confirmed loaded, check if they have access
     if (!canAccessRoute(user, allowedRoles)) {
-      // Only redirect once per auth state change
-      if (!hasRedirectedRef.current) {
-        hasRedirectedRef.current = true;
-        const redirectTo = getDefaultRouteForRole(user);
-        return <Redirect to={redirectTo} />;
-      }
-      // After redirect, show skeleton to avoid flashing
-      return <DashboardLayoutSkeleton />;
+      // Redirect to default route for their role
+      const redirectTo = getDefaultRouteForRole(user);
+      return <Redirect to={redirectTo} />;
     }
 
     return (
