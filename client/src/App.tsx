@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getDefaultRouteForRole, logRouteGuardDecision } from "@/lib/routeUtils";
 import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
 import { withRoleGuard, withSuspense } from "@/lib/routeGuards";
+import { AlertCircle } from "lucide-react";
 
 // Lazy load pages
 const Home = lazy(() => import("@/pages/Home"));
@@ -16,6 +17,36 @@ const Quotation = lazy(() => import("@/pages/Quotation"));
 const Profile = lazy(() => import("@/pages/UserProfile"));
 const WalletDashboard = lazy(() => import("@/pages/WalletDashboard"));
 
+// Placeholder component for unimplemented features
+function ComingSoonPlaceholder({ title, description }: { title: string; description?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+      <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
+      <h1 className="text-3xl font-bold mb-2">{title}</h1>
+      {description && <p className="text-gray-500 mb-4 max-w-md">{description}</p>}
+      <p className="text-lg text-gray-400">Esta sección estará disponible pronto</p>
+    </div>
+  );
+}
+
+// Placeholder components for unimplemented features
+const LoadsDispatchPlaceholder = () => <ComingSoonPlaceholder title="Loads & Dispatch" description="Gestión de cargas y cotización" />;
+const QuoteAnalyzerPlaceholder = () => <ComingSoonPlaceholder title="Quote Analyzer" description="Análisis de cotizaciones" />;
+const SettlementsPlaceholder = () => <ComingSoonPlaceholder title="Settlements" description="Distribución de ganancias" />;
+const BankingCashFlowPlaceholder = () => <ComingSoonPlaceholder title="Banking Cash Flow" description="Gestión de flujo de caja" />;
+const InvoicingPlaceholder = () => <ComingSoonPlaceholder title="Invoicing" description="Facturas y cuentas por cobrar" />;
+const FleetTrackingPlaceholder = () => <ComingSoonPlaceholder title="Fleet & Drivers" description="Operaciones de flota" />;
+const TeamPlaceholder = () => <ComingSoonPlaceholder title="Team" description="Usuarios y desempeño" />;
+const ChatPlaceholder = () => <ComingSoonPlaceholder title="Chat" description="Mensajes" />;
+const CompanyPlaceholder = () => <ComingSoonPlaceholder title="Company" description="Información corporativa" />;
+const CompanyManagementPlaceholder = () => <ComingSoonPlaceholder title="Company Management" description="Gestión de empresas" />;
+const AlertsTasksPlaceholder = () => <ComingSoonPlaceholder title="Alerts & Tasks" description="Notificaciones y tareas" />;
+const SettingsPlaceholder = () => <ComingSoonPlaceholder title="Settings" description="Configuración" />;
+
+function PageLoader() {
+  return <DashboardLayoutSkeleton />;
+}
+
 export default function App() {
   return (
     <Router>
@@ -24,9 +55,9 @@ export default function App() {
         <Route path="/login" component={withSuspense(LoginPage)} />
         <Route path="/home" component={withSuspense(Home)} />
 
-        {/* ===== DRIVER ROUTES ===== */}
-        <Route path="/driver" component={withRoleGuard(DriverPage, ["driver"])} />
-        <Route path="/finance-wallet" component={withRoleGuard(WalletDashboard, ["driver"])} />
+        {/* ===== DRIVER ROUTES (also accessible to owner/admin) ===== */}
+        <Route path="/driver" component={withRoleGuard(DriverPage, ["driver", "owner", "admin"])} />
+        <Route path="/finance-wallet" component={withRoleGuard(WalletDashboard, ["driver", "owner", "admin"])} />
         <Route path="/profile" component={withSuspense(Profile)} />
 
         {/* ===== OWNER/ADMIN ROUTES ===== */}
@@ -34,6 +65,20 @@ export default function App() {
         <Route path="/finance-dashboard" component={withRoleGuard(FinanceDashboard, ["owner", "admin"])} />
         <Route path="/dispatch-board" component={withRoleGuard(DispatchBoard, ["owner", "admin"])} />
         <Route path="/quotation" component={withRoleGuard(Quotation, ["owner", "admin"])} />
+        
+        {/* ===== PLACEHOLDER ROUTES (unimplemented features) ===== */}
+        <Route path="/loads-dispatch" component={withRoleGuard(LoadsDispatchPlaceholder, ["owner", "admin"])} />
+        <Route path="/quote-analyzer" component={withRoleGuard(QuoteAnalyzerPlaceholder, ["owner", "admin"])} />
+        <Route path="/finance-settlements" component={withRoleGuard(SettlementsPlaceholder, ["owner", "admin"])} />
+        <Route path="/banking-cashflow" component={withRoleGuard(BankingCashFlowPlaceholder, ["owner", "admin"])} />
+        <Route path="/invoicing" component={withRoleGuard(InvoicingPlaceholder, ["owner", "admin"])} />
+        <Route path="/fleet-tracking" component={withRoleGuard(FleetTrackingPlaceholder, ["owner", "admin"])} />
+        <Route path="/team" component={withRoleGuard(TeamPlaceholder, ["owner", "admin"])} />
+        <Route path="/chat" component={withRoleGuard(ChatPlaceholder, ["owner", "admin", "driver"])} />
+        <Route path="/company" component={withRoleGuard(CompanyPlaceholder, ["owner", "admin"])} />
+        <Route path="/company-management" component={withRoleGuard(CompanyManagementPlaceholder, ["owner", "admin"])} />
+        <Route path="/alerts-tasks" component={withRoleGuard(AlertsTasksPlaceholder, ["owner", "admin"])} />
+        <Route path="/settings" component={withRoleGuard(SettingsPlaceholder, ["owner", "admin"])} />
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
         <Route path="/about">{() => <Redirect to="/company" />}</Route>
@@ -56,6 +101,7 @@ export default function App() {
         <Route path="/transactions">
           {() => <Redirect to="/finance-dashboard" />}
         </Route>
+        <Route path="/accounting-finance">{() => <Redirect to="/finance-dashboard" />}</Route>
 
         {/* ===== DEFAULTS ===== */}
         <Route path="/">
@@ -76,62 +122,14 @@ export default function App() {
               true
             );
             
-            // Debug panel (visible only when localStorage.debugRoleRedirect === "1")
-            const showDebug = typeof window !== 'undefined' && localStorage.getItem('debugRoleRedirect') === '1';
-            
-            if (showDebug) {
-              const debugInfo = {
-                component: 'RootRedirect',
-                path: location.pathname,
-                loading: isLoading,
-                userEmail: user?.email || 'undefined',
-                userRole: user?.role || 'undefined',
-                computedDefaultRoute: defaultRoute,
-                willRedirectTo: defaultRoute
-              };
-              if (typeof window !== 'undefined') {
-                (window as any).__rootRedirectDebug = debugInfo;
-                console.log('ROOT REDIRECT DEBUG:', debugInfo);
-              }
-              
-              return (
-                <div style={{
-                  position: 'fixed',
-                  top: '20px',
-                  right: '20px',
-                  backgroundColor: '#1a1a1a',
-                  color: '#00ff00',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  fontFamily: 'monospace',
-                  fontSize: '13px',
-                  zIndex: 9999,
-                  border: '3px solid #00ff00',
-                  maxWidth: '600px',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  boxShadow: '0 0 20px rgba(0, 255, 0, 0.5)'
-                }}>
-                  <div style={{ marginBottom: '10px', fontWeight: 'bold', fontSize: '16px' }}>🔍 ROOT REDIRECT DEBUG</div>
-                  <div>component: "RootRedirect"</div>
-                  <div>path: "{location.pathname}"</div>
-                  <div>loading: {isLoading}</div>
-                  <div>userEmail: "{user?.email || 'undefined'}"</div>
-                  <div>userRole: "{user?.role || 'undefined'}"</div>
-                  <div>computedDefaultRoute: "{defaultRoute}"</div>
-                  <div>willRedirectTo: "{defaultRoute}"</div>
-                  <div style={{ marginTop: '15px', fontSize: '12px', color: '#ffff00', fontWeight: 'bold' }}>⏱️ Redirecting in 10 seconds...</div>
-                </div>
-              );
-            }
-            
             return <Redirect to={defaultRoute} />;
           }}
         </Route>
+
+        {/* ===== 404 CATCH-ALL ===== */}
         <Route>
           {() => {
             const { user, loading: isLoading } = useAuth();
-            const showDebug = typeof localStorage !== 'undefined' && localStorage.getItem('debugRoleRedirect') === '1';
             
             if (isLoading) {
               return <PageLoader />;
@@ -142,57 +140,6 @@ export default function App() {
             }
             
             const defaultRoute = getDefaultRouteForRole(user);
-            
-            if (showDebug) {
-              const debugInfo = {
-                component: 'RootRedirect',
-                path: '/',
-                loading: isLoading,
-                userEmail: user?.email,
-                userRole: user?.role,
-                computedDefaultRoute: defaultRoute,
-                willRedirectTo: defaultRoute
-              };
-              window.__rootRedirectDebug = debugInfo;
-              
-              return (
-                <div style={{
-                  position: 'fixed',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  backgroundColor: '#fff',
-                  border: '2px solid #f00',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  zIndex: 9999,
-                  maxWidth: '500px',
-                  fontFamily: 'monospace',
-                  fontSize: '12px',
-                  lineHeight: '1.6'
-                }}>
-                  <h2 style={{ marginTop: 0, color: '#f00' }}>ROOT REDIRECT DEBUG</h2>
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                    {JSON.stringify(debugInfo, null, 2)}
-                  </pre>
-                  <button onClick={() => {
-                    localStorage.removeItem('debugRoleRedirect');
-                    window.location.href = defaultRoute;
-                  }} style={{
-                    marginTop: '10px',
-                    padding: '10px 20px',
-                    backgroundColor: '#007bff',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}>
-                    Continue to {defaultRoute}
-                  </button>
-                </div>
-              );
-            }
-            
             return <Redirect to={defaultRoute} />;
           }}
         </Route>

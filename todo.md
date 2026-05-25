@@ -2000,3 +2000,15 @@
 - [x] Exported VehicleType from VehicleTypeSelector
 - [x] Verified: No more toMoney(undefined) errors in console
 - [x] UI displays correctly: Vehicle Type Selector shows cost breakdown
+
+
+## Navigation Regression Fix (Checkpoint 474a551e)
+
+- [ ] Audit sidebar menu paths vs App.tsx registered routes
+- [ ] Identify missing, broken, and blank-page routes
+- [ ] Fix route registration and component mapping in App.tsx
+- [ ] Add safe placeholder pages for unimplemented features
+- [ ] Fix double-click navigation issues in sidebar
+- [ ] Resolve owner/driver role access conflicts
+- [ ] Rebuild, deploy to Railway, and validate all routes
+- [ ] Final validation and deliver results
