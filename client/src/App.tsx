@@ -17,6 +17,19 @@ const Quotation = lazy(() => import("@/pages/Quotation"));
 const Profile = lazy(() => import("@/pages/UserProfile"));
 const WalletDashboard = lazy(() => import("@/pages/WalletDashboard"));
 
+// Existing pages for previously placeholder routes
+const LoadsDispatch = lazy(() => import("@/pages/LoadsDispatch"));
+const QuoteAnalyzer = lazy(() => import("@/pages/QuoteAnalyzer"));
+const SettlementsPage = lazy(() => import("@/pages/SettlementsPage"));
+const BankingCashFlow = lazy(() => import("@/pages/BankingCashFlow"));
+const InvoicingPage = lazy(() => import("@/pages/InvoicingPage"));
+const FleetTracking = lazy(() => import("@/pages/FleetTracking"));
+const UserManagement = lazy(() => import("@/pages/UserManagement"));
+const Chat = lazy(() => import("@/pages/Chat"));
+const Company = lazy(() => import("@/pages/Company"));
+const CompanyManagement = lazy(() => import("@/pages/CompanyManagement"));
+const AlertsTasksPage = lazy(() => import("@/pages/AlertsTasksPage"));
+
 // Placeholder component for unimplemented features
 function ComingSoonPlaceholder({ title, description }: { title: string; description?: string }) {
   return (
@@ -29,18 +42,7 @@ function ComingSoonPlaceholder({ title, description }: { title: string; descript
   );
 }
 
-// Placeholder components for unimplemented features
-const LoadsDispatchPlaceholder = () => <ComingSoonPlaceholder title="Loads & Dispatch" description="Gestión de cargas y cotización" />;
-const QuoteAnalyzerPlaceholder = () => <ComingSoonPlaceholder title="Quote Analyzer" description="Análisis de cotizaciones" />;
-const SettlementsPlaceholder = () => <ComingSoonPlaceholder title="Settlements" description="Distribución de ganancias" />;
-const BankingCashFlowPlaceholder = () => <ComingSoonPlaceholder title="Banking Cash Flow" description="Gestión de flujo de caja" />;
-const InvoicingPlaceholder = () => <ComingSoonPlaceholder title="Invoicing" description="Facturas y cuentas por cobrar" />;
-const FleetTrackingPlaceholder = () => <ComingSoonPlaceholder title="Fleet & Drivers" description="Operaciones de flota" />;
-const TeamPlaceholder = () => <ComingSoonPlaceholder title="Team" description="Usuarios y desempeño" />;
-const ChatPlaceholder = () => <ComingSoonPlaceholder title="Chat" description="Mensajes" />;
-const CompanyPlaceholder = () => <ComingSoonPlaceholder title="Company" description="Información corporativa" />;
-const CompanyManagementPlaceholder = () => <ComingSoonPlaceholder title="Company Management" description="Gestión de empresas" />;
-const AlertsTasksPlaceholder = () => <ComingSoonPlaceholder title="Alerts & Tasks" description="Notificaciones y tareas" />;
+// Placeholder only for Settings (no existing SettingsPage.tsx)
 const SettingsPlaceholder = () => <ComingSoonPlaceholder title="Settings" description="Configuración" />;
 
 function PageLoader() {
@@ -66,18 +68,18 @@ export default function App() {
         <Route path="/dispatch-board" component={withRoleGuard(DispatchBoard, ["owner", "admin"])} />
         <Route path="/quotation" component={withRoleGuard(Quotation, ["owner", "admin"])} />
         
-        {/* ===== PLACEHOLDER ROUTES (unimplemented features) ===== */}
-        <Route path="/loads-dispatch" component={withRoleGuard(LoadsDispatchPlaceholder, ["owner", "admin"])} />
-        <Route path="/quote-analyzer" component={withRoleGuard(QuoteAnalyzerPlaceholder, ["owner", "admin"])} />
-        <Route path="/finance-settlements" component={withRoleGuard(SettlementsPlaceholder, ["owner", "admin"])} />
-        <Route path="/banking-cashflow" component={withRoleGuard(BankingCashFlowPlaceholder, ["owner", "admin"])} />
-        <Route path="/invoicing" component={withRoleGuard(InvoicingPlaceholder, ["owner", "admin"])} />
-        <Route path="/fleet-tracking" component={withRoleGuard(FleetTrackingPlaceholder, ["owner", "admin"])} />
-        <Route path="/team" component={withRoleGuard(TeamPlaceholder, ["owner", "admin"])} />
-        <Route path="/chat" component={withRoleGuard(ChatPlaceholder, ["owner", "admin", "driver"])} />
-        <Route path="/company" component={withRoleGuard(CompanyPlaceholder, ["owner", "admin"])} />
-        <Route path="/company-management" component={withRoleGuard(CompanyManagementPlaceholder, ["owner", "admin"])} />
-        <Route path="/alerts-tasks" component={withRoleGuard(AlertsTasksPlaceholder, ["owner", "admin"])} />
+        {/* ===== EXISTING FEATURE ROUTES ===== */}
+        <Route path="/loads-dispatch" component={withRoleGuard(LoadsDispatch, ["owner", "admin"])} />
+        <Route path="/quote-analyzer" component={withRoleGuard(QuoteAnalyzer, ["owner", "admin"])} />
+        <Route path="/finance-settlements" component={withRoleGuard(SettlementsPage, ["owner", "admin"])} />
+        <Route path="/banking-cashflow" component={withRoleGuard(BankingCashFlow, ["owner", "admin"])} />
+        <Route path="/invoicing" component={withRoleGuard(InvoicingPage, ["owner", "admin"])} />
+        <Route path="/fleet-tracking" component={withRoleGuard(FleetTracking, ["owner", "admin"])} />
+        <Route path="/team" component={withRoleGuard(UserManagement, ["owner", "admin"])} />
+        <Route path="/chat" component={withRoleGuard(Chat, ["owner", "admin", "driver"])} />
+        <Route path="/company" component={withRoleGuard(Company, ["owner", "admin"])} />
+        <Route path="/company-management" component={withRoleGuard(CompanyManagement, ["owner", "admin"])} />
+        <Route path="/alerts-tasks" component={withRoleGuard(AlertsTasksPage, ["owner", "admin"])} />
         <Route path="/settings" component={withRoleGuard(SettingsPlaceholder, ["owner", "admin"])} />
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
