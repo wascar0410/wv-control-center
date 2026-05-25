@@ -7,6 +7,7 @@ import React, { ComponentType, Suspense } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Redirect } from "wouter";
 import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
+import DashboardLayout from "@/components/DashboardLayout";
 import { canAccessRoute, getDefaultRouteForRole } from "./routeUtils";
 
 /**
@@ -31,7 +32,11 @@ export function withRoleGuard<P extends object>(
       return <Redirect to={redirectTo} />;
     }
 
-    return <Component {...props} />;
+    return (
+      <DashboardLayout>
+        <Component {...props} />
+      </DashboardLayout>
+    );
   };
 }
 
