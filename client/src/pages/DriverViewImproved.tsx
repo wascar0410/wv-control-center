@@ -479,5 +479,6 @@ export default function DriverViewImproved() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
   );
 }
