@@ -151,16 +151,16 @@ export default function DriverViewImproved() {
 
   return (
     <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Bienvenido, {userName}</h1>
             <p className="text-muted-foreground mt-1">Panel de seguimiento interno de cargas</p>
           </div>
-        </div>
+      </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">Cargas Activas</CardTitle>
@@ -208,10 +208,10 @@ export default function DriverViewImproved() {
               </div>
             </CardContent>
           </Card>
-        </div>
+      </div>
 
-        {/* Main Tabs */}
-        <Tabs defaultValue="cargas" className="w-full">
+      {/* Main Tabs */}
+      <Tabs defaultValue="cargas" className="w-full">
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="cargas">Cargas</TabsTrigger>
             <TabsTrigger value="ganancias">Ganancias</TabsTrigger>
@@ -429,12 +429,11 @@ export default function DriverViewImproved() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+      </Tabs>
 
-        {/* Chat Widget */}
-        <div className="mt-8">
+      {/* Chat Widget */}
+      <div className="mt-8">
           <DriverChatWidget />
-        </div>
       </div>
 
       {/* Confirm Delivery Dialog */}
