@@ -222,7 +222,11 @@ const FALLBACK_USER = {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
-    return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+    const parsed = saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
+    if (!Number.isFinite(parsed) || parsed < MIN_WIDTH || parsed > MAX_WIDTH) {
+      return DEFAULT_WIDTH;
+    }
+    return parsed;
   });
 
   const { loading, user } = useAuth();
@@ -271,7 +275,13 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
 
   const menuItems = getFilteredMenuItems(user?.role);
-  const activeMenuItem = menuItems.find((item) => item.path === location);
+  
+  // Safety fallback: if owner/admin has no menu items, return admin menu
+  const safeMenuItems = menuItems.length === 0 && (user?.role === "owner" || user?.role === "admin") 
+    ? adminMenuItems 
+    : menuItems;
+  
+  const activeMenuItem = safeMenuItems.find((item) => item.path === location);
 
   const roleLabel =
     user?.role === "admin"
@@ -375,7 +385,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0 py-3">
             <SidebarMenu className="gap-1 px-2">
-              {menuItems.map((item) => {
+              {safeMenuItems.map((item) => {
                 const isActive = location === item.path ||
                   (item.path === "/driver" && location.startsWith("/driver/"));
 
