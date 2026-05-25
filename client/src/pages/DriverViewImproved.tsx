@@ -14,7 +14,7 @@ import { DriverPerformanceComparison } from "@/components/DriverPerformanceCompa
 import { DriverBonusSystem } from "@/components/DriverBonusSystem";
 import { DriverInvoicing } from "@/components/DriverInvoicing";
 import { CustomerRating } from "@/components/CustomerRating";
-import DashboardLayout from "@/components/DashboardLayout";
+
 // useAuth hook will be provided by DashboardLayout context
 import { toast } from "sonner";
 import {
@@ -150,7 +150,6 @@ export default function DriverViewImproved() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -480,6 +479,5 @@ export default function DriverViewImproved() {
           )}
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
   );
 }

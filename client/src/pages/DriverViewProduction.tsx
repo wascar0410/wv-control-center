@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Package, Truck, CheckCircle, DollarSign } from "lucide-react";
 
@@ -24,7 +24,6 @@ export default function DriverViewProduction() {
   };
 
   return (
-    <DashboardLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Driver Panel (Modo Seguro)</h1>
 
@@ -74,6 +73,5 @@ export default function DriverViewProduction() {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
   );
 }
