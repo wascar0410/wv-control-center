@@ -210,11 +210,12 @@ async function startServer() {
 
   // Health/Build marker endpoint
   app.get("/api/health/build", (_req, res) => {
+    const commitSha = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT_SHA || "unknown";
     res.json({
       status: "ok",
-      commit: "dc0f84f",
-      checkpoint: "1e104f66",
-      buildLabel: "driver-sidebar-removechild-fix",
+      commit: commitSha,
+      checkpoint: commitSha,
+      buildLabel: "owner-sidebar-visibility-fix",
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || "development",
     });
@@ -814,6 +815,7 @@ async function startServer() {
   wsManager.initialize(server);
 
   server.listen(port, () => {
+    console.log(`[BUILD MARKER] owner-sidebar-visibility-fix 17f4a4d3`);
     console.log(`Server running on http://localhost:${port}/`);
   });
 }
