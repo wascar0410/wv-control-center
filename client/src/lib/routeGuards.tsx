@@ -21,11 +21,18 @@ export function withRoleGuard<P extends object>(
   return function RoleGuardedComponent(props: P) {
     const { user, loading } = useAuth();
 
+    // If loading, show skeleton
     if (loading) {
       return <DashboardLayoutSkeleton />;
     }
 
-    // Check if user has access to this route
+    // If user is not loaded yet (null), show skeleton instead of redirecting
+    // This prevents redirect loops during route transitions
+    if (!user) {
+      return <DashboardLayoutSkeleton />;
+    }
+
+    // Now that user is confirmed loaded, check if they have access
     if (!canAccessRoute(user, allowedRoles)) {
       // Redirect to default route for their role
       const redirectTo = getDefaultRouteForRole(user);
