@@ -1,4 +1,4 @@
-import { Router, Route, Redirect } from "wouter";
+import { Router, Route, Redirect, Switch } from "wouter";
 import { Suspense, lazy } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getDefaultRouteForRole, logRouteGuardDecision } from "@/lib/routeUtils";
@@ -74,7 +74,8 @@ export default function App() {
   return (
     <Router>
       <Suspense fallback={<DashboardLayoutSkeleton />}>
-        {/* ===== PUBLIC ROUTES ===== */}
+        <Switch>
+          {/* ===== PUBLIC ROUTES ===== */}
         <Route path="/login" component={withSuspense(LoginPage)} />
         <Route path="/home" component={withSuspense(Home)} />
 
@@ -151,6 +152,7 @@ export default function App() {
 
         {/* ===== 404 CATCH-ALL REMOVED ===== */}
         {/* Catch-all route removed - wouter renders it alongside valid routes */}
+        </Switch>
       </Suspense>
     </Router>
   );
