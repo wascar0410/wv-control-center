@@ -4,7 +4,7 @@
  */
 
 import React, { ComponentType, Suspense } from "react";
-import { useAuth } from "@/_core/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Redirect } from "wouter";
 import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
 import DashboardLayout from "@/components/DashboardLayout";
