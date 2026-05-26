@@ -163,7 +163,18 @@ export default function App() {
             }
             
             const defaultRoute = getDefaultRouteForRole(user);
-            return <Redirect to={defaultRoute} />;
+            return (
+              <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-background">
+                <h1 className="text-4xl font-bold mb-4 text-foreground">404</h1>
+                <p className="text-lg text-muted-foreground mb-6">Página no encontrada</p>
+                <button
+                  onClick={() => window.location.href = defaultRoute}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Volver al inicio
+                </button>
+              </div>
+            );
           }}
         </Route>
       </Suspense>
