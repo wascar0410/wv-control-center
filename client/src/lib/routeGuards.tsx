@@ -8,7 +8,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Redirect } from "wouter";
 import { DashboardLayoutSkeleton } from "@/components/DashboardLayoutSkeleton";
 import DashboardLayout from "@/components/DashboardLayout";
-import { canAccessRoute, getDefaultRouteForRole } from "./routeUtils";
+import { canAccessRoute, getDefaultRouteForRole, logRouteGuardDecision } from "./routeUtils";
 
 /**
  * Wraps a component with role-based access control
@@ -19,24 +19,60 @@ export function withRoleGuard<P extends object>(
   allowedRoles: string[]
 ) {
   return function RoleGuardedComponent(props: P) {
-    const { user, loading } = useAuth();
+    const { user, loading, authChecked } = useAuth();
 
-    // If loading, show skeleton
-    if (loading) {
+    // Debug logging if enabled
+    const debugEnabled = typeof window !== "undefined" && localStorage.getItem("debugRouteGuard") === "1";
+
+    // Phase 1: Auth is still loading or hasn't been checked yet
+    // Show skeleton, do NOT redirect
+    if (loading || !authChecked) {
+      if (debugEnabled) {
+        console.log("[RouteGuard] Auth not ready", {
+          path: window.location.pathname,
+          loading,
+          authChecked,
+          userEmail: user?.email,
+          userRole: user?.role,
+          allowedRoles,
+        });
+      }
       return <DashboardLayoutSkeleton />;
     }
 
-    // If user is not loaded yet (null), show skeleton instead of redirecting
-    // This prevents redirect loops during route transitions
+    // Phase 2: Auth check completed but user is null (not logged in)
     if (!user) {
-      return <DashboardLayoutSkeleton />;
+      if (debugEnabled) {
+        console.log("[RouteGuard] User not authenticated", {
+          path: window.location.pathname,
+          redirectTo: "/login",
+        });
+      }
+      return <Redirect to="/login" />;
     }
 
-    // Now that user is confirmed loaded, check if they have access
+    // Phase 3: User exists but doesn't have required role
     if (!canAccessRoute(user, allowedRoles)) {
-      // Redirect to default route for their role
       const redirectTo = getDefaultRouteForRole(user);
+      if (debugEnabled) {
+        console.log("[RouteGuard] User role not allowed", {
+          path: window.location.pathname,
+          userRole: user.role,
+          allowedRoles,
+          redirectTo,
+        });
+      }
       return <Redirect to={redirectTo} />;
+    }
+
+    // Phase 4: User is authenticated and has required role
+    if (debugEnabled) {
+      console.log("[RouteGuard] Access granted", {
+        path: window.location.pathname,
+        userEmail: user.email,
+        userRole: user.role,
+        allowedRoles,
+      });
     }
 
     return (
