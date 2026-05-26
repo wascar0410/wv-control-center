@@ -83,24 +83,24 @@ export default function App() {
         <Route path="/profile" component={withSuspense(Profile)} />
 
         {/* ===== OWNER/ADMIN ROUTES ===== */}
-        <Route path="/command-center" component={ProtectedCommandCenter} />
-        <Route path="/finance-dashboard" component={ProtectedFinanceDashboard} />
-        <Route path="/dispatch-board" component={ProtectedDispatchBoard} />
-        <Route path="/quotation" component={ProtectedQuotation} />
+        <Route path="/command-center">{() => <ProtectedCommandCenter />}</Route>
+        <Route path="/finance-dashboard">{() => <ProtectedFinanceDashboard />}</Route>
+        <Route path="/dispatch-board">{() => <ProtectedDispatchBoard />}</Route>
+        <Route path="/quotation">{() => <ProtectedQuotation />}</Route>
         
         {/* ===== EXISTING FEATURE ROUTES ===== */}
-        <Route path="/loads-dispatch" component={ProtectedLoadsDispatch} />
-        <Route path="/quote-analyzer" component={ProtectedQuoteAnalyzer} />
-        <Route path="/finance-settlements" component={ProtectedSettlementsPage} />
-        <Route path="/banking-cashflow" component={ProtectedBankingCashFlow} />
-        <Route path="/invoicing" component={ProtectedInvoicingPage} />
-        <Route path="/fleet-tracking" component={ProtectedFleetTracking} />
-        <Route path="/team" component={ProtectedUserManagement} />
-        <Route path="/chat" component={ProtectedChatPlaceholder} />
-        <Route path="/company" component={ProtectedCompany} />
-        <Route path="/company-management" component={ProtectedCompanyManagement} />
-        <Route path="/alerts-tasks" component={ProtectedAlertsTasksPage} />
-        <Route path="/settings" component={ProtectedSettingsPlaceholder} />
+        <Route path="/loads-dispatch">{() => <ProtectedLoadsDispatch />}</Route>
+        <Route path="/quote-analyzer">{() => <ProtectedQuoteAnalyzer />}</Route>
+        <Route path="/finance-settlements">{() => <ProtectedSettlementsPage />}</Route>
+        <Route path="/banking-cashflow">{() => <ProtectedBankingCashFlow />}</Route>
+        <Route path="/invoicing">{() => <ProtectedInvoicingPage />}</Route>
+        <Route path="/fleet-tracking">{() => <ProtectedFleetTracking />}</Route>
+        <Route path="/team">{() => <ProtectedUserManagement />}</Route>
+        <Route path="/chat">{() => <ProtectedChatPlaceholder />}</Route>
+        <Route path="/company">{() => <ProtectedCompany />}</Route>
+        <Route path="/company-management">{() => <ProtectedCompanyManagement />}</Route>
+        <Route path="/alerts-tasks">{() => <ProtectedAlertsTasksPage />}</Route>
+        <Route path="/settings">{() => <ProtectedSettingsPlaceholder />}</Route>
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
         <Route path="/about">{() => <Redirect to="/company" />}</Route>
