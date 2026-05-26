@@ -49,6 +49,26 @@ function PageLoader() {
   return <DashboardLayoutSkeleton />;
 }
 
+// Pre-create wrapped components to avoid remounting issues
+const ProtectedDriverPage = withRoleGuard(DriverPage, ["driver", "owner", "admin"]);
+const ProtectedWalletDashboard = withRoleGuard(WalletDashboard, ["driver", "owner", "admin"]);
+const ProtectedCommandCenter = withRoleGuard(CommandCenter, ["owner", "admin"]);
+const ProtectedFinanceDashboard = withRoleGuard(FinanceDashboard, ["owner", "admin"]);
+const ProtectedDispatchBoard = withRoleGuard(DispatchBoard, ["owner", "admin"]);
+const ProtectedQuotation = withRoleGuard(Quotation, ["owner", "admin"]);
+const ProtectedLoadsDispatch = withRoleGuard(LoadsDispatch, ["owner", "admin"]);
+const ProtectedQuoteAnalyzer = withRoleGuard(QuoteAnalyzer, ["owner", "admin"]);
+const ProtectedSettlementsPage = withRoleGuard(SettlementsPage, ["owner", "admin"]);
+const ProtectedBankingCashFlow = withRoleGuard(BankingCashFlow, ["owner", "admin"]);
+const ProtectedInvoicingPage = withRoleGuard(InvoicingPage, ["owner", "admin"]);
+const ProtectedFleetTracking = withRoleGuard(FleetTracking, ["owner", "admin"]);
+const ProtectedUserManagement = withRoleGuard(UserManagement, ["owner", "admin"]);
+const ProtectedChatPlaceholder = withRoleGuard(ChatPlaceholder, ["owner", "admin", "driver"]);
+const ProtectedCompany = withRoleGuard(Company, ["owner", "admin"]);
+const ProtectedCompanyManagement = withRoleGuard(CompanyManagement, ["owner", "admin"]);
+const ProtectedAlertsTasksPage = withRoleGuard(AlertsTasksPage, ["owner", "admin"]);
+const ProtectedSettingsPlaceholder = withRoleGuard(SettingsPlaceholder, ["owner", "admin"]);
+
 export default function App() {
   return (
     <Router>
@@ -58,29 +78,29 @@ export default function App() {
         <Route path="/home" component={withSuspense(Home)} />
 
         {/* ===== DRIVER ROUTES (also accessible to owner/admin) ===== */}
-        <Route path="/driver" component={withRoleGuard(DriverPage, ["driver", "owner", "admin"])} />
-        <Route path="/finance-wallet" component={withRoleGuard(WalletDashboard, ["driver", "owner", "admin"])} />
+        <Route path="/driver" component={ProtectedDriverPage} />
+        <Route path="/finance-wallet" component={ProtectedWalletDashboard} />
         <Route path="/profile" component={withSuspense(Profile)} />
 
         {/* ===== OWNER/ADMIN ROUTES ===== */}
-        <Route path="/command-center" component={withRoleGuard(CommandCenter, ["owner", "admin"])} />
-        <Route path="/finance-dashboard" component={withRoleGuard(FinanceDashboard, ["owner", "admin"])} />
-        <Route path="/dispatch-board" component={withRoleGuard(DispatchBoard, ["owner", "admin"])} />
-        <Route path="/quotation" component={withRoleGuard(Quotation, ["owner", "admin"])} />
+        <Route path="/command-center" component={ProtectedCommandCenter} />
+        <Route path="/finance-dashboard" component={ProtectedFinanceDashboard} />
+        <Route path="/dispatch-board" component={ProtectedDispatchBoard} />
+        <Route path="/quotation" component={ProtectedQuotation} />
         
         {/* ===== EXISTING FEATURE ROUTES ===== */}
-        <Route path="/loads-dispatch" component={withRoleGuard(LoadsDispatch, ["owner", "admin"])} />
-        <Route path="/quote-analyzer" component={withRoleGuard(QuoteAnalyzer, ["owner", "admin"])} />
-        <Route path="/finance-settlements" component={withRoleGuard(SettlementsPage, ["owner", "admin"])} />
-        <Route path="/banking-cashflow" component={withRoleGuard(BankingCashFlow, ["owner", "admin"])} />
-        <Route path="/invoicing" component={withRoleGuard(InvoicingPage, ["owner", "admin"])} />
-        <Route path="/fleet-tracking" component={withRoleGuard(FleetTracking, ["owner", "admin"])} />
-        <Route path="/team" component={withRoleGuard(UserManagement, ["owner", "admin"])} />
-        <Route path="/chat" component={withRoleGuard(ChatPlaceholder, ["owner", "admin", "driver"])} />
-        <Route path="/company" component={withRoleGuard(Company, ["owner", "admin"])} />
-        <Route path="/company-management" component={withRoleGuard(CompanyManagement, ["owner", "admin"])} />
-        <Route path="/alerts-tasks" component={withRoleGuard(AlertsTasksPage, ["owner", "admin"])} />
-        <Route path="/settings" component={withRoleGuard(SettingsPlaceholder, ["owner", "admin"])} />
+        <Route path="/loads-dispatch" component={ProtectedLoadsDispatch} />
+        <Route path="/quote-analyzer" component={ProtectedQuoteAnalyzer} />
+        <Route path="/finance-settlements" component={ProtectedSettlementsPage} />
+        <Route path="/banking-cashflow" component={ProtectedBankingCashFlow} />
+        <Route path="/invoicing" component={ProtectedInvoicingPage} />
+        <Route path="/fleet-tracking" component={ProtectedFleetTracking} />
+        <Route path="/team" component={ProtectedUserManagement} />
+        <Route path="/chat" component={ProtectedChatPlaceholder} />
+        <Route path="/company" component={ProtectedCompany} />
+        <Route path="/company-management" component={ProtectedCompanyManagement} />
+        <Route path="/alerts-tasks" component={ProtectedAlertsTasksPage} />
+        <Route path="/settings" component={ProtectedSettingsPlaceholder} />
 
         {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
         <Route path="/about">{() => <Redirect to="/company" />}</Route>
