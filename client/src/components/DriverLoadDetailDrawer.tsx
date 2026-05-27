@@ -8,6 +8,15 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { X, MapPin, Package, Clock, DollarSign } from "lucide-react";
 import {
   calculateLoadEconomics,
@@ -43,6 +52,8 @@ interface DriverLoadDetailDrawerProps {
   tollCost?: number | string;
   status?: string;
   vehicleType?: "cargo_van" | "sprinter" | "box_truck" | "default";
+  onAccept?: (loadId: number) => Promise<void>;
+  onReject?: (loadId: number, reason: string) => Promise<void>;
 }
 
 /**
@@ -55,6 +66,7 @@ interface DriverLoadDetailDrawerProps {
  * - Time estimate
  * - Cost estimate
  * - Profitability explanation
+ * - Accept/Reject buttons with confirmations
  */
 export function DriverLoadDetailDrawer({
   isOpen,
@@ -78,8 +90,14 @@ export function DriverLoadDetailDrawer({
   tollCost,
   status = "available",
   vehicleType = "cargo_van",
+  onAccept,
+  onReject,
 }: DriverLoadDetailDrawerProps) {
   const [showCalculationDetails, setShowCalculationDetails] = useState(false);
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Calculate economics
   const economics = calculateLoadEconomics({
@@ -96,239 +114,354 @@ export function DriverLoadDetailDrawer({
     vehicleType,
   } as LoadEconomicsInput);
 
+  const isAvailable = status === "available";
+
+  const handleAccept = async () => {
+    if (!loadId || !onAccept) return;
+    setIsLoading(true);
+    try {
+      await onAccept(loadId);
+      setShowAcceptConfirm(false);
+      onClose();
+    } catch (error) {
+      console.error("Error accepting load:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!loadId || !onReject) return;
+    setIsLoading(true);
+    try {
+      await onReject(loadId, rejectReason || "Sin razón especificada");
+      setShowRejectConfirm(false);
+      setRejectReason("");
+      onClose();
+    } catch (error) {
+      console.error("Error rejecting load:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle className="text-xl">Detalles de Carga</SheetTitle>
-          <SheetDescription>
-            {clientName} - {status === "in_transit" ? "En Ruta" : "Disponible"}
-          </SheetDescription>
-        </SheetHeader>
+    <>
+      <Sheet open={isOpen} onOpenChange={onClose}>
+        <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="text-xl">Detalles de Carga</SheetTitle>
+            <SheetDescription>
+              {clientName} - {status === "in_transit" ? "En Ruta" : "Disponible"}
+            </SheetDescription>
+          </SheetHeader>
 
-        <div className="space-y-6 mt-6">
-          {/* Load Summary */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-gray-900">Resumen</h3>
-            <div className="space-y-2 text-sm">
-              <p className="text-gray-600">
-                <span className="font-medium">Cliente:</span> {clientName}
-              </p>
-              {merchandiseType && (
+          <div className="space-y-6 mt-6">
+            {/* Load Summary */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900">Resumen</h3>
+              <div className="space-y-2 text-sm">
                 <p className="text-gray-600">
-                  <span className="font-medium">Tipo:</span> {merchandiseType}
+                  <span className="font-medium">Cliente:</span> {clientName}
                 </p>
-              )}
-              {weight && (
+                {merchandiseType && (
+                  <p className="text-gray-600">
+                    <span className="font-medium">Tipo:</span> {merchandiseType}
+                  </p>
+                )}
+                {weight && (
+                  <p className="text-gray-600">
+                    <span className="font-medium">Peso:</span> {weight} {weightUnit}
+                  </p>
+                )}
                 <p className="text-gray-600">
-                  <span className="font-medium">Peso:</span> {weight} {weightUnit}
+                  <span className="font-medium">Vehículo:</span> {vehicleType}
                 </p>
-              )}
-              <p className="text-gray-600">
-                <span className="font-medium">Vehículo:</span> {vehicleType}
-              </p>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Pickup and Delivery */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              Ruta
-            </h3>
-            <div className="space-y-3 text-sm">
-              <div className="p-3 bg-blue-50 rounded border border-blue-200">
-                <p className="text-xs text-gray-500 mb-1">ORIGEN</p>
-                <p className="font-medium text-gray-900">{pickupAddress}</p>
-              </div>
-              <div className="text-center text-gray-400">↓</div>
-              <div className="p-3 bg-green-50 rounded border border-green-200">
-                <p className="text-xs text-gray-500 mb-1">DESTINO</p>
-                <p className="font-medium text-gray-900">{deliveryAddress}</p>
               </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* Earnings Breakdown - V2 */}
-          <DriverEarningsBreakdown
-            grossPay={economics.grossPay}
-            fuelCost={economics.fuelCost}
-            maintenanceCost={economics.maintenanceCost}
-            tolls={economics.tolls}
-            estimatedTotalCost={economics.estimatedTotalCost}
-            netPay={economics.netPay}
-            hourlyRate={economics.hourlyRate}
-            payPerMile={economics.payPerMile}
-          />
-
-          <Separator />
-
-          {/* Time Estimate */}
-          {economics.estimatedTotalMinutes !== null && (
+            {/* Pickup and Delivery */}
             <div className="space-y-3">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Clock className="w-4 h-4" />
-                Estimación de Tiempo
+                <MapPin className="w-4 h-4" />
+                Ruta
               </h3>
-              <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tiempo de manejo:</span>
-                  <span className="font-medium">
-                    {formatTime(economics.estimatedDriveMinutes)}
-                  </span>
+              <div className="space-y-3 text-sm">
+                <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                  <p className="text-xs text-gray-500 mb-1">ORIGEN</p>
+                  <p className="font-medium text-gray-900">{pickupAddress}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tiempo de servicio:</span>
-                  <span className="font-medium">
-                    {formatTime(economics.serviceMinutes)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Buffer:</span>
-                  <span className="font-medium">
-                    {economics.bufferMinutes}m
-                  </span>
-                </div>
-                <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span>Tiempo total estimado:</span>
-                  <span className="text-blue-600">
-                    {formatTime(economics.estimatedTotalMinutes)}
-                  </span>
+                <div className="text-center text-gray-400">↓</div>
+                <div className="p-3 bg-green-50 rounded border border-green-200">
+                  <p className="text-xs text-gray-500 mb-1">DESTINO</p>
+                  <p className="font-medium text-gray-900">{deliveryAddress}</p>
                 </div>
               </div>
             </div>
-          )}
 
-          <Separator />
+            <Separator />
 
-          {/* Cost Estimate - V2 */}
-          {economics.totalMiles !== null && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
-                Estimación de Costos
-              </h3>
-              <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Millas:</span>
-                  <span className="font-medium">
-                    {formatMiles(economics.totalMiles)}
-                  </span>
-                </div>
-                
-                <div className="border-t pt-2 mt-2">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Combustible por milla:</span>
-                    <span className="font-medium">
-                      ${economics.fuelCostPerMile.toFixed(3)}/mi
-                    </span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Mantenimiento por milla:</span>
-                    <span className="font-medium">
-                      ${economics.maintenanceCostPerMile.toFixed(3)}/mi
-                    </span>
-                  </div>
-                  <div className="flex justify-between font-semibold">
-                    <span>Total por milla:</span>
-                    <span className="text-red-600">
-                      ${economics.totalCostPerMile.toFixed(3)}/mi
-                    </span>
-                  </div>
-                </div>
+            {/* Earnings Breakdown - V2 */}
+            <DriverEarningsBreakdown
+              grossPay={economics.grossPay}
+              fuelCost={economics.fuelCost}
+              maintenanceCost={economics.maintenanceCost}
+              tolls={economics.tolls}
+              estimatedTotalCost={economics.estimatedTotalCost}
+              netPay={economics.netPay}
+              hourlyRate={economics.hourlyRate}
+              payPerMile={economics.payPerMile}
+            />
 
-                <div className="border-t pt-2 mt-2 space-y-2">
+            <Separator />
+
+            {/* Time Estimate */}
+            {economics.estimatedTotalMinutes !== null && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Estimación de Tiempo
+                </h3>
+                <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Combustible (Est.):</span>
-                    <span className="text-red-600">
-                      -{formatCurrency(economics.fuelCost)}
+                    <span className="text-gray-600">Tiempo de manejo:</span>
+                    <span className="font-medium">
+                      {formatTime(economics.estimatedDriveMinutes)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Mantenimiento (Est.):</span>
-                    <span className="text-red-600">
-                      -{formatCurrency(economics.maintenanceCost)}
+                    <span className="text-gray-600">Tiempo de servicio:</span>
+                    <span className="font-medium">
+                      {formatTime(economics.serviceMinutes)}
                     </span>
                   </div>
-                  {economics.tolls !== null && economics.tolls > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Peajes:</span>
-                      <span className="text-red-600">
-                        -{formatCurrency(economics.tolls)}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Buffer:</span>
+                    <span className="font-medium">
+                      {economics.bufferMinutes}m
+                    </span>
+                  </div>
                   <div className="border-t pt-2 flex justify-between font-semibold">
-                    <span>Costo total estimado:</span>
-                    <span className="text-red-600">
-                      -{formatCurrency(economics.estimatedTotalCost)}
+                    <span>Tiempo total estimado:</span>
+                    <span className="text-blue-600">
+                      {formatTime(economics.estimatedTotalMinutes)}
                     </span>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          <Separator />
-
-          {/* Profitability Score */}
-          <div className="space-y-3">
-            <h3 className="font-semibold text-gray-900">Rentabilidad</h3>
-            <div className="p-4 rounded border-2 border-gray-200 flex justify-between items-center">
-              <span className="text-gray-700">Puntuación:</span>
-              <DriverLoadScoreBadge
-                score={economics.profitabilityScore}
-                hourlyRate={economics.hourlyRate}
-              />
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Calculation Details Toggle */}
-          <div className="space-y-3">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowCalculationDetails(!showCalculationDetails)}
-            >
-              {showCalculationDetails
-                ? "Ocultar Detalles de Cálculo"
-                : "Ver Detalles de Cálculo"}
-            </Button>
-
-            {showCalculationDetails && (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800 whitespace-pre-wrap">
-                {getCalculationExplanation()}
               </div>
             )}
-          </div>
 
-          {/* Final Disclaimer */}
-          <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
-            <p className="font-semibold mb-1">⚠️ Importante</p>
-            <p>
-              Estos valores son ESTIMACIONES. El pago final se calcula en
-              Wallet/Settlements y puede variar según:
-            </p>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
-              <li>Distancia real recorrida</li>
-              <li>Tiempo real de entrega</li>
-              <li>Combustible y peajes reales</li>
-              <li>Políticas de comisión</li>
+            <Separator />
+
+            {/* Cost Estimate - V2 */}
+            {economics.totalMiles !== null && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" />
+                  Estimación de Costos
+                </h3>
+                <div className="space-y-2 text-sm bg-gray-50 p-3 rounded">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Millas:</span>
+                    <span className="font-medium">
+                      {formatMiles(economics.totalMiles)}
+                    </span>
+                  </div>
+                  
+                  <div className="border-t pt-2 mt-2">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-gray-600">Combustible por milla:</span>
+                      <span className="font-medium">
+                        ${economics.fuelCostPerMile.toFixed(3)}/mi
+                      </span>
+                    </div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-gray-600">Mantenimiento por milla:</span>
+                      <span className="font-medium">
+                        ${economics.maintenanceCostPerMile.toFixed(3)}/mi
+                      </span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Total por milla:</span>
+                      <span className="text-red-600">
+                        ${economics.totalCostPerMile.toFixed(3)}/mi
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-2 mt-2 space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Combustible (Est.):</span>
+                      <span className="text-red-600">
+                        -{formatCurrency(economics.fuelCost)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Mantenimiento (Est.):</span>
+                      <span className="text-red-600">
+                        -{formatCurrency(economics.maintenanceCost)}
+                      </span>
+                    </div>
+                    {economics.tolls !== null && economics.tolls > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Peajes:</span>
+                        <span className="text-red-600">
+                          -{formatCurrency(economics.tolls)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="border-t pt-2 flex justify-between font-semibold">
+                      <span>Costo total estimado:</span>
+                      <span className="text-red-600">
+                        -{formatCurrency(economics.estimatedTotalCost)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Separator />
+
+            {/* Profitability Score */}
+            <div className="space-y-3">
+              <h3 className="font-semibold text-gray-900">Rentabilidad</h3>
+              <div className="p-4 rounded border-2 border-gray-200 flex justify-between items-center">
+                <span className="text-gray-700">Puntuación:</span>
+                <DriverLoadScoreBadge
+                  score={economics.profitabilityScore}
+                  hourlyRate={economics.hourlyRate}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Calculation Details Toggle */}
+            <div className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowCalculationDetails(!showCalculationDetails)}
+              >
+                {showCalculationDetails
+                  ? "Ocultar Detalles de Cálculo"
+                  : "Ver Detalles de Cálculo"}
+              </Button>
+
+              {showCalculationDetails && (
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800 whitespace-pre-wrap">
+                  {getCalculationExplanation()}
+                </div>
+              )}
+            </div>
+
+            {/* Final Disclaimer */}
+            <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+              <p className="font-semibold mb-1">⚠️ Importante</p>
+              <p>
+                Estos valores son ESTIMACIONES. El pago final se calcula en
+                Wallet/Settlements y puede variar según:
+              </p>
+              <ul className="list-disc list-inside mt-2 space-y-1 text-xs">
+                <li>Distancia real recorrida</li>
+                <li>Tiempo real de entrega</li>
+                <li>Combustible y peajes reales</li>
+                <li>Políticas de comisión</li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            {isAvailable && (
+              <div className="flex gap-2">
+                {onAccept && (
+                  <Button
+                    onClick={() => setShowAcceptConfirm(true)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                    disabled={isLoading}
+                  >
+                    Aceptar Carga
+                  </Button>
+                )}
+                {onReject && (
+                  <Button
+                    onClick={() => setShowRejectConfirm(true)}
+                    variant="destructive"
+                    className="flex-1"
+                    disabled={isLoading}
+                  >
+                    Rechazar
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Close Button */}
+            <Button onClick={onClose} className="w-full">
+              Cerrar
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Accept Confirmation Dialog */}
+      <AlertDialog open={showAcceptConfirm} onOpenChange={setShowAcceptConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Aceptar carga?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de aceptar la carga de {clientName}. El pago estimado es {formatCurrency(economics.netPay)} (neto).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-800">
+            <p className="font-semibold mb-1">Resumen:</p>
+            <ul className="space-y-1 text-xs">
+              <li>Pago Bruto: {formatCurrency(economics.grossPay)}</li>
+              <li>Costos (Est.): {formatCurrency(economics.estimatedTotalCost)}</li>
+              <li>Pago Neto (Est.): {formatCurrency(economics.netPay)}</li>
             </ul>
           </div>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleAccept}
+            disabled={isLoading}
+            className="bg-green-600 hover:bg-green-700"
+          >
+            {isLoading ? "Aceptando..." : "Aceptar"}
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
 
-          {/* Close Button */}
-          <Button onClick={onClose} className="w-full">
-            Cerrar
-          </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog open={showRejectConfirm} onOpenChange={setShowRejectConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Rechazar carga?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de rechazar la carga de {clientName}. Puedes proporcionar una razón (opcional).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Razón del rechazo (opcional)..."
+              className="w-full p-2 border rounded text-sm"
+              rows={3}
+            />
+          </div>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleReject}
+            disabled={isLoading}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            {isLoading ? "Rechazando..." : "Rechazar"}
+          </AlertDialogAction>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

@@ -30,6 +30,8 @@ interface DriverLoadCardProps {
   tollCost?: number | string;
   vehicleType?: "cargo_van" | "sprinter" | "box_truck" | "default";
   onViewDetail?: (loadId: number) => void;
+  onAccept?: (loadId: number) => void;
+  onReject?: (loadId: number) => void;
   className?: string;
 }
 
@@ -45,7 +47,7 @@ interface DriverLoadCardProps {
  * - Estimated miles
  * - Estimated time
  * - Score badge
- * - "Ver detalle" button
+ * - "Ver detalle", "Aceptar", "Rechazar" buttons
  */
 export function DriverLoadCard({
   loadId,
@@ -67,6 +69,8 @@ export function DriverLoadCard({
   tollCost,
   vehicleType = "cargo_van",
   onViewDetail,
+  onAccept,
+  onReject,
   className = "",
 }: DriverLoadCardProps) {
   // Calculate economics - V2
@@ -202,16 +206,35 @@ export function DriverLoadCard({
           />
         </div>
 
-        {/* Action Button */}
-        {onViewDetail && (
-          <Button
-            onClick={() => onViewDetail(loadId)}
-            variant="outline"
-            className="w-full mt-2"
-          >
-            Ver Detalle
-          </Button>
-        )}
+        {/* Action Buttons */}
+        <div className="flex gap-2 mt-2">
+          {onViewDetail && (
+            <Button
+              onClick={() => onViewDetail(loadId)}
+              variant="outline"
+              className="flex-1"
+            >
+              Ver Detalle
+            </Button>
+          )}
+          {isAvailable && onAccept && (
+            <Button
+              onClick={() => onAccept(loadId)}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+            >
+              Aceptar
+            </Button>
+          )}
+          {isAvailable && onReject && (
+            <Button
+              onClick={() => onReject(loadId)}
+              variant="destructive"
+              className="flex-1"
+            >
+              Rechazar
+            </Button>
+          )}
+        </div>
 
         {/* Weight Info */}
         {weight && (

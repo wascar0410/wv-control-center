@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,7 @@ export default function DriverOps() {
       navigate("/driver?tab=dashboard");
     }
   };
+  const { toast } = useToast();
   const [selectedLoad, setSelectedLoad] = useState<any>(null);
   const [showPODUpload, setShowPODUpload] = useState(false);
   const [podLoadId, setPodLoadId] = useState<number | null>(null);
@@ -97,6 +99,47 @@ export default function DriverOps() {
   );
 
   const { data: walletSummary } = trpc.wallet.getWalletSummary.useQuery();
+
+  // Accept/Reject mutations
+  const acceptLoadMutation = trpc.loads.acceptLoad.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "✅ Carga aceptada",
+        description: "La carga ha sido aceptada correctamente.",
+      });
+      setSelectedLoad(null);
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    },
+    onError: (error) => {
+      toast({
+        title: "❌ Error",
+        description: error.message || "No se pudo aceptar la carga.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectLoadMutation = trpc.loads.rejectLoad.useMutation({
+    onSuccess: () => {
+      toast({
+        title: "✅ Carga rechazada",
+        description: "La carga ha sido rechazada correctamente.",
+      });
+      setSelectedLoad(null);
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    },
+    onError: (error) => {
+      toast({
+        title: "❌ Error",
+        description: error.message || "No se pudo rechazar la carga.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const isLoading = loadsLoading || statsLoading;
 
@@ -339,6 +382,8 @@ export default function DriverOps() {
                     weight={load.weight}
                     merchandiseType={load.merchandiseType}
                     onViewDetail={() => setSelectedLoad(load)}
+                    onAccept={() => setSelectedLoad(load)}
+                    onReject={() => setSelectedLoad(load)}
                   />
                 ))}
               </CardContent>
@@ -419,6 +464,8 @@ export default function DriverOps() {
           weightUnit={selectedLoad.weightUnit}
           merchandiseType={selectedLoad.merchandiseType}
           status={selectedLoad.status}
+          onAccept={(loadId) => acceptLoadMutation.mutateAsync({ loadId })}
+          onReject={(loadId, reason) => rejectLoadMutation.mutateAsync({ loadId, reason })}
         />
       )}
     </div>

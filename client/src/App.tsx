@@ -76,82 +76,82 @@ export default function App() {
       <Suspense fallback={<DashboardLayoutSkeleton />}>
         <Switch>
           {/* ===== PUBLIC ROUTES ===== */}
-        <Route path="/login" component={withSuspense(LoginPage)} />
-        <Route path="/home" component={withSuspense(Home)} />
+          <Route path="/login" component={withSuspense(LoginPage)} />
+          <Route path="/home" component={withSuspense(Home)} />
 
-        {/* ===== DRIVER ROUTES (also accessible to owner/admin) ===== */}
-        <Route path="/driver" component={ProtectedDriverPage} />
-        <Route path="/finance-wallet" component={ProtectedWalletDashboard} />
-        <Route path="/profile" component={ProtectedProfile} />
+          {/* ===== DRIVER ROUTES (also accessible to owner/admin) ===== */}
+          <Route path="/driver" component={ProtectedDriverPage} />
+          <Route path="/finance-wallet" component={ProtectedWalletDashboard} />
+          <Route path="/profile" component={ProtectedProfile} />
 
-        {/* ===== OWNER/ADMIN ROUTES ===== */}
-        <Route path="/command-center" component={ProtectedCommandCenter} />
-        <Route path="/finance-dashboard" component={ProtectedFinanceDashboard} />
-        <Route path="/dispatch-board" component={ProtectedDispatchBoard} />
-        <Route path="/quotation" component={ProtectedQuotation} />
-        
-        {/* ===== EXISTING FEATURE ROUTES ===== */}
-        <Route path="/loads-dispatch" component={ProtectedLoadsDispatch} />
-        <Route path="/quote-analyzer" component={ProtectedQuoteAnalyzer} />
-        <Route path="/finance-settlements" component={ProtectedSettlementsPage} />
-        <Route path="/banking-cashflow" component={ProtectedBankingCashFlow} />
-        <Route path="/invoicing" component={ProtectedInvoicingPage} />
-        <Route path="/fleet-tracking" component={ProtectedFleetTracking} />
-        <Route path="/team" component={ProtectedUserManagement} />
-        <Route path="/chat" component={ProtectedChatPlaceholder} />
-        <Route path="/company" component={ProtectedCompany} />
-        <Route path="/company-management" component={ProtectedCompanyManagement} />
-        <Route path="/alerts-tasks" component={ProtectedAlertsTasksPage} />
-        <Route path="/settings" component={ProtectedSettingsPlaceholder} />
+          {/* ===== OWNER/ADMIN ROUTES ===== */}
+          <Route path="/command-center" component={ProtectedCommandCenter} />
+          <Route path="/finance-dashboard" component={ProtectedFinanceDashboard} />
+          <Route path="/dispatch-board" component={ProtectedDispatchBoard} />
+          <Route path="/quotation" component={ProtectedQuotation} />
+          
+          {/* ===== EXISTING FEATURE ROUTES ===== */}
+          <Route path="/loads-dispatch" component={ProtectedLoadsDispatch} />
+          <Route path="/quote-analyzer" component={ProtectedQuoteAnalyzer} />
+          <Route path="/finance-settlements" component={ProtectedSettlementsPage} />
+          <Route path="/banking-cashflow" component={ProtectedBankingCashFlow} />
+          <Route path="/invoicing" component={ProtectedInvoicingPage} />
+          <Route path="/fleet-tracking" component={ProtectedFleetTracking} />
+          <Route path="/team" component={ProtectedUserManagement} />
+          <Route path="/chat" component={ProtectedChatPlaceholder} />
+          <Route path="/company" component={ProtectedCompany} />
+          <Route path="/company-management" component={ProtectedCompanyManagement} />
+          <Route path="/alerts-tasks" component={ProtectedAlertsTasksPage} />
+          <Route path="/settings" component={ProtectedSettingsPlaceholder} />
 
-        {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
-        <Route path="/about">{() => <Redirect to="/company" />}</Route>
-        <Route path="/carrier-packet">{() => <Redirect to="/company" />}</Route>
-        <Route path="/business-plan">{() => <Redirect to="/company" />}</Route>
-        <Route path="/dashboard">{() => <Redirect to="/command-center" />}</Route>
-        <Route path="/loads">{() => <Redirect to="/loads-dispatch" />}</Route>
-        <Route path="/finance">{() => <Redirect to="/finance-dashboard" />}</Route>
-        <Route path="/executive-dashboard">
-          {() => <Redirect to="/command-center" />}
-        </Route>
-        <Route path="/fleet-map">{() => <Redirect to="/fleet-tracking" />}</Route>
-        <Route path="/fleet-management">
-          {() => <Redirect to="/fleet-tracking" />}
-        </Route>
-        <Route path="/driver-dashboard">{() => <Redirect to="/driver" />}</Route>
-        <Route path="/driver-wallet">
-          {() => <Redirect to="/finance-wallet" />}
-        </Route>
-        <Route path="/transactions">
-          {() => <Redirect to="/finance-dashboard" />}
-        </Route>
-        <Route path="/accounting-finance">{() => <Redirect to="/finance-dashboard" />}</Route>
+          {/* ===== REDIRECTS (BACKWARD COMPATIBILITY) ===== */}
+          <Route path="/about">{() => <Redirect to="/company" />}</Route>
+          <Route path="/carrier-packet">{() => <Redirect to="/company" />}</Route>
+          <Route path="/business-plan">{() => <Redirect to="/company" />}</Route>
+          <Route path="/dashboard">{() => <Redirect to="/command-center" />}</Route>
+          <Route path="/loads">{() => <Redirect to="/loads-dispatch" />}</Route>
+          <Route path="/finance">{() => <Redirect to="/finance-dashboard" />}</Route>
+          <Route path="/executive-dashboard">
+            {() => <Redirect to="/command-center" />}
+          </Route>
+          <Route path="/fleet-map">{() => <Redirect to="/fleet-tracking" />}</Route>
+          <Route path="/fleet-management">
+            {() => <Redirect to="/fleet-tracking" />}
+          </Route>
+          <Route path="/driver-dashboard">{() => <Redirect to="/driver" />}</Route>
+          <Route path="/driver-wallet">
+            {() => <Redirect to="/finance-wallet" />}
+          </Route>
+          <Route path="/transactions">
+            {() => <Redirect to="/finance-dashboard" />}
+          </Route>
+          <Route path="/accounting-finance">{() => <Redirect to="/finance-dashboard" />}</Route>
 
-        {/* ===== DEFAULTS ===== */}
-        <Route path="/">
-          {() => {
-            const { user, loading: isLoading } = useAuth();
-            if (isLoading) {
-              return <PageLoader />;
-            }
-            
-            // Use central route logic
-            const defaultRoute = getDefaultRouteForRole(user);
-            
-            // Log the redirect decision
-            logRouteGuardDecision(
-              user?.role,
-              "/",
-              defaultRoute,
-              true
-            );
-            
-            return <Redirect to={defaultRoute} />;
-          }}
-        </Route>
+          {/* ===== DEFAULTS ===== */}
+          <Route path="/">
+            {() => {
+              const { user, loading: isLoading } = useAuth();
+              if (isLoading) {
+                return <PageLoader />;
+              }
+              
+              // Use central route logic
+              const defaultRoute = getDefaultRouteForRole(user);
+              
+              // Log the redirect decision
+              logRouteGuardDecision(
+                user?.role,
+                "/",
+                defaultRoute,
+                true
+              );
+              
+              return <Redirect to={defaultRoute} />;
+            }}
+          </Route>
 
-        {/* ===== 404 CATCH-ALL REMOVED ===== */}
-        {/* Catch-all route removed - wouter renders it alongside valid routes */}
+          {/* ===== 404 CATCH-ALL REMOVED ===== */}
+          {/* Catch-all route removed - wouter renders it alongside valid routes */}
         </Switch>
       </Suspense>
     </Router>
