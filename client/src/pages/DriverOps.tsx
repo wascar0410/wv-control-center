@@ -58,7 +58,7 @@ export default function DriverOps() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  // Read tab from URL query parameter
+  // Read tab from URL query parameter on mount/location change
   useEffect(() => {
     const params = new URLSearchParams(location.split("?")[1]);
     const tabParam = params.get("tab");
@@ -66,8 +66,21 @@ export default function DriverOps() {
       setActiveTab("operations");
     } else if (tabParam === "dashboard") {
       setActiveTab("dashboard");
+    } else {
+      // Default to dashboard if no tab param
+      setActiveTab("dashboard");
     }
   }, [location]);
+
+  // Update URL when tab changes
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    if (newTab === "operations") {
+      navigate("/driver?tab=operations");
+    } else if (newTab === "dashboard") {
+      navigate("/driver?tab=dashboard");
+    }
+  };
   const [selectedLoad, setSelectedLoad] = useState<any>(null);
   const [showPODUpload, setShowPODUpload] = useState(false);
   const [podLoadId, setPodLoadId] = useState<number | null>(null);
@@ -136,7 +149,7 @@ export default function DriverOps() {
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="operations">Mis Cargas</TabsTrigger>
