@@ -487,12 +487,16 @@ const loadsRouter = router({
       if (!load) throw new Error("Carga no encontrada");
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       
+      // Log acceptance attempt
+      console.log(`[acceptLoad] userId: ${ctx.user.id}, role: ${ctx.user.role}, loadId: ${input.loadId}, status: ${load.status}, assignedDriverId: ${load.assignedDriverId}`);
+      
       // Driver can accept available loads (status = available, assignedDriverId = null)
       // or loads already assigned to them
       if (!isPrivileged) {
         const canAccept = (load.status === "available" && load.assignedDriverId === null) || 
                          (load.assignedDriverId === ctx.user.id);
         if (!canAccept) {
+          console.log(`[acceptLoad] FORBIDDEN: canAccept=${canAccept}`);
           throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para aceptar esta carga" });
         }
       }
@@ -523,12 +527,16 @@ const loadsRouter = router({
       if (!load) throw new Error("Carga no encontrada");
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       
+      // Log rejection attempt
+      console.log(`[rejectLoad] userId: ${ctx.user.id}, role: ${ctx.user.role}, loadId: ${input.loadId}, status: ${load.status}, assignedDriverId: ${load.assignedDriverId}`);
+      
       // Driver can reject available loads (status = available, assignedDriverId = null)
       // or loads already assigned to them
       if (!isPrivileged) {
         const canReject = (load.status === "available" && load.assignedDriverId === null) || 
                          (load.assignedDriverId === ctx.user.id);
         if (!canReject) {
+          console.log(`[rejectLoad] FORBIDDEN: canReject=${canReject}`);
           throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para rechazar esta carga" });
         }
       }
