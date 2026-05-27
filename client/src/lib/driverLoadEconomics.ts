@@ -1,23 +1,57 @@
 /**
- * Driver Load Economics Utility
+ * Driver Load Economics Utility - V2
  * 
- * V1 Frontend-only calculations for estimated driver earnings.
+ * V2 Frontend-only calculations for estimated driver earnings with:
+ * - Fuel costs (vehicle type based)
+ * - Maintenance costs (vehicle type based)
+ * - Tolls
+ * - Complete cost breakdown
+ * 
  * All values are ESTIMATES and do NOT affect real payments.
  * Real payments are calculated in Wallet/Settlements.
  */
 
+export type VehicleType = "cargo_van" | "sprinter" | "box_truck" | "default";
+
+export interface VehicleCosts {
+  fuelCostPerMile: number;
+  maintenanceCostPerMile: number;
+  totalCostPerMile: number;
+}
+
 export interface LoadEconomics {
+  // Gross pay
   grossPay: number | null;
+  
+  // Distance
   totalMiles: number | null;
-  vehicleCostPerMile: number;
-  vehicleCost: number | null;
+  
+  // Vehicle type and costs
+  vehicleType: VehicleType;
+  fuelCostPerMile: number;
+  maintenanceCostPerMile: number;
+  totalCostPerMile: number;
+  
+  // Cost breakdown
+  fuelCost: number | null;
+  maintenanceCost: number | null;
+  tolls: number | null;
+  estimatedTotalCost: number | null;
+  
+  // Net pay
   netPay: number | null;
+  
+  // Time estimates
   estimatedDriveMinutes: number | null;
   serviceMinutes: number;
   bufferMinutes: number;
   estimatedTotalMinutes: number | null;
+  
+  // Rates
   hourlyRate: number | null;
   payPerMile: number | null;
+  
+  // Score
   profitabilityScore: ProfitabilityScore;
 }
 
@@ -31,10 +65,37 @@ export interface LoadEconomicsInput {
   itemCount?: number;
   estimatedFuel?: number | string;
   estimatedTolls?: number | string;
+  tolls?: number | string;
+  tollAmount?: number | string;
+  tollCost?: number | string;
+  vehicleType?: VehicleType;
 }
 
+// Vehicle cost profiles (fuel + maintenance per mile)
+const VEHICLE_COSTS: Record<VehicleType, VehicleCosts> = {
+  cargo_van: {
+    fuelCostPerMile: 0.22,
+    maintenanceCostPerMile: 0.12,
+    totalCostPerMile: 0.34,
+  },
+  sprinter: {
+    fuelCostPerMile: 0.28,
+    maintenanceCostPerMile: 0.16,
+    totalCostPerMile: 0.44,
+  },
+  box_truck: {
+    fuelCostPerMile: 0.45,
+    maintenanceCostPerMile: 0.25,
+    totalCostPerMile: 0.70,
+  },
+  default: {
+    fuelCostPerMile: 0.22,
+    maintenanceCostPerMile: 0.12,
+    totalCostPerMile: 0.34,
+  },
+};
+
 const DEFAULTS = {
-  vehicleCostPerMile: 0.179,
   serviceMinutesPerItem: 1.1,
   bufferMinutes: 5,
   minimumEstimatedMinutes: 15,
@@ -89,16 +150,16 @@ export function getScoreLabel(score: ProfitabilityScore): string {
 }
 
 /**
- * Calculate driver load economics
+ * Calculate driver load economics - V2
  * 
- * V1 Formula:
+ * V2 Formula:
  * - grossPay: load.driverPay || load.price
- * - totalMiles: load.totalMiles || load.miles || null (NO DEFAULT 120)
- * - vehicleCost: totalMiles * 0.179
- * - netPay: grossPay - vehicleCost
- * - estimatedDriveMinutes: totalMiles / 40 * 60
- * - serviceMinutes: itemCount * 1.1 || 15
- * - estimatedTotalMinutes: max(driveMinutes + serviceMinutes + 5, 15)
+ * - totalMiles: load.totalMiles || load.miles || null
+ * - fuelCost: totalMiles * fuelCostPerMile (vehicle type based)
+ * - maintenanceCost: totalMiles * maintenanceCostPerMile (vehicle type based)
+ * - tolls: load.tolls || load.tollAmount || load.tollCost || load.estimatedTolls || 0
+ * - estimatedTotalCost: fuelCost + maintenanceCost + tolls
+ * - netPay: grossPay - estimatedTotalCost
  * - hourlyRate: (netPay / estimatedTotalMinutes) * 60
  * - payPerMile: netPay / totalMiles
  * - profitabilityScore: based on hourlyRate
@@ -111,7 +172,7 @@ export function calculateLoadEconomics(input: LoadEconomicsInput): LoadEconomics
     ? Number(input.price)
     : null;
 
-  // Total miles: use totalMiles, else miles, else null (NO DEFAULT 120)
+  // Total miles: use totalMiles, else miles, else null
   let totalMiles: number | null = null;
   if (input.totalMiles) {
     totalMiles = Number(input.totalMiles);
@@ -124,13 +185,44 @@ export function calculateLoadEconomics(input: LoadEconomicsInput): LoadEconomics
     totalMiles = null;
   }
 
-  // Vehicle cost
-  const vehicleCostPerMile = DEFAULTS.vehicleCostPerMile;
-  const vehicleCost = totalMiles !== null ? totalMiles * vehicleCostPerMile : null;
+  // Vehicle type (default to cargo_van)
+  const vehicleType: VehicleType = input.vehicleType || "cargo_van";
+  const vehicleCosts = VEHICLE_COSTS[vehicleType];
 
-  // Net pay: grossPay - vehicleCost (if vehicleCost exists)
+  // Fuel cost: totalMiles * fuelCostPerMile
+  const fuelCost = totalMiles !== null ? totalMiles * vehicleCosts.fuelCostPerMile : null;
+
+  // Maintenance cost: totalMiles * maintenanceCostPerMile
+  const maintenanceCost = totalMiles !== null ? totalMiles * vehicleCosts.maintenanceCostPerMile : null;
+
+  // Tolls: try multiple field names
+  let tolls: number | null = null;
+  if (input.tolls) {
+    tolls = Number(input.tolls);
+  } else if (input.tollAmount) {
+    tolls = Number(input.tollAmount);
+  } else if (input.tollCost) {
+    tolls = Number(input.tollCost);
+  } else if (input.estimatedTolls) {
+    tolls = Number(input.estimatedTolls);
+  } else {
+    tolls = 0;
+  }
+
+  // Validate tolls
+  if (tolls !== null && !Number.isFinite(tolls)) {
+    tolls = 0;
+  }
+
+  // Estimated total cost: fuelCost + maintenanceCost + tolls
+  let estimatedTotalCost: number | null = null;
+  if (fuelCost !== null && maintenanceCost !== null) {
+    estimatedTotalCost = fuelCost + maintenanceCost + tolls;
+  }
+
+  // Net pay: grossPay - estimatedTotalCost
   const netPay =
-    vehicleCost !== null && grossPay !== null ? grossPay - vehicleCost : grossPay;
+    estimatedTotalCost !== null && grossPay !== null ? grossPay - estimatedTotalCost : grossPay;
 
   // Estimated drive minutes: totalMiles / 40 * 60
   const estimatedDriveMinutes =
@@ -169,8 +261,14 @@ export function calculateLoadEconomics(input: LoadEconomicsInput): LoadEconomics
   return {
     grossPay,
     totalMiles,
-    vehicleCostPerMile,
-    vehicleCost,
+    vehicleType,
+    fuelCostPerMile: vehicleCosts.fuelCostPerMile,
+    maintenanceCostPerMile: vehicleCosts.maintenanceCostPerMile,
+    totalCostPerMile: vehicleCosts.totalCostPerMile,
+    fuelCost,
+    maintenanceCost,
+    tolls,
+    estimatedTotalCost,
     netPay,
     estimatedDriveMinutes,
     serviceMinutes,
@@ -232,8 +330,10 @@ export function getCalculationExplanation(): string {
   return `
 Estos son valores ESTIMADOS basados en:
 - Distancia: calculada desde coordenadas
+- Combustible: según tipo de vehículo
+- Mantenimiento: según tipo de vehículo
+- Peajes: incluidos en la carga
 - Tiempo: estimado a 40 mph promedio + 1.1 min por artículo
-- Costo vehículo: $0.179 por milla (cargo van)
 
 El pago final se calcula en Wallet/Settlements.
 No es la liquidación oficial.

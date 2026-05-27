@@ -5,7 +5,7 @@
  * - Operations tab: Active loads, accept/reject, POD, fuel logging
  * - Wallet link for earnings management
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
@@ -54,9 +54,20 @@ const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
 };
 
 export default function DriverOps() {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
+
+  // Read tab from URL query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.split("?")[1]);
+    const tabParam = params.get("tab");
+    if (tabParam === "loads" || tabParam === "operations") {
+      setActiveTab("operations");
+    } else if (tabParam === "dashboard") {
+      setActiveTab("dashboard");
+    }
+  }, [location]);
   const [selectedLoad, setSelectedLoad] = useState<any>(null);
   const [showPODUpload, setShowPODUpload] = useState(false);
   const [podLoadId, setPodLoadId] = useState<number | null>(null);

@@ -23,18 +23,24 @@ interface DriverLoadCardProps {
   status?: string;
   weight?: number | string;
   merchandiseType?: string;
+  estimatedFuel?: number | string;
+  estimatedTolls?: number | string;
+  tolls?: number | string;
+  tollAmount?: number | string;
+  tollCost?: number | string;
+  vehicleType?: "cargo_van" | "sprinter" | "box_truck" | "default";
   onViewDetail?: (loadId: number) => void;
   className?: string;
 }
 
 /**
- * Professional driver load card with earnings summary
+ * Professional driver load card with earnings summary - V2
  * 
  * Shows:
  * - Route/client
  * - Pickup → delivery
  * - Gross pay
- * - Estimated net pay
+ * - Estimated net pay (after fuel, maintenance, tolls)
  * - Estimated hourly rate
  * - Estimated miles
  * - Estimated time
@@ -54,16 +60,28 @@ export function DriverLoadCard({
   status = "available",
   weight,
   merchandiseType,
+  estimatedFuel,
+  estimatedTolls,
+  tolls,
+  tollAmount,
+  tollCost,
+  vehicleType = "cargo_van",
   onViewDetail,
   className = "",
 }: DriverLoadCardProps) {
-  // Calculate economics
+  // Calculate economics - V2
   const economics = calculateLoadEconomics({
     driverPay,
     price,
     totalMiles,
     miles,
     itemCount,
+    estimatedFuel,
+    estimatedTolls,
+    tolls,
+    tollAmount,
+    tollCost,
+    vehicleType,
   } as LoadEconomicsInput);
 
   const isAvailable = status === "available";
@@ -113,7 +131,7 @@ export function DriverLoadCard({
             </p>
           </div>
 
-          {/* Net Pay (Estimated) */}
+          {/* Net Pay (Estimated) - V2 */}
           <div className="space-y-1">
             <p className="text-xs text-gray-500">Pago Neto (Est.)</p>
             <p className="font-bold text-blue-600">
@@ -143,6 +161,30 @@ export function DriverLoadCard({
             </p>
           </div>
         </div>
+
+        {/* Cost Breakdown Summary - V2 */}
+        {economics.estimatedTotalCost !== null && (
+          <div className="text-xs space-y-1 p-2 bg-gray-50 rounded">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Combustible (Est.):</span>
+              <span className="text-red-600">-{formatCurrency(economics.fuelCost)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Mantenimiento (Est.):</span>
+              <span className="text-red-600">-{formatCurrency(economics.maintenanceCost)}</span>
+            </div>
+            {economics.tolls !== null && economics.tolls > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">Peajes:</span>
+                <span className="text-red-600">-{formatCurrency(economics.tolls)}</span>
+              </div>
+            )}
+            <div className="border-t pt-1 flex justify-between font-semibold">
+              <span>Costo Total:</span>
+              <span className="text-red-600">-{formatCurrency(economics.estimatedTotalCost)}</span>
+            </div>
+          </div>
+        )}
 
         {/* Hourly Rate and Score */}
         <div className="flex justify-between items-center pt-2">
@@ -178,9 +220,9 @@ export function DriverLoadCard({
           </p>
         )}
 
-        {/* Disclaimer */}
+        {/* Disclaimer - V2 */}
         <p className="text-xs text-gray-400 text-center italic">
-          Valores estimados. Pago final en Wallet.
+          Estimado basado en vehículo, millas y peajes. Pago final en Wallet.
         </p>
       </CardContent>
     </Card>

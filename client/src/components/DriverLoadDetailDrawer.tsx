@@ -38,16 +38,20 @@ interface DriverLoadDetailDrawerProps {
   merchandiseType?: string;
   estimatedFuel?: number | string;
   estimatedTolls?: number | string;
+  tolls?: number | string;
+  tollAmount?: number | string;
+  tollCost?: number | string;
   status?: string;
+  vehicleType?: "cargo_van" | "sprinter" | "box_truck" | "default";
 }
 
 /**
- * Detailed breakdown drawer for driver loads
+ * Detailed breakdown drawer for driver loads - V2
  * 
  * Sections:
  * - Load summary
  * - Pickup and delivery
- * - Earnings breakdown
+ * - Earnings breakdown (with fuel, maintenance, tolls)
  * - Time estimate
  * - Cost estimate
  * - Profitability explanation
@@ -69,7 +73,11 @@ export function DriverLoadDetailDrawer({
   merchandiseType,
   estimatedFuel,
   estimatedTolls,
+  tolls,
+  tollAmount,
+  tollCost,
   status = "available",
+  vehicleType = "cargo_van",
 }: DriverLoadDetailDrawerProps) {
   const [showCalculationDetails, setShowCalculationDetails] = useState(false);
 
@@ -80,6 +88,12 @@ export function DriverLoadDetailDrawer({
     totalMiles,
     miles,
     itemCount,
+    estimatedFuel,
+    estimatedTolls,
+    tolls,
+    tollAmount,
+    tollCost,
+    vehicleType,
   } as LoadEconomicsInput);
 
   return (
@@ -110,6 +124,9 @@ export function DriverLoadDetailDrawer({
                   <span className="font-medium">Peso:</span> {weight} {weightUnit}
                 </p>
               )}
+              <p className="text-gray-600">
+                <span className="font-medium">Vehículo:</span> {vehicleType}
+              </p>
             </div>
           </div>
 
@@ -136,10 +153,13 @@ export function DriverLoadDetailDrawer({
 
           <Separator />
 
-          {/* Earnings Breakdown */}
+          {/* Earnings Breakdown - V2 */}
           <DriverEarningsBreakdown
             grossPay={economics.grossPay}
-            vehicleCost={economics.vehicleCost}
+            fuelCost={economics.fuelCost}
+            maintenanceCost={economics.maintenanceCost}
+            tolls={economics.tolls}
+            estimatedTotalCost={economics.estimatedTotalCost}
             netPay={economics.netPay}
             hourlyRate={economics.hourlyRate}
             payPerMile={economics.payPerMile}
@@ -185,7 +205,7 @@ export function DriverLoadDetailDrawer({
 
           <Separator />
 
-          {/* Cost Estimate */}
+          {/* Cost Estimate - V2 */}
           {economics.totalMiles !== null && (
             <div className="space-y-3">
               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
@@ -199,17 +219,55 @@ export function DriverLoadDetailDrawer({
                     {formatMiles(economics.totalMiles)}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Costo por milla:</span>
-                  <span className="font-medium">
-                    ${economics.vehicleCostPerMile.toFixed(3)}/mi
-                  </span>
+                
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-600">Combustible por milla:</span>
+                    <span className="font-medium">
+                      ${economics.fuelCostPerMile.toFixed(3)}/mi
+                    </span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-600">Mantenimiento por milla:</span>
+                    <span className="font-medium">
+                      ${economics.maintenanceCostPerMile.toFixed(3)}/mi
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-semibold">
+                    <span>Total por milla:</span>
+                    <span className="text-red-600">
+                      ${economics.totalCostPerMile.toFixed(3)}/mi
+                    </span>
+                  </div>
                 </div>
-                <div className="border-t pt-2 flex justify-between font-semibold">
-                  <span>Costo total vehículo:</span>
-                  <span className="text-red-600">
-                    {formatCurrency(economics.vehicleCost)}
-                  </span>
+
+                <div className="border-t pt-2 mt-2 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Combustible (Est.):</span>
+                    <span className="text-red-600">
+                      -{formatCurrency(economics.fuelCost)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Mantenimiento (Est.):</span>
+                    <span className="text-red-600">
+                      -{formatCurrency(economics.maintenanceCost)}
+                    </span>
+                  </div>
+                  {economics.tolls !== null && economics.tolls > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Peajes:</span>
+                      <span className="text-red-600">
+                        -{formatCurrency(economics.tolls)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="border-t pt-2 flex justify-between font-semibold">
+                    <span>Costo total estimado:</span>
+                    <span className="text-red-600">
+                      -{formatCurrency(economics.estimatedTotalCost)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
