@@ -486,10 +486,19 @@ const loadsRouter = router({
       const load = await getLoadById(input.loadId);
       if (!load) throw new Error("Carga no encontrada");
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
-      if (!isPrivileged && load.assignedDriverId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para aceptar esta carga" });
+      
+      // Driver can accept available loads (status = available, assignedDriverId = null)
+      // or loads already assigned to them
+      if (!isPrivileged) {
+        const canAccept = (load.status === "available" && load.assignedDriverId === null) || 
+                         (load.assignedDriverId === ctx.user.id);
+        if (!canAccept) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para aceptar esta carga" });
+        }
       }
+      
       await updateLoad(input.loadId, {
+        assignedDriverId: ctx.user.id,
         driverAcceptedAt: new Date(),
         status: "in_transit",
       });
@@ -512,8 +521,16 @@ const loadsRouter = router({
     .mutation(async ({ input, ctx }) => {
       const load = await getLoadById(input.loadId);
       if (!load) throw new Error("Carga no encontrada");
-      if (load.assignedDriverId !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para rechazar esta carga" });
+      const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+      
+      // Driver can reject available loads (status = available, assignedDriverId = null)
+      // or loads already assigned to them
+      if (!isPrivileged) {
+        const canReject = (load.status === "available" && load.assignedDriverId === null) || 
+                         (load.assignedDriverId === ctx.user.id);
+        if (!canReject) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para rechazar esta carga" });
+        }
       }
 
       await updateLoad(input.loadId, {
