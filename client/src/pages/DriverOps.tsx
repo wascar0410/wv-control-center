@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import LoadStatusCard from "@/components/LoadStatusCard";
 import { PODUpload } from "@/components/PODUpload";
 import DeliveryProofUpload from "@/components/DeliveryProofUpload";
+import { DriverLoadCard } from "@/components/DriverLoadCard";
+import { DriverLoadDetailDrawer } from "@/components/DriverLoadDetailDrawer";
 import {
   Truck,
   DollarSign,
@@ -58,6 +60,7 @@ export default function DriverOps() {
   const [selectedLoad, setSelectedLoad] = useState<any>(null);
   const [showPODUpload, setShowPODUpload] = useState(false);
   const [podLoadId, setPodLoadId] = useState<number | null>(null);
+  const [showDetailDrawer, setShowDetailDrawer] = useState(false);
 
   // Fetch driver data
   const { data: myLoads, isLoading: loadsLoading } = trpc.driver.myLoads.useQuery(undefined, {
@@ -297,38 +300,22 @@ export default function DriverOps() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {availableLoads.map((load: any) => (
-                  <Card
+                  <DriverLoadCard
                     key={load.id}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => setSelectedLoad(load)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant="outline" className="text-xs">
-                              {STATUS_CONFIG[load.status]?.label}
-                            </Badge>
-                            <p className="font-semibold text-sm">{load.clientName}</p>
-                          </div>
-                          <div className="space-y-1 text-xs text-muted-foreground">
-                            <p className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {load.pickupAddress}
-                            </p>
-                            <p className="flex items-center gap-1">
-                              <ArrowRight className="w-3 h-3" />
-                              {load.deliveryAddress}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-primary">{formatCurrency(load.price)}</p>
-                          <p className="text-xs text-muted-foreground">{load.weight} {load.weightUnit}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                    loadId={load.id}
+                    clientName={load.clientName}
+                    pickupAddress={load.pickupAddress}
+                    deliveryAddress={load.deliveryAddress}
+                    price={load.price}
+                    driverPay={load.driverPay}
+                    totalMiles={load.totalMiles}
+                    miles={load.miles}
+                    itemCount={load.itemCount}
+                    status={load.status}
+                    weight={load.weight}
+                    merchandiseType={load.merchandiseType}
+                    onViewDetail={() => setSelectedLoad(load)}
+                  />
                 ))}
               </CardContent>
             </Card>
@@ -388,6 +375,27 @@ export default function DriverOps() {
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Load Detail Drawer */}
+      {selectedLoad && (
+        <DriverLoadDetailDrawer
+          isOpen={!!selectedLoad}
+          onClose={() => setSelectedLoad(null)}
+          loadId={selectedLoad.id}
+          clientName={selectedLoad.clientName}
+          pickupAddress={selectedLoad.pickupAddress}
+          deliveryAddress={selectedLoad.deliveryAddress}
+          price={selectedLoad.price}
+          driverPay={selectedLoad.driverPay}
+          totalMiles={selectedLoad.totalMiles}
+          miles={selectedLoad.miles}
+          itemCount={selectedLoad.itemCount}
+          weight={selectedLoad.weight}
+          weightUnit={selectedLoad.weightUnit}
+          merchandiseType={selectedLoad.merchandiseType}
+          status={selectedLoad.status}
+        />
       )}
     </div>
   );

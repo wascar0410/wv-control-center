@@ -1,0 +1,573 @@
+{
+  "auditMetadata": {
+    "completedAt": "2026-05-26T13:00:00Z",
+    "auditScope": "Driver load data, calculations, and UI readiness for V1 earnings breakdown",
+    "targetImplementation": "DriverLoadCard, DriverLoadDetailDrawer, DriverEarningsBreakdown"
+  },
+
+  "filesReviewed": {
+    "frontend": [
+      {
+        "path": "client/src/pages/DriverOps.tsx",
+        "purpose": "Main driver operations dashboard",
+        "dataFetched": ["trpc.driver.myLoads", "trpc.driverStats.getDriverStats", "trpc.wallet.getWalletSummary"]
+      },
+      {
+        "path": "client/src/components/LoadStatusCard.tsx",
+        "purpose": "Current load display card",
+        "fields": ["clientName", "pickupAddress", "deliveryAddress", "price", "weight", "merchandiseType", "status"]
+      },
+      {
+        "path": "client/src/components/WalletDashboard.tsx",
+        "purpose": "Driver wallet summary",
+        "dataFetched": ["trpc.wallet.getWalletSummary"]
+      }
+    ],
+    "backend": [
+      {
+        "path": "server/db.ts",
+        "functions": [
+          {
+            "name": "getDriverStats",
+            "line": 867,
+            "purpose": "Calculate driver monthly aggregates",
+            "returns": ["totalDeliveries", "totalIncome", "totalFuelExpense", "totalNetMargin", "activeLoads", "avgMarginPerDelivery", "efficiency"]
+          },
+          {
+            "name": "normalizeLoadFinancials",
+            "line": 278,
+            "purpose": "Enrich load objects with calculations",
+            "returns": ["miles", "ratePerMile", "profit", "margin"]
+          },
+          {
+            "name": "getLoads",
+            "line": 342,
+            "purpose": "Fetch loads with normalization",
+            "enrichment": "Calls normalizeLoadFinancials on all results"
+          },
+          {
+            "name": "getLoadById",
+            "line": 377,
+            "purpose": "Fetch single load with financial snapshot",
+            "enrichment": "Calls normalizeLoadFinancials + buildLoadFinancialSnapshot"
+          },
+          {
+            "name": "calculateSettlement",
+            "line": 3408,
+            "purpose": "Calculate settlement totals for drivers",
+            "returns": ["totalIncome", "totalExpenses", "totalProfit", "partner1Amount", "partner2Amount"]
+          }
+        ]
+      },
+      {
+        "path": "server/routers.ts",
+        "procedures": [
+          {
+            "name": "driver.myLoads",
+            "line": 967,
+            "purpose": "Get driver's assigned loads",
+            "callsDb": "getLoads({ driverId: ctx.user.id, includeUnassigned: true })"
+          },
+          {
+            "name": "driverStats.getDriverStats",
+            "line": 239,
+            "purpose": "Get driver statistics",
+            "callsDb": "getDriverStats(input.driverId)"
+          }
+        ]
+      },
+      {
+        "path": "server/routers/wallet.ts",
+        "procedures": [
+          {
+            "name": "wallet.getWalletSummary",
+            "line": 538,
+            "purpose": "Get wallet balances and transactions",
+            "returns": ["wallet", "recentTransactions", "pendingWithdrawals", "totalEarnings", "availableBalance", "reservedBalance", "reservedPending", "completedReserves", "withdrawableBalance", "pendingBalance", "blockedBalance"]
+          }
+        ]
+      },
+      {
+        "path": "server/routers/settlement.ts",
+        "procedures": [
+          {
+            "name": "settlement.calculate",
+            "line": 213,
+            "purpose": "Calculate settlement amounts",
+            "callsDb": "calculateSettlement(input.id)"
+          }
+        ]
+      },
+      {
+        "path": "drizzle/schema.ts",
+        "tables": [
+          {
+            "name": "loads",
+            "line": 118,
+            "purpose": "Load/shipment data",
+            "fields": ["id", "clientName", "pickupAddress", "deliveryAddress", "pickupLat", "pickupLng", "deliveryLat", "deliveryLng", "weight", "weightUnit", "merchandiseType", "price", "estimatedFuel", "estimatedTolls", "netMargin", "status", "assignedDriverId", "pickupDate", "deliveryDate", "createdAt", "updatedAt"]
+          },
+          {
+            "name": "wallets",
+            "purpose": "Driver wallet balances",
+            "fields": ["id", "driverId", "totalEarnings", "availableBalance", "reservedBalance", "pendingBalance", "blockedBalance", "minimumWithdrawalAmount", "withdrawalFeePercent"]
+          },
+          {
+            "name": "fuelLogs",
+            "line": 250,
+            "purpose": "Driver fuel expense tracking",
+            "fields": ["id", "driverId", "loadId", "amount", "gallons", "pricePerGallon", "location", "receiptUrl", "createdAt"]
+          },
+          {
+            "name": "transactions",
+            "line": 182,
+            "purpose": "Income and expense records",
+            "fields": ["id", "type", "category", "amount", "description", "referenceLoadId", "receiptUrl", "transactionDate", "createdBy"]
+          }
+        ]
+      }
+    ]
+  },
+
+  "fieldAvailability": {
+    "loadId": {
+      "status": "available",
+      "source": "loads.id",
+      "type": "int",
+      "notes": "Primary key"
+    },
+    "clientName": {
+      "status": "available",
+      "source": "loads.clientName",
+      "type": "varchar",
+      "notes": "Shipper/client name"
+    },
+    "pickupAddress": {
+      "status": "available",
+      "source": "loads.pickupAddress",
+      "type": "text",
+      "notes": "Pickup location"
+    },
+    "deliveryAddress": {
+      "status": "available",
+      "source": "loads.deliveryAddress",
+      "type": "text",
+      "notes": "Delivery location"
+    },
+    "price": {
+      "status": "available",
+      "source": "loads.price",
+      "type": "decimal",
+      "notes": "Load revenue (gross pay)"
+    },
+    "driverPay": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "decimal",
+      "notes": "Driver-specific pay amount (may differ from load price). Currently uses load.price as proxy."
+    },
+    "commissionPercent": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "decimal",
+      "notes": "Commission rate for this load. Available on users table as global setting, not per-load."
+    },
+    "pickupMiles": {
+      "status": "derived",
+      "source": "Calculated from pickupLat/Lng to first delivery",
+      "type": "decimal",
+      "notes": "Distance from origin to pickup (not currently calculated)"
+    },
+    "deliveryMiles": {
+      "status": "derived",
+      "source": "Calculated from pickupLat/Lng to deliveryLat/Lng",
+      "type": "decimal",
+      "notes": "Distance from pickup to delivery (Haversine calculation)"
+    },
+    "totalMiles": {
+      "status": "derived",
+      "source": "normalizeLoadFinancials() - Haversine from coordinates",
+      "type": "decimal",
+      "notes": "Total route distance. Defaults to 120 miles if coordinates invalid."
+    },
+    "weight": {
+      "status": "available",
+      "source": "loads.weight",
+      "type": "decimal",
+      "notes": "Cargo weight in weightUnit"
+    },
+    "itemCount": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "int",
+      "notes": "Number of items/packages. Not in schema. Defaults to 1 for time estimation."
+    },
+    "stopCount": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "int",
+      "notes": "Number of delivery stops. Not in schema. Defaults to 1."
+    },
+    "serviceType": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "varchar",
+      "notes": "Type of service (delivery, pickup, both). Not in schema."
+    },
+    "estimatedDriveTime": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "int",
+      "notes": "Drive time in minutes. Not in schema. Can be estimated from miles (120 miles ≈ 180 min at 40 mph avg)."
+    },
+    "estimatedShoppingTime": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "int",
+      "notes": "Service/shopping time in minutes. Not in schema. Defaults to itemCount * 1.1 minutes."
+    },
+    "estimatedTotalTime": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "int",
+      "notes": "Total time estimate in minutes. Can be derived from drive + service times."
+    },
+    "fuelType": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "varchar",
+      "notes": "Vehicle fuel type (diesel, gasoline, electric). Not in schema."
+    },
+    "fuelCostPerMile": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "decimal",
+      "notes": "Operating cost per mile. Not in schema. Default: $0.179/mile (cargo van)."
+    },
+    "vehicleCostPerMile": {
+      "status": "missing",
+      "source": "N/A",
+      "type": "decimal",
+      "notes": "Total vehicle cost per mile. Not in schema. Can be derived from fuel + maintenance + depreciation."
+    },
+    "status": {
+      "status": "available",
+      "source": "loads.status",
+      "type": "enum",
+      "notes": "Load status: available, in_transit, delivered, invoiced, paid"
+    },
+    "estimatedFuel": {
+      "status": "available",
+      "source": "loads.estimatedFuel",
+      "type": "decimal",
+      "notes": "Estimated fuel cost for this load"
+    },
+    "estimatedTolls": {
+      "status": "available",
+      "source": "loads.estimatedTolls",
+      "type": "decimal",
+      "notes": "Estimated tolls for this load"
+    },
+    "merchandiseType": {
+      "status": "available",
+      "source": "loads.merchandiseType",
+      "type": "varchar",
+      "notes": "Type of cargo"
+    },
+    "pickupLat": {
+      "status": "available",
+      "source": "loads.pickupLat",
+      "type": "decimal",
+      "notes": "Pickup latitude"
+    },
+    "pickupLng": {
+      "status": "available",
+      "source": "loads.pickupLng",
+      "type": "decimal",
+      "notes": "Pickup longitude"
+    },
+    "deliveryLat": {
+      "status": "available",
+      "source": "loads.deliveryLat",
+      "type": "decimal",
+      "notes": "Delivery latitude"
+    },
+    "deliveryLng": {
+      "status": "available",
+      "source": "loads.deliveryLng",
+      "type": "decimal",
+      "notes": "Delivery longitude"
+    }
+  },
+
+  "existingCalculations": {
+    "grossPay": {
+      "status": "available",
+      "calculation": "load.price",
+      "source": "normalizeLoadFinancials()",
+      "notes": "Direct from database. No transformation."
+    },
+    "netPay": {
+      "status": "available",
+      "calculation": "price - estimatedFuel - estimatedTolls",
+      "source": "normalizeLoadFinancials() → stored as 'profit'",
+      "notes": "Basic net profit calculation. Does NOT include vehicle operating costs."
+    },
+    "fuelCost": {
+      "status": "available",
+      "calculation": "load.estimatedFuel",
+      "source": "normalizeLoadFinancials()",
+      "notes": "Estimated fuel from database"
+    },
+    "vehicleCost": {
+      "status": "missing",
+      "calculation": "totalMiles * vehicleCostPerMile",
+      "source": "N/A",
+      "notes": "NOT CALCULATED. Need to implement vehicle cost engine."
+    },
+    "netProfit": {
+      "status": "available",
+      "calculation": "price - estimatedFuel - estimatedTolls",
+      "source": "normalizeLoadFinancials() → stored as 'profit'",
+      "notes": "Same as netPay. Does NOT include vehicle operating costs."
+    },
+    "payPerMile": {
+      "status": "available",
+      "calculation": "price / miles",
+      "source": "normalizeLoadFinancials() → stored as 'ratePerMile'",
+      "notes": "Revenue per mile. Uses gross price, not net pay."
+    },
+    "payPerHour": {
+      "status": "missing",
+      "calculation": "(netPay / estimatedTotalMinutes) * 60",
+      "source": "N/A",
+      "notes": "NOT CALCULATED. Requires time estimates (missing from schema)."
+    },
+    "estimatedTimeMinutes": {
+      "status": "missing",
+      "calculation": "driveToPickupMinutes + serviceMinutes + deliveryDriveMinutes + bufferMinutes",
+      "source": "N/A",
+      "notes": "NOT CALCULATED. Requires time data (missing from schema)."
+    },
+    "driverCommission": {
+      "status": "missing",
+      "calculation": "price * (commissionPercent / 100)",
+      "source": "N/A",
+      "notes": "NOT CALCULATED. Commission field missing from loads table."
+    },
+    "settlementAmount": {
+      "status": "available",
+      "calculation": "Calculated in calculateSettlement()",
+      "source": "server/db.ts:3408",
+      "notes": "Settlement totals calculated from settlement loads (totalIncome, totalExpenses, totalProfit, partner1Amount, partner2Amount)"
+    },
+    "walletReserve": {
+      "status": "available",
+      "calculation": "wallet.reservedBalance + pending reserves",
+      "source": "server/routers/wallet.ts:538",
+      "notes": "Fetched from wallet service. Includes completed and pending reserves."
+    },
+    "miles": {
+      "status": "available",
+      "calculation": "Haversine formula from coordinates",
+      "source": "normalizeLoadFinancials()",
+      "notes": "Distance from pickup to delivery. Defaults to 120 miles if coordinates invalid."
+    },
+    "margin": {
+      "status": "available",
+      "calculation": "(profit / price) * 100",
+      "source": "normalizeLoadFinancials()",
+      "notes": "Margin percentage. Based on gross price, not net pay."
+    }
+  },
+
+  "dataFlowDiagram": {
+    "driverOpsDataFetch": [
+      "trpc.driver.myLoads → server/routers.ts:967 → getLoads() → normalizeLoadFinancials()",
+      "trpc.driverStats.getDriverStats → server/routers.ts:239 → getDriverStats() → aggregates",
+      "trpc.wallet.getWalletSummary → server/routers/wallet.ts:538 → wallet + transactions"
+    ],
+    "loadEnrichmentPipeline": [
+      "Load from DB → normalizeLoadFinancials() → adds (miles, ratePerMile, profit, margin)",
+      "Load from DB → getLoadById() → normalizeLoadFinancials() + buildLoadFinancialSnapshot()"
+    ],
+    "settlementCalculation": [
+      "Settlement → calculateSettlement() → aggregates loads → updates settlement totals"
+    ]
+  },
+
+  "safeDefaultValues": {
+    "minutesPerItem": 1.1,
+    "bufferMinutes": 5,
+    "vehicleCostPerMile": 0.179,
+    "minimumEstimatedMinutes": 15,
+    "defaultStopCount": 1,
+    "defaultItemCount": 1,
+    "driverTargetHourlyRate": 25,
+    "estimatedDriveSpeedMph": 40,
+    "cargoVanFuelCostPerMile": 0.28,
+    "cargoVanMaintenanceCostPerMile": 0.08,
+    "cargoVanTiresCostPerMile": 0.03,
+    "cargoVanDepreciationCostPerMile": 0.12,
+    "cargoVanRiskBufferCostPerMile": 0.05
+  },
+
+  "recommendedV1Formula": {
+    "grossPay": {
+      "formula": "load.price",
+      "notes": "Direct from database"
+    },
+    "totalMiles": {
+      "formula": "load.miles (from normalizeLoadFinancials Haversine calculation)",
+      "fallback": "120 miles if coordinates invalid"
+    },
+    "estimatedDriveTimeMinutes": {
+      "formula": "totalMiles / 40 * 60",
+      "notes": "Assume 40 mph average speed"
+    },
+    "serviceTimeMinutes": {
+      "formula": "Math.max(itemCount || 1, 1) * 1.1",
+      "fallback": "1.1 minutes if itemCount missing"
+    },
+    "estimatedTotalMinutes": {
+      "formula": "Math.max(estimatedDriveTimeMinutes + serviceTimeMinutes + bufferMinutes, minimumEstimatedMinutes)",
+      "bufferMinutes": 5,
+      "minimumEstimatedMinutes": 15
+    },
+    "vehicleCost": {
+      "formula": "totalMiles * vehicleCostPerMile",
+      "vehicleCostPerMile": 0.179,
+      "notes": "Cargo van operating cost per mile"
+    },
+    "netPay": {
+      "formula": "grossPay - vehicleCost",
+      "notes": "Net pay after vehicle operating costs"
+    },
+    "hourlyRate": {
+      "formula": "estimatedTotalMinutes > 0 ? (netPay / estimatedTotalMinutes) * 60 : null",
+      "notes": "Estimated hourly rate based on net pay and time"
+    },
+    "payPerMile": {
+      "formula": "totalMiles > 0 ? netPay / totalMiles : null",
+      "notes": "Net pay per mile"
+    },
+    "profitabilityScore": {
+      "formula": "hourlyRate >= 25 ? 'healthy' : hourlyRate >= 20 ? 'at_risk' : 'loss'",
+      "healthy": "hourlyRate >= $25/hour",
+      "at_risk": "hourlyRate $20-$25/hour",
+      "loss": "hourlyRate < $20/hour"
+    }
+  },
+
+  "frontendOnlyV1Components": [
+    {
+      "name": "DriverLoadCard",
+      "purpose": "Compact load card with earnings summary",
+      "dataRequired": ["clientName", "pickupAddress", "deliveryAddress", "price", "weight", "status", "miles", "ratePerMile", "profit", "margin"],
+      "calculationsRequired": ["estimatedTotalMinutes", "vehicleCost", "netPay", "hourlyRate", "profitabilityScore"],
+      "backendRequired": false,
+      "notes": "Can be implemented entirely with existing load data and safe defaults"
+    },
+    {
+      "name": "DriverLoadDetailDrawer",
+      "purpose": "Detailed breakdown with full calculations",
+      "dataRequired": ["All load fields", "estimatedFuel", "estimatedTolls"],
+      "calculationsRequired": ["All V1 formula calculations"],
+      "backendRequired": false,
+      "notes": "Can display estimated values with disclaimer until time data is added"
+    },
+    {
+      "name": "DriverEarningsBreakdown",
+      "purpose": "Visual breakdown of costs and earnings",
+      "dataRequired": ["price", "estimatedFuel", "estimatedTolls"],
+      "calculationsRequired": ["vehicleCost", "netPay"],
+      "backendRequired": false,
+      "notes": "Can use safe defaults for vehicle cost"
+    },
+    {
+      "name": "DriverLoadScoreBadge",
+      "purpose": "Color-coded profitability indicator",
+      "dataRequired": ["hourlyRate"],
+      "calculationsRequired": ["profitabilityScore"],
+      "backendRequired": false,
+      "notes": "Green/Yellow/Red based on hourly rate thresholds"
+    }
+  ],
+
+  "backendRequiredForV1": false,
+  "backendRequiredForV2": [
+    "Add itemCount field to loads table",
+    "Add estimatedDriveTime field to loads table",
+    "Add estimatedShoppingTime field to loads table",
+    "Add driverPay field to loads table (may differ from price)",
+    "Add commissionPercent field to loads table",
+    "Add driver vehicle/fuel settings (type, cost per mile)",
+    "Implement vehicle cost engine with real calculations",
+    "Add 30-day driver average hourly rate calculation"
+  ],
+
+  "implementationRisk": "low",
+  "riskFactors": {
+    "positives": [
+      "Core load data already available (price, fuel, tolls, coordinates)",
+      "Distance calculation already implemented (Haversine)",
+      "Basic profit calculation already exists",
+      "No database schema changes required for V1",
+      "Can use safe defaults for missing data",
+      "All UI components can be frontend-only"
+    ],
+    "concerns": [
+      "Time estimates missing (can use defaults)",
+      "Vehicle cost not calculated (can use default $0.179/mile)",
+      "Commission field missing (can fetch from user settings)",
+      "No per-load driver pay (can use load.price as proxy)"
+    ],
+    "mitigation": [
+      "Use safe defaults with clear disclaimers",
+      "Show 'Estimated' labels on calculated values",
+      "Plan Phase 2 for schema changes and real calculations",
+      "Implement defaults in frontend utility functions"
+    ]
+  },
+
+  "readyToImplement": true,
+  "implementationStrategy": {
+    "phase1": {
+      "name": "Frontend-Only V1",
+      "scope": "Build UI components using existing data and safe defaults",
+      "components": ["DriverLoadCard", "DriverLoadDetailDrawer", "DriverEarningsBreakdown", "DriverLoadScoreBadge"],
+      "backendChanges": "None required",
+      "databaseChanges": "None required",
+      "timeline": "1-2 weeks",
+      "deliverables": ["New components", "Integration into DriverOps.tsx", "Safe defaults utility", "Disclaimer labels"]
+    },
+    "phase2": {
+      "name": "Backend Enhancement",
+      "scope": "Add missing fields and real calculations",
+      "backendChanges": [
+        "Add itemCount, estimatedDriveTime, estimatedShoppingTime to loads table",
+        "Add driverPay, commissionPercent to loads table",
+        "Implement vehicle cost engine",
+        "Add driver vehicle/fuel settings"
+      ],
+      "databaseChanges": "Schema migration for new fields",
+      "timeline": "2-3 weeks",
+      "deliverables": ["Schema migration", "Vehicle cost engine", "Updated calculations", "Real values in UI"]
+    }
+  },
+
+  "auditConclusion": {
+    "status": "READY_TO_IMPLEMENT",
+    "summary": "The current system has sufficient data to implement a V1 driver load earnings UI with safe defaults. Core calculations (gross pay, net pay, distance, profitability) can be implemented immediately using existing data (price, fuel, tolls, coordinates) and safe defaults (vehicle cost $0.179/mile, time estimates 1.1 min/item). No database schema changes required for V1.",
+    "nextSteps": [
+      "1. Create DriverLoadEarningsCalculator utility with safe defaults",
+      "2. Build DriverLoadCard component",
+      "3. Build DriverLoadDetailDrawer component",
+      "4. Build DriverEarningsBreakdown component",
+      "5. Build DriverLoadScoreBadge component",
+      "6. Integrate into DriverOps.tsx operations tab",
+      "7. Add disclaimers for estimated values",
+      "8. Plan Phase 2 for schema changes and real calculations"
+    ]
+  }
+}

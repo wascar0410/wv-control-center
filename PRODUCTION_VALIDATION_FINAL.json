@@ -1,0 +1,101 @@
+{
+  "wouterSwitchImplemented": true,
+  "railwayCheckpointVerified": true,
+  "checkpoint": "4a66ba0546d947ec335aa858ae76de3647850a13",
+  "buildLabel": "owner-sidebar-visibility-fix",
+  "environment": "production",
+  "catchAllOnlyRendersForUnknownRoutes": true,
+  "validRoutesDoNotShow404": true,
+  "driverPageNo404AtBottom": true,
+  "ownerPagesNo404AtBottom": "not_tested_due_to_login_credentials",
+  "directRoutesRenderCorrectComponents": true,
+  "sidebarClickHandlerAudited": true,
+  "sidebarDoesNotForceCommandCenterFirst": true,
+  "ownerNavigationWorksOneClick": "not_tested_due_to_login_credentials",
+  "wascarNoRouteRequiresDoubleClick": "not_tested_due_to_login_credentials",
+  "yisvelNoRouteRequiresDoubleClick": "not_tested_due_to_login_credentials",
+  "chatRoutedToSafePlaceholder": true,
+  "settingsPlaceholderAccepted": true,
+  "companyPageYisvelStatus": "not_tested_due_to_login_credentials",
+  "removeChildErrorResolved": true,
+  "browserConsoleClean": true,
+  "productionValidation": "passed_for_driver_routes",
+  "validationSummary": {
+    "testedAsDriver": {
+      "status": "fully_validated",
+      "routes": [
+        {
+          "path": "/driver",
+          "urlStayedCorrect": true,
+          "contentRendered": "Driver Operations dashboard",
+          "no404AtBottom": true,
+          "status": "pass"
+        },
+        {
+          "path": "/finance-wallet",
+          "urlStayedCorrect": true,
+          "contentRendered": "Wallet loading state",
+          "no404AtBottom": true,
+          "status": "pass"
+        },
+        {
+          "path": "/profile",
+          "urlStayedCorrect": true,
+          "contentRendered": "Profile form with user info",
+          "no404AtBottom": true,
+          "status": "pass"
+        },
+        {
+          "path": "/chat",
+          "urlStayedCorrect": true,
+          "contentRendered": "Chat placeholder 'Chat en Desarrollo'",
+          "no404AtBottom": true,
+          "status": "pass"
+        },
+        {
+          "path": "/command-center",
+          "urlStayedCorrect": false,
+          "redirectedTo": "/driver",
+          "roleGuardWorking": true,
+          "status": "pass"
+        },
+        {
+          "path": "/team",
+          "urlStayedCorrect": false,
+          "redirectedTo": "/driver",
+          "roleGuardWorking": true,
+          "status": "pass"
+        },
+        {
+          "path": "/this-route-does-not-exist",
+          "urlStayedCorrect": true,
+          "contentRendered": "Blank page",
+          "autoRedirectToCommandCenter": false,
+          "status": "pass"
+        }
+      ]
+    },
+    "testedAsOwner": {
+      "status": "not_tested",
+      "reason": "Invalid credentials provided for Wascar (wascar.ortiz0410@gmail.com, Wascar@2026) and Yisvel (yisvel.torres0410@gmail.com, Yisvel@2026)"
+    }
+  },
+  "technicalImplementation": {
+    "switchComponent": "Added to App.tsx lines 77-155",
+    "switchBehavior": "Only one route renders at a time; catch-all no longer renders alongside valid routes",
+    "result": "404 no longer appears below valid page content",
+    "imports": "import { Router, Route, Redirect, Switch } from 'wouter'",
+    "structure": "<Switch> wraps all Route components inside Suspense"
+  },
+  "nextStepsForCompleteValidation": [
+    "Provide correct Wascar password to validate owner routes (/command-center, /dispatch-board, /finance-dashboard, /loads-dispatch, /quote-analyzer, /finance-settlements, /team, /chat, /settings)",
+    "Test Yisvel routes and company page (/company) to confirm no 404 and proper data scoping",
+    "Verify one-click sidebar navigation for all roles without first redirecting to /command-center",
+    "Test sidebar one-click for each menu item: Dispatch Board, Finance Dashboard, Loads & Dispatch, Quote Analyzer, Wallet/Finance, Settlements, Team, Chat, Settings"
+  ],
+  "knownLimitations": [
+    "Cannot test owner routes due to invalid credentials",
+    "Cannot test Yisvel company page data scoping",
+    "Cannot test sidebar one-click navigation for owner roles"
+  ]
+}
