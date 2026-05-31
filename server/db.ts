@@ -398,7 +398,25 @@ export async function getLoadById(id: number) {
 export async function updateLoadStatus(id: number, status: string, extra?: Partial<InsertLoad>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.update(loads).set({ status: status as any, ...extra }).where(eq(loads.id, id));
+  
+  try {
+    // Validate status enum before DB operation
+    const validStatuses = ["available", "in_transit", "delivered", "invoiced", "paid"];
+    if (!validStatuses.includes(status)) {
+      console.error(`[updateLoadStatus] Invalid status: ${status}`);
+      throw new Error(`Invalid status: ${status}`);
+    }
+    
+    await db.update(loads).set({ status: status as any, ...extra }).where(eq(loads.id, id));
+  } catch (error) {
+    console.error(`[updateLoadStatus] DB error for load ${id}:`, {
+      status,
+      extra,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error;
+  }
 }
 
 export async function updateLoad(id: number, data: Partial<InsertLoad>) {
