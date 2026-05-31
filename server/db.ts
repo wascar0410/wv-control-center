@@ -408,8 +408,37 @@ export async function updateLoadStatus(id: number, status: string, extra?: Parti
       throw error;
     }
     
-    console.log(`[updateLoadStatus] Updating load ${id} to status ${status}`);
-    await db.update(loads).set({ status: status as any, ...extra }).where(eq(loads.id, id));
+    // Verify load exists before updating
+    const existingLoad = await db.query.loads.findFirst({
+      where: eq(loads.id, id),
+    });
+    
+    if (!existingLoad) {
+      const error = new Error(`Load not found: ${id}`);
+      console.error(`[updateLoadStatus] NOT_FOUND: ${error.message}`);
+      throw error;
+    }
+    
+    console.log(`[updateLoadStatus] Updating load ${id} from status ${existingLoad.status} to ${status}`, { extra });
+    
+    // Filter extra to only include valid columns
+    const validColumns = [
+      'assignedDriverId', 'driverAcceptedAt', 'driverRejectedAt', 'driverRejectionReason',
+      'rateConfirmationNumber', 'notes', 'bolImageUrl', 'pickupDate', 'deliveryDate',
+      'netMargin', 'estimatedFuel', 'estimatedTolls'
+    ];
+    const filteredExtra: Partial<InsertLoad> = {};
+    if (extra) {
+      for (const key of Object.keys(extra)) {
+        if (validColumns.includes(key)) {
+          filteredExtra[key as keyof InsertLoad] = extra[key as keyof InsertLoad];
+        } else {
+          console.warn(`[updateLoadStatus] Ignoring invalid column: ${key}`);
+        }
+      }
+    }
+    
+    await db.update(loads).set({ status: status as any, ...filteredExtra }).where(eq(loads.id, id));
     console.log(`[updateLoadStatus] Successfully updated load ${id} to ${status}`);
   } catch (error) {
     console.error(`[updateLoadStatus] Error updating load ${id}:`, {
