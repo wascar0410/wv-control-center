@@ -401,15 +401,18 @@ export async function updateLoadStatus(id: number, status: string, extra?: Parti
   
   try {
     // Validate status enum before DB operation
-    const validStatuses = ["available", "in_transit", "delivered", "invoiced", "paid"];
-    if (!validStatuses.includes(status)) {
-      console.error(`[updateLoadStatus] Invalid status: ${status}`);
-      throw new Error(`Invalid status: ${status}`);
+    const ALLOWED_STATUSES = ["available", "in_transit", "delivered", "invoiced", "paid"] as const;
+    if (!ALLOWED_STATUSES.includes(status as any)) {
+      const error = new Error(`Invalid load status: ${status}. Allowed: ${ALLOWED_STATUSES.join(", ")}`);
+      console.error(`[updateLoadStatus] BAD_REQUEST: ${error.message}`);
+      throw error;
     }
     
+    console.log(`[updateLoadStatus] Updating load ${id} to status ${status}`);
     await db.update(loads).set({ status: status as any, ...extra }).where(eq(loads.id, id));
+    console.log(`[updateLoadStatus] Successfully updated load ${id} to ${status}`);
   } catch (error) {
-    console.error(`[updateLoadStatus] DB error for load ${id}:`, {
+    console.error(`[updateLoadStatus] Error updating load ${id}:`, {
       status,
       extra,
       error: error instanceof Error ? error.message : String(error),
