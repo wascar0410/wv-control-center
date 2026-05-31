@@ -423,39 +423,69 @@ const loadsRouter = router({
       status: z.enum(["available", "in_transit", "delivered", "invoiced", "paid"]),
     }))
     .mutation(async ({ input, ctx }) => {
-      await updateLoadStatus(input.id, input.status);
-
-      // Auto-create income transaction when load is paid
-      if (input.status === "paid") {
+      try {
+        // Validate load exists
         const load = await getLoadById(input.id);
-        if (load) {
-          await createTransaction({
-            type: "income",
-            category: "load_payment",
-            amount: load.price,
-            description: `Pago de carga #${load.id} - ${load.clientName}`,
-            referenceLoadId: load.id,
-            transactionDate: new Date(),
-            createdBy: ctx.user.id,
-          });
-          await notifyOwner({
-            title: "💰 Carga Pagada",
-            content: `La carga #${load.id} de ${load.clientName} por $${load.price} ha sido marcada como pagada. Ingreso registrado automáticamente.`,
-          });
+        if (!load) {
+          console.error(`[loads.updateStatus] Load not found: ${input.id}`);
+          throw new TRPCError({ code: "NOT_FOUND", message: "Carga no encontrada" });
         }
-      }
 
-      if (input.status === "delivered") {
-        const load = await getLoadById(input.id);
-        if (load) {
-          await notifyOwner({
-            title: "✅ Carga Entregada",
-            content: `La carga #${load.id} de ${load.clientName} (${load.pickupAddress} → ${load.deliveryAddress}) ha sido entregada exitosamente.`,
-          });
+        // Check permission - only owner/admin can update status
+        const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
+        if (!isPrivileged) {
+          console.error(`[loads.updateStatus] FORBIDDEN: user ${ctx.user.id} (${ctx.user.role}) cannot update load status`);
+          throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para actualizar el estado de la carga" });
         }
-      }
 
-      return { success: true };
+        // Validate status enum
+        const validStatuses = ["available", "in_transit", "delivered", "invoiced", "paid"];
+        if (!validStatuses.includes(input.status)) {
+          console.error(`[loads.updateStatus] BAD_REQUEST: invalid status ${input.status}`);
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Estado inválido: ${input.status}` });
+        }
+
+        console.log(`[loads.updateStatus] Updating load ${input.id} to status ${input.status} by user ${ctx.user.id}`);
+        await updateLoadStatus(input.id, input.status);
+
+        // Auto-create income transaction when load is paid
+        if (input.status === "paid") {
+          const updatedLoad = await getLoadById(input.id);
+          if (updatedLoad) {
+            await createTransaction({
+              type: "income",
+              category: "load_payment",
+              amount: updatedLoad.price,
+              description: `Pago de carga #${updatedLoad.id} - ${updatedLoad.clientName}`,
+              referenceLoadId: updatedLoad.id,
+              transactionDate: new Date(),
+              createdBy: ctx.user.id,
+            });
+            await notifyOwner({
+              title: "💰 Carga Pagada",
+              content: `La carga #${updatedLoad.id} de ${updatedLoad.clientName} por $${updatedLoad.price} ha sido marcada como pagada. Ingreso registrado automáticamente.`,
+            });
+          }
+        }
+
+        if (input.status === "delivered") {
+          const updatedLoad = await getLoadById(input.id);
+          if (updatedLoad) {
+            await notifyOwner({
+              title: "✅ Carga Entregada",
+              content: `La carga #${updatedLoad.id} de ${updatedLoad.clientName} (${updatedLoad.pickupAddress} → ${updatedLoad.deliveryAddress}) ha sido entregada exitosamente.`,
+            });
+          }
+        }
+
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        console.error(`[loads.updateStatus] Unexpected error:`, error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Error al actualizar el estado de la carga" });
+      }
     }),
 
   delete: protectedProcedure
