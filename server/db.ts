@@ -402,6 +402,8 @@ export async function updateLoadStatus(id: number, status: string, extra?: Parti
   try {
     // Validate status enum before DB operation
     const ALLOWED_STATUSES = ["available", "in_transit", "delivered", "invoiced", "paid"] as const;
+    type AllowedStatus = typeof ALLOWED_STATUSES[number];
+    
     if (!ALLOWED_STATUSES.includes(status as any)) {
       const error = new Error(`Invalid load status: ${status}. Allowed: ${ALLOWED_STATUSES.join(", ")}`);
       console.error(`[updateLoadStatus] BAD_REQUEST: ${error.message}`);
@@ -419,7 +421,8 @@ export async function updateLoadStatus(id: number, status: string, extra?: Parti
       throw error;
     }
     
-    console.log(`[updateLoadStatus] Updating load ${id} from status ${existingLoad.status} to ${status}`, { extra });
+    // Safe extra with default empty object
+    const safeExtra = extra ?? {};
     
     // Filter extra to only include valid columns
     const validColumns = [
@@ -427,24 +430,43 @@ export async function updateLoadStatus(id: number, status: string, extra?: Parti
       'rateConfirmationNumber', 'notes', 'bolImageUrl', 'pickupDate', 'deliveryDate',
       'netMargin', 'estimatedFuel', 'estimatedTolls'
     ];
-    const filteredExtra: Partial<InsertLoad> = {};
-    if (extra) {
-      for (const key of Object.keys(extra)) {
-        if (validColumns.includes(key)) {
-          filteredExtra[key as keyof InsertLoad] = extra[key as keyof InsertLoad];
-        } else {
-          console.warn(`[updateLoadStatus] Ignoring invalid column: ${key}`);
-        }
+    const sanitizedExtra: Partial<InsertLoad> = {};
+    
+    for (const key of Object.keys(safeExtra)) {
+      if (validColumns.includes(key)) {
+        sanitizedExtra[key as keyof InsertLoad] = safeExtra[key as keyof InsertLoad];
+      } else {
+        console.warn(`[updateLoadStatus] Ignoring invalid column: ${key}`);
       }
     }
     
-    await db.update(loads).set({ status: status as any, ...filteredExtra }).where(eq(loads.id, id));
-    console.log(`[updateLoadStatus] Successfully updated load ${id} to ${status}`);
+    // Build update data with proper typing
+    const updateData: Partial<InsertLoad> = {
+      ...sanitizedExtra,
+      status: status as AllowedStatus,
+      updatedAt: new Date(),
+    };
+    
+    const updateDataKeys = Object.keys(updateData);
+    
+    console.log(`[updateLoadStatus] input`, {
+      id,
+      status,
+      sanitizedExtra,
+      updateDataKeys,
+      previousStatus: existingLoad.status,
+    });
+    
+    await db.update(loads).set(updateData).where(eq(loads.id, id));
+    
+    console.log(`[updateLoadStatus] Successfully updated load ${id} from ${existingLoad.status} to ${status}`);
   } catch (error) {
-    console.error(`[updateLoadStatus] Error updating load ${id}:`, {
+    console.error(`[updateLoadStatus] error`, {
+      id,
       status,
       extra,
-      error: error instanceof Error ? error.message : String(error),
+      sanitizedExtra: extra ? Object.keys(extra ?? {}) : undefined,
+      message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     });
     throw error;
