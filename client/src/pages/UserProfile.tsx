@@ -78,6 +78,13 @@ type VehicleForm = {
   availableForLoads: boolean;
 };
 
+type ComplianceForm = {
+  dotNumber: string;
+  licenseUrl: string;
+  insuranceUrl: string;
+  leaseContractUrl: string;
+};
+
 const DEFAULT_PROFILE: ProfileForm = {
   name: "",
   phone: "",
@@ -118,6 +125,13 @@ const DEFAULT_VEHICLE: VehicleForm = {
   availableForLoads: true,
 };
 
+const DEFAULT_COMPLIANCE: ComplianceForm = {
+  dotNumber: "",
+  licenseUrl: "",
+  insuranceUrl: "",
+  leaseContractUrl: "",
+};
+
 export default function UserProfile() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -127,6 +141,7 @@ export default function UserProfile() {
   const [preferencesForm, setPreferencesForm] =
     useState<PreferencesForm>(DEFAULT_PREFERENCES);
   const [vehicleForm, setVehicleForm] = useState<VehicleForm>(DEFAULT_VEHICLE);
+  const [complianceForm, setComplianceForm] = useState<ComplianceForm>(DEFAULT_COMPLIANCE);
   const [avatarImageError, setAvatarImageError] = useState(false);
 
   const {
@@ -168,6 +183,20 @@ export default function UserProfile() {
     onError: (err) => {
       toast.error("Error al guardar vehículo", {
         description: err.message || "No se pudo actualizar la información del vehículo.",
+      });
+    },
+  });
+
+  const updateComplianceMutation = trpc.profile.updateProfile.useMutation({
+    onSuccess: async () => {
+      toast.success("Cumplimiento guardado", {
+        description: "La información de cumplimiento ha sido guardada correctamente.",
+      });
+      await utils.profile.getProfile.invalidate();
+    },
+    onError: (err) => {
+      toast.error("Error al guardar cumplimiento", {
+        description: err.message || "No se pudo actualizar la información de cumplimiento.",
       });
     },
   });
@@ -245,6 +274,15 @@ export default function UserProfile() {
       } catch (e) {
         setVehicleForm(DEFAULT_VEHICLE);
       }
+    }
+
+    if (profileData?.profile) {
+      setComplianceForm({
+        dotNumber: profileData.profile.dotNumber || "",
+        licenseUrl: profileData.profile.licenseUrl || "",
+        insuranceUrl: profileData.profile.insuranceUrl || "",
+        leaseContractUrl: profileData.profile.leaseContractUrl || "",
+      });
     }
   }, [profileData, user]);
 
@@ -351,6 +389,19 @@ export default function UserProfile() {
     await updateVehicleMutation.mutateAsync({
       vehicleInfo: JSON.stringify(vehicleData),
     });
+  };
+
+  const handleSaveCompliance = async () => {
+    await updateComplianceMutation.mutateAsync({
+      dotNumber: complianceForm.dotNumber,
+      licenseUrl: complianceForm.licenseUrl,
+      insuranceUrl: complianceForm.insuranceUrl,
+      leaseContractUrl: complianceForm.leaseContractUrl,
+    });
+  };
+
+  const handleClearCompliance = () => {
+    setComplianceForm(DEFAULT_COMPLIANCE);
   };
 
   const handleResetProfile = () => {
@@ -521,25 +572,29 @@ export default function UserProfile() {
           onValueChange={setActiveTab}
           className="w-full"
         >
-          <TabsList className="mb-6 grid w-full grid-cols-3">
-            <TabsTrigger value="profile" className="flex items-center gap-2">
+          <TabsList className="mb-6 grid w-full grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 h-auto">
+            <TabsTrigger value="profile" className="flex items-center gap-2 px-2 py-2 text-xs sm:text-sm">
               <User className="h-4 w-4" />
               <span className="hidden sm:inline">Perfil</span>
             </TabsTrigger>
             <TabsTrigger
               value="preferences"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 px-2 py-2 text-xs sm:text-sm"
             >
               <Settings className="h-4 w-4" />
               <span className="hidden sm:inline">Preferencias</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="flex items-center gap-2">
+            <TabsTrigger value="security" className="flex items-center gap-2 px-2 py-2 text-xs sm:text-sm">
               <Lock className="h-4 w-4" />
               <span className="hidden sm:inline">Seguridad</span>
             </TabsTrigger>
-            <TabsTrigger value="vehicle" className="flex items-center gap-2">
+            <TabsTrigger value="vehicle" className="flex items-center gap-2 px-2 py-2 text-xs sm:text-sm">
               <Wallet className="h-4 w-4" />
               <span className="hidden sm:inline">Vehículo</span>
+            </TabsTrigger>
+            <TabsTrigger value="compliance" className="flex items-center gap-2 px-2 py-2 text-xs sm:text-sm">
+              <ShieldCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Cumplimiento</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1175,6 +1230,79 @@ export default function UserProfile() {
                   )}
                   <Save className="mr-2 h-4 w-4" />
                   Guardar Vehículo
+                </Button>
+              </div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="compliance" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Información de Cumplimiento</CardTitle>
+                <CardDescription>
+                  Actualiza tu información de cumplimiento y documentación.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="dot-number">Número DOT</Label>
+                  <Input
+                    id="dot-number"
+                    placeholder="Ej: 1234567"
+                    value={complianceForm.dotNumber}
+                    onChange={(e) => setComplianceForm({ ...complianceForm, dotNumber: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="license-url">URL de Licencia</Label>
+                  <Input
+                    id="license-url"
+                    placeholder="https://..."
+                    value={complianceForm.licenseUrl}
+                    onChange={(e) => setComplianceForm({ ...complianceForm, licenseUrl: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="insurance-url">URL de Seguro</Label>
+                  <Input
+                    id="insurance-url"
+                    placeholder="https://..."
+                    value={complianceForm.insuranceUrl}
+                    onChange={(e) => setComplianceForm({ ...complianceForm, insuranceUrl: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lease-url">URL de Contrato/Permiso</Label>
+                  <Input
+                    id="lease-url"
+                    placeholder="https://..."
+                    value={complianceForm.leaseContractUrl}
+                    onChange={(e) => setComplianceForm({ ...complianceForm, leaseContractUrl: e.target.value })}
+                  />
+                </div>
+              </CardContent>
+
+              <div className="border-t px-6 py-4 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleClearCompliance}
+                  disabled={updateComplianceMutation.isPending}
+                >
+                  Limpiar
+                </Button>
+                <Button
+                  onClick={handleSaveCompliance}
+                  disabled={updateComplianceMutation.isPending}
+                >
+                  {updateComplianceMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  <Save className="mr-2 h-4 w-4" />
+                  Guardar Cumplimiento
                 </Button>
               </div>
             </Card>
