@@ -1917,6 +1917,7 @@ export async function updateUserProfile(userId: number, data: {
   zipCode?: string;
   profileImageUrl?: string;
   bio?: string;
+  vehicleInfo?: string;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -1930,6 +1931,7 @@ export async function updateUserProfile(userId: number, data: {
   if (data.zipCode !== undefined) updateData.zipCode = data.zipCode;
   if (data.profileImageUrl !== undefined) updateData.profileImageUrl = data.profileImageUrl;
   if (data.bio !== undefined) updateData.bio = data.bio;
+  if (data.vehicleInfo !== undefined) updateData.vehicleInfo = data.vehicleInfo;
   updateData.updatedAt = new Date();
 
   await db.update(users).set(updateData).where(eq(users.id, userId));

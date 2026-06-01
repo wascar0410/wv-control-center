@@ -2108,6 +2108,7 @@ const profileRouter = router({
       zipCode: z.string().optional(),
       profileImageUrl: z.string().optional(),
       bio: z.string().optional(),
+      vehicleInfo: z.string().optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const { updateUserProfile } = await import("./db");

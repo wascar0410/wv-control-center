@@ -65,6 +65,19 @@ type PreferencesForm = {
   allowLocationTracking: boolean;
 };
 
+type VehicleForm = {
+  type: "cargo_van" | "sprinter" | "box_truck" | "pickup" | "other" | "";
+  name: string;
+  plate: string;
+  year: string;
+  make: string;
+  model: string;
+  weightCapacity: string;
+  fuelCostPerMile: string;
+  maintenanceCostPerMile: string;
+  availableForLoads: boolean;
+};
+
 const DEFAULT_PROFILE: ProfileForm = {
   name: "",
   phone: "",
@@ -92,6 +105,19 @@ const DEFAULT_PREFERENCES: PreferencesForm = {
   allowLocationTracking: false,
 };
 
+const DEFAULT_VEHICLE: VehicleForm = {
+  type: "",
+  name: "",
+  plate: "",
+  year: "",
+  make: "",
+  model: "",
+  weightCapacity: "",
+  fuelCostPerMile: "0.22",
+  maintenanceCostPerMile: "0.12",
+  availableForLoads: true,
+};
+
 export default function UserProfile() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -100,6 +126,7 @@ export default function UserProfile() {
   const [profileForm, setProfileForm] = useState<ProfileForm>(DEFAULT_PROFILE);
   const [preferencesForm, setPreferencesForm] =
     useState<PreferencesForm>(DEFAULT_PREFERENCES);
+  const [vehicleForm, setVehicleForm] = useState<VehicleForm>(DEFAULT_VEHICLE);
   const [avatarImageError, setAvatarImageError] = useState(false);
 
   const {
@@ -127,6 +154,20 @@ export default function UserProfile() {
     onError: (err) => {
       toast.error("Error al guardar perfil", {
         description: err.message || "No se pudo actualizar el perfil.",
+      });
+    },
+  });
+
+  const updateVehicleMutation = trpc.profile.updateProfile.useMutation({
+    onSuccess: async () => {
+      toast.success("Vehículo guardado", {
+        description: "La información de tu vehículo ha sido guardada correctamente.",
+      });
+      await utils.profile.getProfile.invalidate();
+    },
+    onError: (err) => {
+      toast.error("Error al guardar vehículo", {
+        description: err.message || "No se pudo actualizar la información del vehículo.",
       });
     },
   });
@@ -184,6 +225,26 @@ export default function UserProfile() {
         allowLocationTracking:
           profileData.preferences.allowLocationTracking ?? false,
       });
+    }
+
+    if (profileData?.profile?.vehicleInfo) {
+      try {
+        const vehicleData = JSON.parse(profileData.profile.vehicleInfo);
+        setVehicleForm({
+          type: vehicleData.type || "",
+          name: vehicleData.name || "",
+          plate: vehicleData.plate || "",
+          year: vehicleData.year || "",
+          make: vehicleData.make || "",
+          model: vehicleData.model || "",
+          weightCapacity: vehicleData.weightCapacity || "",
+          fuelCostPerMile: vehicleData.fuelCostPerMile?.toString() || "0.22",
+          maintenanceCostPerMile: vehicleData.maintenanceCostPerMile?.toString() || "0.12",
+          availableForLoads: vehicleData.availableForLoads ?? true,
+        });
+      } catch (e) {
+        setVehicleForm(DEFAULT_VEHICLE);
+      }
     }
   }, [profileData, user]);
 
@@ -257,6 +318,39 @@ export default function UserProfile() {
 
   const handleSavePreferences = async () => {
     await updatePreferencesMutation.mutateAsync(preferencesForm);
+  };
+
+  const handleVehicleChange = (field: keyof VehicleForm, value: string | boolean) => {
+    setVehicleForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveVehicle = async () => {
+    const fuelCost = parseFloat(vehicleForm.fuelCostPerMile) || 0;
+    const maintenanceCost = parseFloat(vehicleForm.maintenanceCostPerMile) || 0;
+    
+    if (fuelCost < 0 || maintenanceCost < 0) {
+      toast.error("Costos inválidos", {
+        description: "Los costos no pueden ser negativos.",
+      });
+      return;
+    }
+
+    const vehicleData = {
+      type: vehicleForm.type,
+      name: vehicleForm.name,
+      plate: vehicleForm.plate,
+      year: vehicleForm.year,
+      make: vehicleForm.make,
+      model: vehicleForm.model,
+      weightCapacity: vehicleForm.weightCapacity,
+      fuelCostPerMile: fuelCost,
+      maintenanceCostPerMile: maintenanceCost,
+      availableForLoads: vehicleForm.availableForLoads,
+    };
+
+    await updateVehicleMutation.mutateAsync({
+      vehicleInfo: JSON.stringify(vehicleData),
+    });
   };
 
   const handleResetProfile = () => {
@@ -442,6 +536,10 @@ export default function UserProfile() {
             <TabsTrigger value="security" className="flex items-center gap-2">
               <Lock className="h-4 w-4" />
               <span className="hidden sm:inline">Seguridad</span>
+            </TabsTrigger>
+            <TabsTrigger value="vehicle" className="flex items-center gap-2">
+              <Wallet className="h-4 w-4" />
+              <span className="hidden sm:inline">Vehículo</span>
             </TabsTrigger>
           </TabsList>
 
@@ -914,6 +1012,171 @@ export default function UserProfile() {
                   </p>
                 </div>
               </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="vehicle" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Información del Vehículo</CardTitle>
+                <CardDescription>
+                  Configura los datos de tu vehículo para cálculos de costos precisos
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-type">Tipo de Vehículo *</Label>
+                    <Select
+                      value={vehicleForm.type}
+                      onValueChange={(value) => handleVehicleChange("type", value)}
+                    >
+                      <SelectTrigger id="vehicle-type">
+                        <SelectValue placeholder="Selecciona tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cargo_van">Cargo Van</SelectItem>
+                        <SelectItem value="sprinter">Sprinter</SelectItem>
+                        <SelectItem value="box_truck">Box Truck</SelectItem>
+                        <SelectItem value="pickup">Pickup</SelectItem>
+                        <SelectItem value="other">Otro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-name">Nombre/Alias</Label>
+                    <Input
+                      id="vehicle-name"
+                      placeholder="Mi Vehículo"
+                      value={vehicleForm.name}
+                      onChange={(e) => handleVehicleChange("name", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-plate">Placa</Label>
+                    <Input
+                      id="vehicle-plate"
+                      placeholder="ABC-123"
+                      value={vehicleForm.plate}
+                      onChange={(e) => handleVehicleChange("plate", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-year">Año</Label>
+                    <Input
+                      id="vehicle-year"
+                      placeholder="2023"
+                      value={vehicleForm.year}
+                      onChange={(e) => handleVehicleChange("year", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-make">Marca</Label>
+                    <Input
+                      id="vehicle-make"
+                      placeholder="Ford"
+                      value={vehicleForm.make}
+                      onChange={(e) => handleVehicleChange("make", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-model">Modelo</Label>
+                    <Input
+                      id="vehicle-model"
+                      placeholder="Transit"
+                      value={vehicleForm.model}
+                      onChange={(e) => handleVehicleChange("model", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle-capacity">Capacidad de Peso (lbs)</Label>
+                    <Input
+                      id="vehicle-capacity"
+                      placeholder="5000"
+                      value={vehicleForm.weightCapacity}
+                      onChange={(e) => handleVehicleChange("weightCapacity", e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-6">
+                  <h3 className="font-semibold mb-4">Costos Operacionales</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fuel-cost">Combustible por Milla ($)</Label>
+                      <Input
+                        id="fuel-cost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.22"
+                        value={vehicleForm.fuelCostPerMile}
+                        onChange={(e) => handleVehicleChange("fuelCostPerMile", e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="maintenance-cost">Mantenimiento por Milla ($)</Label>
+                      <Input
+                        id="maintenance-cost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.12"
+                        value={vehicleForm.maintenanceCostPerMile}
+                        onChange={(e) => handleVehicleChange("maintenanceCostPerMile", e.target.value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Total por Milla</Label>
+                      <div className="rounded-md border bg-muted p-3 flex items-center justify-center">
+                        <span className="text-lg font-semibold">
+                          ${(parseFloat(vehicleForm.fuelCostPerMile) || 0 + parseFloat(vehicleForm.maintenanceCostPerMile) || 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="available-loads"
+                    checked={vehicleForm.availableForLoads}
+                    onCheckedChange={(checked) => handleVehicleChange("availableForLoads", checked as boolean)}
+                  />
+                  <Label htmlFor="available-loads" className="font-normal cursor-pointer">
+                    Disponible para cargas
+                  </Label>
+                </div>
+              </CardContent>
+
+              <div className="border-t px-6 py-4 flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setVehicleForm(DEFAULT_VEHICLE)}
+                  disabled={updateVehicleMutation.isPending}
+                >
+                  Limpiar
+                </Button>
+                <Button
+                  onClick={handleSaveVehicle}
+                  disabled={updateVehicleMutation.isPending}
+                >
+                  {updateVehicleMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  <Save className="mr-2 h-4 w-4" />
+                  Guardar Vehículo
+                </Button>
+              </div>
             </Card>
           </TabsContent>
         </Tabs>
