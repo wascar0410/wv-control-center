@@ -1806,7 +1806,7 @@ const adminRouter = router({
             THEN locationSharingEnabled ELSE 0 END as locationSharingEnabled,
           createdAt
         FROM users
-        WHERE role IN ('driver', 'owner')
+        WHERE role = 'driver' AND email NOT LIKE 'archived+%'
         ORDER BY name ASC
       `);
       return rows as any[];
