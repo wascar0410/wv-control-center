@@ -5,7 +5,7 @@
  * - Operations tab: Active loads, accept/reject, POD, fuel logging
  * - Wallet link for earnings management
  */
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,9 +58,6 @@ export default function DriverOps() {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
-  const previousLoadIdsRef = useRef<Set<number>>(new Set());
-  const notifiedLoadIdsRef = useRef<Set<number>>(new Set());
-  const isInitialLoadRef = useRef(true);
 
   // Read tab from URL query parameter on mount/location change
   useEffect(() => {
@@ -93,7 +90,7 @@ export default function DriverOps() {
 
   // Fetch driver data
   const { data: myLoads, isLoading: loadsLoading } = trpc.driver.myLoads.useQuery(undefined, {
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const { data: driverStats, isLoading: statsLoading } = trpc.driverStats.getDriverStats.useQuery(
@@ -102,40 +99,6 @@ export default function DriverOps() {
   );
 
   const { data: walletSummary } = trpc.wallet.getWalletSummary.useQuery();
-
-  // Detect new available loads
-  useEffect(() => {
-    if (!myLoads || isLoading) return;
-
-    const currentAvailableLoads = myLoads.filter((l: any) => l.status === "available");
-    const currentLoadIds = new Set(currentAvailableLoads.map((l: any) => l.id));
-
-    // Skip notification on initial load
-    if (isInitialLoadRef.current) {
-      previousLoadIdsRef.current = currentLoadIds;
-      isInitialLoadRef.current = false;
-      return;
-    }
-
-    // Find new loads that weren't there before
-    const newLoadIds = Array.from(currentLoadIds).filter(
-      (id) => !previousLoadIdsRef.current.has(id) && !notifiedLoadIdsRef.current.has(id)
-    );
-
-    if (newLoadIds.length > 0) {
-      // Show toast for new loads
-      toast({
-        title: "🚚 Nueva carga disponible",
-        description: `Tienes ${newLoadIds.length} nueva(s) carga(s) para revisar`,
-      });
-
-      // Mark these loads as notified
-      newLoadIds.forEach((id) => notifiedLoadIdsRef.current.add(id));
-    }
-
-    // Update previous load IDs for next comparison
-    previousLoadIdsRef.current = currentLoadIds;
-  }, [myLoads, isLoading, toast]);
 
   // Accept/Reject mutations
   const acceptLoadMutation = trpc.loads.acceptLoad.useMutation({
@@ -232,14 +195,7 @@ export default function DriverOps() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="operations" className="relative">
-            Mis Cargas
-            {availableLoads.length > 0 && (
-              <Badge variant="destructive" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                {availableLoads.length}
-              </Badge>
-            )}
-          </TabsTrigger>
+          <TabsTrigger value="operations">Mis Cargas</TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
@@ -401,7 +357,7 @@ export default function DriverOps() {
 
           {/* Available Loads */}
           {availableLoads.length > 0 && (
-            <Card className="border-blue-500/50">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="w-4 h-4 text-blue-500" />
