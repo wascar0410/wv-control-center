@@ -5,7 +5,7 @@
  * - Operations tab: Active loads, accept/reject, POD, fuel logging
  * - Wallet link for earnings management
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/contexts/AuthContext";
@@ -90,8 +90,48 @@ export default function DriverOps() {
 
   // Fetch driver data
   const { data: myLoads, isLoading: loadsLoading } = trpc.driver.myLoads.useQuery(undefined, {
-    refetchInterval: 30000,
+    refetchInterval: 10000,
   });
+
+  // Track previous loads and notified IDs for new load detection
+  const previousLoadsRef = useRef<any[]>([]);
+  const notifiedLoadIdsRef = useRef<Set<number>>(new Set());
+  const isInitialLoadRef = useRef(true);
+
+  // Detect new available loads
+  useEffect(() => {
+    if (!myLoads) return;
+
+    const currentAvailable = myLoads.filter((l: any) => l.status === "available");
+    const currentAvailableIds = new Set(currentAvailable.map((l: any) => l.id));
+    const previousAvailableIds = new Set(previousLoadsRef.current.filter((l: any) => l.status === "available").map((l: any) => l.id));
+
+    // Skip toast on initial load
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      previousLoadsRef.current = myLoads;
+      return;
+    }
+
+    // Find new loads that weren't available before
+    const newLoadIds: number[] = [];
+    currentAvailableIds.forEach((id: number) => {
+      if (!previousAvailableIds.has(id) && !notifiedLoadIdsRef.current.has(id)) {
+        newLoadIds.push(id);
+        notifiedLoadIdsRef.current.add(id);
+      }
+    });
+
+    // Show toast if new loads appeared
+    if (newLoadIds.length > 0) {
+      toast({
+        title: "🚚 Nueva carga disponible",
+        description: `Tienes ${newLoadIds.length} nueva(s) carga(s) para revisar`,
+      });
+    }
+
+    previousLoadsRef.current = myLoads;
+  }, [myLoads, toast]);
 
   const { data: driverStats, isLoading: statsLoading } = trpc.driverStats.getDriverStats.useQuery(
     { driverId: user?.id || 0 },
@@ -195,7 +235,14 @@ export default function DriverOps() {
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="operations">Mis Cargas</TabsTrigger>
+          <TabsTrigger value="operations">
+            Mis Cargas
+            {availableLoads.length > 0 && (
+              <Badge variant="secondary" className="ml-2 bg-blue-500/20 text-blue-400">
+                {availableLoads.length}
+              </Badge>
+            )}
+          </TabsTrigger>
         </TabsList>
 
         {/* Dashboard Tab */}
