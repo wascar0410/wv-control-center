@@ -42,6 +42,54 @@ import {
 } from "lucide-react";
 
 /**
+ * Badge Helper Components
+ */
+function DriverAvailabilityBadge({ availableForLoads }: { availableForLoads: boolean }) {
+  return (
+    <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+      <p className="text-xs font-medium text-slate-200">Disponibilidad</p>
+      <p className={availableForLoads ? "text-xs font-semibold text-emerald-300" : "text-xs font-semibold text-red-300"}>
+        {availableForLoads ? "Activo para cargas" : "No disponible"}
+      </p>
+    </div>
+  );
+}
+
+function DriverGpsBadge({ gpsActive }: { gpsActive: boolean }) {
+  return (
+    <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+      <p className="text-xs font-medium text-slate-200">GPS</p>
+      <p className={gpsActive ? "text-xs font-semibold text-emerald-300" : "text-xs font-semibold text-slate-200"}>
+        {gpsActive ? "Activo" : "Inactivo"}
+      </p>
+    </div>
+  );
+}
+
+function DriverOperationBadge({ hasActiveLoad }: { hasActiveLoad: boolean }) {
+  return (
+    <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+      <p className="text-xs font-medium text-slate-200">Operación</p>
+      <p className={hasActiveLoad ? "text-xs font-semibold text-blue-300" : "text-xs font-semibold text-slate-200"}>
+        {hasActiveLoad ? "Con carga" : "Sin carga"}
+      </p>
+    </div>
+  );
+}
+
+function DriverComplianceBadge({ dotNumber, licenseUrl, insuranceUrl }: { dotNumber?: string; licenseUrl?: string; insuranceUrl?: string }) {
+  const hasBasicDocs = dotNumber || licenseUrl || insuranceUrl;
+  return (
+    <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
+      <p className="text-xs font-medium text-slate-200">Cumplimiento</p>
+      <p className={hasBasicDocs ? "text-xs font-semibold text-emerald-300" : "text-xs font-semibold text-amber-300"}>
+        {hasBasicDocs ? "Docs básicos" : "Docs pendientes"}
+      </p>
+    </div>
+  );
+}
+
+/**
  * Fleet constants
  */
 const FLEET_COLORS: Record<string, { bg: string; text: string; marker: string; border: string }> = {
@@ -583,32 +631,22 @@ function FleetManagementView({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+                        {(() => {
+                          try {
+                            const vehicleInfo = typeof driver.vehicleInfo === 'string' ? JSON.parse(driver.vehicleInfo) : driver.vehicleInfo;
+                            return <DriverAvailabilityBadge availableForLoads={vehicleInfo?.availableForLoads !== false} />;
+                          } catch {
+                            return <DriverAvailabilityBadge availableForLoads={true} />;
+                          }
+                        })()}
+                        <DriverGpsBadge gpsActive={operation.hasGps} />
+                        <DriverOperationBadge hasActiveLoad={!!operation.activeLoad} />
+                        <DriverComplianceBadge dotNumber={driver.dotNumber} licenseUrl={driver.licenseUrl} insuranceUrl={driver.insuranceUrl} />
                         <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
                           <p className="text-xs font-medium text-slate-200">Comisión WV</p>
                           <p className="font-semibold text-amber-300">
                             {toNumber(driver.commissionPercent, 0)}%
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
-                          <p className="text-xs font-medium text-slate-200">Chofer recibe</p>
-                          <p className="font-semibold text-emerald-300">
-                            {100 - toNumber(driver.commissionPercent, 0)}%
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
-                          <p className="text-xs font-medium text-slate-200">DOT</p>
-                          <p className="font-semibold text-white">
-                            {driver.dotNumber || "—"}
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-700 bg-slate-800/80 p-3">
-                          <p className="text-xs font-medium text-slate-200">Último ping</p>
-                          <p className="font-semibold text-white">
-                            {getTimeSince(location?.timestamp)}
                           </p>
                         </div>
                       </div>
@@ -1106,8 +1144,21 @@ export default function FleetTracking() {
   }, [drivers, locationsByDriverId]);
 
   const fleetStats = useMemo(() => {
+    const availableForLoads = drivers.filter((d: any) => {
+      try {
+        const vehicleInfo = typeof d.vehicleInfo === 'string' ? JSON.parse(d.vehicleInfo) : d.vehicleInfo;
+        return vehicleInfo?.availableForLoads !== false;
+      } catch {
+        return true;
+      }
+    }).length;
+
+    const unavailableForLoads = drivers.length - availableForLoads;
+
     return {
       totalDrivers: drivers.length,
+      availableForLoads,
+      unavailableForLoads,
       internal: drivers.filter((d: any) => getSafeFleetType(d.fleetType) === "internal").length,
       leased: drivers.filter((d: any) => getSafeFleetType(d.fleetType) === "leased").length,
       external: drivers.filter((d: any) => getSafeFleetType(d.fleetType) === "external").length,
