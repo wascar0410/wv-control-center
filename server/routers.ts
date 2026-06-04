@@ -431,11 +431,27 @@ const loadsRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Carga no encontrada" });
         }
 
-        // Check permission - only owner/admin can update status
+        // Check permission
         const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
-        if (!isPrivileged) {
+        const isDriver = ctx.user.role === "driver";
+        
+        if (!isPrivileged && !isDriver) {
           console.error(`[loads.updateStatus] FORBIDDEN: user ${ctx.user.id} (${ctx.user.role}) cannot update load status`);
           throw new TRPCError({ code: "FORBIDDEN", message: "No tienes permiso para actualizar el estado de la carga" });
+        }
+        
+        // Driver can only update their own assigned loads with valid transitions
+        if (isDriver) {
+          if (load.assignedDriverId !== ctx.user.id) {
+            console.error(`[loads.updateStatus] FORBIDDEN: driver ${ctx.user.id} cannot update load ${input.id} (assigned to ${load.assignedDriverId})`);
+            throw new TRPCError({ code: "FORBIDDEN", message: "Esta carga no está asignada a ti" });
+          }
+          
+          // Driver can only transition to delivered from in_transit
+          if (input.status !== "delivered" || load.status !== "in_transit") {
+            console.error(`[loads.updateStatus] FORBIDDEN: driver ${ctx.user.id} cannot transition load from ${load.status} to ${input.status}`);
+            throw new TRPCError({ code: "FORBIDDEN", message: "Solo puedes marcar como entregada una carga en tránsito" });
+          }
         }
 
         // Validate status enum
