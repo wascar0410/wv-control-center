@@ -296,7 +296,7 @@ function getSafeFleetType(type?: string | null) {
 }
 
 function normalizeLoadStatus(raw?: string | null): string {
-  if (!raw) return "assigned";
+  if (!raw) return "assigned"; // Default when status is undefined
 
   const value = String(raw).toLowerCase();
 
@@ -310,6 +310,15 @@ function normalizeLoadStatus(raw?: string | null): string {
 }
 
 function getStatusMeta(status?: string | null) {
+  // If status is explicitly null (no active load), return a special "no load" status
+  if (status === null) {
+    return {
+      label: "Sin carga",
+      className: "bg-slate-500/20 text-slate-200 border-slate-400/30",
+      icon: Package,
+      step: -1,
+    };
+  }
   const normalized = normalizeLoadStatus(status);
   return LOAD_STATUS_META[normalized] || LOAD_STATUS_META.assigned;
 }
@@ -369,7 +378,8 @@ function LoadProgress({ status }: { status?: string | null }) {
 
 function deriveDriverOperation(driver: any, location: any) {
   const activeLoad = location?.activeLoad || driver?.activeLoad || null;
-  const loadStatus = normalizeLoadStatus(activeLoad?.status);
+  // Only normalize status if there's an active load; otherwise use null to indicate no load
+  const loadStatus = activeLoad ? normalizeLoadStatus(activeLoad?.status) : null;
 
   return {
     hasGps: !!location,
