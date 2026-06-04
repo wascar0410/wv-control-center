@@ -267,6 +267,22 @@ type EditState = {
   dotNumber: string;
 };
 
+/**
+ * Detect if a driver is a test/demo account
+ */
+function isTestDemoDriver(driver: any): boolean {
+  const email = String(driver.email ?? "").toLowerCase();
+  const name = String(driver.name ?? "").toLowerCase();
+  
+  return (
+    email.includes("test") ||
+    email.includes("demo") ||
+    email.endsWith("@test.local") ||
+    name.includes("test") ||
+    name.includes("demo")
+  );
+}
+
 function getTimeSince(ts?: string | Date | null): string {
   if (!ts) return "Sin registro";
 
@@ -404,9 +420,11 @@ function deriveDriverOperation(driver: any, location: any) {
 function FleetManagementView({
   drivers,
   locationsByDriverId,
+  showTestDemo,
 }: {
   drivers: any[];
   locationsByDriverId: Map<number, any>;
+  showTestDemo: boolean;
 }) {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -458,10 +476,17 @@ function FleetManagementView({
   };
 
   const filteredDrivers = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return drivers;
+    // First filter by test/demo status
+    let result = drivers;
+    if (!showTestDemo) {
+      result = drivers.filter((driver) => !isTestDemoDriver(driver));
+    }
 
-    return drivers.filter((driver) => {
+    // Then apply search filter
+    const term = search.trim().toLowerCase();
+    if (!term) return result;
+
+    return result.filter((driver) => {
       const operation = deriveDriverOperation(driver, locationsByDriverId.get(driver.id));
       return (
         String(driver.name ?? "").toLowerCase().includes(term) ||
@@ -470,7 +495,7 @@ function FleetManagementView({
         String(operation.clientLabel ?? "").toLowerCase().includes(term)
       );
     });
-  }, [drivers, locationsByDriverId, search]);
+  }, [drivers, locationsByDriverId, search, showTestDemo]);
 
   if (!drivers) {
     return <div className="py-8 text-center text-slate-200">Cargando choferes...</div>;
@@ -478,14 +503,26 @@ function FleetManagementView({
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar chofer, email, DOT o cliente..."
-          className="border-slate-600 bg-slate-800 pl-9 text-slate-100 placeholder:text-slate-300"
-        />
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="relative max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar chofer, email, DOT o cliente..."
+            className="border-slate-600 bg-slate-800 pl-9 text-slate-100 placeholder:text-slate-300"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-300">Test/Demo:</span>
+          <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-medium ${
+            showTestDemo
+              ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
+              : "border-slate-600 bg-slate-800/50 text-slate-300"
+          }`}>
+            {showTestDemo ? "Visible" : "Oculto"}
+          </span>
+        </div>
       </div>
 
       {filteredDrivers.length === 0 ? (
@@ -604,6 +641,14 @@ function FleetManagementView({
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="font-semibold text-white">{driver.name}</p>
                               <FleetBadge type={safeFleetType} />
+                              {isTestDemoDriver(driver) && (
+                                <Badge
+                                  variant="outline"
+                                  className="border-amber-500/50 bg-amber-500/10 text-amber-300"
+                                >
+                                  Test/Demo
+                                </Badge>
+                              )}
                               <Badge
                                 variant="outline"
                                 className="border-slate-500 text-slate-100"
@@ -1105,6 +1150,7 @@ function FleetMapView({
  */
 export default function FleetTracking() {
   const [activeTab, setActiveTab] = useState("map");
+  const [showTestDemo, setShowTestDemo] = useState(false);
 
   const {
     data: driversRaw,
@@ -1154,7 +1200,11 @@ export default function FleetTracking() {
   }, [drivers, locationsByDriverId]);
 
   const fleetStats = useMemo(() => {
-    const availableForLoads = drivers.filter((d: any) => {
+    // Filter drivers based on showTestDemo toggle
+    const visibleDrivers = showTestDemo ? drivers : drivers.filter((d: any) => !isTestDemoDriver(d));
+    const testDemoCount = drivers.filter((d: any) => isTestDemoDriver(d)).length;
+
+    const availableForLoads = visibleDrivers.filter((d: any) => {
       try {
         const vehicleInfo = typeof d.vehicleInfo === 'string' ? JSON.parse(d.vehicleInfo) : d.vehicleInfo;
         return vehicleInfo?.availableForLoads !== false;
@@ -1163,25 +1213,26 @@ export default function FleetTracking() {
       }
     }).length;
 
-    const unavailableForLoads = drivers.length - availableForLoads;
+    const unavailableForLoads = visibleDrivers.length - availableForLoads;
 
     return {
-      totalDrivers: drivers.length,
+      totalDrivers: visibleDrivers.length,
+      testDemoCount,
       availableForLoads,
       unavailableForLoads,
-      internal: drivers.filter((d: any) => getSafeFleetType(d.fleetType) === "internal").length,
-      leased: drivers.filter((d: any) => getSafeFleetType(d.fleetType) === "leased").length,
-      external: drivers.filter((d: any) => getSafeFleetType(d.fleetType) === "external").length,
-      gpsActive: locations.length,
-      withActiveLoad: enrichedDrivers.filter((d: any) => d.__operation?.activeLoad).length,
-      assigned: enrichedDrivers.filter((d: any) => d.__operation?.loadStatus === "assigned").length,
-      started: enrichedDrivers.filter((d: any) => d.__operation?.loadStatus === "started").length,
-      inTransit: enrichedDrivers.filter((d: any) => d.__operation?.loadStatus === "in_transit").length,
-      delivered: enrichedDrivers.filter((d: any) => d.__operation?.loadStatus === "delivered").length,
-      invoiced: enrichedDrivers.filter((d: any) => d.__operation?.loadStatus === "invoiced").length,
-      paid: enrichedDrivers.filter((d: any) => d.__operation?.loadStatus === "paid").length,
+      internal: visibleDrivers.filter((d: any) => getSafeFleetType(d.fleetType) === "internal").length,
+      leased: visibleDrivers.filter((d: any) => getSafeFleetType(d.fleetType) === "leased").length,
+      external: visibleDrivers.filter((d: any) => getSafeFleetType(d.fleetType) === "external").length,
+      gpsActive: locations.filter((l: any) => !isTestDemoDriver(drivers.find((d: any) => d.id === l.driverId))).length,
+      withActiveLoad: enrichedDrivers.filter((d: any) => !isTestDemoDriver(d) && d.__operation?.activeLoad).length,
+      assigned: enrichedDrivers.filter((d: any) => !isTestDemoDriver(d) && d.__operation?.loadStatus === "assigned").length,
+      started: enrichedDrivers.filter((d: any) => !isTestDemoDriver(d) && d.__operation?.loadStatus === "started").length,
+      inTransit: enrichedDrivers.filter((d: any) => !isTestDemoDriver(d) && d.__operation?.loadStatus === "in_transit").length,
+      delivered: enrichedDrivers.filter((d: any) => !isTestDemoDriver(d) && d.__operation?.loadStatus === "delivered").length,
+      invoiced: enrichedDrivers.filter((d: any) => !isTestDemoDriver(d) && d.__operation?.loadStatus === "invoiced").length,
+      paid: enrichedDrivers.filter((d: any) => !isTestDemoDriver(d) && d.__operation?.loadStatus === "paid").length,
     };
-  }, [drivers, locations, enrichedDrivers]);
+  }, [drivers, locations, enrichedDrivers, showTestDemo]);
 
   const handleManualRefresh = async () => {
     await Promise.all([refetchDrivers(), refetchLocations()]);
@@ -1324,15 +1375,31 @@ export default function FleetTracking() {
         <TabsContent value="management" className="mt-4">
           <Card className="border-slate-800 bg-slate-900">
             <CardHeader>
-              <CardTitle className="text-white">Choferes y estado de operación</CardTitle>
-              <CardDescription className="text-slate-200">
-                Edita configuración de flota y visualiza en qué fase va cada carga.
-              </CardDescription>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle className="text-white">Choferes y estado de operación</CardTitle>
+                  <CardDescription className="text-slate-200">
+                    Edita configuración de flota y visualiza en qué fase va cada carga.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTestDemo(!showTestDemo)}
+                  className={`gap-2 ${
+                    showTestDemo
+                      ? "border-amber-500/50 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                      : "border-slate-600 text-slate-100 hover:bg-slate-800"
+                  }`}
+                >
+                  {showTestDemo ? "Ocultando" : "Mostrando"} test/demo
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <FleetManagementView
                 drivers={drivers}
                 locationsByDriverId={locationsByDriverId}
+                showTestDemo={showTestDemo}
               />
             </CardContent>
           </Card>
