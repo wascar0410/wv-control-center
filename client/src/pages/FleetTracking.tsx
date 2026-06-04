@@ -208,6 +208,11 @@ const OPERATION_FLOW = [
  */
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+// Diagnostic: Log if API key is available (never log the actual key)
+if (typeof window !== 'undefined') {
+  console.log('[FleetTracking] VITE_GOOGLE_MAPS_API_KEY available:', Boolean(GOOGLE_MAPS_API_KEY));
+}
+
 let googleMapsLoadPromise: Promise<void> | null = null;
 
 function loadGoogleMapsScript(): Promise<void> {
