@@ -116,6 +116,7 @@ async function startServer() {
     "api.wvtransports.com",
     "3000-iop08n4oqcm170ethc0yz-164a9fa2.us2.manus.computer",
     "wv-control-center-production.up.railway.app",
+    "healthcheck.railway.app",
   ];
 
   const envHosts = process.env.ALLOWED_HOSTS
@@ -128,15 +129,23 @@ async function startServer() {
 
   app.use((req, res, next) => {
     const fullHost = req.get("host");
+    
+    // Skip host validation for health check endpoints
+    if (req.path === "/api/health/build" || req.path === "/api/health") {
+      return next();
+    }
 
     if (
       process.env.NODE_ENV === "production" &&
       !isHostAllowed(fullHost, allowedHosts)
     ) {
       console.warn(`[Host Validation] Rejected request from host: ${fullHost}`);
-      recordHostRejection(fullHost || "unknown", "Invalid host header", req).catch(
-        console.error
-      );
+      // Don't alert for healthcheck.railway.app - it's an automated check
+      if (fullHost !== "healthcheck.railway.app") {
+        recordHostRejection(fullHost || "unknown", "Invalid host header", req).catch(
+          console.error
+        );
+      }
       return res.status(400).json({ error: "Invalid host" });
     }
 
