@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { NearbyDriversModal } from "@/components/NearbyDriversModal";
 import {
   ArrowLeft,
   Package,
@@ -500,6 +501,7 @@ export default function LoadDetail() {
   const { data: driversData } = trpc.assignment.drivers.useQuery();
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
   const [assigning, setAssigning] = useState(false);
+  const [showNearbyDrivers, setShowNearbyDrivers] = useState(false);
 
   const handleAssignDriver = async () => {
     if (!selectedDriverId) return toast.error("Selecciona un conductor");
@@ -869,6 +871,15 @@ export default function LoadDetail() {
                   {assigning ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <User className="h-3.5 w-3.5" />}
                   {assigning ? "Asignando..." : "Asignar Conductor"}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowNearbyDrivers(true)}
+                  className="h-8 text-xs gap-1.5"
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  Ver Cercanos
+                </Button>
               </div>
             </div>
           </div>
@@ -945,6 +956,17 @@ export default function LoadDetail() {
       {/* ── Status History ── */}
       <StatusHistoryCard load={load} />
 
+      {/* Nearby Drivers Modal */}
+      {load && (
+        <NearbyDriversModal
+          open={showNearbyDrivers}
+          onOpenChange={setShowNearbyDrivers}
+          loadId={load.id}
+          pickupLat={load.pickupLat}
+          pickupLng={load.pickupLng}
+          onAssignSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 }
