@@ -35,6 +35,11 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     { enabled: !!user, retry: false }
   );
 
+  const { data: availableDrivers, isLoading: isLoadingDrivers } = trpc.admin.getDrivers.useQuery(
+    { limit: 100, offset: 0 },
+    { enabled: !!user && user.role !== "driver" && safeChats.length === 0, retry: false }
+  );
+
   const { data: messages, isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(
     { contactId: selectedUserId || 0 },
     { enabled: !!selectedUserId && !!user, retry: false }
@@ -139,7 +144,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Cargando conversaciones...
               </div>
-            ) : filteredChats.length === 0 ? (
+            ) : filteredChats.length === 0 && (isLoadingDrivers || !availableDrivers || availableDrivers.length === 0) ? (
               <div className="rounded-lg border border-dashed border-border p-6 text-center">
                 <MessageSquare className="mx-auto mb-2 h-8 w-8 text-muted-foreground/60" />
                 <p className="text-sm font-medium text-foreground">
@@ -150,6 +155,35 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                     ? "Prueba con otro nombre o término."
                     : "Las conversaciones aparecerán aquí."}
                 </p>
+              </div>
+            ) : filteredChats.length === 0 && availableDrivers && availableDrivers.length > 0 ? (
+              <div className="space-y-2">
+                <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Iniciar conversación
+                </p>
+                {availableDrivers.map((driver: any) => (
+                  <button
+                    key={driver.id}
+                    onClick={() => setSelectedUserId(driver.id)}
+                    className="w-full rounded-xl border border-transparent bg-background px-3 py-3 text-left transition-all hover:border-border hover:bg-muted/50"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="relative mt-0.5">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                          <UserRound className="h-4 w-4 text-primary" />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-foreground">
+                          {driver.name}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {driver.email}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
             ) : (
               filteredChats.map((chat) => {
