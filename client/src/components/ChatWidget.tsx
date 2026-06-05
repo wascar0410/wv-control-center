@@ -35,18 +35,19 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     { enabled: !!user, retry: false }
   );
 
-  const { data: availableDrivers, isLoading: isLoadingDrivers } = trpc.admin.getDrivers.useQuery(
-    { limit: 100, offset: 0 },
-    { enabled: !!user && user.role !== "driver" && safeChats.length === 0, retry: false }
-  );
-
   const { data: messages, isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(
     { contactId: selectedUserId || 0 },
     { enabled: !!selectedUserId && !!user, retry: false }
   );
 
+  // Define safe arrays BEFORE using them in queries
   const safeChats = Array.isArray(recentChats) ? recentChats : [];
   const safeMessages = Array.isArray(messages) ? messages : [];
+
+  const { data: availableDrivers, isLoading: isLoadingDrivers } = trpc.admin.getDrivers.useQuery(
+    { limit: 100, offset: 0 },
+    { enabled: !!user && user.role !== "driver" && safeChats.length === 0, retry: false }
+  );
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onSuccess: async () => {
