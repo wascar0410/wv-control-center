@@ -20,6 +20,7 @@ import { PODUpload } from "@/components/PODUpload";
 import DeliveryProofUpload from "@/components/DeliveryProofUpload";
 import { DriverLoadCard } from "@/components/DriverLoadCard";
 import { DriverLoadDetailDrawer } from "@/components/DriverLoadDetailDrawer";
+import { GPSTracker } from "@/components/GPSTracker";
 import {
   Truck,
   DollarSign,
@@ -378,6 +379,9 @@ export default function DriverOps() {
 
         {/* Operations Tab */}
         <TabsContent value="operations" className="space-y-6">
+          {/* GPS Tracker */}
+          <GPSTracker />
+
           {/* Active Loads */}
           {activeLoads.length > 0 && (
             <Card>
