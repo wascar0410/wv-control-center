@@ -25,7 +25,7 @@ const BankingCashFlow = lazy(() => import("@/pages/BankingCashFlow"));
 const InvoicingPage = lazy(() => import("@/pages/InvoicingPage"));
 const FleetTracking = lazy(() => import("@/pages/FleetTracking"));
 const UserManagement = lazy(() => import("@/pages/UserManagement"));
-const ChatPlaceholder = lazy(() => import("@/pages/ChatPlaceholder"));
+const Chat = lazy(() => import("@/pages/Chat"));
 const Company = lazy(() => import("@/pages/Company"));
 const CompanyManagement = lazy(() => import("@/pages/CompanyManagement"));
 const AlertsTasksPage = lazy(() => import("@/pages/AlertsTasksPage"));
@@ -64,7 +64,7 @@ const ProtectedBankingCashFlow = withRoleGuard(BankingCashFlow, ["owner", "admin
 const ProtectedInvoicingPage = withRoleGuard(InvoicingPage, ["owner", "admin"]);
 const ProtectedFleetTracking = withRoleGuard(FleetTracking, ["owner", "admin"]);
 const ProtectedUserManagement = withRoleGuard(UserManagement, ["owner", "admin"]);
-const ProtectedChatPlaceholder = withRoleGuard(ChatPlaceholder, ["owner", "admin", "driver"]);
+const ProtectedChat = withRoleGuard(Chat, ["owner", "admin", "driver"]);
 const ProtectedCompany = withRoleGuard(Company, ["owner", "admin"]);
 const ProtectedCompanyManagement = withRoleGuard(CompanyManagement, ["owner", "admin"]);
 const ProtectedAlertsTasksPage = withRoleGuard(AlertsTasksPage, ["owner", "admin"]);
@@ -98,7 +98,7 @@ export default function App() {
           <Route path="/invoicing" component={ProtectedInvoicingPage} />
           <Route path="/fleet-tracking" component={ProtectedFleetTracking} />
           <Route path="/team" component={ProtectedUserManagement} />
-          <Route path="/chat" component={ProtectedChatPlaceholder} />
+          <Route path="/chat" component={ProtectedChat} />
           <Route path="/company" component={ProtectedCompany} />
           <Route path="/company-management" component={ProtectedCompanyManagement} />
           <Route path="/alerts-tasks" component={ProtectedAlertsTasksPage} />
