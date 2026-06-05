@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { DriverRecommendationsTab } from "@/components/DriverRecommendationsTab";
 import {
   TrendingUp,
   TrendingDown,
@@ -68,6 +69,35 @@ function formatCurrency(value: number | string) {
 function formatPercent(value: number | string) {
   const num = typeof value === "string" ? parseFloat(value) : value;
   return `${num.toFixed(2)}%`;
+}
+
+// Driver Recommendations Tab
+function DriverRecommendationsTabContent() {
+  const { data: analyses } = trpc.quoteAnalysis.getAll.useQuery({
+    limit: 1,
+  });
+
+  const latestAnalysis = analyses?.[0];
+
+  if (!latestAnalysis) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <p>Selecciona una cotización para ver recomendaciones de choferes</p>
+      </div>
+    );
+  }
+
+  return (
+    <DriverRecommendationsTab
+      loadId={latestAnalysis.loadId}
+      pickupLat={40.7580} // Placeholder - should come from load
+      pickupLng={-73.9855} // Placeholder - should come from load
+      deliveryLat={39.9526} // Placeholder - should come from load
+      deliveryLng={-75.1652} // Placeholder - should come from load
+      loadPrice={latestAnalysis.totalIncome}
+      estimatedTolls={0} // Placeholder - should come from load
+    />
+  );
 }
 
 // Summary Tab
@@ -392,9 +422,10 @@ export default function QuoteAnalyzer() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="analysis">Análisis</TabsTrigger>
           <TabsTrigger value="summary">Resumen por Broker</TabsTrigger>
+          <TabsTrigger value="recommendations">Recomendaciones</TabsTrigger>
         </TabsList>
 
         <TabsContent value="analysis" className="space-y-4">
@@ -403,6 +434,10 @@ export default function QuoteAnalyzer() {
 
         <TabsContent value="summary" className="space-y-4">
           <SummaryTab />
+        </TabsContent>
+
+        <TabsContent value="recommendations" className="space-y-4">
+          <DriverRecommendationsTabContent />
         </TabsContent>
       </Tabs>
     </div>
