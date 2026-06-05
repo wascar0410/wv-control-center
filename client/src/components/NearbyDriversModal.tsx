@@ -12,6 +12,10 @@ interface NearbyDriversModalProps {
   loadId: number;
   pickupLat: number;
   pickupLng: number;
+  deliveryLat?: number;
+  deliveryLng?: number;
+  loadPrice?: number;
+  estimatedTolls?: number;
   onAssignSuccess?: () => void;
 }
 
@@ -21,6 +25,10 @@ export function NearbyDriversModal({
   loadId,
   pickupLat,
   pickupLng,
+  deliveryLat,
+  deliveryLng,
+  loadPrice,
+  estimatedTolls,
   onAssignSuccess,
 }: NearbyDriversModalProps) {
   const { data: nearbyDriversData, isLoading } = trpc.nearby.getDrivers.useQuery(
@@ -28,6 +36,10 @@ export function NearbyDriversModal({
       loadId,
       pickupLat,
       pickupLng,
+      deliveryLat,
+      deliveryLng,
+      loadPrice,
+      estimatedTolls,
     },
     {
       enabled: open,
@@ -40,9 +52,21 @@ export function NearbyDriversModal({
   const nearbyDrivers = useMemo(() => {
     if (!nearbyDriversData) return [];
 
+    // Find the closest driver with GPS
+    let closestDriverId: number | null = null;
+    let minDistance = Infinity;
+    
+    nearbyDriversData.forEach((driver: any) => {
+      if (!driver.gpsInactive && driver.distanceToPickupMiles !== null && driver.distanceToPickupMiles < minDistance) {
+        minDistance = driver.distanceToPickupMiles;
+        closestDriverId = driver.id;
+      }
+    });
+
     return nearbyDriversData.map((driver: any) => ({
       ...driver,
-      hasGps: !!driver.lastLocationUpdate,
+      hasGps: !!driver.lastLocationUpdate && !driver.gpsInactive,
+      isClosest: driver.id === closestDriverId,
     }));
   }, [nearbyDriversData]);
 
@@ -71,6 +95,22 @@ export function NearbyDriversModal({
   const formatDistance = (distance: number | null): string => {
     if (distance === null) return "—";
     return distance < 1 ? `${(distance * 5280).toFixed(0)} ft` : `${distance.toFixed(1)} mi`;
+  };
+
+  const formatCurrency = (value: number | null): string => {
+    if (value === null) return "—";
+    return new Intl.NumberFormat("es-ES", {
+      style: "currency",
+      currency: "USD",
+    }).format(value);
+  };
+
+  const formatMinutes = (minutes: number | null): string => {
+    if (minutes === null) return "—";
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.floor(minutes % 60);
+    if (hours === 0) return `${mins}m`;
+    return `${hours}h ${mins}m`;
   };
 
   const formatTime = (date: Date | string | null): string => {
@@ -116,16 +156,22 @@ export function NearbyDriversModal({
             {nearbyDrivers.map((driver: any) => (
               <div
                 key={driver.id}
-                className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                className={`p-4 border rounded-lg hover:bg-muted/50 transition-colors ${
+                  driver.isClosest
+                    ? "border-green-500/50 bg-green-500/5"
+                    : "border-border"
+                }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    {/* Header: Name, Distance, GPS Status */}
+                    {/* Header: Name, Distance, GPS Status, Closest Badge */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <h4 className="font-semibold text-foreground">{driver.name}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        {formatDistance(driver.distance)}
-                      </Badge>
+                      {driver.isClosest && (
+                        <Badge variant="default" className="text-xs bg-green-600 text-white">
+                          ✓ Más cercano
+                        </Badge>
+                      )}
                       {driver.hasGps ? (
                         <Badge variant="default" className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
                           <Wifi className="h-3 w-3 mr-1" />
@@ -134,10 +180,28 @@ export function NearbyDriversModal({
                       ) : (
                         <Badge variant="outline" className="text-xs text-muted-foreground">
                           <WifiOff className="h-3 w-3 mr-1" />
-                          Sin GPS
+                          Sin ubicación reciente
                         </Badge>
                       )}
                     </div>
+
+                    {/* Deadhead Distance and ETA */}
+                    {driver.hasGps ? (
+                      <div className="mb-2 p-2 bg-muted/50 rounded text-xs space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Distancia al pickup:</span>
+                          <span className="font-mono font-semibold">{formatDistance(driver.distanceToPickupMiles)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">ETA al pickup:</span>
+                          <span className="font-mono font-semibold">{formatMinutes(driver.etaToPickupMinutes)}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mb-2 p-2 bg-muted/50 rounded text-xs text-muted-foreground italic">
+                        Sin ubicación reciente - no se puede calcular distancia
+                      </div>
+                    )}
 
                     {/* Availability Status */}
                     <div className="flex items-center gap-2 mb-2 text-xs">
@@ -162,11 +226,50 @@ export function NearbyDriversModal({
                       {driver.vehiclePlate && <p className="font-mono">Placa: {driver.vehiclePlate}</p>}
                     </div>
 
+                    {/* Operational Miles and Economics */}
+                    {driver.hasGps && driver.totalOperationalMiles !== null ? (
+                      <div className="mb-2 p-2 bg-muted/50 rounded text-xs space-y-1">
+                        <div className="text-muted-foreground font-semibold mb-1">📊 Estimado operativo</div>
+                        <div className="flex justify-between">
+                          <span>Millas vacías:</span>
+                          <span className="font-mono">{formatDistance(driver.distanceToPickupMiles)}</span>
+                        </div>
+                        {driver.loadedMiles !== null && (
+                          <div className="flex justify-between">
+                            <span>Millas cargadas:</span>
+                            <span className="font-mono">{formatDistance(driver.loadedMiles)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-semibold border-t border-muted pt-1 mt-1">
+                          <span>Total operativo:</span>
+                          <span className="font-mono">{formatDistance(driver.totalOperationalMiles)}</span>
+                        </div>
+                        {driver.payPerOperationalMile !== null && (
+                          <div className="flex justify-between">
+                            <span>Pago/milla operativa:</span>
+                            <span className="font-mono">{formatCurrency(driver.payPerOperationalMile)}</span>
+                          </div>
+                        )}
+                        {driver.estimatedOperationalCost !== null && (
+                          <div className="flex justify-between">
+                            <span>Costo operativo est.:</span>
+                            <span className="font-mono">{formatCurrency(driver.estimatedOperationalCost)}</span>
+                          </div>
+                        )}
+                        {driver.adjustedEstimatedNet !== null && (
+                          <div className="flex justify-between font-semibold text-green-400 border-t border-muted pt-1 mt-1">
+                            <span>Ganancia neta est.:</span>
+                            <span className="font-mono">{formatCurrency(driver.adjustedEstimatedNet)}</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+
                     {/* GPS Last Update */}
                     {driver.lastLocationUpdate && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        Última ubicación: {formatTime(driver.lastLocationUpdate)}
+                        Último ping: {formatTime(driver.lastLocationUpdate)}
                       </div>
                     )}
 
@@ -188,14 +291,19 @@ export function NearbyDriversModal({
                   </div>
 
                   {/* Assign Button */}
-                  <Button
-                    size="sm"
-                    onClick={() => handleAssign(driver.id, driver.name, driver.availableForLoads)}
-                    disabled={assigningDriverId !== null || !driver.availableForLoads}
-                    className="shrink-0"
-                  >
-                    {assigningDriverId === driver.id ? "Asignando..." : "Asignar"}
-                  </Button>
+                  <div className="flex flex-col gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      onClick={() => handleAssign(driver.id, driver.name, driver.availableForLoads)}
+                      disabled={assigningDriverId !== null || !driver.availableForLoads}
+                      variant={driver.isClosest ? "default" : "outline"}
+                    >
+                      {assigningDriverId === driver.id ? "Asignando..." : "Asignar"}
+                    </Button>
+                    {!driver.availableForLoads && (
+                      <p className="text-xs text-amber-400 text-center">No disponible</p>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

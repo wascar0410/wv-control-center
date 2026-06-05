@@ -964,6 +964,10 @@ export default function LoadDetail() {
           loadId={load.id}
           pickupLat={load.pickupLat}
           pickupLng={load.pickupLng}
+          deliveryLat={load.deliveryLat}
+          deliveryLng={load.deliveryLng}
+          loadPrice={Number(load.price)}
+          estimatedTolls={Number(load.estimatedTolls || 0)}
           onAssignSuccess={() => refetch()}
         />
       )}
