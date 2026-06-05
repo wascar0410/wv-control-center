@@ -26,6 +26,7 @@ import { irsComplianceRouter } from "./_core/irsComplianceRouter";
 import { advancedSearchRouter } from "./_core/advancedSearchRouter";
 import { chatRouter } from "./_core/chatRouter";
 import { analyticsRouter } from "./_core/analyticsRouter";
+import { nearbyRouter } from "./_core/nearbyRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { users } from "../drizzle/schema";
 import { getDb, getLoadAdvice, getLoadAdviceBatch } from "./db";
@@ -2748,6 +2749,7 @@ export const appRouter = router({
   advancedSearch: advancedSearchRouter,
   chat: chatRouter,
   analytics: analyticsRouter,
+  nearby: nearbyRouter,
   admin: adminRouter,
   profile: profileRouter,
   securityMonitoring: securityMonitoringRouter,
