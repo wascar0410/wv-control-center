@@ -69,8 +69,26 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   }, [safeChats, effectiveSearchQuery]);
 
   const selectedChat = useMemo(() => {
-    return safeChats.find((c) => c.id === selectedUserId) || null;
-  }, [safeChats, selectedUserId]);
+    // First check if it's an existing conversation
+    const existingChat = safeChats.find((c) => c.id === selectedUserId);
+    if (existingChat) return existingChat;
+    
+    // If not, check if it's a driver being selected for new conversation
+    if (selectedUserId && user?.role !== "driver" && availableDrivers) {
+      const selectedDriver = availableDrivers.find((d: any) => d.id === selectedUserId);
+      if (selectedDriver) {
+        return {
+          id: selectedDriver.id,
+          name: selectedDriver.name,
+          email: selectedDriver.email,
+          isOnline: false,
+          unreadCount: 0,
+        };
+      }
+    }
+    
+    return null;
+  }, [safeChats, selectedUserId, availableDrivers, user?.role]);
 
   const totalUnread = useMemo(() => {
     return safeChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
@@ -351,6 +369,29 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
               </div>
             </div>
           </>
+        ) : user?.role === "driver" ? (
+          // Driver view: show dispatch contact option
+          <div className="flex h-full flex-col">
+            <div className="border-b border-border px-5 py-4">
+              <p className="text-sm font-semibold text-foreground">Iniciar conversación</p>
+            </div>
+            <div className="flex-1 p-5">
+              <button
+                onClick={() => setSelectedUserId(1)} // Owner/admin contact
+                className="w-full rounded-xl border border-transparent bg-background px-4 py-4 text-left transition-all hover:border-border hover:bg-muted/50"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                    <UserRound className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">WV Dispatch</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Owner / Dispatcher</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
             <MessageSquare className="mb-3 h-10 w-10 text-muted-foreground/50" />
@@ -359,7 +400,8 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
               Elige una conversación para ver mensajes y responder.
             </p>
           </div>
-        )}
+        )
+        }
       </section>
     </div>
   );
