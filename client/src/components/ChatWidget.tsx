@@ -13,6 +13,14 @@ interface ChatUser {
   isOnline?: boolean;
 }
 
+interface ActiveContact {
+  id: number;
+  name: string;
+  email?: string;
+  role?: string;
+  isVirtual?: boolean;
+}
+
 interface ChatWidgetProps {
   search?: string;
 }
@@ -21,10 +29,12 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const { user } = useAuth();
   const utils = trpc.useUtils();
 
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  // Single source of truth for active contact
+  const [activeContact, setActiveContact] = useState<ActiveContact | null>(null);
   const [messageText, setMessageText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const [lastDebugAction, setLastDebugAction] = useState<string>("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -36,8 +46,8 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   );
 
   const { data: messages, isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(
-    { contactId: selectedUserId || 0 },
-    { enabled: !!selectedUserId && !!user, retry: false }
+    { contactId: activeContact?.id || 0 },
+    { enabled: !!activeContact?.id && !!user, retry: false }
   );
 
   // Define safe arrays BEFORE using them in queries
@@ -52,6 +62,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onSuccess: async (data) => {
       console.log('[Chat Mutation] onSuccess:', data);
+      setLastDebugAction("send_success");
       // Clear input only after successful send
       setMessageText("");
       // Invalidate to refresh from server
@@ -62,6 +73,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     },
     onError: (err) => {
       console.error('[Chat Mutation] onError:', err);
+      setLastDebugAction("send_error");
       // Don't clear input on error - user can retry
     },
   });
@@ -72,50 +84,65 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     );
   }, [safeChats, effectiveSearchQuery]);
 
-  const selectedChat = useMemo(() => {
-    // First check if it's an existing conversation
-    const existingChat = safeChats.find((c) => c.id === selectedUserId);
-    if (existingChat) return existingChat;
-    
-    // If not, check if it's a driver being selected for new conversation
-    if (selectedUserId && user?.role !== "driver" && availableDrivers) {
-      const selectedDriver = availableDrivers.find((d: any) => d.id === selectedUserId);
-      if (selectedDriver) {
-        return {
-          id: selectedDriver.id,
-          name: selectedDriver.name,
-          email: selectedDriver.email,
-          isOnline: false,
-          unreadCount: 0,
-        };
-      }
-    }
-    
-    return null;
-  }, [safeChats, selectedUserId, availableDrivers, user?.role]);
-
   const totalUnread = useMemo(() => {
     return safeChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
   }, [safeChats]);
 
-  const handleSendMessage = async () => {
-    console.log('[Chat] handleSendMessage clicked', { selectedUserId, selectedChat, messageText: messageText.length });
-    
+  const handleSelectExistingChat = (chat: ChatUser) => {
+    console.log('[Chat] Selecting existing chat:', chat.id);
+    setActiveContact({
+      id: chat.id,
+      name: chat.name,
+      isOnline: chat.isOnline,
+    });
+    setLastDebugAction("chat_selected");
+  };
+
+  const handleSelectDriver = (driver: any) => {
+    console.log('[Chat] Selecting driver for new conversation:', driver.id);
+    setActiveContact({
+      id: driver.id,
+      name: driver.name,
+      email: driver.email,
+      role: "driver",
+      isVirtual: true,
+    });
+    setLastDebugAction("driver_selected");
+  };
+
+  const handleSelectDispatch = () => {
+    console.log('[Chat] Driver selecting dispatch/owner');
+    // For driver, select owner/admin (usually id=1)
+    const ownerId = 1;
+    setActiveContact({
+      id: ownerId,
+      name: "WV Dispatch",
+      email: user?.email,
+      role: "owner",
+      isVirtual: true,
+    });
+    setLastDebugAction("dispatch_selected");
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log('[Chat] handleSendMessage clicked', { activeContact, messageLength: messageText.length });
+    setLastDebugAction("send_clicked");
+
     if (!messageText.trim() || !user || isSending) {
       console.log('[Chat] Early return - validation failed', { messageText: messageText.trim(), user: !!user, isSending });
       return;
     }
 
-    // Resolve recipientId from selectedChat or selectedUserId
-    const recipientId = selectedChat?.id || selectedUserId;
-    console.log('[Chat] Resolved recipientId:', { selectedChat, selectedUserId, recipientId });
-
-    if (!recipientId || typeof recipientId !== 'number' || recipientId <= 0) {
-      console.error('[Chat Widget] Invalid recipientId:', recipientId);
+    if (!activeContact?.id) {
+      console.error('[Chat] No active contact selected');
+      setLastDebugAction("send_error_no_contact");
       return;
     }
 
+    const recipientId = activeContact.id;
     const messageToSend = messageText.trim();
+
     console.log('[Chat Widget] Sending message:', {
       to: recipientId,
       from: user.id,
@@ -131,7 +158,6 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       console.log('[Chat Widget] Message sent successfully:', result);
     } catch (error) {
       console.error('[Chat Widget] Failed to send message:', error);
-      // Error is already logged by mutation onError
     } finally {
       setIsSending(false);
     }
@@ -144,11 +170,12 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     }
   }, [safeMessages]);
 
+  // Auto-select first chat if none selected
   useEffect(() => {
-    if (!selectedUserId && filteredChats.length > 0) {
-      setSelectedUserId(filteredChats[0].id);
+    if (!activeContact && filteredChats.length > 0) {
+      handleSelectExistingChat(filteredChats[0]);
     }
-  }, [filteredChats, selectedUserId]);
+  }, [filteredChats, activeContact]);
 
   return (
     <div className="flex h-[560px] overflow-hidden rounded-xl border border-border bg-card">
@@ -210,47 +237,44 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                   Iniciar conversación
                 </p>
                 {availableDrivers.map((driver: any) => {
-                  const isSelected = selectedUserId === driver.id;
+                  const isSelected = activeContact?.id === driver.id && activeContact?.isVirtual;
                   return (
-                  <button
-                    key={driver.id}
-                    onClick={() => {
-                      console.log('[Chat] Driver clicked:', driver.id);
-                      setSelectedUserId(driver.id);
-                    }}
-                    className={`w-full rounded-xl border px-3 py-3 text-left transition-all ${
-                      isSelected
-                        ? "border-primary/40 bg-primary/10 shadow-sm"
-                        : "border-transparent bg-background hover:border-border hover:bg-muted/50"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="relative mt-0.5">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                          <UserRound className="h-4 w-4 text-primary" />
+                    <button
+                      key={driver.id}
+                      onClick={() => handleSelectDriver(driver)}
+                      className={`w-full rounded-xl border px-3 py-3 text-left transition-all ${
+                        isSelected
+                          ? "border-primary/40 bg-primary/10 shadow-sm"
+                          : "border-transparent bg-background hover:border-border hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="relative mt-0.5">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                            <UserRound className="h-4 w-4 text-primary" />
+                          </div>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {driver.name}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {driver.email}
+                          </p>
                         </div>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {driver.name}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {driver.email}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
+                    </button>
+                  );
                 })}
               </div>
             ) : (
               filteredChats.map((chat) => {
-                const isSelected = selectedUserId === chat.id;
+                const isSelected = activeContact?.id === chat.id && !activeContact?.isVirtual;
 
                 return (
                   <button
                     key={chat.id}
-                    onClick={() => setSelectedUserId(chat.id)}
+                    onClick={() => handleSelectExistingChat(chat)}
                     className={`w-full rounded-xl border px-3 py-3 text-left transition-all ${
                       isSelected
                         ? "border-primary/40 bg-primary/10 shadow-sm"
@@ -296,7 +320,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       </aside>
 
       <section className="flex min-w-0 flex-1 flex-col bg-background">
-        {selectedUserId && selectedChat ? (
+        {activeContact ? (
           <>
             <div className="border-b border-border px-5 py-4">
               <div className="flex items-center gap-3">
@@ -306,17 +330,17 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                   </div>
                   <Circle
                     className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 fill-current ${
-                      selectedChat.isOnline ? "text-emerald-500" : "text-slate-400"
+                      activeContact.isOnline ? "text-emerald-500" : "text-slate-400"
                     }`}
                   />
                 </div>
 
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">
-                    {selectedChat.name || "Chat"}
+                    {activeContact.name || "Chat"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {selectedChat.isOnline ? "Chofer en línea" : "Chofer desconectado"}
+                    {activeContact.isOnline ? "En línea" : "Desconectado"}
                   </p>
                 </div>
               </div>
@@ -379,22 +403,16 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
             </div>
 
             <div className="border-t border-border p-4">
-              <div className="flex items-center gap-2">
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <Input
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   placeholder="Escribe un mensaje..."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void handleSendMessage();
-                    }
-                  }}
                   disabled={isSending}
                   aria-label="Escribir mensaje"
                 />
                 <Button
-                  onClick={() => void handleSendMessage()}
+                  type="submit"
                   disabled={!messageText.trim() || isSending}
                   size="icon"
                   aria-label="Enviar mensaje"
@@ -405,6 +423,15 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                     <Send className="h-4 w-4" />
                   )}
                 </Button>
+              </form>
+            </div>
+
+            {/* Diagnostic footer */}
+            <div className="border-t border-border/50 bg-muted/20 px-4 py-2 text-[10px] text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Chat build: 1abe3ab7+</span>
+                <span>Contact: {activeContact?.id || "none"}</span>
+                <span>Action: {lastDebugAction}</span>
               </div>
             </div>
           </>
@@ -416,7 +443,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
             </div>
             <div className="flex-1 p-5">
               <button
-                onClick={() => setSelectedUserId(1)} // Owner/admin contact
+                onClick={handleSelectDispatch}
                 className="w-full rounded-xl border border-transparent bg-background px-4 py-4 text-left transition-all hover:border-border hover:bg-muted/50"
               >
                 <div className="flex items-start gap-3">
@@ -430,6 +457,15 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                 </div>
               </button>
             </div>
+
+            {/* Diagnostic footer */}
+            <div className="border-t border-border/50 bg-muted/20 px-4 py-2 text-[10px] text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Chat build: 1abe3ab7+</span>
+                <span>Contact: {activeContact?.id || "none"}</span>
+                <span>Action: {lastDebugAction}</span>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
@@ -438,9 +474,17 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
             <p className="mt-1 text-xs text-muted-foreground">
               Elige una conversación para ver mensajes y responder.
             </p>
+
+            {/* Diagnostic footer */}
+            <div className="mt-8 border-t border-border/50 bg-muted/20 px-4 py-2 text-[10px] text-muted-foreground">
+              <div className="flex justify-between gap-4">
+                <span>Chat build: 1abe3ab7+</span>
+                <span>Contact: {activeContact?.id || "none"}</span>
+                <span>Action: {lastDebugAction}</span>
+              </div>
+            </div>
           </div>
-        )
-        }
+        )}
       </section>
     </div>
   );
