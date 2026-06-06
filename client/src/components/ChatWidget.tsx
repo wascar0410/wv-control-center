@@ -99,17 +99,25 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   }, [safeChats]);
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedUserId || !user || isSending) return;
+    console.log('[Chat] handleSendMessage clicked', { selectedUserId, selectedChat, messageText: messageText.length });
+    
+    if (!messageText.trim() || !user || isSending) {
+      console.log('[Chat] Early return - validation failed', { messageText: messageText.trim(), user: !!user, isSending });
+      return;
+    }
 
-    // Validate recipientId
-    if (typeof selectedUserId !== 'number' || selectedUserId <= 0) {
-      console.error('[Chat Widget] Invalid recipientId:', selectedUserId);
+    // Resolve recipientId from selectedChat or selectedUserId
+    const recipientId = selectedChat?.id || selectedUserId;
+    console.log('[Chat] Resolved recipientId:', { selectedChat, selectedUserId, recipientId });
+
+    if (!recipientId || typeof recipientId !== 'number' || recipientId <= 0) {
+      console.error('[Chat Widget] Invalid recipientId:', recipientId);
       return;
     }
 
     const messageToSend = messageText.trim();
     console.log('[Chat Widget] Sending message:', {
-      to: selectedUserId,
+      to: recipientId,
       from: user.id,
       messageLength: messageToSend.length,
     });
@@ -117,7 +125,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     setIsSending(true);
     try {
       const result = await sendMessageMutation.mutateAsync({
-        recipientId: selectedUserId,
+        recipientId,
         message: messageToSend,
       });
       console.log('[Chat Widget] Message sent successfully:', result);
@@ -201,11 +209,20 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                 <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Iniciar conversación
                 </p>
-                {availableDrivers.map((driver: any) => (
+                {availableDrivers.map((driver: any) => {
+                  const isSelected = selectedUserId === driver.id;
+                  return (
                   <button
                     key={driver.id}
-                    onClick={() => setSelectedUserId(driver.id)}
-                    className="w-full rounded-xl border border-transparent bg-background px-3 py-3 text-left transition-all hover:border-border hover:bg-muted/50"
+                    onClick={() => {
+                      console.log('[Chat] Driver clicked:', driver.id);
+                      setSelectedUserId(driver.id);
+                    }}
+                    className={`w-full rounded-xl border px-3 py-3 text-left transition-all ${
+                      isSelected
+                        ? "border-primary/40 bg-primary/10 shadow-sm"
+                        : "border-transparent bg-background hover:border-border hover:bg-muted/50"
+                    }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="relative mt-0.5">
@@ -223,7 +240,8 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                       </div>
                     </div>
                   </button>
-                ))}
+                );
+                })}
               </div>
             ) : (
               filteredChats.map((chat) => {
