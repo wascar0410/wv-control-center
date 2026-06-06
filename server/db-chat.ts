@@ -31,14 +31,22 @@ export async function sendDirectMessage(
       attachmentType,
     });
 
-    if (!result || !result[0]) {
-      console.error('[Chat] Insert failed - no result');
-      throw new Error('Failed to insert message');
+    console.log('[Chat] Insert result:', result);
+
+    // Drizzle returns { insertId } or similar
+    let messageId: number | null = null;
+    if (result && typeof result === 'object') {
+      if ('insertId' in result) {
+        messageId = result.insertId as number;
+      } else if (Array.isArray(result) && result.length > 0) {
+        messageId = result[0] as number;
+      }
     }
 
-    const messageId = typeof result[0] === 'object' && 'insertId' in result[0] 
-      ? result[0].insertId 
-      : result[0];
+    if (!messageId) {
+      console.error('[Chat] Failed to extract messageId from insert result:', result);
+      throw new Error('Failed to insert message - no ID returned');
+    }
 
     console.log('[Chat] Message inserted:', { messageId, senderId, recipientId });
 
