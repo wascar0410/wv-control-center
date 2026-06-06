@@ -50,15 +50,19 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   );
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      console.log('[Chat Mutation] onSuccess:', data);
+      // Clear input only after successful send
       setMessageText("");
+      // Invalidate to refresh from server
       await Promise.all([
         utils.chat.getMessages.invalidate(),
         utils.chat.getRecentChats.invalidate(),
       ]);
     },
     onError: (err) => {
-      console.error("Chat send error:", err);
+      console.error('[Chat Mutation] onError:', err);
+      // Don't clear input on error - user can retry
     },
   });
 
@@ -97,12 +101,29 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedUserId || !user || isSending) return;
 
+    // Validate recipientId
+    if (typeof selectedUserId !== 'number' || selectedUserId <= 0) {
+      console.error('[Chat Widget] Invalid recipientId:', selectedUserId);
+      return;
+    }
+
+    const messageToSend = messageText.trim();
+    console.log('[Chat Widget] Sending message:', {
+      to: selectedUserId,
+      from: user.id,
+      messageLength: messageToSend.length,
+    });
+
     setIsSending(true);
     try {
-      await sendMessageMutation.mutateAsync({
+      const result = await sendMessageMutation.mutateAsync({
         recipientId: selectedUserId,
-        message: messageText.trim(),
+        message: messageToSend,
       });
+      console.log('[Chat Widget] Message sent successfully:', result);
+    } catch (error) {
+      console.error('[Chat Widget] Failed to send message:', error);
+      // Error is already logged by mutation onError
     } finally {
       setIsSending(false);
     }

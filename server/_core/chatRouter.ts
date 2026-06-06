@@ -30,14 +30,33 @@ export const chatRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      return await sendDirectMessage(
-        ctx.user.id,
-        input.recipientId,
-        input.message,
-        input.loadId,
-        input.attachmentUrl,
-        input.attachmentType
-      );
+      try {
+        console.log('[Chat Router] sendMessage called:', {
+          senderId: ctx.user.id,
+          recipientId: input.recipientId,
+          messageLength: input.message.length,
+        });
+
+        const result = await sendDirectMessage(
+          ctx.user.id,
+          input.recipientId,
+          input.message,
+          input.loadId,
+          input.attachmentUrl,
+          input.attachmentType
+        );
+
+        if (!result) {
+          console.error('[Chat Router] sendDirectMessage returned null/undefined');
+          throw new Error('Failed to send message - no result from database');
+        }
+
+        console.log('[Chat Router] Message sent successfully:', { messageId: (result as any).id });
+        return result;
+      } catch (error) {
+        console.error('[Chat Router] sendMessage error:', error);
+        throw error;
+      }
     }),
 
   /**

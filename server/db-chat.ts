@@ -13,30 +13,61 @@ export async function sendDirectMessage(
   attachmentUrl?: string,
   attachmentType?: string
 ) {
-  const db = await getDb();
-  if (!db) return null;
+  try {
+    const db = await getDb();
+    if (!db) {
+      console.error('[Chat] Database connection failed');
+      throw new Error('Database connection unavailable');
+    }
 
-  const result = await db.insert(chatMessages).values({
-    senderId,
-    recipientId,
-    loadId,
-    message,
-    attachmentUrl,
-    attachmentType,
-  });
+    console.log('[Chat] Sending message:', { senderId, recipientId, messageLength: message.length });
 
-  // Create notification for recipient
-  if (result && result[0]) {
-    const messageId = typeof result[0] === 'object' && 'insertId' in result[0] ? result[0].insertId : result[0];
-    await db.insert(chatNotifications).values({
-      userId: recipientId,
+    const result = await db.insert(chatMessages).values({
       senderId,
-      messageId: messageId as number,
-      notificationType: "direct_message",
+      recipientId,
+      loadId,
+      message,
+      attachmentUrl,
+      attachmentType,
     });
-  }
 
-  return result;
+    if (!result || !result[0]) {
+      console.error('[Chat] Insert failed - no result');
+      throw new Error('Failed to insert message');
+    }
+
+    const messageId = typeof result[0] === 'object' && 'insertId' in result[0] 
+      ? result[0].insertId 
+      : result[0];
+
+    console.log('[Chat] Message inserted:', { messageId, senderId, recipientId });
+
+    // Create notification for recipient
+    try {
+      await db.insert(chatNotifications).values({
+        userId: recipientId,
+        senderId,
+        messageId: messageId as number,
+        notificationType: "direct_message",
+      });
+      console.log('[Chat] Notification created for user:', recipientId);
+    } catch (notifError) {
+      console.error('[Chat] Failed to create notification:', notifError);
+      // Don't fail the message send if notification fails
+    }
+
+    // Return the saved message
+    const savedMessage = await db
+      .select()
+      .from(chatMessages)
+      .where(eq(chatMessages.id, messageId as number))
+      .limit(1);
+
+    return savedMessage[0] || result;
+  } catch (error) {
+    console.error('[Chat] sendDirectMessage failed:', error);
+    throw error;
+  }
 }
 
 /**
