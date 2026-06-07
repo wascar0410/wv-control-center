@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { chatMessages, chatConversations, chatParticipants, chatNotifications, users } from "../drizzle/schema";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, sql } from "drizzle-orm";
 
 /**
  * Send a direct message between dispatcher and driver
@@ -38,38 +38,22 @@ export async function sendDirectMessage(
 
     console.log('[Chat] Normalized fields:', { normalizedLoadId, normalizedAttachmentUrl, normalizedAttachmentType });
 
-    // Use raw SQL to have full control over which fields are inserted
-    // This prevents Drizzle from including all table columns with default/null values
+    // Use Drizzle sql template for proper parameterized queries
     let messageId: number | null = null;
     
     try {
-      // Build SQL based on which optional fields are present
-      let sql = 'INSERT INTO chat_messages (senderId, recipientId, message, isRead';
-      const params: any[] = [senderId, recipientId, message, false];
+      console.log('[CHAT_RAW_SQL_TEMPLATE] insert start', { senderId, recipientId, normalizedLoadId, normalizedAttachmentUrl, normalizedAttachmentType });
       
-      if (typeof normalizedLoadId === 'number' && Number.isFinite(normalizedLoadId)) {
-        sql += ', loadId';
-        params.push(normalizedLoadId);
-      }
+      // Build Drizzle sql template with proper parameter substitution
+      const insertSql = sql`
+        INSERT INTO chat_messages (senderId, recipientId, message, isRead${normalizedLoadId ? sql`, loadId` : sql``}${normalizedAttachmentUrl ? sql`, attachmentUrl` : sql``}${normalizedAttachmentType ? sql`, attachmentType` : sql``})
+        VALUES (${senderId}, ${recipientId}, ${message}, ${false}${normalizedLoadId ? sql`, ${normalizedLoadId}` : sql``}${normalizedAttachmentUrl ? sql`, ${normalizedAttachmentUrl}` : sql``}${normalizedAttachmentType ? sql`, ${normalizedAttachmentType}` : sql``})
+      `;
       
-      if (normalizedAttachmentUrl) {
-        sql += ', attachmentUrl';
-        params.push(normalizedAttachmentUrl);
-      }
+      // Execute using Drizzle's execute method with sql template
+      const result = await db.execute(insertSql);
       
-      if (normalizedAttachmentType) {
-        sql += ', attachmentType';
-        params.push(normalizedAttachmentType);
-      }
-      
-      sql += ') VALUES (' + params.map(() => '?').join(', ') + ')';
-      
-      console.log('[ChatFix64cb_RAW_SQL] About to execute:', { sql, paramCount: params.length });
-      
-      // Execute raw SQL using Drizzle's execute method
-      const result = await db.execute(sql, params);
-      
-      console.log('[ChatFix64cb_RAW_SQL] Insert result:', { result });
+      console.log('[CHAT_RAW_SQL_TEMPLATE] insert success', { result });
       
       // Extract insertId from result
       if (result && typeof result === 'object') {
@@ -83,7 +67,7 @@ export async function sendDirectMessage(
       }
       
       if (!messageId) {
-        console.error('[ChatFix64cb_RAW_SQL] Failed to extract messageId, trying select:', { result });
+        console.error('[CHAT_RAW_SQL_TEMPLATE] Failed to extract messageId, trying select:', { result });
         // Fallback: select the latest message from this sender to this recipient
         const selectResult = await db
           .select()
@@ -94,11 +78,11 @@ export async function sendDirectMessage(
         
         if (selectResult && selectResult.length > 0) {
           messageId = selectResult[0].id;
-          console.log('[ChatFix64cb_RAW_SQL] Got messageId from select:', { messageId });
+          console.log('[CHAT_RAW_SQL_TEMPLATE] selected saved message', { messageId });
         }
       }
     } catch (rawSqlError) {
-      console.error('[ChatFix64cb_RAW_SQL] Raw SQL insert failed:', rawSqlError);
+      console.error('[CHAT_RAW_SQL_TEMPLATE] insert failed:', rawSqlError);
       throw rawSqlError;
     }
 
