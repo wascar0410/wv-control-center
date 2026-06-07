@@ -36,16 +36,26 @@ export async function sendDirectMessage(
         ? attachmentType.trim()
         : null;
 
-    // Prepare insert values - explicitly set isRead and use normalized fields
-    const insertValues = {
+    // Prepare insert values - omit optional fields when null to avoid empty string conversion
+    const insertValues: any = {
       senderId,
       recipientId,
       message,
       isRead: false,
-      loadId: normalizedLoadId,
-      attachmentUrl: normalizedAttachmentUrl,
-      attachmentType: normalizedAttachmentType,
     };
+
+    // Only include optional fields if they have values
+    if (typeof normalizedLoadId === 'number' && Number.isFinite(normalizedLoadId)) {
+      insertValues.loadId = normalizedLoadId;
+    }
+
+    if (normalizedAttachmentUrl) {
+      insertValues.attachmentUrl = normalizedAttachmentUrl;
+    }
+
+    if (normalizedAttachmentType) {
+      insertValues.attachmentType = normalizedAttachmentType;
+    }
 
     console.log('[Chat] insert values prepared:', { senderId, recipientId, normalizedLoadId, normalizedAttachmentUrl, normalizedAttachmentType });
 
