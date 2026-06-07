@@ -49,6 +49,18 @@ export async function sendDirectMessage(
 
     console.log('[Chat] insert values prepared:', { senderId, recipientId, normalizedLoadId, normalizedAttachmentUrl, normalizedAttachmentType });
 
+    // Diagnostic log for debugging
+    console.log('[ChatFix493] normalized insert values', {
+      senderId,
+      recipientId,
+      loadId: normalizedLoadId,
+      loadIdType: typeof normalizedLoadId,
+      attachmentUrl: normalizedAttachmentUrl,
+      attachmentType: normalizedAttachmentType,
+      isRead: false,
+      messageLength: message.length,
+    });
+
     const result = await db.insert(chatMessages).values(insertValues);
 
     console.log('[Chat] insert success:', { result });
