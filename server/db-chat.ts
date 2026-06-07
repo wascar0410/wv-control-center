@@ -22,16 +22,25 @@ export async function sendDirectMessage(
 
     console.log('[Chat] Sending message:', { senderId, recipientId, messageLength: message.length });
 
-    const result = await db.insert(chatMessages).values({
+    // Prepare insert values - explicitly set isRead and sanitize undefined
+    const insertValues = {
       senderId,
       recipientId,
-      loadId,
       message,
-      attachmentUrl,
-      attachmentType,
-    });
+      isRead: false, // Explicitly set default
+      loadId: loadId ?? null,
+      attachmentUrl: attachmentUrl ?? null,
+      attachmentType: attachmentType ?? null,
+    };
 
-    console.log('[Chat] Insert result:', result);
+    console.log('[Chat] insert values prepared:', { senderId, recipientId, hasLoadId: !!loadId, hasAttachment: !!attachmentUrl });
+
+    const result = await db.insert(chatMessages).values(insertValues);
+
+    console.log('[Chat] insert success:', { result });
+    if (!result) {
+      throw new Error('[Chat] insert failed: no result returned');
+    }
 
     // Drizzle returns { insertId } or similar
     let messageId: number | null = null;
