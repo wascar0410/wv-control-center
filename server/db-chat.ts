@@ -36,60 +36,74 @@ export async function sendDirectMessage(
         ? attachmentType.trim()
         : null;
 
-    // Prepare insert values - omit optional fields when null to avoid empty string conversion
-    const insertValues: any = {
-      senderId,
-      recipientId,
-      message,
-      isRead: false,
-    };
+    console.log('[Chat] Normalized fields:', { normalizedLoadId, normalizedAttachmentUrl, normalizedAttachmentType });
 
-    // Only include optional fields if they have values
-    if (typeof normalizedLoadId === 'number' && Number.isFinite(normalizedLoadId)) {
-      insertValues.loadId = normalizedLoadId;
-    }
-
-    if (normalizedAttachmentUrl) {
-      insertValues.attachmentUrl = normalizedAttachmentUrl;
-    }
-
-    if (normalizedAttachmentType) {
-      insertValues.attachmentType = normalizedAttachmentType;
-    }
-
-    console.log('[Chat] insert values prepared:', { senderId, recipientId, normalizedLoadId, normalizedAttachmentUrl, normalizedAttachmentType });
-
-    // Diagnostic log for debugging
-    console.log('[ChatFix493] normalized insert values', {
-      senderId,
-      recipientId,
-      loadId: normalizedLoadId,
-      loadIdType: typeof normalizedLoadId,
-      attachmentUrl: normalizedAttachmentUrl,
-      attachmentType: normalizedAttachmentType,
-      isRead: false,
-      messageLength: message.length,
-    });
-
-    const result = await db.insert(chatMessages).values(insertValues);
-
-    console.log('[Chat] insert success:', { result });
-    if (!result) {
-      throw new Error('[Chat] insert failed: no result returned');
-    }
-
-    // Drizzle returns { insertId } or similar
+    // Use raw SQL to have full control over which fields are inserted
+    // This prevents Drizzle from including all table columns with default/null values
     let messageId: number | null = null;
-    if (result && typeof result === 'object') {
-      if ('insertId' in result) {
-        messageId = result.insertId as number;
-      } else if (Array.isArray(result) && result.length > 0) {
-        messageId = result[0] as number;
+    
+    try {
+      // Build SQL based on which optional fields are present
+      let sql = 'INSERT INTO chat_messages (senderId, recipientId, message, isRead';
+      const params: any[] = [senderId, recipientId, message, false];
+      
+      if (typeof normalizedLoadId === 'number' && Number.isFinite(normalizedLoadId)) {
+        sql += ', loadId';
+        params.push(normalizedLoadId);
       }
+      
+      if (normalizedAttachmentUrl) {
+        sql += ', attachmentUrl';
+        params.push(normalizedAttachmentUrl);
+      }
+      
+      if (normalizedAttachmentType) {
+        sql += ', attachmentType';
+        params.push(normalizedAttachmentType);
+      }
+      
+      sql += ') VALUES (' + params.map(() => '?').join(', ') + ')';
+      
+      console.log('[ChatFix64cb_RAW_SQL] About to execute:', { sql, paramCount: params.length });
+      
+      // Execute raw SQL using Drizzle's execute method
+      const result = await db.execute(sql, params);
+      
+      console.log('[ChatFix64cb_RAW_SQL] Insert result:', { result });
+      
+      // Extract insertId from result
+      if (result && typeof result === 'object') {
+        if ('insertId' in result) {
+          messageId = result.insertId as number;
+        } else if ('lastID' in result) {
+          messageId = result.lastID as number;
+        } else if (Array.isArray(result) && result.length > 0 && typeof result[0] === 'object' && 'insertId' in result[0]) {
+          messageId = result[0].insertId as number;
+        }
+      }
+      
+      if (!messageId) {
+        console.error('[ChatFix64cb_RAW_SQL] Failed to extract messageId, trying select:', { result });
+        // Fallback: select the latest message from this sender to this recipient
+        const selectResult = await db
+          .select()
+          .from(chatMessages)
+          .where(and(eq(chatMessages.senderId, senderId), eq(chatMessages.recipientId, recipientId), eq(chatMessages.message, message)))
+          .orderBy(desc(chatMessages.createdAt))
+          .limit(1);
+        
+        if (selectResult && selectResult.length > 0) {
+          messageId = selectResult[0].id;
+          console.log('[ChatFix64cb_RAW_SQL] Got messageId from select:', { messageId });
+        }
+      }
+    } catch (rawSqlError) {
+      console.error('[ChatFix64cb_RAW_SQL] Raw SQL insert failed:', rawSqlError);
+      throw rawSqlError;
     }
 
     if (!messageId) {
-      console.error('[Chat] Failed to extract messageId from insert result:', result);
+      console.error('[Chat] Failed to extract messageId after insert');
       throw new Error('Failed to insert message - no ID returned');
     }
 
@@ -116,7 +130,7 @@ export async function sendDirectMessage(
       .where(eq(chatMessages.id, messageId as number))
       .limit(1);
 
-    return savedMessage[0] || result;
+    return savedMessage[0] || { id: messageId };
   } catch (error) {
     console.error('[Chat] sendDirectMessage failed:', error);
     throw error;
@@ -128,9 +142,11 @@ export async function sendDirectMessage(
  */
 export async function getDirectMessages(userId1: number, userId2: number, limit = 50, offset = 0) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
 
-  const allMessages = await db
+  return db
     .select()
     .from(chatMessages)
     .where(
@@ -139,9 +155,60 @@ export async function getDirectMessages(userId1: number, userId2: number, limit 
         and(eq(chatMessages.senderId, userId2), eq(chatMessages.recipientId, userId1))
       )
     )
-    .orderBy(desc(chatMessages.createdAt));
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
 
-  return allMessages.slice(offset, offset + limit);
+/**
+ * Get recent chats for a user
+ */
+export async function getRecentChats(userId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  // Get unique contacts from recent messages
+  const recentMessages = await db
+    .select()
+    .from(chatMessages)
+    .where(
+      or(
+        eq(chatMessages.senderId, userId),
+        eq(chatMessages.recipientId, userId)
+      )
+    )
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(100);
+
+  // Group by contact and get latest message
+  const contactMap = new Map();
+  for (const msg of recentMessages) {
+    const contactId = msg.senderId === userId ? msg.recipientId : msg.senderId;
+    if (!contactMap.has(contactId)) {
+      contactMap.set(contactId, msg);
+    }
+  }
+
+  return Array.from(contactMap.values()).slice(0, limit);
+}
+
+/**
+ * Get unread message count for a user
+ */
+export async function getUnreadCount(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  const result = await db
+    .select()
+    .from(chatMessages)
+    .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.isRead, false)));
+
+  return result.length;
 }
 
 /**
@@ -149,188 +216,165 @@ export async function getDirectMessages(userId1: number, userId2: number, limit 
  */
 export async function markMessagesAsRead(userId: number, senderId: number) {
   const db = await getDb();
-  if (!db) return null;
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
 
-  await db
+  return db
     .update(chatMessages)
-    .set({ isRead: true, readAt: new Date() })
-    .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.senderId, senderId), eq(chatMessages.isRead, false)));
-
-  // Also mark notifications as read
-  await db
-    .update(chatNotifications)
-    .set({ isRead: true, readAt: new Date() })
-    .where(and(eq(chatNotifications.userId, userId), eq(chatNotifications.senderId, senderId), eq(chatNotifications.isRead, false)));
+    .set({ isRead: true })
+    .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.senderId, senderId)));
 }
+
 
 /**
  * Get unread message count for a user
  */
 export async function getUnreadMessageCount(userId: number) {
-  const db = await getDb();
-  if (!db) return 0;
-
-  const result = await db
-    .select()
-    .from(chatNotifications)
-    .where(and(eq(chatNotifications.userId, userId), eq(chatNotifications.isRead, false)));
-
-  return result.length;
+  return getUnreadCount(userId);
 }
 
 /**
- * Get unread messages by sender
+ * Get unread messages from a specific sender
  */
-export async function getUnreadMessagesBySender(userId: number) {
+export async function getUnreadMessagesBySender(userId: number, senderId: number) {
   const db = await getDb();
-  if (!db) return [];
-
-  const messages = await db
-    .select()
-    .from(chatMessages)
-    .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.isRead, false)))
-    .orderBy(desc(chatMessages.createdAt));
-
-  // Group by sender and get latest message
-  const grouped: Record<number, any> = {};
-  for (const msg of messages) {
-    if (!grouped[msg.senderId]) {
-      grouped[msg.senderId] = msg;
-    }
+  if (!db) {
+    throw new Error('Database connection unavailable');
   }
 
-  return Object.values(grouped);
-}
-
-/**
- * Create a group conversation
- */
-export async function createConversation(dispatcherId: number, title: string, description?: string, loadId?: number) {
-  const db = await getDb();
-  if (!db) return null;
-
-  return db.insert(chatConversations).values({
-    dispatcherId,
-    title,
-    description,
-    loadId,
-  });
-}
-
-/**
- * Add participant to conversation
- */
-export async function addParticipant(conversationId: number, userId: number) {
-  const db = await getDb();
-  if (!db) return null;
-
-  return db.insert(chatParticipants).values({
-    conversationId,
-    userId,
-  });
-}
-
-/**
- * Get conversation messages
- */
-export async function getConversationMessages(conversationId: number, limit = 50, offset = 0) {
-  const db = await getDb();
-  if (!db) return [];
-
-  // Get messages for this conversation
-  const messages = await db
+  return db
     .select()
     .from(chatMessages)
-    .where(eq(chatMessages.loadId, conversationId))
-    .orderBy(desc(chatMessages.createdAt));
-
-  return messages.slice(offset, offset + limit);
+    .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.senderId, senderId), eq(chatMessages.isRead, false)));
 }
 
 /**
- * Get user's conversations
+ * Delete a message
  */
-export async function getUserConversations(userId: number) {
+export async function deleteMessage(messageId: number) {
   const db = await getDb();
-  if (!db) return [];
-
-  const conversations = await db
-    .select()
-    .from(chatConversations)
-    .orderBy(desc(chatConversations.updatedAt));
-
-  // Filter to only conversations where user is a participant
-  const userConversations = [];
-  for (const conv of conversations) {
-    const participants = await db
-      .select()
-      .from(chatParticipants)
-      .where(and(eq(chatParticipants.conversationId, conv.id), eq(chatParticipants.userId, userId)));
-
-    if (participants.length > 0) {
-      userConversations.push(conv);
-    }
+  if (!db) {
+    throw new Error('Database connection unavailable');
   }
 
-  return userConversations;
-}
+  try {
+    const result = await db
+      .delete(chatMessages)
+      .where(eq(chatMessages.id, messageId));
 
-/**
- * Get recent chats for a user (last message with each contact)
- */
-export async function getRecentChats(userId: number, limit = 20) {
-  const db = await getDb();
-  if (!db) return [];
-
-  const messages = await db
-    .select()
-    .from(chatMessages)
-    .where(or(eq(chatMessages.senderId, userId), eq(chatMessages.recipientId, userId)))
-    .orderBy(desc(chatMessages.createdAt))
-    .limit(limit * 2); // Get more to account for duplicates
-
-  // Group by contact and get latest message
-  const grouped: Record<number, any> = {};
-  for (const msg of messages) {
-    const contactId = msg.senderId === userId ? msg.recipientId : msg.senderId;
-    if (!grouped[contactId]) {
-      grouped[contactId] = msg;
-    }
+    console.log('[Chat] Message deleted:', { messageId });
+    return result;
+  } catch (error) {
+    console.error('[Chat] Failed to delete message:', error);
+    throw error;
   }
-
-  return Object.values(grouped).slice(0, limit);
-}
-
-/**
- * Delete a message (soft delete by marking as deleted)
- */
-export async function deleteMessage(messageId: number, userId: number) {
-  const db = await getDb();
-  if (!db) return null;
-
-  // Verify user owns this message
-  const msg = await db.select().from(chatMessages).where(eq(chatMessages.id, messageId));
-  if (!msg || msg[0].senderId !== userId) return null;
-
-  // Soft delete by clearing message content
-  return db.update(chatMessages).set({ message: "[Deleted]" }).where(eq(chatMessages.id, messageId));
 }
 
 /**
  * Search messages
  */
-export async function searchMessages(userId: number, query: string, limit = 20) {
+export async function searchMessages(userId: number, query: string) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
 
-  const messages = await db
+  // Simple search - in production, use full-text search
+  const allMessages = await db
     .select()
     .from(chatMessages)
-    .where(or(eq(chatMessages.senderId, userId), eq(chatMessages.recipientId, userId)))
-    .orderBy(desc(chatMessages.createdAt));
+    .where(
+      or(
+        eq(chatMessages.senderId, userId),
+        eq(chatMessages.recipientId, userId)
+      )
+    );
 
-  // Filter by query in memory
-  const filtered = messages.filter((msg: any) => msg.message.toLowerCase().includes(query.toLowerCase()));
+  return allMessages.filter(msg => msg.message.toLowerCase().includes(query.toLowerCase()));
+}
 
-  return filtered.slice(0, limit);
+/**
+ * Create a conversation
+ */
+export async function createConversation(participantIds: number[], name?: string) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  try {
+    const result = await db.insert(chatConversations).values({
+      name: name || `Conversation ${Date.now()}`,
+    });
+
+    console.log('[Chat] Conversation created:', { result });
+    return result;
+  } catch (error) {
+    console.error('[Chat] Failed to create conversation:', error);
+    throw error;
+  }
+}
+
+/**
+ * Add participant to a conversation
+ */
+export async function addParticipant(conversationId: number, userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  try {
+    const result = await db.insert(chatParticipants).values({
+      conversationId,
+      userId,
+    });
+
+    console.log('[Chat] Participant added:', { conversationId, userId });
+    return result;
+  } catch (error) {
+    console.error('[Chat] Failed to add participant:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get messages in a conversation
+ */
+export async function getConversationMessages(conversationId: number, limit = 50, offset = 0) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  return db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.loadId, conversationId))
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+/**
+ * Get all conversations for a user
+ */
+export async function getUserConversations(userId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  return db
+    .select()
+    .from(chatConversations)
+    .where(
+      eq(chatConversations.id,
+        db.select(chatParticipants.conversationId)
+          .from(chatParticipants)
+          .where(eq(chatParticipants.userId, userId))
+      )
+    )
+    .limit(limit);
 }
