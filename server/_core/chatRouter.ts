@@ -37,13 +37,18 @@ export const chatRouter = router({
           messageLength: input.message.length,
         });
 
+        // Sanitize input: convert empty strings to undefined
+        const sanitizedLoadId = input.loadId && Number.isFinite(input.loadId) ? input.loadId : undefined;
+        const sanitizedAttachmentUrl = input.attachmentUrl && input.attachmentUrl.trim().length > 0 ? input.attachmentUrl.trim() : undefined;
+        const sanitizedAttachmentType = input.attachmentType && input.attachmentType.trim().length > 0 ? input.attachmentType.trim() : undefined;
+
         const result = await sendDirectMessage(
           ctx.user.id,
           input.recipientId,
           input.message,
-          input.loadId,
-          input.attachmentUrl,
-          input.attachmentType
+          sanitizedLoadId,
+          sanitizedAttachmentUrl,
+          sanitizedAttachmentType
         );
 
         if (!result) {

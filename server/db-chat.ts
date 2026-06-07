@@ -22,18 +22,32 @@ export async function sendDirectMessage(
 
     console.log('[Chat] Sending message:', { senderId, recipientId, messageLength: message.length });
 
-    // Prepare insert values - explicitly set isRead and sanitize undefined
+    // Sanitize optional fields: convert empty strings and invalid types to null
+    const normalizedLoadId =
+      typeof loadId === 'number' && Number.isFinite(loadId) ? loadId : null;
+
+    const normalizedAttachmentUrl =
+      attachmentUrl && typeof attachmentUrl === 'string' && attachmentUrl.trim().length > 0
+        ? attachmentUrl.trim()
+        : null;
+
+    const normalizedAttachmentType =
+      attachmentType && typeof attachmentType === 'string' && attachmentType.trim().length > 0
+        ? attachmentType.trim()
+        : null;
+
+    // Prepare insert values - explicitly set isRead and use normalized fields
     const insertValues = {
       senderId,
       recipientId,
       message,
-      isRead: false, // Explicitly set default
-      loadId: loadId ?? null,
-      attachmentUrl: attachmentUrl ?? null,
-      attachmentType: attachmentType ?? null,
+      isRead: false,
+      loadId: normalizedLoadId,
+      attachmentUrl: normalizedAttachmentUrl,
+      attachmentType: normalizedAttachmentType,
     };
 
-    console.log('[Chat] insert values prepared:', { senderId, recipientId, hasLoadId: !!loadId, hasAttachment: !!attachmentUrl });
+    console.log('[Chat] insert values prepared:', { senderId, recipientId, normalizedLoadId, normalizedAttachmentUrl, normalizedAttachmentType });
 
     const result = await db.insert(chatMessages).values(insertValues);
 
