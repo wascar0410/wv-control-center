@@ -161,16 +161,18 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
 
   const handleSelectDispatch = () => {
     console.log('[Chat] Driver selecting dispatch/owner');
-    // For driver, select owner/admin (usually id=1)
-    const ownerId = 1;
+    // For driver, select owner/admin from recent chats or use context
+    // Find WV Dispatch contact from recent chats or fallback to id=1
+    const dispatchContact = safeChats.find(c => c.role === 'owner' || c.name?.includes('Dispatch'));
+    const ownerId = dispatchContact?.contactUserId || 1;
     console.log('[Chat] Setting activeContact to owner:', { ownerId, currentUserId: user?.id });
     setActiveContact({
       contactUserId: ownerId,
       id: ownerId, // Legacy support
-      name: "WV Dispatch",
-      email: "dispatch@wvtransports.com",
+      name: dispatchContact?.name || "WV Dispatch",
+      email: dispatchContact?.email || "dispatch@wvtransports.com",
       role: "owner",
-      isOnline: true,
+      isOnline: dispatchContact?.isOnline ?? true,
       isVirtual: true,
     });
     setLastDebugAction("dispatch_selected");
@@ -335,7 +337,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
 
                 return (
                   <button
-                    key={chat.id}
+                    key={chat.contactUserId ?? contactUserId}
                     onClick={() => handleSelectExistingChat(chat)}
                     className={`w-full rounded-xl border px-3 py-3 text-left transition-all ${
                       isSelected
