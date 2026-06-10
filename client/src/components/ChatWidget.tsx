@@ -76,10 +76,11 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const markAsReadMutation = trpc.chat.markAsRead.useMutation({
     onSuccess: async () => {
       console.log('[Chat] markAsRead success');
-      // Refresh unread counts
+      // Refresh unread counts and messages to reflect readAt status
       await Promise.all([
         utils.chat.getRecentChats.invalidate(),
         utils.chat.getUnreadBySender.invalidate(),
+        utils.chat.getMessages.invalidate(),  // Invalidate messages cache so UI updates readAt status
       ]);
     },
     onError: (err) => {
@@ -264,6 +265,51 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       }
     }
   }, [filteredChats, activeContact, user?.role, safeChats.length]);
+
+  // Auto-mark messages as read when conversation is open and messages are loaded
+  // This triggers AFTER messages are visible in the UI
+  useEffect(() => {
+    if (!activeContact || !user) {
+      return;
+    }
+
+    const contactId = activeContact.contactUserId || activeContact.id;
+    if (!contactId) {
+      return;
+    }
+
+    // Only mark as read if:
+    // 1. Messages are loaded (not loading)
+    // 2. There are unread messages from this contact
+    if (isLoadingMessages) {
+      console.log('[CHAT_AUTO_MARK_READ] Messages still loading, skipping auto-mark');
+      return;
+    }
+
+    if (safeMessages.length === 0) {
+      console.log('[CHAT_AUTO_MARK_READ] No messages to mark as read');
+      return;
+    }
+
+    // Check if there are unread messages from this contact
+    const unreadMessages = safeMessages.filter(
+      (msg: any) => msg.senderId === contactId && !msg.isRead
+    );
+
+    if (unreadMessages.length === 0) {
+      console.log('[CHAT_AUTO_MARK_READ] No unread messages from this contact');
+      return;
+    }
+
+    console.log('[CHAT_AUTO_MARK_READ] Auto-marking messages as read:', {
+      contactId,
+      unreadCount: unreadMessages.length,
+      messageIds: unreadMessages.map((m: any) => m.id),
+    });
+
+    // Trigger auto-mark only once per contact change
+    markAsReadMutation.mutate({ contactId });
+  }, [activeContact, safeMessages, isLoadingMessages, user, markAsReadMutation]);
 
   return (
     <div className="flex h-[560px] overflow-hidden rounded-xl border border-border bg-card">
