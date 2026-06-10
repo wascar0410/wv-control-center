@@ -2042,19 +2042,19 @@
 
 
 ## Fase 68: Chat Typing Indicators V1
-- [x] Audit WebSocket infrastructure at /api/ws
-- [x] Review ChatWidget for input onChange hook points
-- [x] Decide implementation: WebSocket vs tRPC+polling
-- [x] Implement server-side typingState Map with TTL (3-5s)
-- [x] Implement setTyping tRPC mutation (isTyping true/false)
-- [x] Implement getTypingStatus tRPC query
-- [x] Add debounce/throttle (1.5s) to input onChange
-- [x] Call setTyping(false) on message send
-- [x] Add polling (2-3s) for getTypingStatus
-- [x] Integrate typing indicator UI: "Test Driver está escribiendo..."
-- [x] Test Owner→Driver typing indicator
-- [x] Test Driver→Owner typing indicator
-- [x] Validate no regressions: Chat V1, Presence, Unread, Read Receipts
-- [x] Deploy to production
-- [x] Revalidate in production
-- [x] Checkpoint guardado (794d4928)
+- [ ] Audit WebSocket infrastructure at /api/ws
+- [ ] Review ChatWidget for input onChange hook points
+- [ ] Decide implementation: WebSocket vs tRPC+polling
+- [ ] Implement server-side typingState Map with TTL (3-5s)
+- [ ] Implement setTyping tRPC mutation (isTyping true/false)
+- [ ] Implement getTypingStatus tRPC query
+- [ ] Add debounce/throttle (1.5s) to input onChange
+- [ ] Call setTyping(false) on message send
+- [ ] Add polling (2-3s) for getTypingStatus
+- [ ] Integrate typing indicator UI: "Test Driver está escribiendo..."
+- [ ] Test Owner→Driver typing indicator
+- [ ] Test Driver→Owner typing indicator
+- [ ] Validate no regressions: Chat V1, Presence, Unread, Read Receipts
+- [ ] Deploy to production
+- [ ] Revalidate in production
+- [ ] Checkpoint guardado

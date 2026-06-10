@@ -226,24 +226,11 @@ export const chatRouter = router({
         };
         (global as any).typingIndicators = (global as any).typingIndicators || new Map();
         (global as any).typingIndicators.set(conversationKey, typingState);
-        console.log('[CHAT_TYPING_V1_SET]', JSON.stringify({
-          currentUserId: ctx.user.id,
-          contactId: input.contactId,
-          isTyping: true,
-          conversationKey,
-          expiresAt: new Date(typingState.expiresAt).toISOString(),
-          typingStateSize: (global as any).typingIndicators.size,
-        }));
+        console.log('[CHAT_TYPING_V1] User', ctx.user.id, 'is typing to', input.contactId);
       } else {
         (global as any).typingIndicators = (global as any).typingIndicators || new Map();
         (global as any).typingIndicators.delete(conversationKey);
-        console.log('[CHAT_TYPING_V1_SET]', JSON.stringify({
-          currentUserId: ctx.user.id,
-          contactId: input.contactId,
-          isTyping: false,
-          conversationKey,
-          typingStateSize: (global as any).typingIndicators.size,
-        }));
+        console.log('[CHAT_TYPING_V1] User', ctx.user.id, 'stopped typing to', input.contactId);
       }
       
       return { success: true };
@@ -259,25 +246,9 @@ export const chatRouter = router({
       
       (global as any).typingIndicators = (global as any).typingIndicators || new Map();
       const typingState = (global as any).typingIndicators.get(conversationKey);
-      const now = Date.now();
-      const found = !!typingState;
-      const expired = found && typingState.expiresAt <= now;
-      let returnsIsTyping = false;
       
-      if (typingState && typingState.expiresAt > now) {
+      if (typingState && typingState.expiresAt > Date.now()) {
         if (typingState.userId === input.contactId) {
-          returnsIsTyping = true;
-          console.log('[CHAT_TYPING_V1_GET]', JSON.stringify({
-            currentUserId: ctx.user.id,
-            contactId: input.contactId,
-            conversationKey,
-            found: true,
-            expired: false,
-            storedUserId: typingState.userId,
-            storedRecipientId: typingState.recipientId,
-            returnsIsTyping: true,
-            expiresIn: typingState.expiresAt - now,
-          }));
           return {
             isTyping: true,
             userId: typingState.userId,
@@ -286,23 +257,6 @@ export const chatRouter = router({
         }
       } else if (typingState) {
         (global as any).typingIndicators.delete(conversationKey);
-        console.log('[CHAT_TYPING_V1_GET]', JSON.stringify({
-          currentUserId: ctx.user.id,
-          contactId: input.contactId,
-          conversationKey,
-          found: true,
-          expired: true,
-          returnsIsTyping: false,
-        }));
-      } else {
-        console.log('[CHAT_TYPING_V1_GET]', JSON.stringify({
-          currentUserId: ctx.user.id,
-          contactId: input.contactId,
-          conversationKey,
-          found: false,
-          expired: false,
-          returnsIsTyping: false,
-        }));
       }
       
       return { isTyping: false };
