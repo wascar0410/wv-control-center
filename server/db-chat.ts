@@ -196,6 +196,8 @@ export async function getRecentChats(userId: number, limit = 20) {
   const unreadByContact = new Map<number, number>();
   const contactIds = new Set<number>();
   
+  console.log('[CHAT_RECENT_CHATS_POLISH_V1] Processing', recentMessages.length, 'messages for userId:', userId);
+  
   for (const msg of recentMessages) {
     const contactId = msg.senderId === userId ? msg.recipientId : msg.senderId;
     contactIds.add(contactId);
@@ -209,8 +211,12 @@ export async function getRecentChats(userId: number, limit = 20) {
     if (msg.senderId !== userId && msg.recipientId === userId && !msg.isRead) {
       const count = unreadByContact.get(contactId) || 0;
       unreadByContact.set(contactId, count + 1);
+      console.log(`[CHAT_RECENT_CHATS_POLISH_V1] Unread from contact ${contactId}: count=${count + 1}, msg=${msg.content}`);
     }
   }
+  
+  console.log('[CHAT_RECENT_CHATS_POLISH_V1] Final unreadByContact:', Object.fromEntries(unreadByContact));
+
 
   // Exclude self-contact
   contactIds.delete(userId);
