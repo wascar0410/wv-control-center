@@ -88,10 +88,18 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     return safeChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
   }, [safeChats]);
 
-  const handleSelectExistingChat = (chat: ChatUser) => {
-    console.log('[Chat] Selecting existing chat:', chat.id);
+  const handleSelectExistingChat = (chat: any) => {
+    // For existing chats, derive the other participant's user ID
+    // chat.id is the chat/conversation ID, NOT a user ID
+    // We need to find the other participant (senderId or recipientId)
+    const otherParticipantId = chat.otherUserId || chat.recipientId || chat.senderId;
+    console.log('[Chat] Selecting existing chat:', {
+      chatId: chat.id,
+      otherParticipantId,
+      chatName: chat.name
+    });
     setActiveContact({
-      id: chat.id,
+      id: otherParticipantId,
       name: chat.name,
       isOnline: chat.isOnline,
     });
@@ -144,9 +152,10 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     const messageToSend = messageText.trim();
 
     console.log('[Chat Widget] Sending message:', {
-      to: recipientId,
-      from: user.id,
+      toUserId: recipientId,
+      fromUserId: user.id,
       messageLength: messageToSend.length,
+      activeContactType: activeContact.isVirtual ? 'virtual' : 'existing_chat',
     });
 
     setIsSending(true);

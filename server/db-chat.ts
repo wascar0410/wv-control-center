@@ -22,6 +22,29 @@ export async function sendDirectMessage(
 
     console.log('[Chat] Sending message:', { senderId, recipientId, messageLength: message.length });
 
+    // Validate that recipientId is a valid user
+    if (!Number.isFinite(recipientId) || recipientId <= 0) {
+      throw new Error(`Invalid recipientId: ${recipientId}`);
+    }
+
+    // Check if recipient user exists
+    const recipientUser = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.id, recipientId))
+      .limit(1);
+    
+    if (!recipientUser || recipientUser.length === 0) {
+      console.error('[Chat] Recipient user not found:', { recipientId });
+      throw new Error(`Recipient user not found: ${recipientId}`);
+    }
+
+    console.log('[CHAT_USER_VALIDATION_1229] Valid users found:', {
+      senderId,
+      recipientId,
+      recipientEmail: recipientUser[0].email
+    });
+
     // Sanitize optional fields: convert empty strings and invalid types to null
     const normalizedLoadId =
       typeof loadId === 'number' && Number.isFinite(loadId) ? loadId : null;
