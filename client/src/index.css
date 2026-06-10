@@ -364,6 +364,19 @@
     min-width: 0;
   }
 
+  mark {
+    background-color: #FCD34D;
+    color: #0F172A;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+  }
+
+  .dark mark {
+    background-color: #FBBF24;
+    color: #0F172A;
+  }
+
   @media (min-width: 640px) {
     .container {
       padding-left: 1.5rem;

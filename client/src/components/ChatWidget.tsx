@@ -37,6 +37,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const [messageText, setMessageText] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [lastDebugAction, setLastDebugAction] = useState<string>("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -134,6 +135,31 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       (chat.name || "").toLowerCase().includes(effectiveSearchQuery)
     );
   }, [safeChats, effectiveSearchQuery]);
+
+  // Filter messages based on message search query
+  const filteredMessages = useMemo(() => {
+    if (!messageSearchQuery.trim()) {
+      return safeMessages;
+    }
+    const query = messageSearchQuery.toLowerCase();
+    return safeMessages.filter((msg: any) =>
+      (msg.message || msg.content || "").toLowerCase().includes(query)
+    );
+  }, [safeMessages, messageSearchQuery]);
+
+  const messageSearchResultCount = filteredMessages.length;
+
+  // Helper function to highlight search text in message
+  const highlightText = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, idx) => 
+      part.toLowerCase() === query.toLowerCase() 
+        ? `<mark key=${idx}>${part}</mark>` 
+        : part
+    ).join('');
+  };
 
   const totalUnread = useMemo(() => {
     // Use unreadBySender if available for more accurate count
@@ -496,7 +522,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
         {activeContact ? (
           <>
             <div className="border-b border-border px-5 py-4">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="relative">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                     <UserRound className="h-5 w-5 text-primary" />
@@ -512,6 +538,34 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                   </p>
                 </div>
               </div>
+              
+              <div className="relative mb-2">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar mensajes..."
+                  value={messageSearchQuery}
+                  onChange={(e) => setMessageSearchQuery(e.target.value)}
+                  className="pl-9 pr-9 h-8 text-sm"
+                  aria-label="Buscar mensajes"
+                />
+                {messageSearchQuery && (
+                  <button
+                    onClick={() => setMessageSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Limpiar búsqueda"
+                  >
+                    <span className="text-lg leading-none">×</span>
+                  </button>
+                )}
+              </div>
+              
+              {messageSearchQuery && (
+                <p className="text-xs text-muted-foreground">
+                  {messageSearchResultCount > 0
+                    ? `${messageSearchResultCount} ${messageSearchResultCount === 1 ? "resultado" : "resultados"}`
+                    : "Sin resultados"}
+                </p>
+              )}
             </div>
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
@@ -530,9 +584,19 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                     Inicia la conversación con este chofer.
                   </p>
                 </div>
+              ) : messageSearchQuery && filteredMessages.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <MessageSquare className="mb-3 h-10 w-10 text-muted-foreground/50" />
+                  <p className="text-sm font-medium text-foreground">
+                    Sin resultados
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    No se encontraron mensajes que coincidan con tu búsqueda.
+                  </p>
+                </div>
               ) : (
                 <div className="space-y-3">
-                  {safeMessages.map((msg: any) => {
+                  {filteredMessages.map((msg: any) => {
                     const isOwn = msg.senderId === user?.id;
 
                     return (
@@ -548,7 +612,13 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                           }`}
                         >
                           <p className="whitespace-pre-wrap break-words">
-                            {msg.message || msg.content || ""}
+                            {messageSearchQuery ? (
+                              <span dangerouslySetInnerHTML={{
+                                __html: highlightText(msg.message || msg.content || "", messageSearchQuery)
+                              }} />
+                            ) : (
+                              msg.message || msg.content || ""
+                            )}
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-2">
                             <p
