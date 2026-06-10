@@ -122,10 +122,11 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     console.log('[Chat] Driver selecting dispatch/owner');
     // For driver, select owner/admin (usually id=1)
     const ownerId = 1;
+    console.log('[Chat] Setting activeContact to owner:', { ownerId, currentUserId: user?.id });
     setActiveContact({
       id: ownerId,
       name: "WV Dispatch",
-      email: user?.email,
+      email: "dispatch@wvtransports.com",
       role: "owner",
       isVirtual: true,
     });
@@ -179,12 +180,18 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     }
   }, [safeMessages]);
 
-  // Auto-select first chat if none selected
+  // Auto-select first chat if none selected, or dispatch for drivers
   useEffect(() => {
-    if (!activeContact && filteredChats.length > 0) {
-      handleSelectExistingChat(filteredChats[0]);
+    if (!activeContact) {
+      if (user?.role === 'driver') {
+        // Driver: auto-select WV Dispatch
+        handleSelectDispatch();
+      } else if (filteredChats.length > 0) {
+        // Owner/admin: auto-select first chat
+        handleSelectExistingChat(filteredChats[0]);
+      }
     }
-  }, [filteredChats, activeContact]);
+  }, [filteredChats, activeContact, user?.role]);
 
   return (
     <div className="flex h-[560px] overflow-hidden rounded-xl border border-border bg-card">

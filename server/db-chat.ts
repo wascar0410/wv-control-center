@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { chatMessages, chatConversations, chatParticipants, chatNotifications, users } from "../drizzle/schema";
-import { eq, and, or, desc, sql } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql } from "drizzle-orm";
 
 /**
  * Send a direct message between dispatcher and driver
@@ -162,7 +162,7 @@ export async function getDirectMessages(userId1: number, userId2: number, limit 
         and(eq(chatMessages.senderId, userId2), eq(chatMessages.recipientId, userId1))
       )
     )
-    .orderBy(desc(chatMessages.createdAt))
+    .orderBy(asc(chatMessages.createdAt))
     .limit(limit)
     .offset(offset);
 }
