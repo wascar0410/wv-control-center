@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,7 +43,11 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
 
   const { data: recentChats, isLoading: isLoadingChats } = trpc.chat.getRecentChats.useQuery(
     { limit: 50 },
-    { enabled: !!user, retry: false }
+    { 
+      enabled: !!user, 
+      retry: false,
+      refetchInterval: 12000, // Poll every 12 seconds for unread updates
+    }
   );
 
   const { data: messages, isLoading: isLoadingMessages } = trpc.chat.getMessages.useQuery(
@@ -51,9 +55,16 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     { enabled: !!activeContact?.id && !!user, retry: false }
   );
 
+  const { data: unreadBySender } = trpc.chat.getUnreadBySender.useQuery(undefined, {
+    enabled: !!user,
+    retry: false,
+    refetchInterval: 15000, // Poll every 15 seconds for unread count updates
+  });
+
   // Define safe arrays BEFORE using them in queries
   const safeChats = Array.isArray(recentChats) ? recentChats : [];
   const safeMessages = Array.isArray(messages) ? messages : [];
+  const safeUnreadBySender = Array.isArray(unreadBySender) ? unreadBySender : [];
 
   const { data: availableDrivers, isLoading: isLoadingDrivers } = trpc.admin.getDrivers.useQuery(
     { limit: 100, offset: 0 },
@@ -73,6 +84,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       console.error('[Chat] markAsRead error:', err);
     },
   });
+
 
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onSuccess: async (data) => {
@@ -100,8 +112,12 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   }, [safeChats, effectiveSearchQuery]);
 
   const totalUnread = useMemo(() => {
+    // Use unreadBySender if available for more accurate count
+    if (safeUnreadBySender.length > 0) {
+      return safeUnreadBySender.reduce((sum, item) => sum + (item.unreadCount || 0), 0);
+    }
     return safeChats.reduce((sum, chat) => sum + (chat.unreadCount || 0), 0);
-  }, [safeChats]);
+  }, [safeChats, safeUnreadBySender]);
 
   const handleSelectExistingChat = (chat: any) => {
     // For existing chats, derive the other participant's user ID
