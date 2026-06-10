@@ -10,9 +10,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Search, Users, Wifi } from "lucide-react";
 
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { useState } from "react";
+
 // Accept route props from Wouter (no custom props needed)
 export default function Chat() {
   const [search, setSearch] = useState("");
+  const { user } = useAuth();
+
+  const { data: activeConversationsCount = 0 } = trpc.chat.getActiveConversationsCount.useQuery(
+    undefined,
+    { enabled: !!user, refetchInterval: 12000 }
+  );
+
+  const { data: onlineDriversCount = 0 } = trpc.chat.getOnlineDriversCount.useQuery(
+    undefined,
+    { enabled: !!user, refetchInterval: 15000 }
+  );
 
   return (
     <section className="space-y-6" aria-labelledby="chat-page-title">
@@ -48,7 +63,7 @@ export default function Chat() {
                   Conversaciones
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  0 conversaciones
+                  {activeConversationsCount} {activeConversationsCount === 1 ? 'conversación' : 'conversaciones'}
                 </p>
               </div>
             </CardContent>
@@ -64,7 +79,7 @@ export default function Chat() {
                   En línea
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  0 en línea
+                  {onlineDriversCount} en línea
                 </p>
               </div>
             </CardContent>

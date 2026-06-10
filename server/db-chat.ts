@@ -168,7 +168,7 @@ export async function getDirectMessages(userId1: number, userId2: number, limit 
 }
 
 /**
- * Get recent chats for a user with unread count per contact
+ * Get recent chats for a user with unread count per contact and user info
  */
 export async function getRecentChats(userId: number, limit = 20) {
   const db = await getDb();
@@ -176,7 +176,7 @@ export async function getRecentChats(userId: number, limit = 20) {
     throw new Error('Database connection unavailable');
   }
 
-  console.log('[CHAT_RECENT_CHATS_UNREAD_V1] Getting recent chats for user:', userId);
+  console.log('[CHAT_RECENT_CHATS_POLISH_V1] Getting recent chats for user:', userId);
 
   // Get unique contacts from recent messages
   const recentMessages = await db
@@ -194,9 +194,11 @@ export async function getRecentChats(userId: number, limit = 20) {
   // Group by contact and get latest message + unread count
   const contactMap = new Map();
   const unreadByContact = new Map<number, number>();
+  const contactIds = new Set<number>();
   
   for (const msg of recentMessages) {
     const contactId = msg.senderId === userId ? msg.recipientId : msg.senderId;
+    contactIds.add(contactId);
     
     // Track latest message
     if (!contactMap.has(contactId)) {
@@ -210,15 +212,56 @@ export async function getRecentChats(userId: number, limit = 20) {
     }
   }
 
-  // Build result with unread counts
+  // Exclude self-contact
+  contactIds.delete(userId);
+
+  // Fetch user info for all contacts
+  const contactUserIds = Array.from(contactIds);
+  let contactUsers: any[] = [];
+  
+  if (contactUserIds.length > 0) {
+    contactUsers = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        role: users.role,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(sql`${users.id} IN (${sql.raw(contactUserIds.join(','))})`)
+      .execute();
+  }
+
+  const userMap = new Map();
+  for (const user of contactUsers) {
+    userMap.set(user.id, user);
+  }
+
+  // Build result with normalized contact data
   const result = Array.from(contactMap.entries())
-    .map(([contactId, msg]: [number, any]) => ({
-      ...msg,
-      unreadCount: unreadByContact.get(contactId) || 0,
-    }))
+    .filter(([contactId]) => contactId !== userId) // Exclude self-contact
+    .map(([contactId, msg]: [number, any]) => {
+      const contactUser = userMap.get(contactId);
+      const contactName = contactUser?.name || contactUser?.email || `Chofer #${contactId}`;
+      const isOnline = contactUser?.updatedAt ? 
+        (Date.now() - new Date(contactUser.updatedAt).getTime()) < 5 * 60 * 1000 : // 5 min threshold
+        false;
+      
+      return {
+        contactUserId: contactId,
+        name: contactName,
+        email: contactUser?.email || '',
+        role: contactUser?.role || 'driver',
+        unreadCount: unreadByContact.get(contactId) || 0,
+        lastMessage: msg.message,
+        lastMessageAt: msg.createdAt,
+        isOnline,
+      };
+    })
     .slice(0, limit);
 
-  console.log('[CHAT_RECENT_CHATS_UNREAD_V1] Result:', result.map(r => ({ contactId: r.senderId === userId ? r.recipientId : r.senderId, unreadCount: r.unreadCount })));
+  console.log('[CHAT_RECENT_CHATS_POLISH_V1] Result:', result.map(r => ({ contactUserId: r.contactUserId, name: r.name, unreadCount: r.unreadCount })));
   return result;
 }
 
@@ -439,4 +482,63 @@ export async function getUserConversations(userId: number) {
     .from(chatConversations)
     .innerJoin(chatParticipants, eq(chatConversations.id, chatParticipants.conversationId))
     .where(eq(chatParticipants.userId, userId));
+}
+
+
+/**
+ * Get active conversations count for a user (unique contacts)
+ */
+export async function getActiveConversationsCount(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  const recentMessages = await db
+    .select()
+    .from(chatMessages)
+    .where(
+      or(
+        eq(chatMessages.senderId, userId),
+        eq(chatMessages.recipientId, userId)
+      )
+    )
+    .orderBy(desc(chatMessages.createdAt))
+    .limit(100);
+
+  // Count unique contacts (excluding self)
+  const contactIds = new Set<number>();
+  for (const msg of recentMessages) {
+    const contactId = msg.senderId === userId ? msg.recipientId : msg.senderId;
+    if (contactId !== userId) {
+      contactIds.add(contactId);
+    }
+  }
+
+  return contactIds.size;
+}
+
+/**
+ * Get online drivers count (users with recent activity)
+ */
+export async function getOnlineDriversCount() {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  // Get drivers with recent activity (last 5 minutes)
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  
+  const onlineDrivers = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(
+      and(
+        eq(users.role, 'driver'),
+        sql`${users.updatedAt} > ${fiveMinutesAgo}`
+      )
+    );
+
+  return onlineDrivers.length;
 }

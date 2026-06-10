@@ -14,6 +14,8 @@ import {
   addParticipant,
   getConversationMessages,
   getUserConversations,
+  getActiveConversationsCount,
+  getOnlineDriversCount,
 } from "../db-chat";
 
 export const chatRouter = router({
@@ -187,5 +189,19 @@ export const chatRouter = router({
    */
   getConversations: protectedProcedure.query(async ({ ctx }) => {
     return await getUserConversations(ctx.user.id);
+  }),
+
+  /**
+   * Get active conversations count
+   */
+  getActiveConversationsCount: protectedProcedure.query(async ({ ctx }) => {
+    return await getActiveConversationsCount(ctx.user.id);
+  }),
+
+  /**
+   * Get online drivers count
+   */
+  getOnlineDriversCount: protectedProcedure.query(async () => {
+    return await getOnlineDriversCount();
   }),
 });
