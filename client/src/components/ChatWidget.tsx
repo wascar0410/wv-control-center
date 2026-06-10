@@ -19,6 +19,7 @@ interface ActiveContact {
   email?: string;
   role?: string;
   isVirtual?: boolean;
+  // isOnline removed - not part of core chat data
 }
 
 interface ChatWidgetProps {
@@ -101,7 +102,6 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     setActiveContact({
       id: otherParticipantId,
       name: chat.name,
-      isOnline: chat.isOnline,
     });
     setLastDebugAction("chat_selected");
   };
@@ -344,11 +344,6 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                     <UserRound className="h-5 w-5 text-primary" />
                   </div>
-                  <Circle
-                    className={`absolute -bottom-0.5 -right-0.5 h-4 w-4 fill-current ${
-                      activeContact.isOnline ? "text-emerald-500" : "text-slate-400"
-                    }`}
-                  />
                 </div>
 
                 <div className="min-w-0">
@@ -356,7 +351,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                     {activeContact.name || "Chat"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {activeContact.isOnline ? "En línea" : "Desconectado"}
+                    Conectado
                   </p>
                 </div>
               </div>

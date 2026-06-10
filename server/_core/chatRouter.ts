@@ -6,6 +6,7 @@ import {
   markMessagesAsRead,
   getUnreadMessageCount,
   getUnreadMessagesBySender,
+  getUnreadCountBySender,
   getRecentChats,
   deleteMessage,
   searchMessages,
@@ -102,7 +103,7 @@ export const chatRouter = router({
    * Get unread messages grouped by sender
    */
   getUnreadBySender: protectedProcedure.query(async ({ ctx }) => {
-    return await getUnreadMessagesBySender(ctx.user.id);
+    return await getUnreadCountBySender(ctx.user.id);
   }),
 
   /**

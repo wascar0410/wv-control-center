@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { trpc } from "@/lib/trpc";
+import type { UserRole } from "@/lib/routeUtils";
 
 export type AuthUser = {
   id: number;
   name: string | null;
   email: string | null;
-  role: string;
+  role: UserRole;
   profileImageUrl?: string | null;
 };
 

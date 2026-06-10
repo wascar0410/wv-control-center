@@ -168,13 +168,15 @@ export async function getDirectMessages(userId1: number, userId2: number, limit 
 }
 
 /**
- * Get recent chats for a user
+ * Get recent chats for a user with unread count per contact
  */
 export async function getRecentChats(userId: number, limit = 20) {
   const db = await getDb();
   if (!db) {
     throw new Error('Database connection unavailable');
   }
+
+  console.log('[CHAT_RECENT_CHATS_UNREAD_V1] Getting recent chats for user:', userId);
 
   // Get unique contacts from recent messages
   const recentMessages = await db
@@ -189,16 +191,35 @@ export async function getRecentChats(userId: number, limit = 20) {
     .orderBy(desc(chatMessages.createdAt))
     .limit(100);
 
-  // Group by contact and get latest message
+  // Group by contact and get latest message + unread count
   const contactMap = new Map();
+  const unreadByContact = new Map<number, number>();
+  
   for (const msg of recentMessages) {
     const contactId = msg.senderId === userId ? msg.recipientId : msg.senderId;
+    
+    // Track latest message
     if (!contactMap.has(contactId)) {
       contactMap.set(contactId, msg);
     }
+    
+    // Count unread from this contact (only if they sent it and it's unread)
+    if (msg.senderId === contactId && msg.recipientId === userId && !msg.isRead) {
+      const count = unreadByContact.get(contactId) || 0;
+      unreadByContact.set(contactId, count + 1);
+    }
   }
 
-  return Array.from(contactMap.values()).slice(0, limit);
+  // Build result with unread counts
+  const result = Array.from(contactMap.entries())
+    .map(([contactId, msg]: [number, any]) => ({
+      ...msg,
+      unreadCount: unreadByContact.get(contactId) || 0,
+    }))
+    .slice(0, limit);
+
+  console.log('[CHAT_RECENT_CHATS_UNREAD_V1] Result:', result.map(r => ({ contactId: r.senderId === userId ? r.recipientId : r.senderId, unreadCount: r.unreadCount })));
+  return result;
 }
 
 /**
@@ -227,6 +248,8 @@ export async function markMessagesAsRead(userId: number, senderId: number) {
     throw new Error('Database connection unavailable');
   }
 
+  console.log('[CHAT_MARK_AS_READ_V1] Marking messages as read:', { userId, senderId });
+
   return db
     .update(chatMessages)
     .set({ isRead: true })
@@ -254,6 +277,39 @@ export async function getUnreadMessagesBySender(userId: number, senderId: number
     .select()
     .from(chatMessages)
     .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.senderId, senderId), eq(chatMessages.isRead, false)));
+}
+
+/**
+ * Get unread count grouped by sender for a user
+ */
+export async function getUnreadCountBySender(userId: number) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error('Database connection unavailable');
+  }
+
+  console.log('[CHAT_UNREAD_COUNT_V1] Getting unread count by sender for user:', userId);
+
+  const unreadMessages = await db
+    .select()
+    .from(chatMessages)
+    .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.isRead, false)));
+
+  // Group by senderId and count
+  const unreadBySender = new Map<number, number>();
+  for (const msg of unreadMessages) {
+    const count = unreadBySender.get(msg.senderId) || 0;
+    unreadBySender.set(msg.senderId, count + 1);
+  }
+
+  // Convert to array of { senderId, unreadCount }
+  const result = Array.from(unreadBySender.entries()).map(([senderId, unreadCount]) => ({
+    senderId,
+    unreadCount,
+  }));
+
+  console.log('[CHAT_UNREAD_COUNT_V1] Result:', result);
+  return result;
 }
 
 /**
@@ -298,33 +354,42 @@ export async function searchMessages(userId: number, query: string) {
       )
     );
 
-  return allMessages.filter(msg => msg.message.toLowerCase().includes(query.toLowerCase()));
+  return allMessages.filter((msg: any) =>
+    msg.message.toLowerCase().includes(query.toLowerCase())
+  );
 }
 
 /**
- * Create a conversation
+ * Create a group conversation
  */
-export async function createConversation(participantIds: number[], name?: string) {
+export async function createConversation(
+  userId: number,
+  title: string,
+  description?: string,
+  loadId?: number
+) {
   const db = await getDb();
   if (!db) {
     throw new Error('Database connection unavailable');
   }
 
-  try {
-    const result = await db.insert(chatConversations).values({
-      name: name || `Conversation ${Date.now()}`,
-    });
+  const conversation = await db.insert(chatConversations).values({
+    title,
+    description,
+    loadId,
+  });
 
-    console.log('[Chat] Conversation created:', { result });
-    return result;
-  } catch (error) {
-    console.error('[Chat] Failed to create conversation:', error);
-    throw error;
-  }
+  // Add creator as participant
+  await db.insert(chatParticipants).values({
+    conversationId: (conversation as any)[0],
+    userId,
+  });
+
+  return conversation;
 }
 
 /**
- * Add participant to a conversation
+ * Add participant to conversation
  */
 export async function addParticipant(conversationId: number, userId: number) {
   const db = await getDb();
@@ -332,24 +397,20 @@ export async function addParticipant(conversationId: number, userId: number) {
     throw new Error('Database connection unavailable');
   }
 
-  try {
-    const result = await db.insert(chatParticipants).values({
-      conversationId,
-      userId,
-    });
-
-    console.log('[Chat] Participant added:', { conversationId, userId });
-    return result;
-  } catch (error) {
-    console.error('[Chat] Failed to add participant:', error);
-    throw error;
-  }
+  return db.insert(chatParticipants).values({
+    conversationId,
+    userId,
+  });
 }
 
 /**
- * Get messages in a conversation
+ * Get conversation messages
  */
-export async function getConversationMessages(conversationId: number, limit = 50, offset = 0) {
+export async function getConversationMessages(
+  conversationId: number,
+  limit = 50,
+  offset = 0
+) {
   const db = await getDb();
   if (!db) {
     throw new Error('Database connection unavailable');
@@ -358,16 +419,16 @@ export async function getConversationMessages(conversationId: number, limit = 50
   return db
     .select()
     .from(chatMessages)
-    .where(eq(chatMessages.loadId, conversationId))
-    .orderBy(desc(chatMessages.createdAt))
+    .where(eq(chatMessages.id, conversationId))
+    .orderBy(asc(chatMessages.createdAt))
     .limit(limit)
     .offset(offset);
 }
 
 /**
- * Get all conversations for a user
+ * Get user's conversations
  */
-export async function getUserConversations(userId: number, limit = 20) {
+export async function getUserConversations(userId: number) {
   const db = await getDb();
   if (!db) {
     throw new Error('Database connection unavailable');
@@ -376,12 +437,6 @@ export async function getUserConversations(userId: number, limit = 20) {
   return db
     .select()
     .from(chatConversations)
-    .where(
-      eq(chatConversations.id,
-        db.select(chatParticipants.conversationId)
-          .from(chatParticipants)
-          .where(eq(chatParticipants.userId, userId))
-      )
-    )
-    .limit(limit);
+    .innerJoin(chatParticipants, eq(chatConversations.id, chatParticipants.conversationId))
+    .where(eq(chatParticipants.userId, userId));
 }

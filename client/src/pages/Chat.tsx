@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChatWidget } from "@/components/ChatWidget";
 import {
   Card,
@@ -10,30 +10,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { MessageSquare, Search, Users, Wifi } from "lucide-react";
 
-type ChatProps = {
-  activeConversationsCount?: number;
-  onlineDriversCount?: number;
-};
-
-export default function Chat({
-  activeConversationsCount = 0,
-  onlineDriversCount = 0,
-}: ChatProps) {
+// Accept route props from Wouter (no custom props needed)
+export default function Chat() {
   const [search, setSearch] = useState("");
-
-  const summary = useMemo(() => {
-    return {
-      activeConversationsLabel:
-        activeConversationsCount === 1
-          ? "1 conversación activa"
-          : `${activeConversationsCount} conversaciones activas`,
-
-      onlineDriversLabel:
-        onlineDriversCount === 1
-          ? "1 chofer en línea"
-          : `${onlineDriversCount} choferes en línea`,
-    };
-  }, [activeConversationsCount, onlineDriversCount]);
 
   return (
     <section className="space-y-6" aria-labelledby="chat-page-title">
@@ -69,7 +48,7 @@ export default function Chat({
                   Conversaciones
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {summary.activeConversationsLabel}
+                  0 conversaciones
                 </p>
               </div>
             </CardContent>
@@ -85,7 +64,7 @@ export default function Chat({
                   En línea
                 </p>
                 <p className="text-sm font-semibold text-foreground">
-                  {summary.onlineDriversLabel}
+                  0 en línea
                 </p>
               </div>
             </CardContent>
