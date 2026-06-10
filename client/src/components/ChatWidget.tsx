@@ -83,9 +83,26 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     { 
       enabled: !!(activeContact?.contactUserId || activeContact?.id) && !!user, 
       retry: false,
-      refetchInterval: 2500, // Poll every 2.5 seconds
+      refetchInterval: 2500,
+      onSuccess: (data) => {
+        console.log('[CHAT_TYPING_V1_CLIENT_GET]', JSON.stringify({
+          currentUserId: user?.id,
+          activeContactId: activeContact?.contactUserId || activeContact?.id || 0,
+          typingStatus: data,
+        }));
+      },
     }
   );
+
+  // Log when typing indicator should render
+  React.useEffect(() => {
+    if (typingStatus?.isTyping && activeContact) {
+      console.log('[CHAT_TYPING_V1_RENDER]', JSON.stringify({
+        activeContactName: activeContact.name,
+        shouldShowTypingIndicator: true,
+      }));
+    }
+  }, [typingStatus?.isTyping, activeContact]);
 
   const setTypingMutation = trpc.chat.setTyping.useMutation();
 
@@ -600,13 +617,19 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                   value={messageText}
                   onChange={(e) => {
                     setMessageText(e.target.value);
-                    // Debounce typing notification: send every 1.5s
                     const now = Date.now();
                     if (now - lastTypingNotificationRef.current > 1500) {
                       lastTypingNotificationRef.current = now;
+                      const contactId = activeContact?.contactUserId || activeContact?.id || 0;
                       if (e.target.value.trim()) {
+                        console.log('[CHAT_TYPING_V1_CLIENT_SET]', JSON.stringify({
+                          currentUserId: currentUser?.id,
+                          activeContactId: contactId,
+                          textLength: e.target.value.length,
+                          isTyping: true,
+                        }));
                         setTypingMutation.mutate({
-                          contactId: activeContact?.contactUserId || activeContact?.id || 0,
+                          contactId,
                           isTyping: true,
                         });
                       }
