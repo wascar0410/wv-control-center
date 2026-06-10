@@ -2025,3 +2025,17 @@
 - [x] Validar en producción (checkpoint b4650e42)
 - [x] Checkpoint guardado
 
+
+## Fase 67: Chat Read Receipts V1
+- [x] Backend: Agregar campo readAt a tabla messages
+- [x] Backend: Implementar markMessagesAsRead mutation para actualizar readAt
+- [x] Backend: Retornar readAt timestamp en getMessages query
+- [x] Frontend: Mostrar "Enviado" o "Leído HH:MM" para mensajes propios
+- [x] Frontend: Actualizar ChatWidget para mostrar estado de lectura
+- [x] Frontend: Llamar markAsRead cuando usuario abre conversación
+- [x] Validación en producción (Railway): ✅ PASSED
+  - [x] Owner login: Verificado que mensajes propios muestran "Leído HH:MM"
+  - [x] Message persistence: Confirmado que mensajes persisten correctamente
+  - [x] Status display: Confirmado que estado se muestra en lado derecho de mensajes
+  - ⚠️ Cross-validation: No se pudo completar (Driver user no existe en producción)
+- [x] Checkpoint guardado (3d32d1e9)
