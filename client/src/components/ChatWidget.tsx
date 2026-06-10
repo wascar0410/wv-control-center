@@ -292,6 +292,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     }
 
     // Check if there are unread messages from this contact
+    console.log('[CHAT_AUTO_MARK_V2] Checking messages. contactId:', contactId, 'safeMessages:', safeMessages.map((m: any) => ({ id: m.id, senderId: m.senderId, isRead: m.isRead })));
     const unreadMessages = safeMessages.filter(
       (msg: any) => msg.senderId === contactId && !msg.isRead
     );
