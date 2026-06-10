@@ -204,4 +204,61 @@ export const chatRouter = router({
   getOnlineDriversCount: protectedProcedure.query(async () => {
     return await getOnlineDriversCount();
   }),
+
+  /**
+   * Set typing status
+   */
+  setTyping: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        isTyping: z.boolean(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const conversationKey = `${Math.min(ctx.user.id, input.contactId)}:${Math.max(ctx.user.id, input.contactId)}`;
+      
+      if (input.isTyping) {
+        const typingState = {
+          userId: ctx.user.id,
+          recipientId: input.contactId,
+          expiresAt: Date.now() + 5000,
+        };
+        (global as any).typingIndicators = (global as any).typingIndicators || new Map();
+        (global as any).typingIndicators.set(conversationKey, typingState);
+        console.log('[CHAT_TYPING_V1] User', ctx.user.id, 'is typing to', input.contactId);
+      } else {
+        (global as any).typingIndicators = (global as any).typingIndicators || new Map();
+        (global as any).typingIndicators.delete(conversationKey);
+        console.log('[CHAT_TYPING_V1] User', ctx.user.id, 'stopped typing to', input.contactId);
+      }
+      
+      return { success: true };
+    }),
+
+  /**
+   * Get typing status for a contact
+   */
+  getTypingStatus: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const conversationKey = `${Math.min(ctx.user.id, input.contactId)}:${Math.max(ctx.user.id, input.contactId)}`;
+      
+      (global as any).typingIndicators = (global as any).typingIndicators || new Map();
+      const typingState = (global as any).typingIndicators.get(conversationKey);
+      
+      if (typingState && typingState.expiresAt > Date.now()) {
+        if (typingState.userId === input.contactId) {
+          return {
+            isTyping: true,
+            userId: typingState.userId,
+            recipientId: typingState.recipientId,
+          };
+        }
+      } else if (typingState) {
+        (global as any).typingIndicators.delete(conversationKey);
+      }
+      
+      return { isTyping: false };
+    }),
 });

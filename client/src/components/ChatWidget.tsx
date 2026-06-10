@@ -42,6 +42,8 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   // Loop prevention: track last marked read key to avoid duplicate calls
   const lastMarkedReadKeyRef = useRef<string>("");
+  // Typing indicator: track last typing notification time
+  const lastTypingNotificationRef = useRef<number>(0);
 
   const effectiveSearchQuery = (search || localSearchQuery).trim().toLowerCase();
 
@@ -74,6 +76,18 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     { limit: 100, offset: 0 },
     { enabled: !!user && user.role !== "driver" && safeChats.length === 0, retry: false }
   );
+
+  // Typing indicator queries and mutations
+  const { data: typingStatus } = trpc.chat.getTypingStatus.useQuery(
+    { contactId: activeContact?.contactUserId || activeContact?.id || 0 },
+    { 
+      enabled: !!(activeContact?.contactUserId || activeContact?.id) && !!user, 
+      retry: false,
+      refetchInterval: 2500, // Poll every 2.5 seconds
+    }
+  );
+
+  const setTypingMutation = trpc.chat.setTyping.useMutation();
 
   const markAsReadMutation = trpc.chat.markAsRead.useMutation({
     onSuccess: async () => {
@@ -203,6 +217,12 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       setLastDebugAction("send_error_no_contact");
       return;
     }
+
+    // Clear typing indicator when sending message
+    setTypingMutation.mutate({
+      contactId,
+      isTyping: false,
+    });
 
     const recipientId = contactId;
     const messageToSend = messageText.trim();
@@ -568,11 +588,30 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
               )}
             </div>
 
+            {typingStatus?.isTyping && (
+              <div className="border-t border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground italic">
+                {activeContact?.name} está escribiendo...
+              </div>
+            )}
+
             <div className="border-t border-border p-4">
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <Input
                   value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
+                  onChange={(e) => {
+                    setMessageText(e.target.value);
+                    // Debounce typing notification: send every 1.5s
+                    const now = Date.now();
+                    if (now - lastTypingNotificationRef.current > 1500) {
+                      lastTypingNotificationRef.current = now;
+                      if (e.target.value.trim()) {
+                        setTypingMutation.mutate({
+                          contactId: activeContact?.contactUserId || activeContact?.id || 0,
+                          isTyping: true,
+                        });
+                      }
+                    }
+                  }}
                   placeholder="Escribe un mensaje..."
                   disabled={isSending}
                   aria-label="Escribir mensaje"
