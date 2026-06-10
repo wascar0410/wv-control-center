@@ -102,7 +102,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
         shouldShowTypingIndicator: true,
       }));
     }
-  }, [typingStatus?.isTyping, activeContact]);
+  }, [typingStatus?.isTyping, activeContact?.id]);
 
   const setTypingMutation = trpc.chat.setTyping.useMutation();
 
