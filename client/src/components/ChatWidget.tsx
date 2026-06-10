@@ -124,7 +124,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const handleSelectExistingChat = (chat: any) => {
     // Use normalized contactUserId from getRecentChats
     const contactUserId = chat.contactUserId || (chat.senderId === user?.id ? chat.recipientId : chat.senderId);
-    console.log('[Chat] Selecting existing chat:', {
+    console.log('[CHAT_USER_SELECT_MARK_READ] User explicitly selecting chat:', {
       contactUserId,
       name: chat.name,
       unreadCount: chat.unreadCount
@@ -140,8 +140,9 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     });
     setLastDebugAction("chat_selected");
     
-    // Mark messages from this contact as read
+    // Mark messages from this contact as read ONLY on explicit user click
     if (chat.unreadCount && chat.unreadCount > 0) {
+      console.log('[CHAT_MARK_AS_READ_V1] Marking as read for contactId:', contactUserId);
       markAsReadMutation.mutate({ contactId: contactUserId });
     }
   };
@@ -227,14 +228,39 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   }, [safeMessages]);
 
   // Auto-select first chat if none selected, or dispatch for drivers
+  // NOTE: Auto-select does NOT mark as read - only explicit user clicks do
   useEffect(() => {
     if (!activeContact && safeChats.length > 0) {
       if (user?.role === 'driver') {
-        // Driver: auto-select WV Dispatch
-        handleSelectDispatch();
+        // Driver: auto-select WV Dispatch WITHOUT marking as read
+        console.log('[CHAT_AUTO_SELECT_NO_MARK_READ] Driver auto-selecting dispatch');
+        const dispatchContact = safeChats.find(c => c.role === 'owner' || c.name?.includes('Dispatch'));
+        const ownerId = dispatchContact?.contactUserId || 1;
+        setActiveContact({
+          contactUserId: ownerId,
+          id: ownerId,
+          name: dispatchContact?.name || 'WV Dispatch',
+          email: dispatchContact?.email || 'dispatch@wvtransports.com',
+          role: 'owner',
+          isOnline: dispatchContact?.isOnline ?? true,
+          isVirtual: true,
+        });
+        setLastDebugAction('dispatch_auto_selected');
       } else if (filteredChats.length > 0) {
-        // Owner/admin: auto-select first chat
-        handleSelectExistingChat(filteredChats[0]);
+        // Owner/admin: auto-select first chat WITHOUT marking as read
+        console.log('[CHAT_AUTO_SELECT_NO_MARK_READ] Owner auto-selecting first chat');
+        const firstChat = filteredChats[0];
+        const contactUserId = firstChat.contactUserId || (firstChat.senderId === user?.id ? firstChat.recipientId : firstChat.senderId);
+        setActiveContact({
+          contactUserId,
+          id: contactUserId,
+          name: firstChat.name || `Chofer #${contactUserId}`,
+          email: firstChat.email || '',
+          role: firstChat.role || 'driver',
+          isOnline: firstChat.isOnline,
+          unreadCount: firstChat.unreadCount,
+        });
+        setLastDebugAction('chat_auto_selected');
       }
     }
   }, [filteredChats, activeContact, user?.role, safeChats.length]);
