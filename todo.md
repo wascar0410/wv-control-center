@@ -642,12 +642,12 @@
 - [ ] Probar y validar
 
 ## Fase 63: Chat Dispatcher-Chofer
-- [ ] Crear tabla de mensajes en BD
-- [ ] Crear backend para gestión de mensajes
-- [ ] Crear endpoint tRPC para chat
-- [ ] Crear UI de chat integrada
-- [ ] Integrar WebSocket para mensajes en tiempo real
-- [ ] Probar y validar
+- [x] Crear tabla de mensajes en BD
+- [x] Crear backend para gestión de mensajes
+- [x] Crear endpoint tRPC para chat
+- [x] Crear UI de chat integrada
+- [x] Integrar WebSocket para mensajes en tiempo real (polling 12-15s)
+- [x] Probar y validar
 
 ## Fase 64: Reporte de Utilización de Choferes
 - [ ] Crear backend helper para cálculo de métricas
