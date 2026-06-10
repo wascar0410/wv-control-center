@@ -60,6 +60,20 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     { enabled: !!user && user.role !== "driver" && safeChats.length === 0, retry: false }
   );
 
+  const markAsReadMutation = trpc.chat.markAsRead.useMutation({
+    onSuccess: async () => {
+      console.log('[Chat] markAsRead success');
+      // Refresh unread counts
+      await Promise.all([
+        utils.chat.getRecentChats.invalidate(),
+        utils.chat.getUnreadBySender.invalidate(),
+      ]);
+    },
+    onError: (err) => {
+      console.error('[Chat] markAsRead error:', err);
+    },
+  });
+
   const sendMessageMutation = trpc.chat.sendMessage.useMutation({
     onSuccess: async (data) => {
       console.log('[Chat Mutation] onSuccess:', data);
@@ -91,11 +105,13 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
 
   const handleSelectExistingChat = (chat: any) => {
     // For existing chats, derive the other participant's user ID
-    // chat.id is the chat/conversation ID, NOT a user ID
-    // We need to find the other participant (senderId or recipientId)
-    const otherParticipantId = chat.otherUserId || chat.recipientId || chat.senderId;
+    // chat.senderId/recipientId are the actual user IDs from the message
+    // Determine which one is NOT the current user
+    const otherParticipantId = chat.senderId === user?.id ? chat.recipientId : chat.senderId;
     console.log('[Chat] Selecting existing chat:', {
-      chatId: chat.id,
+      currentUserId: user?.id,
+      senderId: chat.senderId,
+      recipientId: chat.recipientId,
       otherParticipantId,
       chatName: chat.name
     });
@@ -104,6 +120,11 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       name: chat.name,
     });
     setLastDebugAction("chat_selected");
+    
+    // Mark messages from this contact as read
+    if (chat.unreadCount && chat.unreadCount > 0) {
+      markAsReadMutation.mutate({ contactId: otherParticipantId });
+    }
   };
 
   const handleSelectDriver = (driver: any) => {
@@ -116,6 +137,8 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
       isVirtual: true,
     });
     setLastDebugAction("driver_selected");
+    
+    // No need to mark as read for new conversations
   };
 
   const handleSelectDispatch = () => {
@@ -285,7 +308,9 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
               </div>
             ) : (
               filteredChats.map((chat) => {
-                const isSelected = activeContact?.id === chat.id && !activeContact?.isVirtual;
+                // Determine other participant ID to check if this chat is selected
+                const chatOtherParticipantId = chat.senderId === user?.id ? chat.recipientId : chat.senderId;
+                const isSelected = activeContact?.id === chatOtherParticipantId && !activeContact?.isVirtual;
 
                 return (
                   <button
@@ -302,11 +327,6 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
                           <UserRound className="h-4 w-4 text-primary" />
                         </div>
-                        <Circle
-                          className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 fill-current ${
-                            chat.isOnline ? "text-emerald-500" : "text-slate-400"
-                          }`}
-                        />
                       </div>
 
                       <div className="min-w-0 flex-1">
@@ -323,7 +343,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                         </div>
 
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {chat.isOnline ? "En línea" : "Desconectado"}
+                          Conectado
                         </p>
                       </div>
                     </div>
