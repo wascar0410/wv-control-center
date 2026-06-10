@@ -80,8 +80,8 @@ export const chatRouter = router({
     )
     .query(async ({ input, ctx }) => {
       const messages = await getDirectMessages(ctx.user.id, input.contactId, input.limit, input.offset);
-      // Mark as read
-      await markMessagesAsRead(ctx.user.id, input.contactId);
+      // Note: Do NOT mark as read here - let frontend handle it explicitly via markAsRead mutation
+      // This allows unread badges to appear before user opens the conversation
       return messages;
     }),
 
