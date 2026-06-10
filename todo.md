@@ -2012,3 +2012,16 @@
 - [ ] Resolve owner/driver role access conflicts
 - [ ] Rebuild, deploy to Railway, and validate all routes
 - [ ] Final validation and deliver results
+
+## Fase 66: Chat Presence + Conversation Polish V1
+- [x] Normalizar datos de contacto en getRecentChats (name, email, role, isOnline)
+- [x] Excluir self-contact de la lista de conversaciones
+- [x] Mostrar nombres reales de choferes (fallback: email → Chofer #ID)
+- [x] Mostrar estado online/offline real basado en updatedAt
+- [x] Implementar métricas: activeConversationsCount, onlineDriversCount
+- [x] Actualizar Chat.tsx para mostrar métricas reales con polling
+- [x] Actualizar ChatWidget para usar contactUserId normalizado
+- [x] Agregar polling para actualizaciones de métricas (12-15s)
+- [x] Validar en producción (checkpoint b4650e42)
+- [x] Checkpoint guardado
+

@@ -206,7 +206,7 @@ export async function getRecentChats(userId: number, limit = 20) {
     }
     
     // Count unread from this contact (only if they sent it and it's unread)
-    if (msg.senderId === contactId && msg.recipientId === userId && !msg.isRead) {
+    if (msg.senderId !== userId && msg.recipientId === userId && !msg.isRead) {
       const count = unreadByContact.get(contactId) || 0;
       unreadByContact.set(contactId, count + 1);
     }
