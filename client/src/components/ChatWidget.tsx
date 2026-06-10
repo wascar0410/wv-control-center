@@ -40,6 +40,8 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const [lastDebugAction, setLastDebugAction] = useState<string>("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Loop prevention: track last marked read key to avoid duplicate calls
+  const lastMarkedReadKeyRef = useRef<string>("");
 
   const effectiveSearchQuery = (search || localSearchQuery).trim().toLowerCase();
 
@@ -75,16 +77,21 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
 
   const markAsReadMutation = trpc.chat.markAsRead.useMutation({
     onSuccess: async () => {
-      console.log('[Chat] markAsRead success');
-      // Refresh unread counts and messages to reflect readAt status
-      await Promise.all([
-        utils.chat.getRecentChats.invalidate(),
-        utils.chat.getUnreadBySender.invalidate(),
-        utils.chat.getMessages.invalidate(),  // Invalidate messages cache so UI updates readAt status
-      ]);
+      console.log('[CHAT_MARK_AS_READ_V1] markAsRead success - refetching caches');
+      // Complete refetch to ensure UI updates with readAt status
+      try {
+        await Promise.all([
+          utils.chat.getRecentChats.invalidate(),
+          utils.chat.getUnreadBySender.invalidate(),
+          utils.chat.getMessages.invalidate(),
+        ]);
+        console.log('[CHAT_MARK_AS_READ_V1] Cache invalidation complete');
+      } catch (err) {
+        console.error('[CHAT_MARK_AS_READ_V1] Cache invalidation error:', err);
+      }
     },
     onError: (err) => {
-      console.error('[Chat] markAsRead error:', err);
+      console.error('[CHAT_MARK_AS_READ_V1] markAsRead error:', err);
     },
   });
 
@@ -270,45 +277,59 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   // This triggers AFTER messages are visible in the UI
   useEffect(() => {
     if (!activeContact || !user) {
+      console.log('[CHAT_READ_RECEIPTS_V1] Skipping - no activeContact or user');
       return;
     }
 
     const contactId = activeContact.contactUserId || activeContact.id;
     if (!contactId) {
+      console.log('[CHAT_READ_RECEIPTS_V1] Skipping - no contactId');
       return;
     }
 
-    // Only mark as read if:
-    // 1. Messages are loaded (not loading)
-    // 2. There are unread messages from this contact
+    // Only mark as read if messages are loaded (not loading)
     if (isLoadingMessages) {
-      console.log('[CHAT_AUTO_MARK_READ] Messages still loading, skipping auto-mark');
+      console.log('[CHAT_READ_RECEIPTS_V1] Messages still loading, skipping auto-mark');
       return;
     }
 
     if (safeMessages.length === 0) {
-      console.log('[CHAT_AUTO_MARK_READ] No messages to mark as read');
+      console.log('[CHAT_READ_RECEIPTS_V1] No messages to mark as read');
       return;
     }
 
-    // Check if there are unread messages from this contact
-    console.log('[CHAT_AUTO_MARK_V2] Checking messages. contactId:', contactId, 'safeMessages:', safeMessages.map((m: any) => ({ id: m.id, senderId: m.senderId, isRead: m.isRead })));
-    const unreadMessages = safeMessages.filter(
-      (msg: any) => msg.senderId === contactId && !msg.isRead
+    // Calculate: incomingUnread = messages where senderId=contact AND recipientId=currentUser AND !isRead
+    const incomingUnread = safeMessages.filter(
+      (msg: any) => msg.senderId === contactId && msg.recipientId === user.id && !msg.isRead
     );
 
-    if (unreadMessages.length === 0) {
-      console.log('[CHAT_AUTO_MARK_READ] No unread messages from this contact');
+    if (incomingUnread.length === 0) {
+      console.log('[CHAT_READ_RECEIPTS_V1] No unread incoming messages from this contact');
       return;
     }
 
-    console.log('[CHAT_AUTO_MARK_READ] Auto-marking messages as read:', {
+    // Loop prevention: create key from current state
+    const lastUnreadMessageId = incomingUnread[incomingUnread.length - 1]?.id;
+    const currentKey = `${user.id}:${contactId}:${lastUnreadMessageId}`;
+
+    // Skip if we already marked this exact set of messages
+    if (lastMarkedReadKeyRef.current === currentKey) {
+      console.log('[CHAT_READ_RECEIPTS_V1] Already marked this set of messages, skipping');
+      return;
+    }
+
+    console.log('[CHAT_READ_RECEIPTS_V1] visible incoming unread detected', {
       contactId,
-      unreadCount: unreadMessages.length,
-      messageIds: unreadMessages.map((m: any) => m.id),
+      currentUserId: user.id,
+      unreadCount: incomingUnread.length,
+      messageIds: incomingUnread.map((m: any) => m.id),
     });
 
-    // Trigger auto-mark only once per contact change
+    // Update ref to prevent duplicate calls
+    lastMarkedReadKeyRef.current = currentKey;
+
+    // Trigger auto-mark
+    console.log('[CHAT_MARK_AS_READ_V1] mark read from visible conversation');
     markAsReadMutation.mutate({ contactId });
   }, [activeContact, safeMessages, isLoadingMessages, user, markAsReadMutation]);
 
