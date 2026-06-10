@@ -462,18 +462,36 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                           <p className="whitespace-pre-wrap break-words">
                             {msg.message || msg.content || ""}
                           </p>
-                          <p
-                            className={`mt-2 text-[11px] ${
-                              isOwn ? "text-primary-foreground/80" : "text-muted-foreground"
-                            }`}
-                          >
-                            {msg.createdAt
-                              ? new Date(msg.createdAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : ""}
-                          </p>
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <p
+                              className={`text-[11px] ${
+                                isOwn ? "text-primary-foreground/80" : "text-muted-foreground"
+                              }`}
+                            >
+                              {msg.createdAt
+                                ? new Date(msg.createdAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : ""}
+                            </p>
+                            {isOwn && (
+                              <p className={`text-[10px] font-medium ${
+                                msg.isRead
+                                  ? "text-primary-foreground/90"
+                                  : "text-primary-foreground/70"
+                              }`}>
+                                {msg.isRead
+                                  ? msg.readAt
+                                    ? `Leído ${new Date(msg.readAt).toLocaleTimeString([], {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}`
+                                    : "Leído"
+                                  : "Enviado"}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

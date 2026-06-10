@@ -301,7 +301,7 @@ export async function markMessagesAsRead(userId: number, senderId: number) {
 
   return db
     .update(chatMessages)
-    .set({ isRead: true })
+    .set({ isRead: true, readAt: new Date() })
     .where(and(eq(chatMessages.recipientId, userId), eq(chatMessages.senderId, senderId)));
 }
 
