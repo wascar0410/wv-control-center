@@ -52,7 +52,7 @@
 
 
 ## Fase 69: Chat Message Search V1
-**STATUS: in_progress**
+**STATUS: COMPLETED**
 
 **Objective:**
 Implement frontend-only message search within active conversations. Allow Owner/Driver to search for messages by text, filter results, and highlight matches.
@@ -94,6 +94,7 @@ Implement frontend-only message search within active conversations. Allow Owner/
 
 
 ## Fase 70: Chat Attachment UI V1 Preparatory
+**STATUS: COMPLETED**
 
 **Objetivo:**
 Preparar interfaz visual para attachments en chat, sin implementar upload real.
