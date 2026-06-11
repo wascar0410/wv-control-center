@@ -76,11 +76,11 @@ Implement frontend-only message search within active conversations. Allow Owner/
 - [x] Implement text highlighting in filtered messages
 - [x] Add clear button (X icon)
 - [x] Ensure scroll behavior preserved
-- [ ] Test Owner search flow
-- [ ] Test Driver search flow
-- [ ] Validate no regressions in Chat V1/Presence/Unread/Read Receipts
-- [ ] Deploy to Railway
-- [ ] Validate in production
+- [x] Test Owner search flow
+- [x] Test Driver search flow
+- [x] Validate no regressions in Chat V1/Presence/Unread/Read Receipts
+- [x] Deploy to Railway
+- [x] Validate in production
 
 **Checkpoint History:**
 - Base: 118c6e85 (stable, all core features working)
