@@ -2,7 +2,7 @@ import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, Search, Circle, MessageSquare, UserRound } from "lucide-react";
+import { Send, Loader2, Search, Circle, MessageSquare, UserRound, Paperclip, X } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 
@@ -39,6 +39,8 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const [messageSearchQuery, setMessageSearchQuery] = useState("");
   const [lastDebugAction, setLastDebugAction] = useState<string>("");
+  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
+  const attachmentMenuRef = useRef<HTMLDivElement>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   // Loop prevention: track last marked read key to avoid duplicate calls
@@ -331,6 +333,20 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
   useEffect(() => {
     setMessageSearchQuery("");
   }, [activeContact?.contactUserId, activeContact?.id]);
+
+  // Close attachment menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (attachmentMenuRef.current && !attachmentMenuRef.current.contains(event.target as Node)) {
+        setShowAttachmentMenu(false);
+      }
+    }
+
+    if (showAttachmentMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showAttachmentMenu]);
 
   // Auto-mark messages as read when conversation is open and messages are loaded
   // This triggers AFTER messages are visible in the UI
@@ -675,6 +691,51 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
 
             <div className="border-t border-border p-4">
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+                <div className="relative" ref={attachmentMenuRef}>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                    aria-label="Adjuntar archivo"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  
+                  {showAttachmentMenu && (
+                    <div className="absolute bottom-full left-0 mb-2 w-64 rounded-lg border border-border bg-popover p-4 shadow-lg">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="font-medium text-foreground">Adjuntar archivo</p>
+                          <p className="mt-1 text-xs text-muted-foreground">Fotos, PDF y documentos</p>
+                        </div>
+                        <button
+                          onClick={() => setShowAttachmentMenu(false)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="mt-3 space-y-2 border-t border-border pt-3">
+                        <p className="text-sm font-medium text-foreground">Próximamente</p>
+                        <p className="text-xs text-muted-foreground">
+                          La carga de archivos estará disponible en una próxima actualización.
+                        </p>
+                      </div>
+                      
+                      <div className="mt-3 border-t border-border pt-3">
+                        <p className="text-xs font-medium text-muted-foreground">Límites de carga:</p>
+                        <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                          <li>• Máximo 10 MB por archivo</li>
+                          <li>• Tipos: PDF, JPG, PNG, DOC, DOCX</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 <Input
                   value={messageText}
                   onChange={(e) => {

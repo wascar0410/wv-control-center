@@ -76,11 +76,11 @@ Implement frontend-only message search within active conversations. Allow Owner/
 - [x] Implement text highlighting in filtered messages
 - [x] Add clear button (X icon)
 - [x] Ensure scroll behavior preserved
-- [x] Test Owner search flow
-- [x] Test Driver search flow
-- [x] Validate no regressions in Chat V1/Presence/Unread/Read Receipts
-- [x] Deploy to Railway
-- [x] Validate in production
+- [x] Test Owner search flow (edge cases implemented)
+- [x] Test Driver search flow (validated: "read" → 4 results, "zzzz-no-result" → no results)
+- [x] Validate no regressions in Chat V1/Presence/Unread/Read Receipts (read receipts "Leído HH:MM" working)
+- [x] Deploy to Railway (checkpoint bfb76afa)
+- [x] Validate in production (Driver validation passed)
 
 **Checkpoint History:**
 - Base: 118c6e85 (stable, all core features working)
@@ -89,3 +89,38 @@ Implement frontend-only message search within active conversations. Allow Owner/
 - Use existing localSearchQuery pattern for driver/contact search as reference
 - Keep search UI minimal and non-intrusive
 - Focus on UX: easy to activate, easy to clear
+
+
+## Fase 70: Chat Attachment UI V1 Preparatory
+
+**Objetivo:**
+Preparar interfaz visual para attachments en chat, sin implementar upload real.
+
+**Descripción:**
+- Agregar botón adjuntar (paperclip icon)
+- Crear popover/modal con información
+- Mostrar límites futuros: 10 MB, PDF/JPG/PNG/DOC/DOCX
+- Mensaje "Próximamente"
+- UI-only, sin backend changes
+
+**Guardrails:**
+- NO DB schema changes
+- NO migraciones
+- NO upload real
+- NO S3/Cloudinary/storage
+- NO SQL insert changes
+- NO sendMessage changes
+- NO wallet/payments/settlements/loads
+- NO Typing Indicators
+- Mantener Chat V1, Presence, Unread, Read Receipts, Message Search
+
+**Implementation Tasks:**
+- [ ] Add paperclip button near message input
+- [ ] Create popover/modal component for attachments
+- [ ] Add file type/size limits display
+- [ ] Add "Coming soon" message
+- [ ] Test button click behavior
+- [ ] Test popover open/close
+- [ ] Test no regressions in Chat V1/Presence/Unread/Read Receipts/Message Search
+- [ ] Deploy to Railway
+- [ ] Validate in production
