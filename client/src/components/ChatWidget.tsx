@@ -327,6 +327,11 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
     }
   }, [filteredChats, activeContact, user?.role, safeChats.length]);
 
+  // Clear message search when active contact changes
+  useEffect(() => {
+    setMessageSearchQuery("");
+  }, [activeContact?.contactUserId, activeContact?.id]);
+
   // Auto-mark messages as read when conversation is open and messages are loaded
   // This triggers AFTER messages are visible in the UI
   useEffect(() => {
@@ -599,7 +604,7 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                     Sin resultados
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    No se encontraron mensajes que coincidan con tu búsqueda.
+                    No se encontraron mensajes que coincidan con tu búsqueda: "{messageSearchQuery}".
                   </p>
                 </div>
               ) : (
