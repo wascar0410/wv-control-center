@@ -69,13 +69,13 @@ Implement frontend-only message search within active conversations. Allow Owner/
 - No impact on Chat V1, Presence, Unread, Read Receipts
 
 **Implementation Tasks:**
-- [ ] Add searchQuery state to ChatWidget
-- [ ] Add search input field in conversation header (small, compact)
-- [ ] Implement message filtering logic (case-insensitive)
-- [ ] Add result counter display
-- [ ] Implement text highlighting in filtered messages
-- [ ] Add clear button (X icon)
-- [ ] Ensure scroll behavior preserved
+- [x] Add searchQuery state to ChatWidget
+- [x] Add search input field in conversation header (small, compact)
+- [x] Implement message filtering logic (case-insensitive)
+- [x] Add result counter display
+- [x] Implement text highlighting in filtered messages
+- [x] Add clear button (X icon)
+- [x] Ensure scroll behavior preserved
 - [ ] Test Owner search flow
 - [ ] Test Driver search flow
 - [ ] Validate no regressions in Chat V1/Presence/Unread/Read Receipts

@@ -149,16 +149,24 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
 
   const messageSearchResultCount = filteredMessages.length;
 
-  // Helper function to highlight search text in message
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text;
+  // Helper function to highlight search text in message - safe React rendering
+  const highlightText = (text: string, query: string): React.ReactNode[] => {
+    if (!query.trim()) return [text];
     
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    return parts.map((part, idx) => 
-      part.toLowerCase() === query.toLowerCase() 
-        ? `<mark key=${idx}>${part}</mark>` 
-        : part
-    ).join('');
+    try {
+      // Escape special regex characters in query to prevent regex injection
+      const escapedQuery = query.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+      const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'));
+      
+      return parts.map((part, idx) => 
+        part.toLowerCase() === query.toLowerCase() 
+          ? <mark key={`mark-${idx}`}>{part}</mark>
+          : part
+      );
+    } catch (err) {
+      // Fallback if regex fails - return unmodified text
+      return [text];
+    }
   };
 
   const totalUnread = useMemo(() => {
@@ -612,13 +620,9 @@ export function ChatWidget({ search = "" }: ChatWidgetProps) {
                           }`}
                         >
                           <p className="whitespace-pre-wrap break-words">
-                            {messageSearchQuery ? (
-                              <span dangerouslySetInnerHTML={{
-                                __html: highlightText(msg.message || msg.content || "", messageSearchQuery)
-                              }} />
-                            ) : (
-                              msg.message || msg.content || ""
-                            )}
+                            {messageSearchQuery
+                              ? highlightText(msg.message || msg.content || "", messageSearchQuery)
+                              : msg.message || msg.content || ""}
                           </p>
                           <div className="mt-2 flex items-center justify-between gap-2">
                             <p
