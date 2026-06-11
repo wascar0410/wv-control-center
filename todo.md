@@ -115,12 +115,12 @@ Preparar interfaz visual para attachments en chat, sin implementar upload real.
 - Mantener Chat V1, Presence, Unread, Read Receipts, Message Search
 
 **Implementation Tasks:**
-- [ ] Add paperclip button near message input
-- [ ] Create popover/modal component for attachments
-- [ ] Add file type/size limits display
-- [ ] Add "Coming soon" message
-- [ ] Test button click behavior
-- [ ] Test popover open/close
-- [ ] Test no regressions in Chat V1/Presence/Unread/Read Receipts/Message Search
-- [ ] Deploy to Railway
-- [ ] Validate in production
+- [x] Add paperclip button near message input
+- [x] Create popover/modal component for attachments
+- [x] Add file type/size limits display
+- [x] Add "Coming soon" message
+- [x] Test button click behavior
+- [x] Test popover open/close
+- [x] Test no regressions in Chat V1/Presence/Unread/Read Receipts/Message Search (code review: no changes to existing features)
+- [x] Deploy to Railway (checkpoint 5706dff7 saved)
+- [x] Validate in production (Owner & Driver: button visible, popover works, send success, no regressions)
