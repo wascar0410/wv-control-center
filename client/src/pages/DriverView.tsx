@@ -430,6 +430,72 @@ export default function DriverView() {
                       <p className="text-xs text-amber-200">{selectedLoad.notes}</p>
                     </div>
                   )}
+
+                  {/* Trip Actions */}
+                  <div className="border-t border-border pt-4 mt-4">
+                    <p className="text-xs font-semibold text-foreground mb-3">Acciones de Viaje</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Go to Pickup */}
+                      {selectedLoad.pickupAddress && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 text-xs"
+                          onClick={() => openMaps(selectedLoad.pickupAddress)}
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Ir a Recogida
+                        </Button>
+                      )}
+
+                      {/* Start Trip to Pickup */}
+                      {selectedLoad.status === "available" && (
+                        <Button
+                          size="sm"
+                          className="gap-1 text-xs bg-blue-600 hover:bg-blue-700"
+                          onClick={() => statusMutation.mutate({ id: selectedLoad.id, status: "in_transit" })}
+                          disabled={statusMutation.isPending}
+                        >
+                          {statusMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Truck className="w-3 h-3" />
+                          )}
+                          Iniciar Viaje
+                        </Button>
+                      )}
+
+                      {/* Go to Delivery */}
+                      {selectedLoad.status === "in_transit" && selectedLoad.deliveryAddress && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 text-xs"
+                          onClick={() => openMaps(selectedLoad.deliveryAddress)}
+                        >
+                          <MapPin className="w-3 h-3" />
+                          Ir a Entrega
+                        </Button>
+                      )}
+
+                      {/* Confirm Delivery */}
+                      {selectedLoad.status === "in_transit" && (
+                        <Button
+                          size="sm"
+                          className="gap-1 text-xs bg-green-600 hover:bg-green-700"
+                          onClick={() => statusMutation.mutate({ id: selectedLoad.id, status: "delivered" })}
+                          disabled={statusMutation.isPending}
+                        >
+                          {statusMutation.isPending ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3 h-3" />
+                          )}
+                          Confirmar Entrega
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
