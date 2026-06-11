@@ -128,8 +128,19 @@ Preparar interfaz visual para attachments en chat, sin implementar upload real.
 - [x] Validate in production (Owner & Driver: button visible, popover works, send success, no regressions)
 
 
-## Fase 71: Driver Load Acceptance + Driver Trip Lifecycle Fix V1
+## Fase 71A: Load Accept Notification Fix
+**STATUS: PASSED - Bug fixed, production validated**
 
+- [x] acceptLoad no longer fails on notification API key error
+- [x] notifyOwner wrapped in try/catch
+- [x] Returns success=true even if notification fails
+- [x] No 500 error in production
+- [x] No notification API key toast
+- [x] Logs: [LOAD_ACCEPT_V1], [LOAD_ACCEPT_NOTIFICATION_SKIPPED]
+- [x] Checkpoint: e10c3384
+
+
+## Fase 71B: Driver Trip Lifecycle UI Incremental
 **STATUS: in_progress**
 
 **Bug Crítico:**
@@ -154,19 +165,27 @@ Fijar bug de aceptación de carga y mejorar flujo de viaje del driver.
 - [ ] NO cambiar load status a "assigned"
 - [ ] Retornar { success: true, loadId, assignmentId?, notificationSkipped? }
 
-**Parte C: Flujo iniciar viaje**
-- [ ] "Mis Cargas" mostrar cargas aceptadas
-- [ ] Botón "Iniciar viaje a recogida"
-- [ ] Cambiar status a in_transit
-- [ ] Mostrar pickup/delivery address
-- [ ] Botón "Ir a recogida" con Google Maps
-- [ ] Botón "Ir a entrega" después de recoger
+**Implementation Tasks:**
+- [ ] Revisar DriverView.tsx, DriverLoadDetail.tsx, DriverOps.tsx
+- [ ] Implementar UI para mostrar pickupAddress y deliveryAddress
+- [ ] Agregar botón "Ir a recogida" con Google Maps
+- [ ] Agregar botón "Iniciar viaje a recogida" (status → in_transit)
+- [ ] Agregar botón "Ir a entrega" con Google Maps (para cargas in_transit)
+- [ ] Agregar botón "Confirmar entrega" (status → delivered)
+- [ ] Validar regressions: acceptLoad, Chat, Message Search, Attachment UI
+- [ ] pnpm build
+- [ ] save checkpoint
+- [ ] deploy Railway
+- [ ] Validar en producción con test.driver@wvtransports.com
 
 **Guardrails:**
 - NO tocar wallet/payments/settlements
 - NO tocar DB schema
 - NO migraciones
 - NO usar status = assigned
+- NO crear picked_up
+- Load statuses válidos: available, in_transit, delivered, invoiced, paid
 - Mantener Chat estable
 - Mantener Message Search y Attachment UI
+- Mantener acceptLoad notification fix
 - Typing Indicators sigue pendiente, no tocar
