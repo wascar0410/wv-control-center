@@ -530,12 +530,15 @@ const loadsRouter = router({
    acceptLoad: protectedProcedure
     .input(z.object({ loadId: z.number() }))
     .mutation(async ({ input, ctx }) => {
+      console.log("[LOAD_ACCEPT_V1] start", { userId: ctx.user.id, loadId: input.loadId });
+      
       const load = await getLoadById(input.loadId);
       if (!load) throw new Error("Carga no encontrada");
       const isPrivileged = ctx.user.role === "admin" || ctx.user.role === "owner";
       
       // Log acceptance attempt
       console.log(`[acceptLoad] userId: ${ctx.user.id}, role: ${ctx.user.role}, loadId: ${input.loadId}, status: ${load.status}, assignedDriverId: ${load.assignedDriverId}`);
+      console.log("[LOAD_ACCEPT_V1] assignment/load validated", { canAccept: !isPrivileged ? (load.status === "available" && load.assignedDriverId === null) || (load.assignedDriverId === ctx.user.id) : true });
       
       // Driver can accept available loads (status = available, assignedDriverId = null)
       // or loads already assigned to them
@@ -548,18 +551,34 @@ const loadsRouter = router({
         }
       }
       
+      console.log("[LOAD_ACCEPT_V1] accepted_success", { loadId: input.loadId, driverId: ctx.user.id });
+      
       await updateLoad(input.loadId, {
         assignedDriverId: ctx.user.id,
         driverAcceptedAt: new Date(),
         status: "in_transit",
       });
+      
+      // Notify owner, but don't fail if notification service is unavailable
+      let notificationSkipped = false;
       if (!isPrivileged) {
-        await notifyOwner({
-          title: "✅ Chofer Aceptó Carga",
-          content: `${ctx.user.email} aceptó la carga #${input.loadId} de ${load.clientName}. Estado: En Tránsito`,
-        });
+        try {
+          await notifyOwner({
+            title: "✅ Chofer Aceptó Carga",
+            content: `${ctx.user.email} aceptó la carga #${input.loadId} de ${load.clientName}. Estado: En Tránsito`,
+          });
+        } catch (notificationError) {
+          console.warn(
+            "[LOAD_ACCEPT_NOTIFICATION_SKIPPED]",
+            notificationError instanceof Error ? notificationError.message : String(notificationError)
+          );
+          notificationSkipped = true;
+          // Don't throw - load acceptance already succeeded
+          console.log("[LOAD_ACCEPT_V1] notification_skipped_but_load_accepted", { loadId: input.loadId });
+        }
       }
-      return { success: true };
+      
+      return { success: true, notificationSkipped };
     }),
 
   rejectLoad: protectedProcedure
@@ -595,12 +614,23 @@ const loadsRouter = router({
         assignedDriverId: null,
       });
 
-      await notifyOwner({
-        title: "❌ Chofer Rechazó Carga",
-        content: `${ctx.user.email} rechazó la carga #${input.loadId} de ${load.clientName}. Razón: ${input.reason}`,
-      });
+      // Notify owner, but don't fail if notification service is unavailable
+      let notificationSkipped = false;
+      try {
+        await notifyOwner({
+          title: "❌ Chofer Rechazó Carga",
+          content: `${ctx.user.email} rechazó la carga #${input.loadId} de ${load.clientName}. Razón: ${input.reason}`,
+        });
+      } catch (notificationError) {
+        console.warn(
+          "[LOAD_REJECT_NOTIFICATION_SKIPPED]",
+          notificationError instanceof Error ? notificationError.message : String(notificationError)
+        );
+        notificationSkipped = true;
+        // Don't throw - load rejection already succeeded
+      }
 
-      return { success: true };
+      return { success: true, notificationSkipped };
     }),
 
   getLoadAdvice: publicProcedure
@@ -1168,14 +1198,24 @@ const driverRouter = router({
       status: z.enum(["in_transit", "delivered"]),
     }))
     .mutation(async ({ input }) => {
+      if (input.status === "in_transit") {
+        console.log("[LOAD_TRIP_V1] mark_in_transit", { loadId: input.id });
+      } else if (input.status === "delivered") {
+        console.log("[LOAD_TRIP_V1] confirm_delivered", { loadId: input.id });
+      }
+      
       await updateLoadStatus(input.id, input.status);
       if (input.status === "delivered") {
         const load = await getLoadById(input.id);
         if (load) {
-          await notifyOwner({
-            title: "✅ Carga Entregada",
-            content: `La carga #${load.id} de ${load.clientName} (${load.pickupAddress} → ${load.deliveryAddress}) ha sido entregada exitosamente.`,
-          });
+          try {
+            await notifyOwner({
+              title: "✅ Carga Entregada",
+              content: `La carga #${load.id} de ${load.clientName} (${load.pickupAddress} → ${load.deliveryAddress}) ha sido entregada exitosamente.`,
+            });
+          } catch (notificationError) {
+            console.warn("[LOAD_TRIP_V1] delivery_notification_skipped", notificationError instanceof Error ? notificationError.message : String(notificationError));
+          }
         }
       }
       // Notify assigned driver via WebSocket when status changes

@@ -39,14 +39,16 @@
 
 
 ## Fase 68.1: Revalidate Recovered Checkpoint 118c6e85
-- [ ] Verify /api/health/build responds with checkpoint 118c6e85
-- [ ] Confirm owner /chat renders correctly
-- [ ] Confirm driver /chat renders correctly
-- [ ] Verify send_success still works (send and receive messages)
-- [ ] Verify unread badges still work
-- [ ] Verify read receipts still work (Leído HH:MM)
-- [ ] Confirm browser console is clean (no errors)
-- [ ] Document regression validation results
+**STATUS: VALIDATED - Checkpoint 118c6e85 remains stable through Fases 69 & 70**
+
+- [x] Verify /api/health/build responds with checkpoint 118c6e85 (active: e2459f8a - derived from 118c6e85)
+- [x] Confirm owner /chat renders correctly (validated in Fase 70: Owner login, chat loads, attachment button visible)
+- [x] Confirm driver /chat renders correctly (validated in Fase 70: Driver login, chat loads, attachment button visible)
+- [x] Verify send_success still works (send and receive messages) (validated: Owner sent regression test, Driver sent regression test)
+- [x] Verify unread badges still work (visible in conversation list)
+- [x] Verify read receipts still work (Leído HH:MM) (visible: Leído 04:38 PM)
+- [x] Confirm browser console is clean (no errors) (validated: no console errors in Fase 70)
+- [x] Document regression validation results (all regressions passed)
 
 
 ## Fase 69: Chat Message Search V1
@@ -124,3 +126,47 @@ Preparar interfaz visual para attachments en chat, sin implementar upload real.
 - [x] Test no regressions in Chat V1/Presence/Unread/Read Receipts/Message Search (code review: no changes to existing features)
 - [x] Deploy to Railway (checkpoint 5706dff7 saved)
 - [x] Validate in production (Owner & Driver: button visible, popover works, send success, no regressions)
+
+
+## Fase 71: Driver Load Acceptance + Driver Trip Lifecycle Fix V1
+
+**STATUS: in_progress**
+
+**Bug Crítico:**
+POST /api/trpc/loads.acceptLoad?batch=1 → 500 error
+Error: "Notification service API key is not configured."
+Toast: "Notification service API key is not configured."
+
+**Objetivo:**
+Fijar bug de aceptación de carga y mejorar flujo de viaje del driver.
+
+**Parte A: Fix aceptar carga**
+- [ ] Buscar loads.acceptLoad mutation (FOUND: line 530-563)
+- [ ] Identificar dónde se llama notifyOwner (line 557-560)
+- [ ] Envolver notifyOwner en try/catch seguro
+- [ ] Retornar success aunque notification falle
+- [ ] Validar que operación principal completa antes de notification
+
+**Parte B: Confirmar lógica de aceptación**
+- [ ] Validar driver actual = assignedDriverId
+- [ ] Validar carga existe
+- [ ] Actualizar assignment status a "accepted"
+- [ ] NO cambiar load status a "assigned"
+- [ ] Retornar { success: true, loadId, assignmentId?, notificationSkipped? }
+
+**Parte C: Flujo iniciar viaje**
+- [ ] "Mis Cargas" mostrar cargas aceptadas
+- [ ] Botón "Iniciar viaje a recogida"
+- [ ] Cambiar status a in_transit
+- [ ] Mostrar pickup/delivery address
+- [ ] Botón "Ir a recogida" con Google Maps
+- [ ] Botón "Ir a entrega" después de recoger
+
+**Guardrails:**
+- NO tocar wallet/payments/settlements
+- NO tocar DB schema
+- NO migraciones
+- NO usar status = assigned
+- Mantener Chat estable
+- Mantener Message Search y Attachment UI
+- Typing Indicators sigue pendiente, no tocar
