@@ -2628,7 +2628,33 @@ export const appRouter = router({
   system: systemRouter,
   ai: aiRouter,
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
+    me: publicProcedure.query((opts) => {
+      if (!opts.ctx.user) return null;
+      // Return only serializable fields, exclude timestamp objects
+      return {
+        id: opts.ctx.user.id,
+        email: opts.ctx.user.email,
+        name: opts.ctx.user.name,
+        role: opts.ctx.user.role,
+        openId: opts.ctx.user.openId,
+        phone: opts.ctx.user.phone,
+        address: opts.ctx.user.address,
+        city: opts.ctx.user.city,
+        state: opts.ctx.user.state,
+        zipCode: opts.ctx.user.zipCode,
+        profileImageUrl: opts.ctx.user.profileImageUrl,
+        bio: opts.ctx.user.bio,
+        fleetType: opts.ctx.user.fleetType,
+        commissionPercent: opts.ctx.user.commissionPercent,
+        dotNumber: opts.ctx.user.dotNumber,
+        vehicleInfo: opts.ctx.user.vehicleInfo,
+        licenseUrl: opts.ctx.user.licenseUrl,
+        insuranceUrl: opts.ctx.user.insuranceUrl,
+        leaseContractUrl: opts.ctx.user.leaseContractUrl,
+        locationSharingEnabled: opts.ctx.user.locationSharingEnabled,
+        loginMethod: opts.ctx.user.loginMethod,
+      };
+    }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
