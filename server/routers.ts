@@ -2722,32 +2722,36 @@ export const appRouter = router({
       { expiresIn: 365 * 24 * 60 * 60 }
     );
 
-    // Set auth cookie (side effect, no return value used)
-    try {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      ctx.res.cookie('wv_session', token, {
-        httpOnly: true,
-        sameSite: 'none',
-        secure: true,
-        maxAge: 365 * 24 * 60 * 60 * 1000,
-        path: '/'
-      });
-    } catch (e) {
-      console.error('[COOKIE ERROR]', e);
-      // Continue anyway, token is in response
-    }
+    // Clear any previous OAuth session (from owner/admin login)
+    // This ensures driver login is not shadowed by old owner session
+    const cookieOptions = getSessionCookieOptions(ctx.req);
+    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+    
+    // Set wv_session cookie with JWT token
+    ctx.res.cookie('wv_session', token, {
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+      maxAge: 365 * 24 * 60 * 60 * 1000,
+      path: '/'
+    });
 
-    // Return only serializable JSON
+    console.log('[LOGIN SUCCESS]', {
+      id: user.id,
+      email: user.email,
+      role: user.role
+    });
+    console.log('[LOGIN COOKIE SET]', {
+      cookieName: 'wv_session',
+      userId: user.id,
+      expiresIn: 365 * 24 * 60 * 60
+    });
+
     return {
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email || '',
-        name: user.name || user.email || '',
-        role: user.role
-      },
-      token: token
+      token,
+      role: user.role,
+      name: user.name || user.email,
+      email: user.email
     };
   }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {

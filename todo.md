@@ -52,7 +52,7 @@
 
 
 ## Fase 69: Chat Message Search V1
-**STATUS: COMPLETED**
+**STATUS: in_progress**
 
 **Objective:**
 Implement frontend-only message search within active conversations. Allow Owner/Driver to search for messages by text, filter results, and highlight matches.
@@ -94,7 +94,6 @@ Implement frontend-only message search within active conversations. Allow Owner/
 
 
 ## Fase 70: Chat Attachment UI V1 Preparatory
-**STATUS: COMPLETED**
 
 **Objetivo:**
 Preparar interfaz visual para attachments en chat, sin implementar upload real.
@@ -129,21 +128,9 @@ Preparar interfaz visual para attachments en chat, sin implementar upload real.
 - [x] Validate in production (Owner & Driver: button visible, popover works, send success, no regressions)
 
 
-## Fase 71A: Load Accept Notification Fix
-**STATUS: PASSED - Bug fixed, production validated**
+## Fase 71: Driver Load Acceptance + Driver Trip Lifecycle Fix V1
 
-- [x] acceptLoad no longer fails on notification API key error
-- [x] notifyOwner wrapped in try/catch
-- [x] Returns success=true even if notification fails
-- [x] No 500 error in production
-- [x] No notification API key toast
-- [x] Logs: [LOAD_ACCEPT_V1], [LOAD_ACCEPT_NOTIFICATION_SKIPPED]
-- [x] Checkpoint: e10c3384
-
-
-## Fase 71B: Driver Trip Lifecycle UI Incremental
-**STATUS: implemented_build_passed_pending_production_validation**
-**BLOCKER: Production login error - "Unable to transform response from server"**
+**STATUS: in_progress**
 
 **Bug Crítico:**
 POST /api/trpc/loads.acceptLoad?batch=1 → 500 error
@@ -167,29 +154,19 @@ Fijar bug de aceptación de carga y mejorar flujo de viaje del driver.
 - [ ] NO cambiar load status a "assigned"
 - [ ] Retornar { success: true, loadId, assignmentId?, notificationSkipped? }
 
-**Implementation Tasks:**
-- [x] Revisar DriverView.tsx (DONE: Added trip actions to selectedLoad details section)
-- [x] Revisar DriverLoadDetail.tsx (VERIFIED: Separate detail page, no changes needed for Fase 71B)
-- [x] Revisar DriverOps.tsx (VERIFIED: Dashboard/ops page, no changes needed for Fase 71B)
-- [x] Implementar UI para mostrar pickupAddress y deliveryAddress (DONE: Already visible in selectedLoad details)
-- [x] Agregar botón "Ir a recogida" con Google Maps (DONE: Line 439-449 in DriverView.tsx)
-- [x] Agregar botón "Iniciar viaje a recogida" (status → in_transit) (DONE: Line 452-466 in DriverView.tsx)
-- [x] Agregar botón "Ir a entrega" con Google Maps (para cargas in_transit) (DONE: Line 469-479 in DriverView.tsx)
-- [x] Agregar botón "Confirmar entrega" (status → delivered) (DONE: Line 482-496 in DriverView.tsx)
-- [x] Validar regressions: acceptLoad, Chat, Message Search, Attachment UI (VERIFIED: Build successful, no new errors, isolated changes)
-- [x] pnpm build (DONE: Built in 11.62s, no new TypeScript errors)
-- [x] save checkpoint (DONE: 5866ba26)
-- [ ] deploy Railway (PENDING: Checkpoint ready for deployment)
-- [ ] Validar en producción con test.driver@wvtransports.com (BLOCKED: Production login error, dev rate-limited)
+**Parte C: Flujo iniciar viaje**
+- [ ] "Mis Cargas" mostrar cargas aceptadas
+- [ ] Botón "Iniciar viaje a recogida"
+- [ ] Cambiar status a in_transit
+- [ ] Mostrar pickup/delivery address
+- [ ] Botón "Ir a recogida" con Google Maps
+- [ ] Botón "Ir a entrega" después de recoger
 
 **Guardrails:**
 - NO tocar wallet/payments/settlements
 - NO tocar DB schema
 - NO migraciones
 - NO usar status = assigned
-- NO crear picked_up
-- Load statuses válidos: available, in_transit, delivered, invoiced, paid
 - Mantener Chat estable
 - Mantener Message Search y Attachment UI
-- Mantener acceptLoad notification fix
 - Typing Indicators sigue pendiente, no tocar

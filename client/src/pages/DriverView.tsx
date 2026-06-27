@@ -39,11 +39,6 @@ function formatTime(date: Date | string | null | undefined): string {
   return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 }
 
-function openMaps(address: string) {
-  if (!address) return;
-  window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, "_blank");
-}
-
 function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTransit, onUploadBOL, onLogFuel, readonly = false, onAcceptLoad, onRejectLoad, onViewDetails }: any) {
   return (
     <Card
@@ -85,9 +80,7 @@ function LoadCard({ load, isSelected, onSelect, onAccept, onReject, onStartTrans
             {onViewDetails && <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={(e) => { e.stopPropagation(); onViewDetails(); }}><ExternalLink className="w-3 h-3" />Ver Detalles</Button>}
             {onAcceptLoad && <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700" onClick={(e) => { e.stopPropagation(); onAcceptLoad(); }}>Aceptar</Button>}
             {onRejectLoad && <Button size="sm" variant="destructive" className="flex-1" onClick={(e) => { e.stopPropagation(); onRejectLoad(); }}>Rechazar</Button>}
-            {onStartTransit && load.status === "available" && <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onStartTransit(); }}>Iniciar Viaje</Button>}
-            {load.status === "available" && load.pickupAddress && <Button size="sm" variant="ghost" className="flex-1" onClick={(e) => { e.stopPropagation(); openMaps(load.pickupAddress); }}>Ir a Recogida</Button>}
-            {load.status === "in_transit" && load.deliveryAddress && <Button size="sm" variant="ghost" className="flex-1" onClick={(e) => { e.stopPropagation(); openMaps(load.deliveryAddress); }}>Ir a Entrega</Button>}
+            {onStartTransit && load.status === "available" && <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onStartTransit(); }}>Iniciar</Button>}
             {onUploadBOL && <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onUploadBOL(); }}><Upload className="w-3 h-3" /></Button>}
             {onLogFuel && <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); onLogFuel(); }}><Fuel className="w-3 h-3" /></Button>}
           </div>
@@ -430,72 +423,6 @@ export default function DriverView() {
                       <p className="text-xs text-amber-200">{selectedLoad.notes}</p>
                     </div>
                   )}
-
-                  {/* Trip Actions */}
-                  <div className="border-t border-border pt-4 mt-4">
-                    <p className="text-xs font-semibold text-foreground mb-3">Acciones de Viaje</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Go to Pickup */}
-                      {selectedLoad.pickupAddress && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 text-xs"
-                          onClick={() => openMaps(selectedLoad.pickupAddress)}
-                        >
-                          <MapPin className="w-3 h-3" />
-                          Ir a Recogida
-                        </Button>
-                      )}
-
-                      {/* Start Trip to Pickup */}
-                      {selectedLoad.status === "available" && (
-                        <Button
-                          size="sm"
-                          className="gap-1 text-xs bg-blue-600 hover:bg-blue-700"
-                          onClick={() => statusMutation.mutate({ id: selectedLoad.id, status: "in_transit" })}
-                          disabled={statusMutation.isPending}
-                        >
-                          {statusMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <Truck className="w-3 h-3" />
-                          )}
-                          Iniciar Viaje
-                        </Button>
-                      )}
-
-                      {/* Go to Delivery */}
-                      {selectedLoad.status === "in_transit" && selectedLoad.deliveryAddress && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-1 text-xs"
-                          onClick={() => openMaps(selectedLoad.deliveryAddress)}
-                        >
-                          <MapPin className="w-3 h-3" />
-                          Ir a Entrega
-                        </Button>
-                      )}
-
-                      {/* Confirm Delivery */}
-                      {selectedLoad.status === "in_transit" && (
-                        <Button
-                          size="sm"
-                          className="gap-1 text-xs bg-green-600 hover:bg-green-700"
-                          onClick={() => statusMutation.mutate({ id: selectedLoad.id, status: "delivered" })}
-                          disabled={statusMutation.isPending}
-                        >
-                          {statusMutation.isPending ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="w-3 h-3" />
-                          )}
-                          Confirmar Entrega
-                        </Button>
-                      )}
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             )}

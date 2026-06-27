@@ -54,10 +54,6 @@ interface DriverLoadDetailDrawerProps {
   vehicleType?: "cargo_van" | "sprinter" | "box_truck" | "default";
   onAccept?: (loadId: number) => Promise<void>;
   onReject?: (loadId: number, reason: string) => Promise<void>;
-  onStartTrip?: (loadId: number) => Promise<void>;
-  onConfirmDelivery?: (loadId: number) => Promise<void>;
-  onGoToPickup?: (pickupAddress: string) => void;
-  onGoToDelivery?: (deliveryAddress: string) => void;
 }
 
 /**
@@ -96,10 +92,6 @@ export function DriverLoadDetailDrawer({
   vehicleType = "cargo_van",
   onAccept,
   onReject,
-  onStartTrip,
-  onConfirmDelivery,
-  onGoToPickup,
-  onGoToDelivery,
 }: DriverLoadDetailDrawerProps) {
   const [showCalculationDetails, setShowCalculationDetails] = useState(false);
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
