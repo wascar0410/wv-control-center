@@ -16,7 +16,6 @@ export type TrpcContext = {
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-
   // ─── DEV MODE (local development only) ────────────────────────────────────
   // NOTE: This dev mode check is disabled in production. Use proper auth instead.
   // if (process.env.NODE_ENV !== "production") {

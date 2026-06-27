@@ -2628,33 +2628,7 @@ export const appRouter = router({
   system: systemRouter,
   ai: aiRouter,
   auth: router({
-    me: publicProcedure.query((opts) => {
-      if (!opts.ctx.user) return null;
-      // Return only serializable fields, exclude timestamp objects
-      return {
-        id: opts.ctx.user.id,
-        email: opts.ctx.user.email,
-        name: opts.ctx.user.name,
-        role: opts.ctx.user.role,
-        openId: opts.ctx.user.openId,
-        phone: opts.ctx.user.phone,
-        address: opts.ctx.user.address,
-        city: opts.ctx.user.city,
-        state: opts.ctx.user.state,
-        zipCode: opts.ctx.user.zipCode,
-        profileImageUrl: opts.ctx.user.profileImageUrl,
-        bio: opts.ctx.user.bio,
-        fleetType: opts.ctx.user.fleetType,
-        commissionPercent: opts.ctx.user.commissionPercent,
-        dotNumber: opts.ctx.user.dotNumber,
-        vehicleInfo: opts.ctx.user.vehicleInfo,
-        licenseUrl: opts.ctx.user.licenseUrl,
-        insuranceUrl: opts.ctx.user.insuranceUrl,
-        leaseContractUrl: opts.ctx.user.leaseContractUrl,
-        locationSharingEnabled: opts.ctx.user.locationSharingEnabled,
-        loginMethod: opts.ctx.user.loginMethod,
-      };
-    }),
+    me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -2748,36 +2722,32 @@ export const appRouter = router({
       { expiresIn: 365 * 24 * 60 * 60 }
     );
 
-    // Clear any previous OAuth session (from owner/admin login)
-    // This ensures driver login is not shadowed by old owner session
-    const cookieOptions = getSessionCookieOptions(ctx.req);
-    ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-    
-    // Set wv_session cookie with JWT token
-    ctx.res.cookie('wv_session', token, {
-      httpOnly: true,
-      sameSite: 'none',
-      secure: true,
-      maxAge: 365 * 24 * 60 * 60 * 1000,
-      path: '/'
-    });
+    // Set auth cookie (side effect, no return value used)
+    try {
+      const cookieOptions = getSessionCookieOptions(ctx.req);
+      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.cookie('wv_session', token, {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+        maxAge: 365 * 24 * 60 * 60 * 1000,
+        path: '/'
+      });
+    } catch (e) {
+      console.error('[COOKIE ERROR]', e);
+      // Continue anyway, token is in response
+    }
 
-    console.log('[LOGIN SUCCESS]', {
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
-    console.log('[LOGIN COOKIE SET]', {
-      cookieName: 'wv_session',
-      userId: user.id,
-      expiresIn: 365 * 24 * 60 * 60
-    });
-
+    // Return only serializable JSON
     return {
-      token,
-      role: user.role,
-      name: user.name || user.email,
-      email: user.email
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email || '',
+        name: user.name || user.email || '',
+        role: user.role
+      },
+      token: token
     };
   }),
     getPasswordAuditHistory: protectedProcedure.query(async ({ ctx }) => {

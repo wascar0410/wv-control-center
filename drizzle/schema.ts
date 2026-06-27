@@ -70,7 +70,7 @@ export type InsertPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export const passwordAuditLog = mysqlTable("password_audit_log", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
-  action: mysqlEnum("action", ["changed", "reset", "created"]).notNull(),
+  action: mysqlEnum("action", ["changed", "reset", "created", "login"]).notNull(),
   ipAddress: varchar("ipAddress", { length: 45 }),
   userAgent: text("userAgent"),
   reason: varchar("reason", { length: 255 }),
