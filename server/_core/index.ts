@@ -114,6 +114,24 @@ async function startServer() {
   // Importante detrás de Railway / proxies para cookies seguras y req.secure
   app.set("trust proxy", 1);
 
+  // Diagnostic endpoint BEFORE host validation middleware
+  app.get("/api/prehost-debug", (req, res) => {
+    res.json({
+      ok: true,
+      phase: "pre_host_validation",
+      path: req.path,
+      originalUrl: req.originalUrl,
+      url: req.url,
+      host: req.get("host") || null,
+      xForwardedHost: req.get("x-forwarded-host") || null,
+      xOriginalHost: req.get("x-original-host") || null,
+      forwarded: req.get("forwarded") || null,
+      nodeEnv: process.env.NODE_ENV || null,
+      railwayPublicDomain: process.env.RAILWAY_PUBLIC_DOMAIN || null,
+      allowedHostsEnvPresent: Boolean(process.env.ALLOWED_HOSTS)
+    });
+  });
+
   // Debug endpoint solo en desarrollo
   if (process.env.NODE_ENV !== "production") {
     app.get("/debug/users-columns", async (_req, res) => {
