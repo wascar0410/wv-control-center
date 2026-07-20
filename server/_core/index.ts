@@ -156,8 +156,9 @@ async function startServer() {
   app.use((req, res, next) => {
     const fullHost = getRequestHost(req);
     
-    // Skip host validation for health check endpoints
+    // Debug: log headers for health endpoints
     if (req.path.startsWith("/api/health")) {
+      console.log(`[Host Debug] Health endpoint - host: "${fullHost}" | x-forwarded-host: "${req.get("x-forwarded-host")}" | x-original-host: "${req.get("x-original-host")}" | host: "${req.get("host")}"`);
       return next();
     }
 
