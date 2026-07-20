@@ -263,7 +263,8 @@ async function startServer() {
   });
 
   // Health/Build marker endpoint
-  app.get("/api/health/build", (_req, res) => {
+  app.get("/api/health/build", (req, res) => {
+    console.log(`[Health Build] Endpoint reached - path: "${req.path}" | host: "${req.get("host")}" | x-forwarded-host: "${req.get("x-forwarded-host")}"`);
     const commitSha = process.env.RAILWAY_GIT_COMMIT_SHA || process.env.GIT_COMMIT_SHA || "unknown";
     res.json({
       status: "ok",
