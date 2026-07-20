@@ -130,8 +130,12 @@ async function startServer() {
   app.use((req, res, next) => {
     const fullHost = req.get("host");
     
+    // Log all incoming hosts for debugging
+    console.log(`[Host Validation] Incoming host: "${fullHost}" | Path: ${req.path}`);
+    
     // Skip host validation for health check endpoints
     if (req.path === "/api/health/build" || req.path === "/api/health") {
+      console.log(`[Host Validation] Skipping validation for health endpoint`);
       return next();
     }
 
@@ -139,7 +143,7 @@ async function startServer() {
       process.env.NODE_ENV === "production" &&
       !isHostAllowed(fullHost, allowedHosts)
     ) {
-      console.warn(`[Host Validation] Rejected request from host: ${fullHost}`);
+      console.warn(`[Host Validation] Rejected request from host: "${fullHost}" | Allowed: ${JSON.stringify(allowedHosts)}`);
       // Don't alert for healthcheck.railway.app - it's an automated check
       if (fullHost !== "healthcheck.railway.app") {
         recordHostRejection(fullHost || "unknown", "Invalid host header", req).catch(
@@ -149,6 +153,7 @@ async function startServer() {
       return res.status(400).json({ error: "Invalid host" });
     }
 
+    console.log(`[Host Validation] Host allowed, continuing`);
     next();
   });
 
